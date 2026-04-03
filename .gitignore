@@ -1,7 +1,16 @@
 node_modules/
 dist/
+dist-ssr/
 build/
+coverage/
+src-tauri/target/
 target/
+.cache/
+.npm/
+.pnpm-store/
+.pnpm-home/
+tmp-tauri/
+.vscode/
 .DS_Store
 *.log
 .env
