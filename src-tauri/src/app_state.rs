@@ -2,6 +2,7 @@ use chrono::{DateTime, Duration, FixedOffset, Local, NaiveDate};
 use image::ImageFormat;
 use log::warn;
 use serde::{Deserialize, Serialize};
+use specta::Type;
 use std::{
     collections::BTreeMap,
     collections::VecDeque,
@@ -47,7 +48,7 @@ fn default_clipboard_history_days() -> u16 {
     DEFAULT_CLIPBOARD_HISTORY_DAYS
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub knowledge_root: String,
@@ -102,7 +103,7 @@ impl AppSettings {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(default, rename_all = "camelCase")]
 pub struct CapturePreview {
     pub id: String,
@@ -126,7 +127,7 @@ pub struct CapturePreview {
     pub byte_size: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DashboardSnapshot {
     pub app_name: String,
@@ -140,7 +141,7 @@ pub struct DashboardSnapshot {
     pub recent_captures: Vec<CapturePreview>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipboardPageSummary {
     pub total: usize,
@@ -149,7 +150,7 @@ pub struct ClipboardPageSummary {
     pub images: usize,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipboardPage {
     pub captures: Vec<CapturePreview>,
@@ -161,7 +162,7 @@ pub struct ClipboardPage {
     pub summary: ClipboardPageSummary,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteClipboardCaptureResult {
     pub id: String,
@@ -170,7 +171,7 @@ pub struct DeleteClipboardCaptureResult {
     pub deleted: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipboardPageRequest {
     pub page: usize,
@@ -552,7 +553,6 @@ impl AppState {
         let captured_at = parse_captured_at(&capture.captured_at)?;
         let mut stored_capture = capture.clone();
         ensure_knowledge_root_layout(&knowledge_root)?;
-        enforce_clipboard_retention(&knowledge_root, settings.clipboard_history_days)?;
         ensure_queue_state(&knowledge_root)?;
 
         if let Some(reason) = detect_filter_reason(&stored_capture) {
@@ -647,6 +647,27 @@ impl AppState {
         } else {
             CaptureProcessingResult::Archived { path: archive_path }
         })
+    }
+
+    pub fn run_periodic_maintenance(&self) -> Result<(), String> {
+        let settings = self.current_settings()?;
+        let knowledge_root = settings.knowledge_root_path();
+        let previous_runtime = self.lock_state()?.runtime.clone();
+
+        enforce_clipboard_retention(&knowledge_root, settings.clipboard_history_days)?;
+
+        let queue_depth = queue_depth_for_root(&knowledge_root)?;
+        let ready_batch_count = count_ready_batches(&knowledge_root)?;
+        let maintenance_changed = previous_runtime.queue_depth != queue_depth
+            || previous_runtime.ready_batch_count != ready_batch_count;
+
+        self.update_runtime_batch_metrics(queue_depth, ready_batch_count, None, None)?;
+
+        if maintenance_changed {
+            self.emit_clipboard_updated();
+        }
+
+        Ok(())
     }
 
     pub fn promote_ready_batches(&self) -> Result<Vec<BatchPromotionSummary>, String> {

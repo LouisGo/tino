@@ -4,9 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "typecheck": "tsc -b",
+    "dev": "pnpm gen:bindings && vite",
+    "gen:bindings": "cargo run --manifest-path src-tauri/Cargo.toml --bin generate_bindings",
+    "build": "pnpm gen:bindings && tsc -b && vite build",
+    "typecheck": "pnpm gen:bindings && tsc -b",
     "check:rust": "cargo check --manifest-path src-tauri/Cargo.toml",
     "check": "pnpm lint && pnpm typecheck && pnpm check:rust",
     "lint": "eslint .",

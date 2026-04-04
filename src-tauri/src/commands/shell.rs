@@ -3,6 +3,7 @@ use crate::app_state::{
     DeleteClipboardCaptureResult,
 };
 use serde::Deserialize;
+use specta::Type;
 use std::{fs, path::Path, process::Command};
 use tauri::{AppHandle, Manager, State};
 
@@ -17,7 +18,7 @@ use {
     sha2::{Digest, Sha256},
 };
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipboardReplayRequest {
     content_kind: String,
@@ -28,13 +29,14 @@ pub struct ClipboardReplayRequest {
     asset_path: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteClipboardCaptureRequest {
     id: String,
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_dashboard_snapshot(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -43,6 +45,7 @@ pub fn get_dashboard_snapshot(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_clipboard_page(
     state: State<'_, AppState>,
     request: ClipboardPageRequest,
@@ -51,6 +54,7 @@ pub fn get_clipboard_page(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn delete_clipboard_capture(
     state: State<'_, AppState>,
     request: DeleteClipboardCaptureRequest,
@@ -59,11 +63,13 @@ pub fn delete_clipboard_capture(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_app_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
     state.current_settings()
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn save_app_settings(
     state: State<'_, AppState>,
     settings: AppSettings,
@@ -72,6 +78,7 @@ pub fn save_app_settings(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_log_directory(app: AppHandle) -> Result<String, String> {
     app.path()
         .app_log_dir()
@@ -80,6 +87,7 @@ pub fn get_log_directory(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn open_in_preview(path: String) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
@@ -103,6 +111,7 @@ pub fn open_in_preview(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn copy_capture_to_clipboard(
     state: State<'_, AppState>,
     capture: ClipboardReplayRequest,
@@ -124,6 +133,7 @@ pub fn copy_capture_to_clipboard(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
     let trimmed = path.trim();
     if trimmed.is_empty() {

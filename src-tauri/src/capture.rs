@@ -24,6 +24,8 @@ use {
 const CLIPBOARD_POLL_INTERVAL: Duration = Duration::from_millis(500);
 #[cfg(target_os = "macos")]
 const BATCH_CHECK_INTERVAL: Duration = Duration::from_secs(15);
+#[cfg(target_os = "macos")]
+const MAINTENANCE_INTERVAL: Duration = Duration::from_secs(60 * 5);
 
 pub fn spawn_clipboard_watcher(state: AppState) {
     #[cfg(target_os = "macos")]
@@ -51,6 +53,7 @@ fn run_macos_clipboard_watcher(state: AppState) {
     let _ = state.set_watch_running();
     flush_ready_batches(&state);
     let mut last_batch_check = Instant::now();
+    let mut last_maintenance_check = Instant::now();
 
     loop {
         thread::sleep(CLIPBOARD_POLL_INTERVAL);
@@ -58,6 +61,11 @@ fn run_macos_clipboard_watcher(state: AppState) {
         if last_batch_check.elapsed() >= BATCH_CHECK_INTERVAL {
             flush_ready_batches(&state);
             last_batch_check = Instant::now();
+        }
+
+        if last_maintenance_check.elapsed() >= MAINTENANCE_INTERVAL {
+            run_periodic_maintenance(&state);
+            last_maintenance_check = Instant::now();
         }
 
         match current_change_count() {
@@ -133,6 +141,14 @@ fn flush_ready_batches(state: &AppState) {
             error!("failed to promote ready batches: {error}");
             let _ = state.set_watch_error(format!("batch promotion failed: {error}"));
         }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn run_periodic_maintenance(state: &AppState) {
+    if let Err(error) = state.run_periodic_maintenance() {
+        error!("failed to run periodic maintenance: {error}");
+        let _ = state.set_watch_error(format!("maintenance failed: {error}"));
     }
 }
 

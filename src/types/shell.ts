@@ -1,74 +1,42 @@
-export type ContentKind =
-  | "plain_text"
-  | "rich_text"
-  | "link"
-  | "image"
-  | "video"
-  | "file";
-export type CaptureStatus = "queued" | "archived" | "filtered" | "deduplicated";
+import type {
+  AppSettings as RustAppSettings,
+  CapturePreview as RustCapturePreview,
+  ClipboardPage as RustClipboardPage,
+  ClipboardPageRequest as RustClipboardPageRequest,
+  DashboardSnapshot as RustDashboardSnapshot,
+  DeleteClipboardCaptureResult as RustDeleteClipboardCaptureResult,
+} from "@/bindings/tauri";
 
-export interface ClipboardCapture {
-  id: string;
-  source: string;
-  sourceAppName?: string | null;
-  sourceAppBundleId?: string | null;
-  sourceAppIconPath?: string | null;
-  contentKind: ContentKind;
-  preview: string;
-  secondaryPreview?: string | null;
-  capturedAt: string;
-  status: CaptureStatus;
-  rawText: string;
-  rawRich?: string | null;
-  rawRichFormat?: string | null;
-  linkUrl?: string | null;
-  assetPath?: string | null;
-  thumbnailPath?: string | null;
-  imageWidth?: number | null;
-  imageHeight?: number | null;
-  byteSize?: number | null;
-}
+type RequireKeys<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
 
-export interface DashboardSnapshot {
-  appName: string;
-  appVersion: string;
-  buildChannel: "debug" | "release";
-  os: string;
-  defaultKnowledgeRoot: string;
-  appDataDir: string;
-  queuePolicy: string;
-  captureMode: string;
+export type ContentKind = NonNullable<RustCapturePreview["contentKind"]>;
+export type CaptureStatus = NonNullable<RustCapturePreview["status"]>;
+
+export type ClipboardCapture = RequireKeys<
+  RustCapturePreview,
+  "id" | "source" | "contentKind" | "preview" | "capturedAt" | "status" | "rawText"
+>;
+
+export type DashboardSnapshot = Omit<RustDashboardSnapshot, "recentCaptures"> & {
   recentCaptures: ClipboardCapture[];
-}
+};
 
-export interface ClipboardPageSummary {
-  total: number;
-  text: number;
-  links: number;
-  images: number;
-}
+export type ClipboardPageSummary = RustClipboardPage["summary"];
 
-export interface ClipboardPageResult {
+export type ClipboardPageResult = Omit<RustClipboardPage, "captures"> & {
   captures: ClipboardCapture[];
-  page: number;
-  pageSize: number;
-  total: number;
-  hasMore: boolean;
-  historyDays: number;
-  summary: ClipboardPageSummary;
-}
+};
 
-export interface DeleteClipboardCaptureResult {
-  id: string;
-  removedFromHistory: boolean;
-  removedFromStore: boolean;
-  deleted: boolean;
-}
+export type DeleteClipboardCaptureResult = RustDeleteClipboardCaptureResult;
 
-export interface SettingsDraft {
-  knowledgeRoot: string;
-  baseUrl: string;
-  apiKey: string;
-  model: string;
-  clipboardHistoryDays: number;
-}
+export type SettingsDraft = RequireKeys<
+  RustAppSettings,
+  "knowledgeRoot" | "baseUrl" | "apiKey" | "model" | "clipboardHistoryDays"
+>;
+
+export type ClipboardHistoryFilter = "all" | "text" | "link" | "image";
+
+export type ClipboardPageRequest = Omit<RustClipboardPageRequest, "search" | "filter"> & {
+  search?: string | null;
+  filter?: ClipboardHistoryFilter | null;
+};

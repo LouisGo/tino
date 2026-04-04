@@ -1,6 +1,7 @@
 mod app_state;
 mod capture;
 mod commands;
+pub mod ipc_schema;
 mod storage;
 
 use app_state::AppState;
@@ -15,7 +16,8 @@ use std::{
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, PhysicalPosition, PhysicalSize, RunEvent, WindowEvent,
+    AppHandle, Manager, PhysicalPosition, PhysicalSize, RunEvent, WebviewUrl,
+    WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, WEBVIEW_TARGET};
 
@@ -104,6 +106,31 @@ fn focus_main_window(app: &AppHandle) {
     }
 }
 
+fn focus_window(window: &tauri::WebviewWindow) {
+    let _ = window.show();
+    let _ = window.unminimize();
+    let _ = window.set_focus();
+}
+
+fn open_clipboard_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("clipboard") {
+        focus_window(&window);
+        return;
+    }
+
+    match WebviewWindowBuilder::new(app, "clipboard", WebviewUrl::App("/".into()))
+        .title("Clipboard")
+        .inner_size(1120.0, 720.0)
+        .min_inner_size(920.0, 620.0)
+        .center()
+        .resizable(true)
+        .build()
+    {
+        Ok(window) => focus_window(&window),
+        Err(error) => log::error!("failed to open clipboard window: {}", error),
+    }
+}
+
 fn prune_expired_logs(app: &AppHandle) {
     let Ok(log_dir) = app.path().app_log_dir() else {
         return;
@@ -174,8 +201,9 @@ fn configure_native_macos_window(_app: &AppHandle) {}
 
 fn create_tray(app: &AppHandle) -> tauri::Result<()> {
     let open_item = MenuItem::with_id(app, "open", "Open Tino", true, None::<&str>)?;
+    let clipboard_item = MenuItem::with_id(app, "clipboard", "Clipboard", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open_item, &quit_item])?;
+    let menu = Menu::with_items(app, &[&open_item, &clipboard_item, &quit_item])?;
     let icon = app
         .default_window_icon()
         .cloned()
@@ -188,6 +216,7 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => focus_main_window(app),
+            "clipboard" => open_clipboard_window(app),
             "quit" => {
                 save_main_window_state(app);
                 app.exit(0);
@@ -226,6 +255,10 @@ pub fn run() {
         log_targets.push(Target::new(TargetKind::Stdout));
     }
 
+    #[cfg(debug_assertions)]
+    ipc_schema::export_typescript_bindings()
+        .expect("failed to export TypeScript bindings from Rust schema");
+
     let app = tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -240,7 +273,6 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -263,17 +295,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            commands::shell::get_dashboard_snapshot,
-            commands::shell::get_clipboard_page,
-            commands::shell::delete_clipboard_capture,
-            commands::shell::get_app_settings,
-            commands::shell::save_app_settings,
-            commands::shell::get_log_directory,
-            commands::shell::open_in_preview,
-            commands::shell::copy_capture_to_clipboard,
-            commands::shell::reveal_in_file_manager
-        ])
+        .invoke_handler(ipc_schema::builder().invoke_handler())
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 

@@ -1,11 +1,19 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
+import { commands as tauriCommands } from "@/bindings/tauri";
+import type {
+  AppSettings as RustAppSettings,
+  CapturePreview as RustCapturePreview,
+  ClipboardPage as RustClipboardPage,
+  DashboardSnapshot as RustDashboardSnapshot,
+} from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
   ClipboardCapture,
+  ClipboardPageRequest,
   DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
@@ -103,6 +111,15 @@ const mockSnapshot: DashboardSnapshot = {
   ],
 };
 
+let mockRecentCaptures = [...mockSnapshot.recentCaptures];
+
+function getMockSnapshot(): DashboardSnapshot {
+  return {
+    ...mockSnapshot,
+    recentCaptures: mockRecentCaptures,
+  };
+}
+
 export function isTauriRuntime() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
@@ -115,24 +132,88 @@ export function isMacOsTauriRuntime() {
   );
 }
 
-export async function getDashboardSnapshot() {
-  if (!isTauriRuntime()) {
-    return mockSnapshot;
+async function unwrapTauriResult<T>(
+  result: Promise<{ status: "ok"; data: T } | { status: "error"; error: string }>,
+) {
+  const payload = await result;
+  if (payload.status === "ok") {
+    return payload.data;
   }
 
-  return invoke<DashboardSnapshot>("get_dashboard_snapshot");
+  throw new Error(payload.error);
 }
 
-export async function getClipboardPage(request: {
-  page: number;
-  pageSize: number;
-  search?: string;
-  filter?: "all" | "text" | "link" | "image";
-}) {
+function normalizeClipboardCapture(capture: RustCapturePreview): ClipboardCapture {
+  return {
+    id: capture.id ?? "",
+    source: capture.source ?? "",
+    sourceAppName: capture.sourceAppName ?? null,
+    sourceAppBundleId: capture.sourceAppBundleId ?? null,
+    sourceAppIconPath: capture.sourceAppIconPath ?? null,
+    contentKind: capture.contentKind ?? "plain_text",
+    preview: capture.preview ?? "",
+    secondaryPreview: capture.secondaryPreview ?? null,
+    capturedAt: capture.capturedAt ?? "",
+    status: capture.status ?? "archived",
+    rawText: capture.rawText ?? "",
+    rawRich: capture.rawRich ?? null,
+    rawRichFormat: capture.rawRichFormat ?? null,
+    linkUrl: capture.linkUrl ?? null,
+    assetPath: capture.assetPath ?? null,
+    thumbnailPath: capture.thumbnailPath ?? null,
+    imageWidth: capture.imageWidth ?? null,
+    imageHeight: capture.imageHeight ?? null,
+    byteSize: capture.byteSize ?? null,
+  };
+}
+
+function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
+  return {
+    knowledgeRoot: settings.knowledgeRoot,
+    baseUrl: settings.baseUrl,
+    apiKey: settings.apiKey,
+    model: settings.model,
+    clipboardHistoryDays: settings.clipboardHistoryDays ?? 3,
+  };
+}
+
+function normalizeClipboardPageResult(page: RustClipboardPage): ClipboardPageResult {
+  return {
+    captures: page.captures.map(normalizeClipboardCapture),
+    page: page.page,
+    pageSize: page.pageSize,
+    total: page.total,
+    hasMore: page.hasMore,
+    historyDays: page.historyDays,
+    summary: page.summary,
+  };
+}
+
+function normalizeDashboardSnapshot(snapshot: RustDashboardSnapshot): DashboardSnapshot {
+  return {
+    ...snapshot,
+    recentCaptures: snapshot.recentCaptures.map(normalizeClipboardCapture),
+  };
+}
+
+export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   if (!isTauriRuntime()) {
+    return getMockSnapshot();
+  }
+
+  return normalizeDashboardSnapshot(
+    await unwrapTauriResult(tauriCommands.getDashboardSnapshot()),
+  );
+}
+
+export async function getClipboardPage(
+  request: ClipboardPageRequest,
+): Promise<ClipboardPageResult> {
+  if (!isTauriRuntime()) {
+    const snapshot = getMockSnapshot();
     const normalizedSearch = request.search?.trim().toLowerCase() ?? "";
     const normalizedFilter = request.filter ?? "all";
-    const searchMatched = mockSnapshot.recentCaptures.filter((capture) => {
+    const searchMatched = snapshot.recentCaptures.filter((capture) => {
       if (!normalizedSearch) {
         return true;
       }
@@ -175,11 +256,23 @@ export async function getClipboardPage(request: {
     } satisfies ClipboardPageResult;
   }
 
-  return invoke<ClipboardPageResult>("get_clipboard_page", { request });
+  return normalizeClipboardPageResult(
+    await unwrapTauriResult(
+      tauriCommands.getClipboardPage({
+        page: request.page,
+        pageSize: request.pageSize,
+        search: request.search ?? null,
+        filter: request.filter ?? null,
+      }),
+    ),
+  );
 }
 
-export async function deleteClipboardCapture(id: string) {
+export async function deleteClipboardCapture(
+  id: string,
+): Promise<DeleteClipboardCaptureResult> {
   if (!isTauriRuntime()) {
+    mockRecentCaptures = mockRecentCaptures.filter((capture) => capture.id !== id);
     return {
       id,
       removedFromHistory: true,
@@ -188,17 +281,15 @@ export async function deleteClipboardCapture(id: string) {
     } satisfies DeleteClipboardCaptureResult;
   }
 
-  return invoke<DeleteClipboardCaptureResult>("delete_clipboard_capture", {
-    request: { id },
-  });
+  return unwrapTauriResult(tauriCommands.deleteClipboardCapture({ id }));
 }
 
-export async function getAppSettings() {
+export async function getAppSettings(): Promise<SettingsDraft> {
   if (!isTauriRuntime()) {
     return mockSettings;
   }
 
-  return invoke<SettingsDraft>("get_app_settings");
+  return normalizeSettingsDraft(await unwrapTauriResult(tauriCommands.getAppSettings()));
 }
 
 export async function getLogDirectory() {
@@ -206,15 +297,17 @@ export async function getLogDirectory() {
     return "~/Library/Logs/com.louistation.tino";
   }
 
-  return invoke<string>("get_log_directory");
+  return unwrapTauriResult(tauriCommands.getLogDirectory());
 }
 
-export async function saveAppSettings(settings: SettingsDraft) {
+export async function saveAppSettings(settings: SettingsDraft): Promise<SettingsDraft> {
   if (!isTauriRuntime()) {
     return settings;
   }
 
-  return invoke<SettingsDraft>("save_app_settings", { settings });
+  return normalizeSettingsDraft(
+    await unwrapTauriResult(tauriCommands.saveAppSettings(settings)),
+  );
 }
 
 export async function pickDirectory(defaultPath?: string) {
@@ -237,7 +330,7 @@ export async function revealPath(path: string) {
   }
 
   try {
-    await invoke("reveal_in_file_manager", { path });
+    await unwrapTauriResult(tauriCommands.revealInFileManager(path));
   } catch {
     await openPath(path);
   }
@@ -272,7 +365,7 @@ export async function openImageInPreview(path: string) {
   }
 
   try {
-    await invoke("open_in_preview", { path });
+    await unwrapTauriResult(tauriCommands.openInPreview(path));
   } catch {
     await openExternalTarget(path);
   }
@@ -305,16 +398,16 @@ export async function copyCaptureToClipboard(capture: ClipboardCapture) {
     return;
   }
 
-  await invoke("copy_capture_to_clipboard", {
-    capture: {
+  await unwrapTauriResult(
+    tauriCommands.copyCaptureToClipboard({
       contentKind: capture.contentKind,
       rawText: capture.rawText,
-      rawRich: capture.rawRich,
-      rawRichFormat: capture.rawRichFormat,
-      linkUrl: capture.linkUrl,
-      assetPath: capture.assetPath,
-    },
-  });
+      rawRich: capture.rawRich ?? null,
+      rawRichFormat: capture.rawRichFormat ?? null,
+      linkUrl: capture.linkUrl ?? null,
+      assetPath: capture.assetPath ?? null,
+    }),
+  );
 }
 
 export function resolveAssetUrl(assetPath?: string | null) {
