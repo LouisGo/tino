@@ -1,5 +1,5 @@
 export type ContentKind = "plain_text" | "rich_text" | "image" | "video" | "file";
-export type CaptureStatus = "queued" | "archived" | "filtered";
+export type CaptureStatus = "queued" | "archived" | "filtered" | "deduplicated";
 
 export interface CapturePreview {
   id: string;

@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getDashboardSnapshot } from "@/lib/tauri";
+import { getDashboardSnapshot, isTauriRuntime } from "@/lib/tauri";
 import { formatRelativeTimestamp } from "@/lib/utils";
 import type { CapturePreview } from "@/types/shell";
 
@@ -53,6 +53,8 @@ const columns = [
             ? "success"
             : info.getValue() === "filtered"
               ? "warning"
+              : info.getValue() === "deduplicated"
+                ? "secondary"
               : "secondary"
         }
       >
@@ -74,6 +76,7 @@ export function DashboardPage() {
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["dashboard-snapshot"],
     queryFn: getDashboardSnapshot,
+    refetchInterval: isTauriRuntime() ? 3_000 : false,
   });
 
   // TanStack Table returns an imperative instance by design.
@@ -89,19 +92,19 @@ export function DashboardPage() {
       {
         label: "Knowledge Root",
         value: data?.defaultKnowledgeRoot ?? "~/tino-inbox",
-        description: "User-selected Markdown workspace root.",
+        description: "Current archive workspace used by Rust-side file writes.",
         icon: FolderRoot,
       },
       {
         label: "Queue Policy",
         value: data?.queuePolicy ?? "20 captures or 10 minutes",
-        description: "Hybrid batching from the technical freeze.",
+        description: "Frozen hybrid batch rule reserved for the next milestone.",
         icon: Clock3,
       },
       {
         label: "Runtime",
         value: `${data?.appName ?? "Tino"} ${data?.appVersion ?? "0.1.0"}`,
-        description: `${data?.os ?? "browser"} · ${data?.buildChannel ?? "debug"}`,
+        description: `${data?.os ?? "browser"} · ${data?.captureMode ?? "Rust clipboard poller active"}`,
         icon: ArrowUpRight,
       },
     ],
@@ -117,12 +120,13 @@ export function DashboardPage() {
           </p>
           <div className="space-y-2">
             <h2 className="text-3xl font-semibold tracking-tight">
-              Desktop shell is wired and ready for the real capture pipeline.
+              Clipboard capture now lands in `daily/*.md` through the Rust runtime.
             </h2>
             <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-              This scaffold already wires Tauri, tray support, Rust commands,
-              Zustand shell state, and TanStack Query / Router / Table / Form.
-              The next layer is business logic, not more setup churn.
+              This stage is intentionally narrow: poll the macOS clipboard, build a
+              stable `CaptureRecord`, archive it to Markdown, and expose enough
+              runtime state to verify the chain. AI and batch orchestration come
+              later.
             </p>
           </div>
         </div>
@@ -162,8 +166,7 @@ export function DashboardPage() {
         <CardHeader>
           <CardTitle>Recent Captures</CardTitle>
           <CardDescription>
-            Table scaffold powered by TanStack Table. Replace this mock snapshot
-            with real Rust-side capture history next.
+            Real Rust-side archive history sourced from `_system/runtime.json`.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

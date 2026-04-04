@@ -17,10 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  getAppSettings,
   getAutostartEnabled,
-  getDashboardSnapshot,
   pickDirectory,
   revealPath,
+  saveAppSettings,
   setAutostartEnabled,
 } from "@/lib/tauri";
 import { useAppShellStore } from "@/stores/app-shell-store";
@@ -32,9 +33,9 @@ export function SettingsForm() {
   const setSettingsDraft = useAppShellStore((state) => state.setSettingsDraft);
   const hydrated = useRef(false);
 
-  const { data: snapshot } = useQuery({
-    queryKey: ["dashboard-snapshot"],
-    queryFn: getDashboardSnapshot,
+  const { data: settings } = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: getAppSettings,
   });
 
   const { data: autostartEnabled } = useQuery({
@@ -45,27 +46,25 @@ export function SettingsForm() {
   const form = useForm({
     defaultValues: settingsDraft,
     onSubmit: async ({ value }) => {
-      setSettingsDraft(value);
+      const saved = await saveAppSettings(value);
+      setSettingsDraft(saved);
+      form.reset(saved);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["app-settings"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-snapshot"] }),
+      ]);
     },
   });
 
   useEffect(() => {
-    if (!snapshot || hydrated.current) {
+    if (!settings || hydrated.current) {
       return;
     }
 
-    const next = {
-      knowledgeRoot:
-        settingsDraft.knowledgeRoot || snapshot.defaultKnowledgeRoot || "",
-      baseUrl: settingsDraft.baseUrl || "https://api.openai.com/v1",
-      apiKey: settingsDraft.apiKey,
-      model: settingsDraft.model || "gpt-5.4-mini",
-    };
-
     hydrated.current = true;
-    setSettingsDraft(next);
-    form.reset(next);
-  }, [form, setSettingsDraft, settingsDraft, snapshot]);
+    setSettingsDraft(settings);
+    form.reset(settings);
+  }, [form, setSettingsDraft, settings]);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -73,8 +72,8 @@ export function SettingsForm() {
         <CardHeader>
           <CardTitle>Runtime Setup</CardTitle>
           <CardDescription>
-            MVP setup is split exactly as frozen: knowledge config inside the
-            knowledge root, sensitive provider config in app data.
+            Knowledge root and provider settings now persist through Rust into app
+            data, while archive writes continue to stay inside the knowledge root.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -198,7 +197,7 @@ export function SettingsForm() {
 
             <Button type="submit" className="rounded-full">
               <Save />
-              Save Frontend Draft
+              Save Settings
             </Button>
           </form>
         </CardContent>
@@ -237,21 +236,22 @@ export function SettingsForm() {
           <CardHeader>
             <CardTitle>Scaffold Notes</CardTitle>
             <CardDescription>
-              This route exists to prove the form stack and not to finalize product
-              behavior yet.
+              This route now drives the real settings bridge instead of a local-only
+              draft.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
             <p>
-              Provider calls stay in the frontend for now via Vercel AI SDK Core.
+              Provider calls still stay in the frontend for later AI pipeline work.
             </p>
             <p>
-              Rust owns tray, clipboard/runtime shell, local file access, and
-              future `_system/` state writes.
+              Rust now owns clipboard polling, `daily/*.md` archive writes, and
+              `_system/runtime.json` snapshots.
             </p>
             <p className="flex items-center gap-2 text-foreground">
               <Sparkles className="size-4 text-primary" />
-              Next implementation step is real config persistence and command wiring.
+              Current milestone is the no-AI capture-to-daily loop, not the full
+              orchestrator.
             </p>
           </CardContent>
         </Card>

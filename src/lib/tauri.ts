@@ -3,34 +3,33 @@ import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
 
-import type { DashboardSnapshot } from "@/types/shell";
+import type { DashboardSnapshot, SettingsDraft } from "@/types/shell";
+
+const mockSettings: SettingsDraft = {
+  knowledgeRoot: "~/tino-inbox",
+  baseUrl: "https://api.openai.com/v1",
+  apiKey: "",
+  model: "gpt-5.4-mini",
+};
 
 const mockSnapshot: DashboardSnapshot = {
   appName: "Tino",
   appVersion: "0.1.0",
   buildChannel: "debug",
   os: "browser",
-  defaultKnowledgeRoot: "~/tino-inbox",
+  defaultKnowledgeRoot: mockSettings.knowledgeRoot,
   appDataDir: "~/Library/Application Support/com.louistation.tino",
   queuePolicy: "20 captures or 10 minutes",
-  captureMode: "silent capture",
+  captureMode: "Rust clipboard poller active",
   recentCaptures: [
     {
       id: "cap_001",
       source: "clipboard",
       contentKind: "plain_text",
-      preview: "Tauri menubar and tray bootstrap notes",
+      preview: "Clipboard capture pipeline writes into daily Markdown files.",
       capturedAt: new Date().toISOString(),
-      status: "queued",
-    },
-    {
-      id: "cap_002",
-      source: "clipboard",
-      contentKind: "rich_text",
-      preview: "AI provider settings draft with baseURL + model",
-      capturedAt: new Date(Date.now() - 1_200_000).toISOString(),
       status: "archived",
-    }
+    },
   ],
 };
 
@@ -44,6 +43,22 @@ export async function getDashboardSnapshot() {
   }
 
   return invoke<DashboardSnapshot>("get_dashboard_snapshot");
+}
+
+export async function getAppSettings() {
+  if (!isTauriRuntime()) {
+    return mockSettings;
+  }
+
+  return invoke<SettingsDraft>("get_app_settings");
+}
+
+export async function saveAppSettings(settings: SettingsDraft) {
+  if (!isTauriRuntime()) {
+    return settings;
+  }
+
+  return invoke<SettingsDraft>("save_app_settings", { settings });
 }
 
 export async function pickDirectory(defaultPath?: string) {
