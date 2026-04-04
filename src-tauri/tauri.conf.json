@@ -16,7 +16,7 @@
         "title": "Tino",
         "width": 1480,
         "height": 960,
-        "minWidth": 1080,
+        "minWidth": 700,
         "minHeight": 720,
         "center": true,
         "resizable": true,

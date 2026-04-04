@@ -152,6 +152,23 @@ export async function openExternalTarget(target: string) {
   await openPath(target);
 }
 
+export async function openImageInPreview(path: string) {
+  if (!path) {
+    return;
+  }
+
+  if (!isTauriRuntime()) {
+    window.open(path, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  try {
+    await invoke("open_in_preview", { path });
+  } catch {
+    await openExternalTarget(path);
+  }
+}
+
 export async function getImageAssetDataUrl(assetPath?: string | null) {
   if (!assetPath) {
     return null;

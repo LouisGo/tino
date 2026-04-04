@@ -1,31 +1,21 @@
 import { useDeferredValue, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  Expand,
-  ExternalLink,
-  FileText,
-  ImageIcon,
-  Link2,
-  RefreshCcw,
-  Search,
-  X,
-} from "lucide-react";
+import dayjs from "dayjs";
+import { Expand, ExternalLink, FileText, ImageIcon, Link2, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  CaptureDetailPreview,
+  CaptureImageLightbox,
+} from "@/features/clipboard/components/capture-preview";
+import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
+import {
   getDashboardSnapshot,
-  getImageAssetDataUrl,
   isTauriRuntime,
+  openImageInPreview,
   openExternalTarget,
 } from "@/lib/tauri";
 import { formatRelativeTimestamp } from "@/lib/time";
@@ -42,7 +32,7 @@ const filterOptions: Array<{ value: ClipboardFilter; label: string }> = [
 ];
 
 export function ClipboardPage() {
-  const { data, isFetching, refetch } = useQuery({
+  const { data } = useQuery({
     queryKey: ["dashboard-snapshot"],
     queryFn: getDashboardSnapshot,
     refetchInterval: isTauriRuntime() ? 3_000 : false,
@@ -60,6 +50,7 @@ export function ClipboardPage() {
 
     return matchesSearch(capture, deferredSearch);
   });
+  const captureGroups = groupCapturesByDay(filteredCaptures);
   const selectedCapture =
     filteredCaptures.find((capture) => capture.id === selectedCaptureId) ??
     filteredCaptures[0] ??
@@ -103,19 +94,19 @@ export function ClipboardPage() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-3">
         <div className="app-hero-surface">
-          <div className="app-hero-clipboard px-4 py-5 sm:px-6 sm:py-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">
+          <div className="app-hero-clipboard px-3 py-3 sm:px-4 sm:py-3.5">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold tracking-[0.16em] text-primary uppercase sm:text-xs">
                 Clipboard Board
               </p>
-              <p className="rounded-full border border-border/80 bg-surface-elevated px-3 py-1 text-xs font-medium tracking-[0.1em] text-muted-foreground uppercase">
+              <p className="rounded-full border border-border/80 bg-surface-elevated px-2.5 py-0.5 text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
                 {summary.total} Captures
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-4 gap-2">
               {summaryTiles.map((tile) => (
                 <SummaryTile
                   key={tile.label}
@@ -129,185 +120,172 @@ export function ClipboardPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="relative w-full xl:max-w-xl">
-            <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Type to filter entries..."
-              className="h-[52px] rounded-[26px] border-border/80 bg-card pl-11 text-base shadow-sm"
-            />
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <label className="relative">
-              <span className="sr-only">Filter capture types</span>
-              <select
-                value={filter}
-                onChange={(event) => setFilter(event.target.value as ClipboardFilter)}
-                className="h-[52px] min-w-44 appearance-none rounded-[24px] border border-border/80 bg-card px-5 pr-10 text-sm font-medium shadow-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
-              >
-                {filterOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted-foreground">
-                ▾
-              </span>
-            </label>
-
-            <Button
-              variant="outline"
-              className="h-[52px] rounded-[24px]"
-              onClick={() => void refetch()}
-              disabled={isFetching}
-            >
-              <RefreshCcw className={isFetching ? "animate-spin" : ""} />
-              Refresh
-            </Button>
-          </div>
-        </div>
-
-        <section className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
-          <Card className="overflow-hidden border-border/80 bg-card/95">
-            <CardHeader className="border-b border-border/70 pb-4">
-              <CardTitle>Recent Entries</CardTitle>
-              <CardDescription>
-                Search and filter recent captures before drilling into details.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-3">
-              <div className="max-h-[calc(100vh-23rem)] space-y-2 overflow-y-auto pr-1">
-                {filteredCaptures.length ? (
-                  filteredCaptures.map((capture) => (
-                    <button
-                      key={capture.id}
-                      type="button"
-                      onClick={() => setSelectedCaptureId(capture.id)}
-                      className={cn(
-                        "flex w-full items-start gap-3 rounded-[24px] border px-3 py-3 text-left transition",
-                        selectedCapture?.id === capture.id
-                          ? "border-primary/30 bg-primary/10 shadow-sm"
-                          : "border-transparent bg-background/70 hover:border-border hover:bg-secondary/60",
-                      )}
-                    >
-                      <CaptureThumb capture={capture} />
-
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">
-                            {formatKindLabel(capture.contentKind)}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {formatRelativeTimestamp(capture.capturedAt)}
-                          </span>
-                        </div>
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {captureTitle(capture)}
-                        </p>
-                        <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-                          {captureSubtitle(capture)}
-                        </p>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <EmptyState
-                    title="No matching captures"
-                    description="Try clearing the search term or switching the type filter back to all entries."
-                  />
-                )}
+        <section className="app-board-surface overflow-hidden">
+          <div className="app-board-toolbar border-b border-border/70 px-3 py-3 sm:px-4">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-3">
+              <div className="relative min-w-0">
+                <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  placeholder="Type to filter entries..."
+                  className="h-11 rounded-[20px] border-border/70 bg-card/90 pl-10 text-sm shadow-none"
+                />
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="overflow-hidden border-border/80 bg-card/95">
-                {selectedCapture ? (
-              <>
-                <div className="app-card-header-elevated flex flex-wrap items-center justify-between gap-3 border-b border-border/70 px-5 py-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge>{formatKindLabel(selectedCapture.contentKind)}</Badge>
-                    <Badge variant={statusVariant(selectedCapture.status)}>
-                      {selectedCapture.status}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatRelativeTimestamp(selectedCapture.capturedAt)}
-                    </span>
-                  </div>
+              <div className="flex items-center justify-end">
+                <label className="relative">
+                  <span className="sr-only">Filter capture types</span>
+                  <select
+                    value={filter}
+                    onChange={(event) => setFilter(event.target.value as ClipboardFilter)}
+                    className="h-11 w-[132px] appearance-none rounded-[20px] border border-border/70 bg-card/90 px-4 pr-9 text-sm font-medium shadow-none outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30 sm:w-[148px] sm:pr-10"
+                  >
+                    {filterOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted-foreground">
+                    ▾
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {selectedCapture.contentKind === "link" && selectedCapture.linkUrl ? (
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          void openExternalTarget(selectedCapture.linkUrl ?? "")
-                        }
-                      >
-                        <ExternalLink />
-                        Open in Browser
-                      </Button>
-                    ) : null}
-                    {selectedCapture.contentKind === "image" &&
-                    selectedCapture.assetPath ? (
-                      <Button
-                        variant="outline"
-                        onClick={() => setPreviewingImageId(selectedCapture.id)}
-                      >
-                        <Expand />
-                        Enlarge
-                      </Button>
-                    ) : null}
-                    {selectedCapture.contentKind === "image" &&
-                    selectedCapture.assetPath ? (
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          void openExternalTarget(selectedCapture.assetPath ?? "")
-                        }
-                      >
-                        <ImageIcon />
-                        Open in Preview
-                      </Button>
-                    ) : null}
+          <div className="overflow-hidden">
+            <div className="grid h-[clamp(34rem,68vh,46rem)] grid-cols-[minmax(240px,28%)_minmax(0,1fr)] items-stretch gap-0 md:grid-cols-[260px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)] xl:h-[calc(100vh-18rem)] xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="flex h-full min-h-0 flex-col border-r border-border/70 bg-card/78">
+                <div className="min-h-0 flex-1 overflow-y-auto p-2.5">
+                  <div className="space-y-3">
+                    {filteredCaptures.length ? (
+                      captureGroups.map((group) => (
+                        <section key={group.key} className="space-y-1.5">
+                          <p className="px-1 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                            {group.label}
+                          </p>
+                          <div className="space-y-1">
+                            {group.captures.map((capture) => (
+                              <button
+                                key={capture.id}
+                                type="button"
+                                onClick={() => setSelectedCaptureId(capture.id)}
+                                className={cn(
+                                  "flex h-[50px] w-full items-center gap-3 rounded-[16px] border px-3 text-left transition",
+                                  selectedCapture?.id === capture.id
+                                    ? "border-primary/25 bg-primary/10 shadow-sm"
+                                    : "border-transparent bg-background/55 hover:border-border/80 hover:bg-secondary/50",
+                                )}
+                              >
+                                <CaptureThumb capture={capture} />
+
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-foreground">
+                                    {captureListSummary(capture)}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      ))
+                    ) : (
+                      <EmptyState
+                        title="No matching captures"
+                        description="Try clearing the search term or switching the type filter back to all entries."
+                      />
+                    )}
                   </div>
                 </div>
+              </div>
 
-                <CardContent className="p-0">
-                  <DetailContent
-                    capture={selectedCapture}
-                    onOpenImage={() => setPreviewingImageId(selectedCapture.id)}
-                  />
+              <div className="flex h-full min-h-0 min-w-0 flex-col self-stretch bg-card/92">
+                {selectedCapture ? (
+                  <>
+                    <div className="app-card-header-elevated flex flex-wrap items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className={kindBadgeClass(selectedCapture.contentKind)}>
+                          {formatKindLabel(selectedCapture.contentKind)}
+                        </Badge>
+                        <Badge variant={statusVariant(selectedCapture.status)}>
+                          {selectedCapture.status}
+                        </Badge>
+                        <span className="text-[11px] text-muted-foreground">
+                          {formatRelativeTimestamp(selectedCapture.capturedAt)}
+                        </span>
+                      </div>
 
-                  <DetailInformation capture={selectedCapture} />
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {selectedCapture.contentKind === "link" && selectedCapture.linkUrl ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-[16px] border-border/70 bg-card/75 px-2.5 shadow-none [&_svg]:size-3.5"
+                            onClick={() =>
+                              void openExternalTarget(selectedCapture.linkUrl ?? "")
+                            }
+                          >
+                            <ExternalLink />
+                            Open in Browser
+                          </Button>
+                        ) : null}
+                        {selectedCapture.contentKind === "image" &&
+                        selectedCapture.assetPath ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-[16px] border-border/70 bg-card/75 px-2.5 shadow-none [&_svg]:size-3.5"
+                            onClick={() => setPreviewingImageId(selectedCapture.id)}
+                          >
+                            <Expand />
+                            Enlarge
+                          </Button>
+                        ) : null}
+                        {selectedCapture.contentKind === "image" &&
+                        selectedCapture.assetPath ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-[16px] border-border/70 bg-card/75 px-2.5 shadow-none [&_svg]:size-3.5"
+                            onClick={() => void openImageInPreview(selectedCapture.assetPath ?? "")}
+                          >
+                            <ImageIcon />
+                            Open in Preview
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
 
-                  {selectedCapture.rawRich ? (
-                    <section className="border-t border-border/70 px-5 py-5">
-                      <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-                        Raw Rich Representation
-                      </p>
-                      <pre className="mt-4 max-h-72 overflow-auto rounded-[20px] border border-border/70 bg-background/75 px-4 py-4 font-mono text-xs leading-6 whitespace-pre-wrap text-foreground">
-                        {selectedCapture.rawRich}
-                      </pre>
-                    </section>
-                  ) : null}
-                </CardContent>
-              </>
-            ) : (
-              <CardContent className="p-4">
-                <EmptyState
-                  title="Clipboard board is empty"
-                  description="Copy text, links, or images on macOS and the recent capture board will populate here."
-                />
-              </CardContent>
-            )}
-          </Card>
+                    <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto]">
+                      <div className="min-h-0">
+                        <CaptureDetailPreview
+                          capture={selectedCapture}
+                          onOpenImage={() => setPreviewingImageId(selectedCapture.id)}
+                        />
+                      </div>
+
+                      <div className="border-t border-border/70">
+                        <DetailInformation capture={selectedCapture} />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4">
+                    <EmptyState
+                      title="Clipboard board is empty"
+                      description="Copy text, links, or images on macOS and the recent capture board will populate here."
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </section>
       </div>
 
-      <ImageLightbox
+      <CaptureImageLightbox
         capture={previewingImage}
         onClose={() => setPreviewingImageId(null)}
       />
@@ -333,13 +311,13 @@ function SummaryTile({
         toneClass,
       )}
     >
-      <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+      <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
         {label}
       </p>
-      <p className="mt-2 text-3xl font-semibold leading-none tracking-tight sm:text-[2rem]">
+      <p className="mt-1 text-[1.4rem] font-semibold leading-none tracking-tight sm:text-[1.55rem]">
         {value}
       </p>
-      <p className="mt-2 text-xs leading-5 text-muted-foreground">{hint}</p>
+      <p className="mt-1 text-[10px] leading-4 text-muted-foreground">{hint}</p>
     </div>
   );
 }
@@ -351,7 +329,7 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
 
   if (assetSrc) {
     return (
-      <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-border/70 bg-secondary/70">
+      <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[12px] border border-border/60 bg-secondary/70">
         <img
           src={assetSrc}
           alt={captureTitle(capture)}
@@ -362,97 +340,9 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
   }
 
   return (
-    <div className="flex size-14 shrink-0 items-center justify-center rounded-[18px] border border-border/70 bg-secondary/70 text-muted-foreground">
-      {renderKindIcon(capture.contentKind)}
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-[12px] bg-secondary/80 text-muted-foreground">
+      {renderKindIcon(capture.contentKind, "size-4")}
     </div>
-  );
-}
-
-function DetailContent({
-  capture,
-  onOpenImage,
-}: {
-  capture: ClipboardCapture;
-  onOpenImage: () => void;
-}) {
-  const assetSrc = useClipboardAssetSrc(
-    capture.contentKind === "image" ? capture.assetPath : null,
-  );
-
-  if (capture.contentKind === "image") {
-    return (
-      <section className="app-preview-image border-b border-border/70 px-5 py-5">
-        <button
-          type="button"
-          onClick={onOpenImage}
-          className="group flex min-h-[360px] w-full items-center justify-center overflow-hidden rounded-[24px] border border-border/70 bg-surface-panel px-5 py-5 shadow-sm transition hover:border-primary/30 hover:shadow-md"
-        >
-          {assetSrc ? (
-            <div className="relative w-full">
-              <img
-                src={assetSrc}
-                alt={captureTitle(capture)}
-                className="max-h-[460px] w-full rounded-[20px] object-contain"
-              />
-              <div className="app-overlay-chip pointer-events-none absolute right-3 bottom-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium opacity-0 transition group-hover:opacity-100">
-                <Expand className="size-3.5" />
-                Click to enlarge
-              </div>
-            </div>
-          ) : (
-            <EmptyState
-              title="Image preview unavailable"
-              description="The capture exists, but the local preview asset could not be loaded into the board."
-            />
-          )}
-        </button>
-      </section>
-    );
-  }
-
-  if (capture.contentKind === "link") {
-    const target = capture.linkUrl ?? capture.rawText;
-    const hostname = target ? extractHostname(target) : null;
-
-    return (
-      <section className="app-preview-link border-b border-border/70 px-5 py-5">
-        <button
-          type="button"
-          onClick={() => void openExternalTarget(target)}
-          className="flex min-h-[320px] w-full flex-col items-start justify-between rounded-[24px] border border-border/70 bg-surface-panel px-6 py-6 text-left shadow-sm transition hover:border-primary/30 hover:shadow-md"
-        >
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              <Link2 className="size-3.5" />
-              Open in system browser
-            </div>
-            <div className="space-y-3">
-              <p className="text-xl font-semibold leading-8 text-foreground">
-                {hostname ?? "Link capture"}
-              </p>
-              <p className="break-all font-mono text-sm leading-7 text-muted-foreground">
-                {target}
-              </p>
-            </div>
-          </div>
-
-          <div className="inline-flex items-center gap-2 text-sm font-medium text-primary">
-            Preview in browser
-            <ExternalLink className="size-4" />
-          </div>
-        </button>
-      </section>
-    );
-  }
-
-  return (
-    <section className="app-preview-text border-b border-border/70 px-6 py-6 sm:px-7 sm:py-7">
-      <div className="min-h-[320px]">
-        <div className="text-[15px] leading-8 whitespace-pre-wrap text-foreground">
-          {capture.rawText || captureTitle(capture)}
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -460,85 +350,27 @@ function DetailInformation({ capture }: { capture: ClipboardCapture }) {
   const rows = detailRows(capture);
 
   return (
-    <section className="px-5 py-5">
-      <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+    <section className="flex h-full min-h-0 flex-col px-4 py-4">
+      <p className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
         Information
       </p>
-      <div className="mt-4 overflow-hidden rounded-[22px] border border-border/70 bg-background/70">
-        {rows.map((row, index) => (
-          <div
-            key={`${row.label}-${index}`}
-            className={cn(
-              "grid grid-cols-[140px_minmax(0,1fr)] gap-3 px-4 py-3 text-sm",
-              index > 0 ? "border-t border-border/70" : "",
-            )}
-          >
-            <span className="font-medium text-muted-foreground">{row.label}</span>
-            <span className="break-all text-foreground">{row.value}</span>
-          </div>
-        ))}
+      <div className="mt-3 min-h-0 overflow-hidden rounded-[20px] border border-border/70 bg-background/70">
+        <div className="h-full overflow-auto">
+          {rows.map((row, index) => (
+            <div
+              key={`${row.label}-${index}`}
+              className={cn(
+                "grid grid-cols-[124px_minmax(0,1fr)] gap-3 px-4 py-2.5 text-sm",
+                index > 0 ? "border-t border-border/70" : "",
+              )}
+            >
+              <span className="text-xs font-medium text-muted-foreground">{row.label}</span>
+              <span className="app-selectable break-all text-foreground">{row.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
-  );
-}
-
-function ImageLightbox({
-  capture,
-  onClose,
-}: {
-  capture: ClipboardCapture | null;
-  onClose: () => void;
-}) {
-  const assetSrc = useClipboardAssetSrc(capture?.assetPath);
-
-  if (!capture || capture.contentKind !== "image") {
-    return null;
-  }
-
-  return (
-    <div
-      className="app-overlay-backdrop fixed inset-0 z-50 flex items-center justify-center p-6 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="app-lightbox-surface relative w-full max-w-6xl overflow-hidden rounded-[28px] border shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="app-lightbox-header flex items-center justify-between border-b px-5 py-4">
-          <div>
-            <p className="text-sm font-medium">{captureTitle(capture)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {capture.imageWidth && capture.imageHeight
-                ? `${capture.imageWidth} × ${capture.imageHeight}`
-                : "Image capture"}
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            className="text-foreground hover:bg-surface-soft hover:text-foreground"
-            onClick={onClose}
-          >
-            <X />
-            Close
-          </Button>
-        </div>
-
-        <div className="flex min-h-[70vh] items-center justify-center p-6">
-          {assetSrc ? (
-            <img
-              src={assetSrc}
-              alt={captureTitle(capture)}
-              className="max-h-[70vh] w-full object-contain"
-            />
-          ) : (
-            <EmptyState
-              title="Image preview unavailable"
-              description="The image asset could not be loaded for enlarged preview."
-            />
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -550,35 +382,13 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="flex min-h-56 flex-col items-center justify-center rounded-[28px] border border-dashed border-border/80 bg-background/60 px-6 py-8 text-center">
-      <p className="text-base font-semibold">{title}</p>
-      <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+    <div className="flex min-h-44 flex-col items-center justify-center rounded-[24px] border border-dashed border-border/80 bg-background/60 px-5 py-6 text-center">
+      <p className="text-sm font-semibold">{title}</p>
+      <p className="mt-2 max-w-md text-sm leading-5 text-muted-foreground">
         {description}
       </p>
     </div>
   );
-}
-
-function useClipboardAssetSrc(assetPath?: string | null) {
-  const { data } = useQuery({
-    queryKey: ["clipboard-asset-src", assetPath],
-    enabled: Boolean(assetPath),
-    staleTime: Infinity,
-    retry: false,
-    queryFn: async () => {
-      if (!assetPath) {
-        return null;
-      }
-
-      try {
-        return await getImageAssetDataUrl(assetPath);
-      } catch {
-        return null;
-      }
-    },
-  });
-
-  return data ?? null;
 }
 
 function matchesFilter(contentKind: ContentKind, filter: ClipboardFilter) {
@@ -663,6 +473,54 @@ function captureSubtitle(capture: ClipboardCapture) {
   return `${Math.max(lineCount, 1)} line${lineCount === 1 ? "" : "s"} · ${capture.rawText.length} chars`;
 }
 
+function captureListSummary(capture: ClipboardCapture) {
+  return captureTitle(capture);
+}
+
+function groupCapturesByDay(captures: ClipboardCapture[]) {
+  const groups = new Map<
+    string,
+    {
+      key: string;
+      label: string;
+      captures: ClipboardCapture[];
+    }
+  >();
+
+  for (const capture of captures) {
+    const key = dayjs(capture.capturedAt).format("YYYY-MM-DD");
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.captures.push(capture);
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      label: formatCaptureGroupLabel(capture.capturedAt),
+      captures: [capture],
+    });
+  }
+
+  return Array.from(groups.values());
+}
+
+function formatCaptureGroupLabel(input: string) {
+  const value = dayjs(input);
+  const today = dayjs();
+
+  if (value.isSame(today, "day")) {
+    return "Today";
+  }
+
+  if (value.isSame(today.subtract(1, "day"), "day")) {
+    return "Yesterday";
+  }
+
+  return value.format("YYYY-MM-DD");
+}
+
 function formatKindLabel(contentKind: ContentKind) {
   switch (contentKind) {
     case "plain_text":
@@ -678,14 +536,30 @@ function formatKindLabel(contentKind: ContentKind) {
   }
 }
 
-function renderKindIcon(contentKind: ContentKind) {
+function kindBadgeClass(contentKind: ContentKind) {
+  if (isTextKind(contentKind)) {
+    return "app-kind-badge-text";
+  }
+
+  if (contentKind === "link") {
+    return "app-kind-badge-link";
+  }
+
+  if (contentKind === "image") {
+    return "app-kind-badge-image";
+  }
+
+  return "";
+}
+
+function renderKindIcon(contentKind: ContentKind, className = "size-5") {
   switch (contentKind) {
     case "link":
-      return <Link2 className="size-5" />;
+      return <Link2 className={className} />;
     case "image":
-      return <ImageIcon className="size-5" />;
+      return <ImageIcon className={className} />;
     default:
-      return <FileText className="size-5" />;
+      return <FileText className={className} />;
   }
 }
 

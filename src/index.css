@@ -3,8 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root,
-:root[data-theme="tino"] {
+:root {
   --background: oklch(0.985 0.01 92);
   --foreground: oklch(0.26 0.02 98);
   --card: oklch(1 0 0);
@@ -63,6 +62,53 @@
   --sidebar-accent-foreground: oklch(0.96 0.01 96);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.72 0.13 171);
+  --kind-text: oklch(0.72 0.012 260);
+  --kind-text-soft: oklch(0.3 0.012 255);
+  --kind-link: oklch(0.76 0.045 240);
+  --kind-link-soft: oklch(0.31 0.028 238);
+  --kind-image: oklch(0.78 0.04 320);
+  --kind-image-soft: oklch(0.31 0.026 318);
+  --gradient-preview-image: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+    color-mix(in oklch, var(--secondary) 16%, var(--card) 84%)
+  );
+  --gradient-preview-stage:
+    radial-gradient(
+      circle at top left,
+      color-mix(in oklch, var(--kind-image) 8%, transparent) 0,
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+      color-mix(in oklch, var(--secondary) 10%, var(--card) 90%)
+    );
+  --gradient-preview-link: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+    color-mix(in oklch, var(--secondary) 16%, var(--card) 84%)
+  );
+  --gradient-preview-text: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+    color-mix(in oklch, var(--secondary) 16%, var(--card) 84%)
+  );
+  --summary-tone-text: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+    color-mix(in oklch, var(--secondary) 18%, var(--card) 82%)
+  );
+  --summary-tone-links: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+    color-mix(in oklch, var(--secondary) 18%, var(--card) 82%)
+  );
+  --summary-tone-images: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+    color-mix(in oklch, var(--secondary) 18%, var(--card) 82%)
+  );
 }
 
 :root[data-theme="ocean"] {
@@ -97,9 +143,15 @@
   --surface-soft: color-mix(in oklch, var(--background) 72%, transparent);
   --surface-primary-soft: color-mix(in oklch, var(--primary) 14%, transparent);
   --surface-action-chip: color-mix(in oklch, var(--background) 25%, transparent);
-  --overlay-backdrop: color-mix(in oklch, var(--foreground) 72%, transparent);
+  --overlay-backdrop: color-mix(in oklch, black 80%, transparent);
   --overlay-chip: color-mix(in oklch, var(--foreground) 70%, transparent);
   --overlay-chip-foreground: oklch(0.98 0 0);
+  --kind-text: oklch(0.5 0.015 260);
+  --kind-text-soft: oklch(0.94 0.01 255);
+  --kind-link: oklch(0.58 0.06 240);
+  --kind-link-soft: oklch(0.94 0.025 235);
+  --kind-image: oklch(0.62 0.055 320);
+  --kind-image-soft: oklch(0.95 0.025 318);
   --gradient-body:
     radial-gradient(
       circle at top left,
@@ -140,35 +192,30 @@
   );
   --gradient-preview-image: linear-gradient(
     180deg,
-    color-mix(in oklch, var(--secondary) 48%, var(--card) 52%),
-    color-mix(in oklch, var(--card) 96%, var(--background) 4%)
+    color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+    color-mix(in oklch, var(--secondary) 22%, var(--card) 78%)
   );
   --gradient-preview-stage:
     radial-gradient(
       circle at top left,
-      color-mix(in oklch, var(--accent) 24%, transparent) 0,
-      transparent 27%
+      color-mix(in oklch, var(--kind-image) 12%, transparent) 0,
+      transparent 30%
     ),
     linear-gradient(
       180deg,
-      color-mix(in oklch, var(--secondary) 64%, var(--card) 36%),
-      color-mix(in oklch, var(--card) 88%, var(--background) 12%)
+      color-mix(in oklch, var(--card) 96%, var(--background) 4%),
+      color-mix(in oklch, var(--secondary) 18%, var(--card) 82%)
     );
   --gradient-preview-link:
-    radial-gradient(
-      circle at top left,
-      color-mix(in oklch, var(--accent) 28%, transparent) 0,
-      transparent 36%
-    ),
     linear-gradient(
       180deg,
       color-mix(in oklch, var(--card) 95%, var(--background) 5%),
-      color-mix(in oklch, var(--secondary) 58%, var(--card) 42%)
+      color-mix(in oklch, var(--secondary) 22%, var(--card) 78%)
     );
   --gradient-preview-text: linear-gradient(
     180deg,
-    color-mix(in oklch, var(--card) 96%, var(--background) 4%),
-    color-mix(in oklch, var(--secondary) 56%, var(--card) 44%)
+    color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+    color-mix(in oklch, var(--secondary) 22%, var(--card) 78%)
   );
   --gradient-lightbox: linear-gradient(
     180deg,
@@ -176,24 +223,24 @@
     color-mix(in oklch, var(--background) 70%, var(--card) 30%)
   );
   --summary-tone-recent: linear-gradient(
-    165deg,
-    color-mix(in oklch, var(--accent) 22%, var(--card) 78%),
-    color-mix(in oklch, var(--card) 92%, var(--secondary) 8%)
+    180deg,
+    color-mix(in oklch, var(--card) 94%, var(--background) 6%),
+    color-mix(in oklch, var(--secondary) 28%, var(--card) 72%)
   );
   --summary-tone-text: linear-gradient(
-    165deg,
-    color-mix(in oklch, var(--secondary) 78%, var(--card) 22%),
-    color-mix(in oklch, var(--card) 90%, var(--background) 10%)
+    180deg,
+    color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+    color-mix(in oklch, var(--secondary) 24%, var(--card) 76%)
   );
   --summary-tone-links: linear-gradient(
-    165deg,
-    color-mix(in oklch, var(--accent) 16%, var(--card) 84%),
-    color-mix(in oklch, var(--card) 93%, var(--background) 7%)
+    180deg,
+    color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+    color-mix(in oklch, var(--secondary) 24%, var(--card) 76%)
   );
   --summary-tone-images: linear-gradient(
-    165deg,
-    color-mix(in oklch, var(--secondary) 72%, var(--accent) 28%),
-    color-mix(in oklch, var(--card) 90%, var(--background) 10%)
+    180deg,
+    color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+    color-mix(in oklch, var(--secondary) 24%, var(--card) 76%)
   );
 }
 
@@ -243,29 +290,50 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input,
+  textarea,
+  select,
+  [contenteditable="true"],
+  .app-selectable {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: default;
   }
 
   html {
-    @apply h-full scroll-smooth;
+    @apply h-full overflow-hidden scroll-smooth;
   }
 
   body {
-    @apply min-h-screen bg-background text-foreground antialiased;
+    @apply h-full overflow-hidden bg-background text-foreground antialiased;
     background-image: var(--gradient-body);
   }
 
   #root {
-    @apply min-h-screen;
+    @apply h-full overflow-hidden;
   }
 }
 
 @layer components {
   .app-shell-surface {
-    @apply rounded-[32px] border border-sidebar-border bg-surface-shell p-5 shadow-sm backdrop-blur;
+    @apply rounded-[28px] border border-sidebar-border bg-surface-shell shadow-sm backdrop-blur;
   }
 
   .app-main-surface {
-    @apply rounded-[32px] border border-border/80 bg-surface-main p-4 shadow-sm backdrop-blur md:p-6;
+    @apply bg-transparent shadow-none backdrop-blur-none;
   }
 
   .app-hero-surface {
@@ -284,28 +352,127 @@
     background-image: var(--gradient-card-header);
   }
 
+  .app-board-surface {
+    @apply rounded-[30px] border border-border/80 bg-surface-panel shadow-sm;
+  }
+
+  .app-board-toolbar {
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+      color-mix(in oklch, var(--secondary) 48%, var(--card) 52%)
+    );
+  }
+
   .app-summary-tile {
-    @apply rounded-[24px] border border-border/80 px-4 py-4 shadow-sm backdrop-blur;
+    @apply rounded-[18px] border border-border/80 px-3 py-2.5 shadow-sm backdrop-blur;
   }
 
   .app-summary-tone-recent {
-    background-image: var(--summary-tone-recent);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 14%, transparent) 0,
+        transparent 32%
+      ),
+      var(--summary-tone-recent);
   }
 
   .app-summary-tone-text {
-    background-image: var(--summary-tone-text);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--kind-text) 12%, transparent) 0,
+        transparent 32%
+      ),
+      var(--summary-tone-text);
   }
 
   .app-summary-tone-links {
-    background-image: var(--summary-tone-links);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--kind-link) 14%, transparent) 0,
+        transparent 32%
+      ),
+      var(--summary-tone-links);
   }
 
   .app-summary-tone-images {
-    background-image: var(--summary-tone-images);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--kind-image) 14%, transparent) 0,
+        transparent 32%
+      ),
+      var(--summary-tone-images);
+  }
+
+  .app-kind-badge-text {
+    @apply border-transparent;
+    background-color: color-mix(in oklch, var(--kind-text) 14%, var(--background) 86%);
+    color: color-mix(in oklch, var(--kind-text) 86%, var(--foreground) 14%);
+  }
+
+  .app-kind-badge-link {
+    @apply border-transparent;
+    background-color: color-mix(in oklch, var(--kind-link) 14%, var(--background) 86%);
+    color: color-mix(in oklch, var(--kind-link) 88%, var(--foreground) 12%);
+  }
+
+  .app-kind-badge-image {
+    @apply border-transparent;
+    background-color: color-mix(in oklch, var(--kind-image) 15%, var(--background) 85%);
+    color: color-mix(in oklch, var(--kind-image) 86%, var(--foreground) 14%);
+  }
+
+  .app-kind-text-text {
+    color: color-mix(in oklch, var(--kind-text) 78%, var(--foreground) 22%);
+  }
+
+  .app-kind-text-link {
+    color: color-mix(in oklch, var(--kind-link) 82%, var(--foreground) 18%);
+  }
+
+  .app-kind-text-image {
+    color: color-mix(in oklch, var(--kind-image) 80%, var(--foreground) 20%);
+  }
+
+  .dark .app-kind-badge-text {
+    background-color: color-mix(in oklch, var(--kind-text) 12%, var(--card) 88%);
+    color: color-mix(in oklch, var(--kind-text) 72%, var(--foreground) 28%);
+  }
+
+  .dark .app-kind-badge-link {
+    background-color: color-mix(in oklch, var(--kind-link) 13%, var(--card) 87%);
+    color: color-mix(in oklch, var(--kind-link) 74%, var(--foreground) 26%);
+  }
+
+  .dark .app-kind-badge-image {
+    background-color: color-mix(in oklch, var(--kind-image) 13%, var(--card) 87%);
+    color: color-mix(in oklch, var(--kind-image) 74%, var(--foreground) 26%);
+  }
+
+  .dark .app-kind-text-text {
+    color: color-mix(in oklch, var(--kind-text) 10%, var(--foreground) 90%);
+  }
+
+  .dark .app-kind-text-link {
+    color: color-mix(in oklch, var(--kind-link) 20%, var(--foreground) 80%);
+  }
+
+  .dark .app-kind-text-image {
+    color: color-mix(in oklch, var(--kind-image) 18%, var(--foreground) 82%);
   }
 
   .app-preview-image {
-    background-image: var(--gradient-preview-image);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--kind-image) 10%, transparent) 0,
+        transparent 30%
+      ),
+      var(--gradient-preview-image);
   }
 
   .app-preview-image-stage {
@@ -313,15 +480,40 @@
   }
 
   .app-preview-link {
-    background-image: var(--gradient-preview-link);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--kind-link) 10%, transparent) 0,
+        transparent 30%
+      ),
+      var(--gradient-preview-link);
   }
 
   .app-preview-text {
-    background-image: var(--gradient-preview-text);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--kind-text) 8%, transparent) 0,
+        transparent 30%
+      ),
+      var(--gradient-preview-text);
   }
 
   .app-icon-chip {
     @apply rounded-2xl bg-surface-primary-soft p-2 text-primary;
+  }
+
+  .app-sidebar-icon {
+    @apply border border-transparent;
+  }
+
+  .app-sidebar-tooltip {
+    @apply pointer-events-none absolute top-1/2 left-[calc(100%+12px)] z-50 -translate-y-1/2 rounded-full border border-border/80 bg-surface-panel px-3 py-1.5 text-xs font-medium whitespace-nowrap text-foreground opacity-0 shadow-sm transition-all duration-150;
+  }
+
+  .app-sidebar-icon:hover .app-sidebar-tooltip,
+  .app-sidebar-icon:focus-visible .app-sidebar-tooltip {
+    @apply translate-x-0 opacity-100;
   }
 
   .app-lightbox-surface {

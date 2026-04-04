@@ -2,7 +2,15 @@ import { useEffect, useRef } from "react";
 
 import { useForm } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderSearch, Rocket, Save, Sparkles } from "lucide-react";
+import {
+  FolderSearch,
+  Moon,
+  Palette,
+  Rocket,
+  Save,
+  Sparkles,
+  Sun,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +23,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { themeModes, themeNames } from "@/lib/theme";
 import {
   getAppSettings,
   getAutostartEnabled,
@@ -25,12 +35,20 @@ import {
   setAutostartEnabled,
 } from "@/lib/tauri";
 import { useAppShellStore } from "@/stores/app-shell-store";
+import { useThemeStore } from "@/stores/theme-store";
 
 export function SettingsForm() {
   const queryClient = useQueryClient();
+  const captureEnabled = useAppShellStore((state) => state.captureEnabled);
+  const setCaptureEnabled = useAppShellStore((state) => state.setCaptureEnabled);
   const settingsDraft = useAppShellStore((state) => state.settingsDraft);
   const patchSettingsDraft = useAppShellStore((state) => state.patchSettingsDraft);
   const setSettingsDraft = useAppShellStore((state) => state.setSettingsDraft);
+  const mode = useThemeStore((state) => state.mode);
+  const themeName = useThemeStore((state) => state.themeName);
+  const setMode = useThemeStore((state) => state.setMode);
+  const setThemeName = useThemeStore((state) => state.setThemeName);
+  const toggleDarkLight = useThemeStore((state) => state.toggleDarkLight);
   const hydrated = useRef(false);
 
   const { data: settings } = useQuery({
@@ -128,6 +146,15 @@ export function SettingsForm() {
                       Reveal
                     </Button>
                   </div>
+                  {field.state.value ? (
+                    <button
+                      type="button"
+                      onClick={() => void revealPath(field.state.value)}
+                      className="block max-w-full truncate text-left text-sm text-primary transition hover:underline"
+                    >
+                      {field.state.value}
+                    </button>
+                  ) : null}
                 </div>
               )}
             />
@@ -204,6 +231,99 @@ export function SettingsForm() {
       </Card>
 
       <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Shell Controls</CardTitle>
+            <CardDescription>
+              Sidebar controls moved here to keep the main shell quieter and more
+              stable.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Capture Pipeline</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Clipboard watch stays alive. This only pauses content entering the
+                    main pipeline.
+                  </p>
+                </div>
+                <Badge variant={captureEnabled ? "success" : "secondary"}>
+                  {captureEnabled ? "active" : "paused"}
+                </Badge>
+              </div>
+              <Button
+                className="w-full justify-between"
+                variant={captureEnabled ? "default" : "secondary"}
+                onClick={() => setCaptureEnabled(!captureEnabled)}
+              >
+                {captureEnabled ? "Pause Capture" : "Resume Capture"}
+                <Rocket className="size-4" />
+              </Button>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium">Theme</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Adjust the runtime mode and palette for the desktop shell.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full justify-between"
+                onClick={toggleDarkLight}
+              >
+                Toggle Dark / Light
+                {mode === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
+              </Button>
+              <label className="block space-y-2">
+                <span className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+                  Mode
+                </span>
+                <select
+                  value={mode}
+                  onChange={(event) =>
+                    setMode(event.target.value as (typeof themeModes)[number])
+                  }
+                  className="h-11 w-full rounded-2xl border border-border/80 bg-background/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                >
+                  {themeModes.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block space-y-2">
+                <span className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+                  Palette
+                </span>
+                <select
+                  value={themeName}
+                  onChange={(event) =>
+                    setThemeName(event.target.value as (typeof themeNames)[number])
+                  }
+                  className="h-11 w-full rounded-2xl border border-border/80 bg-background/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                >
+                  {themeNames.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Palette className="size-3.5" />
+                Token-driven theme variables
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Autostart</CardTitle>
