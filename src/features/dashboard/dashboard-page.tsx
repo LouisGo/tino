@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { queryKeys } from "@/app/query-keys";
+import { useCommand } from "@/core/commands";
 import {
   Card,
   CardContent,
@@ -21,10 +22,11 @@ import {
 } from "@/components/ui/card";
 import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events";
 import { formatRelativeTimestamp } from "@/lib/time";
-import { getDashboardSnapshot, revealPath } from "@/lib/tauri";
+import { getDashboardSnapshot } from "@/lib/tauri";
 
 export function DashboardPage() {
   const queryClient = useQueryClient();
+  const revealPath = useCommand<{ path: string }>("system.revealPath");
   const { data, isFetching, refetch } = useQuery({
     queryKey: queryKeys.dashboardSnapshot(),
     queryFn: getDashboardSnapshot,
@@ -42,7 +44,10 @@ export function DashboardPage() {
       description: "Current archive workspace used by Rust-side file writes.",
       icon: FolderRoot,
       action: data?.defaultKnowledgeRoot
-        ? () => void revealPath(data.defaultKnowledgeRoot)
+        ? () =>
+            void revealPath.execute({
+              path: data.defaultKnowledgeRoot,
+            })
         : undefined,
       actionLabel: "Open knowledge root in file manager",
     },

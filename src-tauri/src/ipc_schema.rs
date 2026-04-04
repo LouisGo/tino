@@ -20,8 +20,7 @@ pub fn builder() -> Builder<tauri::Wry> {
 }
 
 pub fn bindings_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../src/bindings/tauri.ts")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../src/bindings/tauri.ts")
 }
 
 pub fn export_typescript_bindings() -> Result<(), String> {

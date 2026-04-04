@@ -2,6 +2,9 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { FileText, ImageIcon, Link2 } from "lucide-react";
 
+import { useCommand } from "@/core/commands";
+import { useContextMenu } from "@/core/context-menu";
+import { clipboardCaptureContextMenu } from "@/features/clipboard/clipboard-capture-context-menu";
 import {
   captureListSummary,
   type ClipboardCaptureGroup,
@@ -15,7 +18,6 @@ import { ClipboardEmptyState } from "./clipboard-empty-state";
 export function ClipboardCaptureList({
   groups,
   selectedCaptureId,
-  onSelectCapture,
   hasNextPage,
   isRefreshingList,
   isFetchingNextPage,
@@ -26,7 +28,6 @@ export function ClipboardCaptureList({
 }: {
   groups: ClipboardCaptureGroup[];
   selectedCaptureId: string | null;
-  onSelectCapture: (captureId: string) => void;
   hasNextPage?: boolean;
   isRefreshingList?: boolean;
   isFetchingNextPage?: boolean;
@@ -39,6 +40,12 @@ export function ClipboardCaptureList({
   const [loadTrigger, setLoadTrigger] = useState<HTMLDivElement | null>(null);
   const isAutoLoadingRef = useRef(false);
   const isLoadTriggerVisibleRef = useRef(false);
+  const selectCapture = useCommand<{ captureId: string }>("clipboard.selectCapture");
+  const { onContextMenu } = useContextMenu(clipboardCaptureContextMenu, {
+    onOpen: (capture) => {
+      void selectCapture.execute({ captureId: capture.id });
+    },
+  });
   const hasCaptures = groups.length > 0;
   const tryLoadMore = useEffectEvent(() => {
     if (
@@ -106,7 +113,8 @@ export function ClipboardCaptureList({
                     <button
                       key={capture.id}
                       type="button"
-                      onClick={() => onSelectCapture(capture.id)}
+                      onClick={() => void selectCapture.execute({ captureId: capture.id })}
+                      onContextMenu={(event) => onContextMenu(event, capture)}
                       className={cn(
                         "flex h-[50px] w-full items-center gap-3 rounded-[16px] border px-3 text-left transition",
                         selectedCaptureId === capture.id

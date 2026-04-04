@@ -346,6 +346,16 @@ export async function openExternalTarget(target: string) {
     return;
   }
 
+  try {
+    const parsedTarget = new URL(target);
+    if (parsedTarget.protocol !== "file:") {
+      await openUrl(target);
+      return;
+    }
+  } catch {
+    // Fall through to local path handling for plain filesystem paths.
+  }
+
   if (target.startsWith("http://") || target.startsWith("https://")) {
     await openUrl(target);
     return;

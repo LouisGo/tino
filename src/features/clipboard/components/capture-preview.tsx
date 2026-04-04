@@ -4,8 +4,9 @@ import {
   useRef,
   useState,
   startTransition,
-  type ReactNode,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
@@ -25,9 +26,14 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useCommand } from "@/core/commands";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import { capturePreviewSurfaceClassName } from "@/features/clipboard/lib/clipboard-board";
-import { openExternalTarget } from "@/lib/tauri";
+import {
+  getExternalLinkTargetFromEventTarget,
+  openExternalLink,
+  resolveExternalLinkTarget,
+} from "@/lib/external-links";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
 
@@ -49,6 +55,7 @@ export function CaptureDetailPreview({
   onOpenImage: () => void;
   sharedSurface?: boolean;
 }) {
+  const openTarget = useCommand<{ target: string }>("system.openExternalTarget");
   const assetSrc = useClipboardAssetSrc(
     capture.contentKind === "image" ? capture.assetPath : null,
   );
@@ -97,7 +104,7 @@ export function CaptureDetailPreview({
           controls={(
             <button
               type="button"
-              onClick={() => void openExternalTarget(target)}
+              onClick={() => void openTarget.execute({ target })}
               className="app-kind-text-link inline-flex h-8 items-center gap-2 rounded-full border border-border/70 bg-card/85 px-3 text-xs font-medium shadow-sm transition hover:border-primary/30 hover:bg-secondary/60"
             >
               Preview in browser
@@ -242,9 +249,20 @@ function HtmlRichPreview({ html }: { html: string }) {
     FORBID_ATTR: ["style", "class"],
   });
 
+  const handleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const target = getExternalLinkTargetFromEventTarget(event.target);
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    void openExternalLink(target);
+  };
+
   return (
     <div
       className="app-markdown-preview app-selectable app-kind-text-text text-[14px] leading-7"
+      onClick={handleClick}
       dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
     />
   );
@@ -253,7 +271,38 @@ function HtmlRichPreview({ html }: { html: string }) {
 function MarkdownTextPreview({ markdown }: { markdown: string }) {
   return (
     <div className="app-markdown-preview app-selectable app-kind-text-text text-[14px] leading-7">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
+        components={{
+          a: ({ href, children, ...props }) => {
+            const target = resolveExternalLinkTarget(href ?? "");
+
+            if (!target) {
+              return (
+                <a {...props} href={href}>
+                  {children}
+                </a>
+              );
+            }
+
+            return (
+              <a
+                {...props}
+                href={target}
+                rel="noopener noreferrer"
+                target="_blank"
+                onClick={(event) => {
+                  event.preventDefault();
+                  void openExternalLink(target);
+                }}
+              >
+                {children}
+              </a>
+            );
+          },
+        }}
+      >
         {markdown}
       </ReactMarkdown>
     </div>

@@ -1,11 +1,17 @@
 export const THEME_MODE_STORAGE_KEY = "tino.theme.mode";
 export const THEME_NAME_STORAGE_KEY = "tino.theme.name";
+export const THEME_PREFERENCE_CHANGED_EVENT = "theme-preference-changed";
 
 export const themeModes = ["light", "dark", "system"] as const;
 export type ThemeMode = (typeof themeModes)[number];
 
 export const themeNames = ["tino", "ocean"] as const;
 export type ThemeName = (typeof themeNames)[number];
+
+export type ThemePreference = {
+  mode: ThemeMode;
+  themeName: ThemeName;
+};
 
 export function isThemeMode(value: string | null): value is ThemeMode {
   return !!value && themeModes.includes(value as ThemeMode);
@@ -71,10 +77,9 @@ export function getInitialThemePreference() {
   return {
     mode: readStoredThemeMode(),
     themeName: readStoredThemeName(),
-  };
+  } satisfies ThemePreference;
 }
 
 export function bootstrapTheme() {
   applyTheme(getInitialThemePreference());
 }
-

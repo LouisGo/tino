@@ -4,6 +4,9 @@ import { Copy, Expand, ImageIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useCommand } from "@/core/commands";
+import { useContextMenu } from "@/core/context-menu";
+import { clipboardCaptureContextMenu } from "@/features/clipboard/clipboard-capture-context-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   CaptureDetailPreview,
@@ -16,7 +19,6 @@ import {
   statusVariant,
 } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
-import { copyCaptureToClipboard, openImageInPreview } from "@/lib/tauri";
 import { formatRelativeTimestamp } from "@/lib/time";
 import type { ClipboardCapture } from "@/types/shell";
 
@@ -29,6 +31,10 @@ export function ClipboardCaptureDetail({
   capture: ClipboardCapture | null;
   onOpenImage: () => void;
 }) {
+  const copyCapture = useCommand<{ capture: ClipboardCapture }>("clipboard.copyCapture");
+  const openImagePreview = useCommand<{ path: string }>("system.openImageInPreview");
+  const { onContextMenu } = useContextMenu(clipboardCaptureContextMenu);
+
   if (!capture) {
     return (
       <div className="p-4">
@@ -42,7 +48,10 @@ export function ClipboardCaptureDetail({
 
   return (
     <>
-      <div className="app-card-header-elevated flex h-[50px] items-center justify-between gap-3 border-b border-border/70 px-4">
+      <div
+        className="app-card-header-elevated flex h-[50px] items-center justify-between gap-3 border-b border-border/70 px-4"
+        onContextMenu={(event) => onContextMenu(event, capture)}
+      >
         <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
           <Badge className={kindBadgeClass(capture.contentKind)}>
             {formatKindLabel(capture.contentKind)}
@@ -56,7 +65,10 @@ export function ClipboardCaptureDetail({
         </div>
 
         <div className="flex shrink-0 items-center justify-end gap-2 whitespace-nowrap">
-          <TooltipIconButton label="Copy Again" onClick={() => void copyCaptureToClipboard(capture)}>
+          <TooltipIconButton
+            label="Copy Again"
+            onClick={() => void copyCapture.execute({ capture })}
+          >
             <Copy />
           </TooltipIconButton>
           {capture.contentKind === "image" && capture.assetPath ? (
@@ -67,7 +79,10 @@ export function ClipboardCaptureDetail({
           {capture.contentKind === "image" && capture.assetPath ? (
             <TooltipIconButton
               label="Open in Preview"
-              onClick={() => void openImageInPreview(capture.assetPath ?? "")}
+              onClick={() =>
+                void openImagePreview.execute({
+                  path: capture.assetPath ?? "",
+                })}
             >
               <ImageIcon />
             </TooltipIconButton>
@@ -77,6 +92,7 @@ export function ClipboardCaptureDetail({
 
       <div
         className={`grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto] ${capturePreviewSurfaceClassName(capture.contentKind)}`}
+        onContextMenu={(event) => onContextMenu(event, capture)}
       >
         <div className="min-h-0 min-w-0">
           <CaptureDetailPreview capture={capture} onOpenImage={onOpenImage} sharedSurface />
@@ -123,7 +139,7 @@ function DetailInformation({ capture }: { capture: ClipboardCapture }) {
   return (
     <section className="px-2.5 pb-2.5 pt-0">
       <div className="app-detail-grid-shell overflow-hidden rounded-[18px]">
-        <div className="app-detail-grid h-[156px]">
+        <div className="app-detail-grid h-[120px]">
           {cells.map((cell, index) => (
             <div
               key={cell ? cell.label : `empty-${index}`}

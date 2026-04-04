@@ -5,12 +5,14 @@ import {
   THEME_NAME_STORAGE_KEY,
   getInitialThemePreference,
   type ThemeMode,
+  type ThemePreference,
   type ThemeName,
 } from "@/lib/theme";
 
 type ThemeState = {
   mode: ThemeMode;
   themeName: ThemeName;
+  setPreference: (value: ThemePreference) => void;
   setMode: (value: ThemeMode) => void;
   setThemeName: (value: ThemeName) => void;
   toggleDarkLight: () => void;
@@ -30,6 +32,10 @@ const initialTheme = getInitialThemePreference();
 export const useThemeStore = create<ThemeState>((set) => ({
   mode: initialTheme.mode,
   themeName: initialTheme.themeName,
+  setPreference: ({ mode, themeName }) => {
+    persistThemePreference(mode, themeName);
+    set({ mode, themeName });
+  },
   setMode: (value) =>
     set((state) => {
       persistThemePreference(value, state.themeName);

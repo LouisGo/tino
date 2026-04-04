@@ -24,6 +24,7 @@
   --input: oklch(0.9 0.01 92);
   --ring: oklch(0.53 0.12 171);
   --radius: 1rem;
+  --panel-radius: 30px;
   --sidebar: oklch(0.985 0.012 96);
   --sidebar-foreground: oklch(0.28 0.02 96);
   --sidebar-primary: oklch(0.53 0.12 171);
@@ -406,7 +407,8 @@
   }
 
   .app-hero-surface {
-    @apply overflow-hidden rounded-[30px] border border-border/80 bg-surface-panel shadow-sm;
+    @apply overflow-hidden border border-border/80 bg-surface-panel shadow-sm;
+    border-radius: var(--panel-radius);
   }
 
   .app-hero-control {
@@ -422,7 +424,8 @@
   }
 
   .app-board-surface {
-    @apply rounded-[30px] border border-border/80 bg-surface-panel shadow-sm;
+    @apply border border-border/80 bg-surface-panel shadow-sm;
+    border-radius: var(--panel-radius);
   }
 
   .app-board-toolbar {

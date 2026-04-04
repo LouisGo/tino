@@ -1,8 +1,19 @@
-import { useState } from "react";
+import { type MouseEvent, useState } from "react";
 
-import { Search, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { LoaderCircle, Search, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { useCommand } from "@/core/commands";
 import {
   Select,
   SelectContent,
@@ -28,6 +39,9 @@ export function ClipboardBoardPanel({
   emptyStateTitle,
   emptyStateDescription,
   onRetry,
+  fillHeight = false,
+  windowMode = false,
+  autoFocusSearch = false,
 }: {
   captures: ClipboardCapture[];
   hasNextPage?: boolean;
@@ -37,9 +51,18 @@ export function ClipboardBoardPanel({
   emptyStateTitle?: string;
   emptyStateDescription?: string;
   onRetry?: () => void;
+  fillHeight?: boolean;
+  windowMode?: boolean;
+  autoFocusSearch?: boolean;
 }) {
-  const [selectedCaptureId, setSelectedCaptureId] = useState<string | null>(null);
-  const [previewingImageId, setPreviewingImageId] = useState<string | null>(null);
+  const selectedCaptureId = useClipboardBoardStore((state) => state.selectedCaptureId);
+  const previewingImageId = useClipboardBoardStore((state) => state.previewingImageId);
+  const pendingDeleteCapture = useClipboardBoardStore((state) => state.pendingDeleteCapture);
+  const setPreviewingImageId = useClipboardBoardStore((state) => state.setPreviewingImageId);
+  const setPendingDeleteCapture = useClipboardBoardStore((state) => state.setPendingDeleteCapture);
+  const openImageLightbox = useCommand<{ captureId: string }>("clipboard.showImageLightbox");
+  const confirmDeleteCapture = useCommand<{ capture: ClipboardCapture }>("clipboard.deleteCapture");
+  const [isDeleting, setIsDeleting] = useState(false);
   const captureGroups = groupCapturesByDay(captures);
   const selectedCapture =
     captures.find((capture) => capture.id === selectedCaptureId) ??
@@ -48,17 +71,71 @@ export function ClipboardBoardPanel({
   const previewingImage =
     captures.find((capture) => capture.id === previewingImageId) ?? null;
 
+  function closeDeleteDialog() {
+    setPendingDeleteCapture(null);
+  }
+
+  function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
+    return (
+      (typeof value === "object" || typeof value === "function") &&
+      value !== null &&
+      "then" in value
+    );
+  }
+
+  function handleConfirmDelete(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    if (!pendingDeleteCapture || isDeleting) {
+      return;
+    }
+
+    try {
+      const result = confirmDeleteCapture.execute({ capture: pendingDeleteCapture });
+      if (!isPromiseLike(result)) {
+        closeDeleteDialog();
+        return;
+      }
+
+      setIsDeleting(true);
+      void Promise.resolve(result)
+        .then(() => {
+          closeDeleteDialog();
+        })
+        .catch((error) => {
+          console.error("[clipboard] failed to delete capture", error);
+        })
+        .finally(() => {
+          setIsDeleting(false);
+        });
+    } catch (error) {
+      console.error("[clipboard] failed to delete capture", error);
+    }
+  }
+
   return (
     <>
-      <section className="app-board-surface overflow-hidden">
-        <ClipboardBoardToolbar />
+      <section
+        className={cn(
+          "app-board-surface overflow-hidden",
+          windowMode && "flex h-screen flex-col",
+        )}
+      >
+        <ClipboardBoardToolbar autoFocusSearch={autoFocusSearch} />
 
-        <div className="overflow-hidden">
-          <div className="grid h-[clamp(34rem,68vh,46rem)] grid-cols-[minmax(240px,28%)_minmax(0,1fr)] items-stretch gap-0 md:grid-cols-[260px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)] xl:h-[calc(100vh-18rem)] xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]">
+        <div className={cn("overflow-hidden", windowMode && "min-h-0 flex-1")}>
+          <div
+            className={cn(
+              "grid grid-cols-[minmax(240px,28%)_minmax(0,1fr)] items-stretch gap-0 md:grid-cols-[260px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]",
+              windowMode
+                ? "h-full"
+                : fillHeight
+                ? "h-[calc(100vh-3.75rem)]"
+                : "h-[clamp(34rem,68vh,46rem)] xl:h-[calc(100vh-18rem)]",
+            )}
+          >
             <ClipboardCaptureList
               groups={captureGroups}
               selectedCaptureId={selectedCapture?.id ?? null}
-              onSelectCapture={setSelectedCaptureId}
               hasNextPage={hasNextPage}
               isRefreshingList={isRefreshingList}
               isFetchingNextPage={isFetchingNextPage}
@@ -73,7 +150,7 @@ export function ClipboardBoardPanel({
                 capture={selectedCapture}
                 onOpenImage={() => {
                   if (selectedCapture) {
-                    setPreviewingImageId(selectedCapture.id);
+                    void openImageLightbox.execute({ captureId: selectedCapture.id });
                   }
                 }}
               />
@@ -86,11 +163,49 @@ export function ClipboardBoardPanel({
         capture={previewingImage}
         onClose={() => setPreviewingImageId(null)}
       />
+
+      <AlertDialog
+        open={Boolean(pendingDeleteCapture)}
+        onOpenChange={(open: boolean) => {
+          if (!open && !isDeleting) {
+            closeDeleteDialog();
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-[min(25rem,calc(100vw-2rem))]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete This Clipboard Capture?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the item from clipboard history and the local board cache.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting || !pendingDeleteCapture}
+              onClick={handleConfirmDelete}
+            >
+              {isDeleting ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Capture"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
 
-function ClipboardBoardToolbar() {
+function ClipboardBoardToolbar({
+  autoFocusSearch = false,
+}: {
+  autoFocusSearch?: boolean;
+}) {
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
   const setSearchValue = useClipboardBoardStore((state) => state.setSearchValue);
@@ -107,6 +222,8 @@ function ClipboardBoardToolbar() {
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             placeholder="Type to filter entries..."
+            data-clipboard-search-input="true"
+            autoFocus={autoFocusSearch}
             className={cn(
               "h-11 rounded-[20px] border-border/70 bg-card/90 pl-10 text-sm shadow-none",
               hasSearchValue ? "pr-11" : "",

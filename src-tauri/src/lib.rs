@@ -16,12 +16,14 @@ use std::{
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, PhysicalPosition, PhysicalSize, RunEvent, WebviewUrl,
-    WebviewWindowBuilder, WindowEvent,
+    AppHandle, Manager, PhysicalPosition, PhysicalSize, RunEvent, WebviewUrl, WebviewWindowBuilder,
+    WindowEvent,
 };
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, WEBVIEW_TARGET};
 
 const WINDOW_STATE_FILE_NAME: &str = "window-state.json";
+const CLIPBOARD_WINDOW_WIDTH: f64 = 800.0;
+const CLIPBOARD_WINDOW_HEIGHT: f64 = 500.0;
 const LOG_MAX_FILE_SIZE_BYTES: u128 = 10_000_000;
 const LOG_KEEP_COUNT: usize = 10;
 const LOG_RETENTION_DAYS: u64 = 14;
@@ -120,10 +122,15 @@ fn open_clipboard_window(app: &AppHandle) {
 
     match WebviewWindowBuilder::new(app, "clipboard", WebviewUrl::App("/".into()))
         .title("Clipboard")
-        .inner_size(1120.0, 720.0)
-        .min_inner_size(920.0, 620.0)
+        .inner_size(CLIPBOARD_WINDOW_WIDTH, CLIPBOARD_WINDOW_HEIGHT)
+        .min_inner_size(CLIPBOARD_WINDOW_WIDTH, CLIPBOARD_WINDOW_HEIGHT)
+        .max_inner_size(CLIPBOARD_WINDOW_WIDTH, CLIPBOARD_WINDOW_HEIGHT)
         .center()
-        .resizable(true)
+        .resizable(false)
+        .transparent(true)
+        .decorations(false)
+        .always_on_top(true)
+        .shadow(true)
         .build()
     {
         Ok(window) => focus_window(&window),
