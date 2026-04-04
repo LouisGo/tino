@@ -3,6 +3,8 @@ mod capture;
 mod commands;
 
 use app_state::AppState;
+#[cfg(target_os = "macos")]
+use objc2_app_kit::NSWindow;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 use tauri::{
@@ -93,6 +95,23 @@ fn focus_main_window(app: &AppHandle) {
     }
 }
 
+#[cfg(target_os = "macos")]
+fn configure_native_macos_window(app: &AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+
+    let Ok(ns_window) = window.ns_window() else {
+        return;
+    };
+
+    let ns_window: &NSWindow = unsafe { &*ns_window.cast() };
+    ns_window.setMovableByWindowBackground(false);
+}
+
+#[cfg(not(target_os = "macos"))]
+fn configure_native_macos_window(_app: &AppHandle) {}
+
 fn create_tray(app: &AppHandle) -> tauri::Result<()> {
     let open_item = MenuItem::with_id(app, "open", "Open Tino", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -151,6 +170,7 @@ pub fn run() {
 
             create_tray(app.handle())?;
             restore_main_window_state(app.handle());
+            configure_native_macos_window(app.handle());
 
             let app_state = AppState::new(app.handle())?;
             capture::spawn_clipboard_watcher(app_state.clone());
@@ -160,9 +180,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::shell::get_dashboard_snapshot,
+            commands::shell::get_clipboard_page,
             commands::shell::get_app_settings,
             commands::shell::save_app_settings,
-            commands::shell::load_image_asset_data_url,
             commands::shell::open_in_preview,
             commands::shell::copy_capture_to_clipboard,
             commands::shell::reveal_in_file_manager

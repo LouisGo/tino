@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
@@ -6,9 +6,12 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
   ClipboardCapture,
+  ClipboardPageResult,
   DashboardSnapshot,
   SettingsDraft,
 } from "@/types/shell";
+
+export const clipboardCapturesUpdatedEvent = "clipboard-captures-updated";
 
 const mockImageAsset = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
@@ -34,6 +37,7 @@ const mockSettings: SettingsDraft = {
   baseUrl: "https://api.openai.com/v1",
   apiKey: "",
   model: "gpt-5.4-mini",
+  clipboardHistoryDays: 3,
 };
 
 const mockSnapshot: DashboardSnapshot = {
@@ -49,6 +53,9 @@ const mockSnapshot: DashboardSnapshot = {
     {
       id: "cap_001",
       source: "clipboard",
+      sourceAppName: "Typora",
+      sourceAppBundleId: "abnerworks.Typora",
+      sourceAppIconPath: mockImageAsset,
       contentKind: "rich_text",
       preview: "Rust capture pipeline now writes into daily Markdown files.",
       secondaryPreview: "2 lines · 85 chars",
@@ -63,6 +70,9 @@ const mockSnapshot: DashboardSnapshot = {
     {
       id: "cap_002",
       source: "clipboard",
+      sourceAppName: "Safari",
+      sourceAppBundleId: "com.apple.Safari",
+      sourceAppIconPath: mockImageAsset,
       contentKind: "link",
       preview: "openai.com/docs/guides/text",
       secondaryPreview: "openai.com",
@@ -74,6 +84,9 @@ const mockSnapshot: DashboardSnapshot = {
     {
       id: "cap_003",
       source: "clipboard",
+      sourceAppName: "CleanShot X",
+      sourceAppBundleId: "com.bjango.cleanshotx",
+      sourceAppIconPath: mockImageAsset,
       contentKind: "image",
       preview: "Clipboard image",
       secondaryPreview: "1280x800 · 68.4 KB",
@@ -81,6 +94,7 @@ const mockSnapshot: DashboardSnapshot = {
       status: "archived",
       rawText: "Clipboard image · 1280x800",
       assetPath: mockImageAsset,
+      thumbnailPath: mockImageAsset,
       imageWidth: 1280,
       imageHeight: 800,
       byteSize: 70000,
@@ -106,6 +120,61 @@ export async function getDashboardSnapshot() {
   }
 
   return invoke<DashboardSnapshot>("get_dashboard_snapshot");
+}
+
+export async function getClipboardPage(request: {
+  page: number;
+  pageSize: number;
+  search?: string;
+  filter?: "all" | "text" | "link" | "image";
+}) {
+  if (!isTauriRuntime()) {
+    const normalizedSearch = request.search?.trim().toLowerCase() ?? "";
+    const normalizedFilter = request.filter ?? "all";
+    const searchMatched = mockSnapshot.recentCaptures.filter((capture) => {
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [
+        capture.preview,
+        capture.secondaryPreview ?? "",
+        capture.rawText,
+        capture.linkUrl ?? "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch);
+    });
+    const filtered = searchMatched.filter((capture) =>
+      normalizedFilter === "all"
+        ? true
+        : normalizedFilter === "text"
+          ? capture.contentKind === "plain_text" || capture.contentKind === "rich_text"
+          : capture.contentKind === normalizedFilter);
+    const total = filtered.length;
+    const start = request.page * request.pageSize;
+    const end = Math.min(start + request.pageSize, total);
+    const captures = start >= total ? [] : filtered.slice(start, end);
+
+    return {
+      captures,
+      page: request.page,
+      pageSize: request.pageSize,
+      total,
+      hasMore: end < total,
+      historyDays: mockSettings.clipboardHistoryDays,
+      summary: {
+        total: searchMatched.length,
+        text: searchMatched.filter((capture) =>
+          capture.contentKind === "plain_text" || capture.contentKind === "rich_text").length,
+        links: searchMatched.filter((capture) => capture.contentKind === "link").length,
+        images: searchMatched.filter((capture) => capture.contentKind === "image").length,
+      },
+    } satisfies ClipboardPageResult;
+  }
+
+  return invoke<ClipboardPageResult>("get_clipboard_page", { request });
 }
 
 export async function getAppSettings() {
@@ -224,12 +293,12 @@ export async function copyCaptureToClipboard(capture: ClipboardCapture) {
   });
 }
 
-export async function loadImageAssetDataUrl(assetPath: string) {
+export function resolveAssetUrl(assetPath?: string | null) {
   if (!assetPath) {
     return null;
   }
 
-  if (assetPath.startsWith("data:")) {
+  if (assetPath.startsWith("data:") || assetPath.startsWith("blob:")) {
     return assetPath;
   }
 
@@ -237,5 +306,5 @@ export async function loadImageAssetDataUrl(assetPath: string) {
     return assetPath;
   }
 
-  return invoke<string>("load_image_asset_data_url", { path: assetPath });
+  return convertFileSrc(assetPath);
 }

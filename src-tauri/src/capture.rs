@@ -6,9 +6,11 @@ use {
     image::{GenericImageView, ImageFormat},
     log::{error, info},
     objc2_app_kit::{
-        NSPasteboard, NSPasteboardTypeHTML, NSPasteboardTypePNG, NSPasteboardTypeRTF,
-        NSPasteboardTypeString, NSPasteboardTypeTIFF,
+        NSBitmapImageFileType, NSBitmapImageRep, NSPasteboard, NSPasteboardTypeHTML,
+        NSPasteboardTypePNG, NSPasteboardTypeRTF, NSPasteboardTypeString, NSPasteboardTypeTIFF,
+        NSRunningApplication, NSWorkspace,
     },
+    objc2_foundation::{NSDictionary, NSString},
     sha2::{Digest, Sha256},
     std::{
         io::Cursor,
@@ -154,19 +156,21 @@ fn current_change_count() -> Result<isize, String> {
 #[cfg(target_os = "macos")]
 fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
     let pasteboard = NSPasteboard::generalPasteboard();
-    let raw_text = unsafe { pasteboard.stringForType(NSPasteboardTypeString) }
+    let (source_app_name, source_app_bundle_id, source_app_icon_bytes) =
+        read_clipboard_source_application(&pasteboard);
+    let plain_text = unsafe { pasteboard.stringForType(NSPasteboardTypeString) }
         .map(|text| text.to_string())
         .unwrap_or_default();
-    let trimmed_raw_text = raw_text.trim();
-
-    let rich_text = unsafe { pasteboard.dataForType(NSPasteboardTypeHTML) }
-        .and_then(|data| decode_clipboard_bytes("html", data.to_vec()));
-
-    let rich_text = match rich_text {
-        Some(value) => Some(value),
-        None => unsafe { pasteboard.dataForType(NSPasteboardTypeRTF) }
-            .and_then(|data| decode_clipboard_bytes("rtf", data.to_vec())),
+    let rich_text = read_clipboard_rich_text(&pasteboard);
+    let raw_text = if plain_text.trim().is_empty() {
+        rich_text
+            .as_ref()
+            .and_then(|(format, content)| extract_plain_text_from_rich_content(format, content))
+            .unwrap_or_default()
+    } else {
+        plain_text
     };
+    let trimmed_raw_text = raw_text.trim();
 
     if !trimmed_raw_text.is_empty() {
         let content_kind = if looks_like_link(trimmed_raw_text) {
@@ -180,12 +184,14 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
         let (raw_rich_format, raw_rich) = rich_text
             .map(|(format, content)| (Some(format), Some(content)))
             .unwrap_or((None, None));
-        let hash =
-            build_capture_hash(content_kind, &raw_text, raw_rich.as_deref(), None::<&[u8]>);
+        let hash = build_capture_hash(content_kind, &raw_text, raw_rich.as_deref(), None::<&[u8]>);
 
         return Ok(Some(CaptureRecord {
             id: format!("cap_{}", Uuid::now_v7().simple()),
             source: "clipboard".into(),
+            source_app_name: source_app_name.clone(),
+            source_app_bundle_id: source_app_bundle_id.clone(),
+            source_app_icon_path: None,
             captured_at: Local::now().to_rfc3339(),
             content_kind: content_kind.into(),
             raw_text: raw_text.clone(),
@@ -197,11 +203,13 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
                 None
             },
             asset_path: None,
+            thumbnail_path: None,
             image_width: None,
             image_height: None,
             byte_size: None,
             hash,
             image_bytes: None,
+            source_app_icon_bytes: source_app_icon_bytes.clone(),
         }));
     }
 
@@ -212,6 +220,9 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
         return Ok(Some(CaptureRecord {
             id: format!("cap_{}", Uuid::now_v7().simple()),
             source: "clipboard".into(),
+            source_app_name,
+            source_app_bundle_id,
+            source_app_icon_path: None,
             captured_at: Local::now().to_rfc3339(),
             content_kind: "image".into(),
             raw_text,
@@ -219,15 +230,188 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
             raw_rich_format: None,
             link_url: None,
             asset_path: None,
+            thumbnail_path: None,
             image_width: Some(width),
             image_height: Some(height),
             byte_size: Some(byte_size as u64),
             hash,
             image_bytes: Some(image_bytes),
+            source_app_icon_bytes,
         }));
     }
 
     Ok(None)
+}
+
+#[cfg(target_os = "macos")]
+fn read_clipboard_source_application(
+    pasteboard: &NSPasteboard,
+) -> (Option<String>, Option<String>, Option<Vec<u8>>) {
+    let workspace = NSWorkspace::sharedWorkspace();
+    let item = pasteboard
+        .pasteboardItems()
+        .and_then(|items| items.firstObject());
+
+    if let Some(bundle_id) = item
+        .as_ref()
+        .and_then(|item| read_pasteboard_source_bundle_id(item))
+    {
+        return resolve_source_application(&workspace, &bundle_id);
+    }
+
+    if let Some(bundle_id) = item
+        .as_ref()
+        .and_then(|item| infer_source_bundle_id_from_item_types(&workspace, item))
+    {
+        return resolve_source_application(&workspace, &bundle_id);
+    };
+
+    workspace
+        .frontmostApplication()
+        .as_deref()
+        .map(snapshot_running_application)
+        .unwrap_or((None, None, None))
+}
+
+#[cfg(target_os = "macos")]
+fn read_pasteboard_source_bundle_id(item: &objc2_app_kit::NSPasteboardItem) -> Option<String> {
+    let source_type = NSString::from_str("org.nspasteboard.source");
+    let bundle_id = item.stringForType(&source_type)?.to_string();
+    let normalized = bundle_id.trim();
+
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized.to_string())
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn infer_source_bundle_id_from_item_types(
+    workspace: &NSWorkspace,
+    item: &objc2_app_kit::NSPasteboardItem,
+) -> Option<String> {
+    let running_applications = workspace.runningApplications();
+    let mut bundle_ids = running_applications
+        .iter()
+        .filter_map(|application| {
+            application
+                .bundleIdentifier()
+                .map(|value| value.to_string())
+        })
+        .filter(|bundle_id| is_vendor_bundle_id(bundle_id))
+        .collect::<Vec<_>>();
+
+    bundle_ids.sort_by_key(|bundle_id| std::cmp::Reverse(bundle_id.len()));
+
+    for pasteboard_type in item.types().iter() {
+        let type_name = pasteboard_type.to_string();
+        if is_generic_pasteboard_type(&type_name) {
+            continue;
+        }
+
+        for bundle_id in &bundle_ids {
+            if type_name == *bundle_id
+                || type_name
+                    .strip_prefix(bundle_id)
+                    .is_some_and(|suffix| suffix.starts_with('.') || suffix.starts_with('/'))
+            {
+                return Some(bundle_id.clone());
+            }
+        }
+    }
+
+    None
+}
+
+#[cfg(target_os = "macos")]
+fn resolve_source_application(
+    workspace: &NSWorkspace,
+    bundle_id: &str,
+) -> (Option<String>, Option<String>, Option<Vec<u8>>) {
+    let bundle_identifier = NSString::from_str(bundle_id);
+    let applications =
+        NSRunningApplication::runningApplicationsWithBundleIdentifier(&bundle_identifier);
+
+    if let Some(application) = applications.firstObject() {
+        return snapshot_running_application(&application);
+    }
+
+    let app_url = workspace.URLForApplicationWithBundleIdentifier(&bundle_identifier);
+    let app_name = app_url
+        .as_ref()
+        .and_then(|url| url.lastPathComponent())
+        .map(|value| value.to_string())
+        .map(|value| value.trim_end_matches(".app").to_string())
+        .filter(|value| !value.trim().is_empty());
+    let icon_bytes = app_url
+        .as_ref()
+        .and_then(|url| url.path())
+        .map(|path| workspace.iconForFile(&path))
+        .and_then(|icon| ns_image_to_png_bytes(&icon));
+
+    (app_name, Some(bundle_id.to_string()), icon_bytes)
+}
+
+#[cfg(target_os = "macos")]
+fn snapshot_running_application(
+    application: &NSRunningApplication,
+) -> (Option<String>, Option<String>, Option<Vec<u8>>) {
+    let name = application.localizedName().map(|value| value.to_string());
+    let bundle_id = application
+        .bundleIdentifier()
+        .map(|value| value.to_string());
+    let icon_bytes = application
+        .icon()
+        .and_then(|icon| ns_image_to_png_bytes(&icon));
+
+    (name, bundle_id, icon_bytes)
+}
+
+#[cfg(target_os = "macos")]
+fn ns_image_to_png_bytes(image: &objc2_app_kit::NSImage) -> Option<Vec<u8>> {
+    let tiff_data = image.TIFFRepresentation()?;
+    let bitmap_rep = NSBitmapImageRep::imageRepWithData(&tiff_data)?;
+    let properties = NSDictionary::new();
+    unsafe {
+        bitmap_rep.representationUsingType_properties(NSBitmapImageFileType::PNG, &properties)
+    }
+    .map(|data| data.to_vec())
+}
+
+#[cfg(target_os = "macos")]
+fn is_generic_pasteboard_type(type_name: &str) -> bool {
+    let normalized = type_name.trim();
+    normalized.is_empty()
+        || normalized.starts_with("public.")
+        || normalized.starts_with("dyn.")
+        || normalized.starts_with("org.nspasteboard.")
+        || normalized.starts_with("com.apple.")
+        || normalized.starts_with("CorePasteboardFlavorType")
+        || normalized.starts_with("Apple ")
+        || normalized.starts_with("NeXT ")
+        || normalized == "NSStringPboardType"
+        || normalized == "NSFilenamesPboardType"
+}
+
+#[cfg(target_os = "macos")]
+fn is_vendor_bundle_id(bundle_id: &str) -> bool {
+    let normalized = bundle_id.trim();
+    !normalized.is_empty()
+        && !normalized.starts_with("com.apple.")
+        && !normalized.starts_with("org.nspasteboard.")
+}
+
+#[cfg(target_os = "macos")]
+fn read_clipboard_rich_text(pasteboard: &NSPasteboard) -> Option<(String, String)> {
+    let rich_text = unsafe { pasteboard.dataForType(NSPasteboardTypeHTML) }
+        .and_then(|data| decode_clipboard_bytes("html", data.to_vec()));
+
+    match rich_text {
+        Some(value) => Some(value),
+        None => unsafe { pasteboard.dataForType(NSPasteboardTypeRTF) }
+            .and_then(|data| decode_clipboard_bytes("rtf", data.to_vec())),
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -246,12 +430,149 @@ fn decode_clipboard_bytes(format: &str, bytes: Vec<u8>) -> Option<(String, Strin
 }
 
 #[cfg(target_os = "macos")]
+fn extract_plain_text_from_rich_content(format: &str, content: &str) -> Option<String> {
+    let extracted = match format {
+        "html" => extract_plain_text_from_html(content),
+        "rtf" => extract_plain_text_from_rtf(content),
+        _ => content.trim().to_string(),
+    };
+
+    let normalized = extracted
+        .lines()
+        .map(str::trim_end)
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_string();
+
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn extract_plain_text_from_html(content: &str) -> String {
+    let mut output = String::new();
+    let mut inside_tag = false;
+    let mut entity = String::new();
+    let mut inside_entity = false;
+
+    for char in content.chars() {
+        if inside_tag {
+            if char == '>' {
+                inside_tag = false;
+            }
+            continue;
+        }
+
+        if inside_entity {
+            if char == ';' {
+                output.push_str(match entity.as_str() {
+                    "nbsp" => " ",
+                    "lt" => "<",
+                    "gt" => ">",
+                    "amp" => "&",
+                    "quot" => "\"",
+                    "#39" => "'",
+                    _ => "",
+                });
+                entity.clear();
+                inside_entity = false;
+            } else {
+                entity.push(char);
+            }
+            continue;
+        }
+
+        match char {
+            '<' => inside_tag = true,
+            '&' => {
+                inside_entity = true;
+                entity.clear();
+            }
+            _ => output.push(char),
+        }
+    }
+
+    output
+}
+
+#[cfg(target_os = "macos")]
+fn extract_plain_text_from_rtf(content: &str) -> String {
+    let mut output = String::new();
+    let mut chars = content.chars().peekable();
+
+    while let Some(char) = chars.next() {
+        match char {
+            '\\' => {
+                let mut control = String::new();
+                while let Some(next) = chars.peek() {
+                    if next.is_ascii_alphabetic() {
+                        control.push(*next);
+                        chars.next();
+                        continue;
+                    }
+                    break;
+                }
+
+                let mut numeric = String::new();
+                while let Some(next) = chars.peek() {
+                    if *next == '-' || next.is_ascii_digit() {
+                        numeric.push(*next);
+                        chars.next();
+                        continue;
+                    }
+                    break;
+                }
+
+                if matches!(chars.peek(), Some(' ')) {
+                    chars.next();
+                }
+
+                match control.as_str() {
+                    "par" | "line" => output.push('\n'),
+                    "tab" => output.push('\t'),
+                    "'" => {
+                        let hi = chars.next();
+                        let lo = chars.next();
+                        if let (Some(hi), Some(lo)) = (hi, lo) {
+                            let hex = format!("{hi}{lo}");
+                            if let Ok(byte) = u8::from_str_radix(&hex, 16) {
+                                output.push(byte as char);
+                            }
+                        }
+                    }
+                    "u" => {
+                        if let Ok(codepoint) = numeric.parse::<i32>() {
+                            if let Some(decoded) = char::from_u32(codepoint.max(0) as u32) {
+                                output.push(decoded);
+                            }
+                        }
+                        let _ = chars.next();
+                    }
+                    _ => {}
+                }
+            }
+            '{' | '}' => {}
+            _ => output.push(char),
+        }
+    }
+
+    output
+}
+
+#[cfg(target_os = "macos")]
 fn read_clipboard_image(
     pasteboard: &NSPasteboard,
 ) -> Result<Option<(Vec<u8>, u32, u32, usize)>, String> {
     let image_data = unsafe { pasteboard.dataForType(NSPasteboardTypePNG) }
         .map(|data| ("png", data.to_vec()))
-        .or_else(|| unsafe { pasteboard.dataForType(NSPasteboardTypeTIFF) }.map(|data| ("tiff", data.to_vec())));
+        .or_else(|| {
+            unsafe { pasteboard.dataForType(NSPasteboardTypeTIFF) }
+                .map(|data| ("tiff", data.to_vec()))
+        });
 
     let Some((format, bytes)) = image_data else {
         return Ok(None);
@@ -285,11 +606,15 @@ fn build_capture_hash(
     let mut hasher = Sha256::new();
     hasher.update(content_kind.as_bytes());
     hasher.update([0]);
-    hasher.update(raw_text.as_bytes());
 
-    if let Some(raw_rich) = raw_rich {
-        hasher.update([0]);
-        hasher.update(raw_rich.as_bytes());
+    let normalized_text = normalize_capture_hash_text(raw_text);
+    hasher.update(normalized_text.as_bytes());
+
+    if normalized_text.is_empty() {
+        if let Some(raw_rich) = raw_rich {
+            hasher.update([0]);
+            hasher.update(normalize_capture_hash_text(raw_rich).as_bytes());
+        }
     }
 
     if let Some(image_bytes) = image_bytes {
@@ -298,6 +623,19 @@ fn build_capture_hash(
     }
 
     format!("{:x}", hasher.finalize())
+}
+
+#[cfg(target_os = "macos")]
+fn normalize_capture_hash_text(input: &str) -> String {
+    input
+        .replace("\r\n", "\n")
+        .replace('\r', "\n")
+        .lines()
+        .map(str::trim_end)
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_string()
 }
 
 #[cfg(target_os = "macos")]

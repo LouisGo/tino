@@ -1,5 +1,6 @@
-use crate::app_state::{AppSettings, AppState, DashboardSnapshot};
-use base64::{engine::general_purpose::STANDARD, Engine as _};
+use crate::app_state::{
+    AppSettings, AppState, ClipboardPage, ClipboardPageRequest, DashboardSnapshot,
+};
 use serde::Deserialize;
 use std::{fs, path::Path, process::Command};
 use tauri::{AppHandle, State};
@@ -35,6 +36,14 @@ pub fn get_dashboard_snapshot(
 }
 
 #[tauri::command]
+pub fn get_clipboard_page(
+    state: State<'_, AppState>,
+    request: ClipboardPageRequest,
+) -> Result<ClipboardPage, String> {
+    state.clipboard_page(request)
+}
+
+#[tauri::command]
 pub fn get_app_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
     state.current_settings()
 }
@@ -45,12 +54,6 @@ pub fn save_app_settings(
     settings: AppSettings,
 ) -> Result<AppSettings, String> {
     state.save_settings(settings)
-}
-
-#[tauri::command]
-pub fn load_image_asset_data_url(path: String) -> Result<String, String> {
-    let bytes = fs::read(path).map_err(|error| error.to_string())?;
-    Ok(format!("data:image/png;base64,{}", STANDARD.encode(bytes)))
 }
 
 #[tauri::command]
@@ -267,11 +270,15 @@ fn build_capture_hash(
     let mut hasher = Sha256::new();
     hasher.update(content_kind.as_bytes());
     hasher.update([0]);
-    hasher.update(raw_text.as_bytes());
 
-    if let Some(raw_rich) = raw_rich {
-        hasher.update([0]);
-        hasher.update(raw_rich.as_bytes());
+    let normalized_text = normalize_capture_hash_text(raw_text);
+    hasher.update(normalized_text.as_bytes());
+
+    if normalized_text.is_empty() {
+        if let Some(raw_rich) = raw_rich {
+            hasher.update([0]);
+            hasher.update(normalize_capture_hash_text(raw_rich).as_bytes());
+        }
     }
 
     if let Some(image_bytes) = image_bytes {
@@ -280,4 +287,17 @@ fn build_capture_hash(
     }
 
     format!("{:x}", hasher.finalize())
+}
+
+#[cfg(target_os = "macos")]
+fn normalize_capture_hash_text(input: &str) -> String {
+    input
+        .replace("\r\n", "\n")
+        .replace('\r', "\n")
+        .lines()
+        .map(str::trim_end)
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_string()
 }

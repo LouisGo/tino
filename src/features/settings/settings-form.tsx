@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { useForm } from "@tanstack/react-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FolderSearch,
   Moon,
@@ -12,6 +12,7 @@ import {
   Sun,
 } from "lucide-react";
 
+import { queryKeys } from "@/app/query-keys";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,25 +53,63 @@ export function SettingsForm() {
   const hydrated = useRef(false);
 
   const { data: settings } = useQuery({
-    queryKey: ["app-settings"],
+    queryKey: queryKeys.appSettings(),
     queryFn: getAppSettings,
+    staleTime: Number.POSITIVE_INFINITY,
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: autostartEnabled } = useQuery({
-    queryKey: ["autostart-enabled"],
+    queryKey: queryKeys.autostartEnabled(),
     queryFn: getAutostartEnabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    placeholderData: (previousData) => previousData,
   });
 
   const form = useForm({
     defaultValues: settingsDraft,
     onSubmit: async ({ value }) => {
-      const saved = await saveAppSettings(value);
+      await saveSettingsMutation.mutateAsync(value);
+    },
+  });
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: saveAppSettings,
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(queryKeys.appSettings(), saved);
       setSettingsDraft(saved);
       form.reset(saved);
+
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["app-settings"] }),
-        queryClient.invalidateQueries({ queryKey: ["dashboard-snapshot"] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageBase() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageSummary() }),
       ]);
+    },
+  });
+
+  const toggleAutostartMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      await setAutostartEnabled(enabled);
+      return enabled;
+    },
+    onMutate: async (nextEnabled) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.autostartEnabled() });
+      const previousEnabled = queryClient.getQueryData<boolean>(
+        queryKeys.autostartEnabled(),
+      );
+
+      queryClient.setQueryData(queryKeys.autostartEnabled(), nextEnabled);
+      return { previousEnabled };
+    },
+    onError: (_error, _nextEnabled, context) => {
+      queryClient.setQueryData(
+        queryKeys.autostartEnabled(),
+        context?.previousEnabled,
+      );
+    },
+    onSuccess: (enabled) => {
+      queryClient.setQueryData(queryKeys.autostartEnabled(), enabled);
     },
   });
 
@@ -202,6 +241,37 @@ export function SettingsForm() {
             </div>
 
             <form.Field
+              name="clipboardHistoryDays"
+              children={(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor={field.name}>Clipboard History Window</Label>
+                  <select
+                    id={field.name}
+                    name={field.name}
+                    value={String(field.state.value)}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      field.handleChange(value);
+                      patchSettingsDraft({ clipboardHistoryDays: value });
+                    }}
+                    className="h-11 w-full rounded-2xl border border-border/80 bg-background/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                  >
+                    {[3, 4, 5, 6, 7].map((value) => (
+                      <option key={value} value={value}>
+                        Keep last {value} days
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Clipboard board and disk-backed clipboard archive are retained
+                    inside this rolling window.
+                  </p>
+                </div>
+              )}
+            />
+
+            <form.Field
               name="apiKey"
               children={(field) => (
                 <div className="space-y-2">
@@ -222,9 +292,13 @@ export function SettingsForm() {
               )}
             />
 
-            <Button type="submit" className="rounded-full">
+            <Button
+              type="submit"
+              className="rounded-full"
+              disabled={saveSettingsMutation.isPending}
+            >
               <Save />
-              Save Settings
+              {saveSettingsMutation.isPending ? "Saving..." : "Save Settings"}
             </Button>
           </form>
         </CardContent>
@@ -338,15 +412,13 @@ export function SettingsForm() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={async () => {
-                  await setAutostartEnabled(!(autostartEnabled ?? false));
-                  await queryClient.invalidateQueries({
-                    queryKey: ["autostart-enabled"],
-                  });
+                disabled={toggleAutostartMutation.isPending}
+                onClick={() => {
+                  void toggleAutostartMutation.mutateAsync(!(autostartEnabled ?? false));
                 }}
               >
                 <Rocket />
-                Toggle
+                {toggleAutostartMutation.isPending ? "Updating..." : "Toggle"}
               </Button>
             </div>
           </CardContent>

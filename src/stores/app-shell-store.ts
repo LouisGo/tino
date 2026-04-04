@@ -15,6 +15,7 @@ const initialSettingsDraft: SettingsDraft = {
   baseUrl: "",
   apiKey: "",
   model: "",
+  clipboardHistoryDays: 3,
 };
 
 export const useAppShellStore = create<AppShellState>((set) => ({

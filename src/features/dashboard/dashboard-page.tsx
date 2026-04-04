@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   Clock3,
@@ -11,6 +11,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { queryKeys } from "@/app/query-keys";
 import {
   Card,
   CardContent,
@@ -18,14 +19,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events";
 import { formatRelativeTimestamp } from "@/lib/time";
-import { getDashboardSnapshot, isTauriRuntime, revealPath } from "@/lib/tauri";
+import { getDashboardSnapshot, revealPath } from "@/lib/tauri";
 
 export function DashboardPage() {
+  const queryClient = useQueryClient();
   const { data, isFetching, refetch } = useQuery({
-    queryKey: ["dashboard-snapshot"],
+    queryKey: queryKeys.dashboardSnapshot(),
     queryFn: getDashboardSnapshot,
-    refetchInterval: isTauriRuntime() ? 3_000 : false,
+    staleTime: 2 * 60 * 1_000,
+    placeholderData: (previousData) => previousData,
+  });
+  useClipboardCaptureEvents(() => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() });
   });
   const recentCaptures = data?.recentCaptures.slice(0, 3) ?? [];
   const cards = [

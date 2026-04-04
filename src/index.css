@@ -64,10 +64,10 @@
   --sidebar-ring: oklch(0.72 0.13 171);
   --kind-text: oklch(0.72 0.012 260);
   --kind-text-soft: oklch(0.3 0.012 255);
-  --kind-link: oklch(0.76 0.045 240);
-  --kind-link-soft: oklch(0.31 0.028 238);
-  --kind-image: oklch(0.78 0.04 320);
-  --kind-image-soft: oklch(0.31 0.026 318);
+  --kind-link: oklch(0.79 0.07 255);
+  --kind-link-soft: oklch(0.32 0.035 252);
+  --kind-image: oklch(0.8 0.07 305);
+  --kind-image-soft: oklch(0.32 0.035 304);
   --gradient-preview-image: linear-gradient(
     180deg,
     color-mix(in oklch, var(--card) 88%, var(--background) 12%),
@@ -148,10 +148,10 @@
   --overlay-chip-foreground: oklch(0.98 0 0);
   --kind-text: oklch(0.5 0.015 260);
   --kind-text-soft: oklch(0.94 0.01 255);
-  --kind-link: oklch(0.58 0.06 240);
-  --kind-link-soft: oklch(0.94 0.025 235);
-  --kind-image: oklch(0.62 0.055 320);
-  --kind-image-soft: oklch(0.95 0.025 318);
+  --kind-link: oklch(0.6 0.085 255);
+  --kind-link-soft: oklch(0.95 0.03 252);
+  --kind-image: oklch(0.64 0.085 305);
+  --kind-image-soft: oklch(0.95 0.03 304);
   --gradient-body:
     radial-gradient(
       circle at top left,
@@ -314,6 +314,8 @@
   textarea,
   select,
   [contenteditable="true"],
+  [contenteditable="true"] *,
+  .app-selectable *,
   .app-selectable {
     user-select: text;
     -webkit-user-select: text;
@@ -330,16 +332,16 @@
   }
 
   html {
-    @apply h-full overflow-hidden scroll-smooth;
+    @apply min-h-full overflow-x-hidden overflow-y-auto scroll-smooth;
   }
 
   body {
-    @apply h-full overflow-hidden bg-background text-foreground antialiased;
+    @apply min-h-full overflow-x-hidden overflow-y-auto bg-background text-foreground antialiased;
     background-image: var(--gradient-body);
   }
 
   #root {
-    @apply h-full overflow-hidden;
+    @apply min-h-full;
   }
 }
 
@@ -410,7 +412,7 @@
   }
 
   .app-card-header-elevated {
-    background-image: var(--gradient-card-header);
+    background-color: color-mix(in oklch, var(--card) 94%, var(--background) 6%);
   }
 
   .app-board-surface {
@@ -418,11 +420,7 @@
   }
 
   .app-board-toolbar {
-    background-image: linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--card) 95%, var(--background) 5%),
-      color-mix(in oklch, var(--secondary) 48%, var(--card) 52%)
-    );
+    background-color: color-mix(in oklch, var(--card) 95%, var(--background) 5%);
   }
 
   .app-summary-tile {
@@ -433,8 +431,8 @@
     background-image:
       radial-gradient(
         circle at top left,
-        color-mix(in oklch, var(--accent) 14%, transparent) 0,
-        transparent 32%
+        color-mix(in oklch, var(--accent) 22%, transparent) 0,
+        transparent 40%
       ),
       var(--summary-tone-recent);
   }
@@ -443,8 +441,8 @@
     background-image:
       radial-gradient(
         circle at top left,
-        color-mix(in oklch, var(--kind-text) 12%, transparent) 0,
-        transparent 32%
+        color-mix(in oklch, var(--kind-text) 20%, transparent) 0,
+        transparent 40%
       ),
       var(--summary-tone-text);
   }
@@ -453,8 +451,8 @@
     background-image:
       radial-gradient(
         circle at top left,
-        color-mix(in oklch, var(--kind-link) 14%, transparent) 0,
-        transparent 32%
+        color-mix(in oklch, var(--kind-link) 22%, transparent) 0,
+        transparent 40%
       ),
       var(--summary-tone-links);
   }
@@ -463,8 +461,8 @@
     background-image:
       radial-gradient(
         circle at top left,
-        color-mix(in oklch, var(--kind-image) 14%, transparent) 0,
-        transparent 32%
+        color-mix(in oklch, var(--kind-image) 22%, transparent) 0,
+        transparent 40%
       ),
       var(--summary-tone-images);
   }
@@ -530,8 +528,8 @@
     background-image:
       radial-gradient(
         circle at top left,
-        color-mix(in oklch, var(--kind-image) 10%, transparent) 0,
-        transparent 30%
+        color-mix(in oklch, var(--kind-image) 18%, transparent) 0,
+        transparent 38%
       ),
       var(--gradient-preview-image);
   }
@@ -544,8 +542,8 @@
     background-image:
       radial-gradient(
         circle at top left,
-        color-mix(in oklch, var(--kind-link) 10%, transparent) 0,
-        transparent 30%
+        color-mix(in oklch, var(--kind-link) 18%, transparent) 0,
+        transparent 38%
       ),
       var(--gradient-preview-link);
   }
@@ -554,8 +552,8 @@
     background-image:
       radial-gradient(
         circle at top left,
-        color-mix(in oklch, var(--kind-text) 8%, transparent) 0,
-        transparent 30%
+        color-mix(in oklch, var(--kind-text) 16%, transparent) 0,
+        transparent 38%
       ),
       var(--gradient-preview-text);
   }
@@ -671,10 +669,14 @@
   }
 
   .app-markdown-preview {
-    @apply text-[14px] leading-7;
+    @apply min-w-0 max-w-full text-[14px] leading-7;
     color: color-mix(in oklch, var(--kind-text) 78%, var(--foreground) 22%);
     overflow-wrap: anywhere;
     word-break: break-word;
+  }
+
+  .app-markdown-preview * {
+    max-width: 100%;
   }
 
   .app-markdown-preview > :first-child {

@@ -51,11 +51,12 @@ export function CaptureDetailPreview({
 
   if (capture.contentKind === "image") {
     return (
-      <section className="app-preview-image h-full px-2.5 py-2.5">
+      <section className="app-preview-image flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5">
+        <PreviewHeader title="Image Preview" />
         <button
           type="button"
           onClick={onOpenImage}
-          className="group flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[22px] border border-border/70 bg-surface-panel px-4 py-4 shadow-sm transition hover:border-primary/30 hover:shadow-md"
+          className="group flex min-h-0 flex-1 items-center justify-center overflow-hidden px-3 pb-3 pt-2 transition"
         >
           {assetSrc ? (
             <div className="relative flex h-full min-h-0 w-full items-center justify-center">
@@ -85,8 +86,21 @@ export function CaptureDetailPreview({
     const hostname = target ? extractHostname(target) : null;
 
     return (
-      <section className="app-preview-link h-full px-2.5 py-2.5">
-        <div className="flex h-full min-h-0 w-full flex-col items-start justify-between rounded-[22px] border border-border/70 bg-surface-panel px-5 py-5 text-left shadow-sm">
+      <section className="app-preview-link flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5">
+        <PreviewHeader
+          title="Link Preview"
+          controls={(
+            <button
+              type="button"
+              onClick={() => void openExternalTarget(target)}
+              className="app-kind-text-link inline-flex h-8 items-center gap-2 rounded-full border border-border/70 bg-card/85 px-3 text-xs font-medium shadow-sm transition hover:border-primary/30 hover:bg-secondary/60"
+            >
+              Preview in browser
+              <ExternalLink className="size-4" />
+            </button>
+          )}
+        />
+        <div className="flex min-h-0 flex-1 flex-col items-start justify-between px-3.5 pb-3.5 pt-2 text-left">
           <div className="space-y-3">
             <div className="app-kind-badge-link inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
               <Link2 className="size-3.5" />
@@ -101,15 +115,6 @@ export function CaptureDetailPreview({
               </p>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => void openExternalTarget(target)}
-            className="app-kind-text-link inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/80 px-3 py-2 text-sm font-medium transition hover:border-primary/30 hover:bg-secondary/60"
-          >
-            Preview in browser
-            <ExternalLink className="size-4" />
-          </button>
         </div>
       </section>
     );
@@ -127,22 +132,20 @@ function TextCapturePreview({ capture }: { capture: ClipboardCapture }) {
   const previewKind = markdownPreview ? "markdown" : htmlPreview ? "html" : "text";
   const tabs = buildTextPreviewTabs(capture, previewKind);
   const showModeToggle = tabs.length > 1;
+  const previewTitle =
+    previewKind === "markdown"
+      ? "Markdown Preview"
+      : previewKind === "html"
+        ? "Rich Text Preview"
+        : "Text Preview";
 
   return (
-    <section className="app-preview-text h-full px-2.5 py-2.5">
-      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[22px] border border-border/70 bg-surface-panel shadow-sm">
-        <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-              {previewKind === "markdown"
-                ? "Markdown Preview"
-                : previewKind === "html"
-                  ? "Rich Text Preview"
-                  : "Text Preview"}
-            </p>
-          </div>
-          {showModeToggle ? (
-            <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/75 p-1">
+    <section className="app-preview-text flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5">
+      <PreviewHeader
+        title={previewTitle}
+        controls={
+          showModeToggle ? (
+            <div className="inline-flex h-7 items-center gap-0.5 rounded-full border border-border/70 bg-background/82 p-0.5 shadow-sm backdrop-blur">
               {tabs.map((tab) => (
                 <PreviewModeButton
                   key={tab.mode}
@@ -153,26 +156,43 @@ function TextCapturePreview({ capture }: { capture: ClipboardCapture }) {
                 </PreviewModeButton>
               ))}
             </div>
-          ) : null}
-        </div>
+          ) : null
+        }
+      />
 
-        <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
-          {mode === "preview" && previewKind === "html" ? (
-            <HtmlRichPreview html={capture.rawRich ?? ""} />
-          ) : null}
-          {mode === "preview" && previewKind === "markdown" ? (
-            <MarkdownTextPreview markdown={normalizedMarkdownSource} />
-          ) : null}
-          {mode === "preview" && previewKind === "text" ? (
-            <RawTextPreview
-              content={capture.rawText}
-            />
-          ) : null}
-          {mode === "raw_text" ? <RawTextPreview content={capture.rawText} /> : null}
-          {mode === "raw_rich" ? <RawTextPreview content={capture.rawRich ?? ""} /> : null}
-        </div>
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto px-3.5 pb-3.5 pt-2">
+        {mode === "preview" && previewKind === "html" ? (
+          <HtmlRichPreview html={capture.rawRich ?? ""} />
+        ) : null}
+        {mode === "preview" && previewKind === "markdown" ? (
+          <MarkdownTextPreview markdown={normalizedMarkdownSource} />
+        ) : null}
+        {mode === "preview" && previewKind === "text" ? (
+          <RawTextPreview
+            content={capture.rawText}
+          />
+        ) : null}
+        {mode === "raw_text" ? <RawTextPreview content={capture.rawText} /> : null}
+        {mode === "raw_rich" ? <RawTextPreview content={capture.rawRich ?? ""} /> : null}
       </div>
     </section>
+  );
+}
+
+function PreviewHeader({
+  title,
+  controls,
+}: {
+  title: string;
+  controls?: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-10 min-w-0 shrink-0 items-center justify-between gap-3 px-3.5 py-1.5">
+      <p className="min-w-0 text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+        {title}
+      </p>
+      {controls ? <div className="shrink-0">{controls}</div> : null}
+    </div>
   );
 }
 
@@ -191,8 +211,8 @@ function PreviewModeButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background"
-          : "rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+          ? "rounded-full bg-foreground px-2.5 py-1 text-[12px] font-medium text-background"
+          : "rounded-full px-2.5 py-1 text-[12px] font-medium text-muted-foreground transition hover:text-foreground"
       }
     >
       {children}
@@ -226,7 +246,7 @@ function MarkdownTextPreview({ markdown }: { markdown: string }) {
 
 function RawTextPreview({ content }: { content: string }) {
   return (
-    <div className="app-selectable app-kind-text-text font-mono text-[13px] leading-7 whitespace-pre-wrap">
+    <div className="app-selectable app-kind-text-text w-0 min-w-full max-w-full overflow-x-hidden font-mono text-[13px] leading-7 whitespace-pre-wrap break-all [overflow-wrap:anywhere]">
       {content || "No raw source available."}
     </div>
   );
@@ -261,7 +281,7 @@ export function CaptureImageLightbox({
 
   return createPortal(
     <div
-      className="app-overlay-backdrop fixed inset-0 z-[140] backdrop-blur-[2px]"
+      className="app-overlay-backdrop fixed inset-0 z-[140]"
       onClick={onClose}
     >
       <div className="relative h-full w-full">
@@ -758,18 +778,18 @@ function buildTextPreviewTabs(
   }
 
   if (capture.rawText.trim()) {
-    tabs.push({ mode: "raw_text", label: "Raw Text" });
+    tabs.push({ mode: "raw_text", label: "Text" });
   }
 
   if (capture.rawRich?.trim()) {
     tabs.push({
       mode: "raw_rich",
-      label: capture.rawRichFormat === "html" ? "Raw HTML" : "Raw Rich",
+      label: capture.rawRichFormat === "html" ? "HTML" : "Raw Rich",
     });
   }
 
   if (tabs.length === 0) {
-    tabs.push({ mode: "raw_text", label: "Raw Text" });
+    tabs.push({ mode: "raw_text", label: "Raw" });
   }
 
   return tabs;

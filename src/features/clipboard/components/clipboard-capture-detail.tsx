@@ -14,6 +14,7 @@ import {
   kindBadgeClass,
   statusVariant,
 } from "@/features/clipboard/lib/clipboard-board";
+import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import { copyCaptureToClipboard, openImageInPreview } from "@/lib/tauri";
 import { formatRelativeTimestamp } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -55,15 +56,9 @@ export function ClipboardCaptureDetail({
         </div>
 
         <div className="flex shrink-0 items-center justify-end gap-2 whitespace-nowrap">
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 rounded-[16px] border-border/70 bg-card/75 px-2.5 shadow-none [&_svg]:size-3.5"
-            onClick={() => void copyCaptureToClipboard(capture)}
-          >
+          <TooltipIconButton label="Copy Again" onClick={() => void copyCaptureToClipboard(capture)}>
             <Copy />
-            Copy Again
-          </Button>
+          </TooltipIconButton>
           {capture.contentKind === "image" && capture.assetPath ? (
             <TooltipIconButton label="Enlarge" onClick={onOpenImage}>
               <Expand />
@@ -80,8 +75,8 @@ export function ClipboardCaptureDetail({
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto]">
-        <div className="min-h-0">
+      <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto]">
+        <div className="min-h-0 min-w-0">
           <CaptureDetailPreview capture={capture} onOpenImage={onOpenImage} />
         </div>
 
@@ -120,6 +115,7 @@ function TooltipIconButton({
 function DetailInformation({ capture }: { capture: ClipboardCapture }) {
   const rows = detailRows(capture);
   const tableRows = chunkDetailRows(rows, 3);
+  const sourceAppIconSrc = useClipboardAssetSrc(capture.sourceAppIconPath);
 
   return (
     <section className="px-2.5 py-2.5">
@@ -140,14 +136,27 @@ function DetailInformation({ capture }: { capture: ClipboardCapture }) {
                           "align-top px-3 py-2.5",
                           cellIndex > 0 ? "border-l border-border/70" : "",
                         )}
-                      >
-                        <div className="space-y-0.5">
-                          <div className="text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                            {cell.label}
-                          </div>
-                          <div className="app-selectable break-all text-[13px] leading-5 text-foreground">
-                            {cell.value}
-                          </div>
+                        >
+                          <div className="space-y-0.5">
+                            <div className="text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                              {cell.label}
+                            </div>
+                            <div className="app-selectable break-all text-[13px] leading-5 text-foreground">
+                              {cell.label === "Source App" && sourceAppIconSrc ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <span className="inline-flex size-5 shrink-0 overflow-hidden rounded-md bg-card/80 align-middle">
+                                    <img
+                                      src={sourceAppIconSrc}
+                                      alt={capture.sourceAppName || capture.source || "Source application icon"}
+                                      className="size-full object-cover"
+                                    />
+                                  </span>
+                                  <span>{cell.value}</span>
+                                </span>
+                              ) : (
+                                cell.value
+                              )}
+                            </div>
                         </div>
                       </td>
                     ) : (

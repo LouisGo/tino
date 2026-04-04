@@ -11,12 +11,43 @@ export type ClipboardCaptureGroup = {
   captures: ClipboardCapture[];
 };
 
-export const clipboardFilterOptions: Array<{ value: ClipboardFilter; label: string }> = [
-  { value: "all", label: "All Types" },
-  { value: "text", label: "Text Only" },
-  { value: "image", label: "Images Only" },
-  { value: "link", label: "Links Only" },
+export type ClipboardFilterOption = {
+  value: ClipboardFilter;
+  label: string;
+  shortLabel: string;
+  accentColor: string;
+};
+
+export const clipboardFilterOptions: ClipboardFilterOption[] = [
+  {
+    value: "all",
+    label: "All Types",
+    shortLabel: "Recent",
+    accentColor: "var(--muted-foreground)",
+  },
+  {
+    value: "text",
+    label: "Text",
+    shortLabel: "Text",
+    accentColor: "var(--kind-text)",
+  },
+  {
+    value: "image",
+    label: "Images",
+    shortLabel: "Images",
+    accentColor: "var(--kind-image)",
+  },
+  {
+    value: "link",
+    label: "Links",
+    shortLabel: "Links",
+    accentColor: "var(--kind-link)",
+  },
 ];
+
+export function getClipboardFilterOption(filter: ClipboardFilter) {
+  return clipboardFilterOptions.find((option) => option.value === filter) ?? clipboardFilterOptions[0];
+}
 
 export function buildClipboardSummary(captures: ClipboardCapture[]) {
   const total = captures.length;
@@ -60,6 +91,8 @@ export function matchesSearch(capture: ClipboardCapture, searchValue: string) {
   }
 
   return [
+    captureSourceLabel(capture),
+    capture.sourceAppBundleId ?? "",
     captureTitle(capture),
     captureSubtitle(capture),
     capture.rawText,
@@ -124,6 +157,10 @@ export function captureSubtitle(capture: ClipboardCapture) {
 
 export function captureListSummary(capture: ClipboardCapture) {
   return captureTitle(capture);
+}
+
+export function captureSourceLabel(capture: ClipboardCapture) {
+  return capture.sourceAppName?.trim() || capture.sourceAppBundleId?.trim() || "Unknown";
 }
 
 export function groupCapturesByDay(captures: ClipboardCapture[]) {
@@ -192,9 +229,13 @@ export function statusVariant(status: ClipboardCapture["status"]) {
 
 export function detailRows(capture: ClipboardCapture) {
   const rows = [
-    { label: "Source", value: capture.source },
+    { label: "Source App", value: captureSourceLabel(capture) },
     { label: "Content type", value: detailContentType(capture) },
   ];
+
+  if (capture.sourceAppBundleId) {
+    rows.push({ label: "Bundle ID", value: capture.sourceAppBundleId });
+  }
 
   if (isTextKind(capture.contentKind)) {
     rows.push(

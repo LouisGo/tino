@@ -1,39 +1,56 @@
 import { cn } from "@/lib/utils";
-import type { ClipboardCapture } from "@/types/shell";
+import type { ClipboardPageSummary } from "@/types/shell";
 import {
-  buildClipboardSummary,
   summarizeRatio,
+  type ClipboardFilter,
 } from "@/features/clipboard/lib/clipboard-board";
+import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 
 export function ClipboardBoardSummary({
-  captures,
+  summary,
+  historyDays,
+  status,
 }: {
-  captures: ClipboardCapture[];
+  summary: ClipboardPageSummary;
+  historyDays: number;
+  status?: "loading" | "error" | "ready";
 }) {
-  const summary = buildClipboardSummary(captures);
+  const activeFilter = useClipboardBoardStore((state) => state.filter);
+  const toggleSummaryFilter = useClipboardBoardStore((state) => state.toggleSummaryFilter);
+  const statusLabel =
+    status === "loading" ? "Loading" : status === "error" ? "Read Error" : null;
   const summaryTiles = [
     {
+      filter: "all" as ClipboardFilter,
       label: "Recent",
-      value: summary.total,
-      hint: "Total entries in recent board",
+      value: statusLabel ? "..." : summary.total,
+      hint:
+        status === "loading"
+          ? "Reading recent clipboard history"
+          : status === "error"
+            ? "Check runtime logs and retry"
+            : `Within the last ${historyDays} day${historyDays === 1 ? "" : "s"}`,
       toneClass: "app-summary-tone-recent",
     },
     {
+      filter: "text" as ClipboardFilter,
       label: "Text",
-      value: summary.text,
-      hint: summarizeRatio(summary.text, summary.total),
+      value: statusLabel ? "..." : summary.text,
+      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.text, summary.total),
       toneClass: "app-summary-tone-text",
     },
     {
+      filter: "link" as ClipboardFilter,
       label: "Links",
-      value: summary.links,
-      hint: summarizeRatio(summary.links, summary.total),
+      value: statusLabel ? "..." : summary.links,
+      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.links, summary.total),
       toneClass: "app-summary-tone-links",
     },
     {
+      filter: "image" as ClipboardFilter,
       label: "Images",
-      value: summary.images,
-      hint: summarizeRatio(summary.images, summary.total),
+      value: statusLabel ? "..." : summary.images,
+      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.images, summary.total),
       toneClass: "app-summary-tone-images",
     },
   ] as const;
@@ -46,7 +63,7 @@ export function ClipboardBoardSummary({
             Clipboard Board
           </p>
           <p className="rounded-full border border-border/80 bg-surface-elevated px-2.5 py-0.5 text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-            {summary.total} Captures
+            {statusLabel ?? `${summary.total} Captures`}
           </p>
         </div>
 
@@ -58,6 +75,8 @@ export function ClipboardBoardSummary({
               value={tile.value}
               hint={tile.hint}
               toneClass={tile.toneClass}
+              active={activeFilter === tile.filter}
+              onClick={() => toggleSummaryFilter(tile.filter)}
             />
           ))}
         </div>
@@ -71,21 +90,49 @@ function SummaryTile({
   value,
   hint,
   toneClass,
+  active,
+  onClick,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   hint: string;
   toneClass: string;
+  active: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div className={cn("app-summary-tile", toneClass)}>
-      <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-        {label}
-      </p>
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "app-summary-tile group relative flex min-h-[5.6rem] w-full flex-col items-start text-left transition duration-200 ease-out",
+        "hover:-translate-y-0.5 hover:shadow-md",
+        active && "border-foreground/14 shadow-md ring-1 ring-foreground/8",
+        toneClass,
+      )}
+    >
+      <div className="flex w-full items-start justify-between gap-2">
+        <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase transition group-hover:text-foreground/72">
+          {label}
+        </p>
+        <span
+          className={cn(
+            "rounded-full border px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.12em] uppercase transition",
+            active
+              ? "border-foreground/12 bg-card/80 text-foreground"
+              : "border-transparent bg-transparent text-transparent",
+          )}
+        >
+          Active
+        </span>
+      </div>
       <p className="mt-1 text-[1.4rem] font-semibold leading-none tracking-tight sm:text-[1.55rem]">
         {value}
       </p>
-      <p className="mt-1 text-[10px] leading-4 text-muted-foreground">{hint}</p>
-    </div>
+      <p className="mt-1 text-[10px] leading-4 text-muted-foreground">
+        {hint}
+      </p>
+    </button>
   );
 }
