@@ -1,25 +1,56 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
-import { getImageAssetDataUrl } from "@/lib/tauri";
+import { isTauriRuntime, loadImageAssetDataUrl } from "@/lib/tauri";
 
 export function useClipboardAssetSrc(assetPath?: string | null) {
-  const { data } = useQuery({
-    queryKey: ["clipboard-asset-src", assetPath],
-    enabled: Boolean(assetPath),
-    staleTime: Infinity,
-    retry: false,
-    queryFn: async () => {
-      if (!assetPath) {
-        return null;
-      }
+  const [blobAssetState, setBlobAssetState] = useState<{
+    path: string | null;
+    url: string | null;
+  }>({ path: null, url: null });
 
+  useEffect(() => {
+    if (
+      !assetPath
+      || assetPath.startsWith("data:")
+      || assetPath.startsWith("blob:")
+      || !isTauriRuntime()
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
       try {
-        return await getImageAssetDataUrl(assetPath);
-      } catch {
-        return null;
-      }
-    },
-  });
+        const dataUrl = await loadImageAssetDataUrl(assetPath);
+        if (cancelled) {
+          return;
+        }
 
-  return data ?? null;
+        setBlobAssetState({ path: assetPath, url: dataUrl });
+      } catch {
+        if (!cancelled) {
+          setBlobAssetState({ path: assetPath, url: null });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [assetPath]);
+
+  if (!assetPath) {
+    return null;
+  }
+
+  if (assetPath.startsWith("data:") || assetPath.startsWith("blob:")) {
+    return assetPath;
+  }
+
+  if (!isTauriRuntime()) {
+    return assetPath;
+  }
+
+  return blobAssetState.path === assetPath ? blobAssetState.url : null;
 }

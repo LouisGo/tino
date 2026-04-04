@@ -157,7 +157,7 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
     let raw_text = unsafe { pasteboard.stringForType(NSPasteboardTypeString) }
         .map(|text| text.to_string())
         .unwrap_or_default();
-    let raw_text = raw_text.trim().to_string();
+    let trimmed_raw_text = raw_text.trim();
 
     let rich_text = unsafe { pasteboard.dataForType(NSPasteboardTypeHTML) }
         .and_then(|data| decode_clipboard_bytes("html", data.to_vec()));
@@ -168,8 +168,8 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
             .and_then(|data| decode_clipboard_bytes("rtf", data.to_vec())),
     };
 
-    if !raw_text.is_empty() {
-        let content_kind = if looks_like_link(&raw_text) {
+    if !trimmed_raw_text.is_empty() {
+        let content_kind = if looks_like_link(trimmed_raw_text) {
             "link"
         } else if rich_text.is_some() {
             "rich_text"
@@ -192,7 +192,7 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
             raw_rich,
             raw_rich_format,
             link_url: if content_kind == "link" {
-                Some(raw_text.clone())
+                Some(trimmed_raw_text.to_string())
             } else {
                 None
             },
@@ -236,9 +236,9 @@ fn decode_clipboard_bytes(format: &str, bytes: Vec<u8>) -> Option<(String, Strin
         return None;
     }
 
-    let decoded = String::from_utf8_lossy(&bytes).trim().to_string();
+    let decoded = String::from_utf8_lossy(&bytes).to_string();
 
-    if decoded.is_empty() {
+    if decoded.trim().is_empty() {
         return None;
     }
 

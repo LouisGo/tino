@@ -163,7 +163,9 @@ pub fn run() {
             commands::shell::get_app_settings,
             commands::shell::save_app_settings,
             commands::shell::load_image_asset_data_url,
-            commands::shell::open_in_preview
+            commands::shell::open_in_preview,
+            commands::shell::copy_capture_to_clipboard,
+            commands::shell::reveal_in_file_manager
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

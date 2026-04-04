@@ -10,6 +10,7 @@
     "core:window:allow-hide",
     "dialog:default",
     "fs:default",
+    "fs:read-all",
     "opener:default",
     "autostart:default"
   ]

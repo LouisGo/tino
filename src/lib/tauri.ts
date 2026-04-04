@@ -4,7 +4,11 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
-import type { DashboardSnapshot, SettingsDraft } from "@/types/shell";
+import type {
+  ClipboardCapture,
+  DashboardSnapshot,
+  SettingsDraft,
+} from "@/types/shell";
 
 const mockImageAsset = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
@@ -88,6 +92,14 @@ export function isTauriRuntime() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
+export function isMacOsTauriRuntime() {
+  return (
+    isTauriRuntime() &&
+    typeof navigator !== "undefined" &&
+    /mac/i.test(navigator.userAgent)
+  );
+}
+
 export async function getDashboardSnapshot() {
   if (!isTauriRuntime()) {
     return mockSnapshot;
@@ -131,7 +143,11 @@ export async function revealPath(path: string) {
     return;
   }
 
-  await openPath(path);
+  try {
+    await invoke("reveal_in_file_manager", { path });
+  } catch {
+    await openPath(path);
+  }
 }
 
 export async function openExternalTarget(target: string) {
@@ -169,22 +185,6 @@ export async function openImageInPreview(path: string) {
   }
 }
 
-export async function getImageAssetDataUrl(assetPath?: string | null) {
-  if (!assetPath) {
-    return null;
-  }
-
-  if (assetPath.startsWith("data:")) {
-    return assetPath;
-  }
-
-  if (!isTauriRuntime()) {
-    return assetPath;
-  }
-
-  return invoke<string>("load_image_asset_data_url", { path: assetPath });
-}
-
 export async function getAutostartEnabled() {
   if (!isTauriRuntime()) {
     return false;
@@ -204,4 +204,38 @@ export async function setAutostartEnabled(enabled: boolean) {
   }
 
   await disable();
+}
+
+export async function copyCaptureToClipboard(capture: ClipboardCapture) {
+  if (!isTauriRuntime()) {
+    await navigator.clipboard.writeText(capture.linkUrl ?? capture.rawText);
+    return;
+  }
+
+  await invoke("copy_capture_to_clipboard", {
+    capture: {
+      contentKind: capture.contentKind,
+      rawText: capture.rawText,
+      rawRich: capture.rawRich,
+      rawRichFormat: capture.rawRichFormat,
+      linkUrl: capture.linkUrl,
+      assetPath: capture.assetPath,
+    },
+  });
+}
+
+export async function loadImageAssetDataUrl(assetPath: string) {
+  if (!assetPath) {
+    return null;
+  }
+
+  if (assetPath.startsWith("data:")) {
+    return assetPath;
+  }
+
+  if (!isTauriRuntime()) {
+    return assetPath;
+  }
+
+  return invoke<string>("load_image_asset_data_url", { path: assetPath });
 }

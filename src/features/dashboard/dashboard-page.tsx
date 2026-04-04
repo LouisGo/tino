@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Clock3,
   FolderRoot,
+  FolderSearch,
   Images,
   RefreshCcw,
 } from "lucide-react";
@@ -18,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatRelativeTimestamp } from "@/lib/time";
-import { getDashboardSnapshot, isTauriRuntime } from "@/lib/tauri";
+import { getDashboardSnapshot, isTauriRuntime, revealPath } from "@/lib/tauri";
 
 export function DashboardPage() {
   const { data, isFetching, refetch } = useQuery({
@@ -33,20 +34,28 @@ export function DashboardPage() {
       value: data?.defaultKnowledgeRoot ?? "~/tino-inbox",
       description: "Current archive workspace used by Rust-side file writes.",
       icon: FolderRoot,
+      action: data?.defaultKnowledgeRoot
+        ? () => void revealPath(data.defaultKnowledgeRoot)
+        : undefined,
+      actionLabel: "Open knowledge root in file manager",
     },
     {
       label: "Queue Policy",
       value: data?.queuePolicy ?? "20 captures or 10 minutes",
       description: "Frozen hybrid batch rule reserved for the next milestone.",
       icon: Clock3,
+      action: undefined,
+      actionLabel: undefined,
     },
     {
       label: "Runtime",
       value: `${data?.appName ?? "Tino"} ${data?.appVersion ?? "0.1.0"}`,
       description: `${data?.os ?? "browser"} · ${data?.captureMode ?? "Rust clipboard poller active"}`,
       icon: ArrowUpRight,
+      action: undefined,
+      actionLabel: undefined,
     },
-  ];
+  ] as const;
 
   return (
     <div className="space-y-6">
@@ -88,9 +97,23 @@ export function DashboardPage() {
             <CardHeader className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <CardDescription>{card.label}</CardDescription>
-                <div className="app-icon-chip">
-                  <card.icon className="size-4" />
-                </div>
+                {card.action ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="app-icon-chip"
+                    onClick={card.action}
+                    aria-label={card.actionLabel}
+                    title={card.actionLabel}
+                  >
+                    <FolderSearch className="size-4" />
+                  </Button>
+                ) : (
+                  <div className="app-icon-chip">
+                    <card.icon className="size-4" />
+                  </div>
+                )}
               </div>
               <CardTitle className="text-xl leading-7">{card.value}</CardTitle>
             </CardHeader>

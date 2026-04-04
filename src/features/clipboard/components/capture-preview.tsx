@@ -4,10 +4,15 @@ import {
   useRef,
   useState,
   startTransition,
+  type ReactNode,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import DOMPurify from "dompurify";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
+import remarkGfm from "remark-gfm";
 
 import {
   Expand,
@@ -26,6 +31,7 @@ import type { ClipboardCapture } from "@/types/shell";
 
 const MIN_IMAGE_SCALE = 0.8;
 const MAX_IMAGE_SCALE = 6;
+type TextPreviewMode = "preview" | "raw_text" | "raw_rich";
 
 type Point = {
   x: number;
@@ -45,7 +51,7 @@ export function CaptureDetailPreview({
 
   if (capture.contentKind === "image") {
     return (
-      <section className="app-preview-image h-full px-4 py-4">
+      <section className="app-preview-image h-full px-2.5 py-2.5">
         <button
           type="button"
           onClick={onOpenImage}
@@ -79,16 +85,12 @@ export function CaptureDetailPreview({
     const hostname = target ? extractHostname(target) : null;
 
     return (
-      <section className="app-preview-link h-full px-4 py-4">
-        <button
-          type="button"
-          onClick={() => void openExternalTarget(target)}
-          className="flex h-full min-h-0 w-full flex-col items-start justify-between rounded-[22px] border border-border/70 bg-surface-panel px-5 py-5 text-left shadow-sm transition hover:border-primary/30 hover:shadow-md"
-        >
+      <section className="app-preview-link h-full px-2.5 py-2.5">
+        <div className="flex h-full min-h-0 w-full flex-col items-start justify-between rounded-[22px] border border-border/70 bg-surface-panel px-5 py-5 text-left shadow-sm">
           <div className="space-y-3">
             <div className="app-kind-badge-link inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
               <Link2 className="size-3.5" />
-              Open in system browser
+              Link capture
             </div>
             <div className="space-y-2.5">
               <p className="app-kind-text-link text-lg font-semibold leading-7">
@@ -100,23 +102,133 @@ export function CaptureDetailPreview({
             </div>
           </div>
 
-          <div className="app-kind-text-link inline-flex items-center gap-2 text-sm font-medium">
+          <button
+            type="button"
+            onClick={() => void openExternalTarget(target)}
+            className="app-kind-text-link inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/80 px-3 py-2 text-sm font-medium transition hover:border-primary/30 hover:bg-secondary/60"
+          >
             Preview in browser
             <ExternalLink className="size-4" />
-          </div>
-        </button>
+          </button>
+        </div>
       </section>
     );
   }
 
+  return <TextCapturePreview key={capture.id} capture={capture} />;
+}
+
+function TextCapturePreview({ capture }: { capture: ClipboardCapture }) {
+  const [mode, setMode] = useState<TextPreviewMode>(() => preferredTextPreviewMode(capture));
+  const normalizedMarkdownSource = normalizeMarkdownSource(capture.rawText);
+
+  const htmlPreview = canRenderHtmlPreview(capture);
+  const markdownPreview = canRenderMarkdownPreview(capture);
+  const previewKind = markdownPreview ? "markdown" : htmlPreview ? "html" : "text";
+  const tabs = buildTextPreviewTabs(capture, previewKind);
+  const showModeToggle = tabs.length > 1;
+
   return (
-    <section className="app-preview-text h-full px-4 py-4 sm:px-5 sm:py-5">
-      <div className="h-full min-h-0 overflow-auto">
-        <div className="app-selectable app-kind-text-text text-[14px] leading-7 whitespace-pre-wrap">
-          {capture.rawText || capturePreviewTitle(capture)}
+    <section className="app-preview-text h-full px-2.5 py-2.5">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[22px] border border-border/70 bg-surface-panel shadow-sm">
+        <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+              {previewKind === "markdown"
+                ? "Markdown Preview"
+                : previewKind === "html"
+                  ? "Rich Text Preview"
+                  : "Text Preview"}
+            </p>
+          </div>
+          {showModeToggle ? (
+            <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/75 p-1">
+              {tabs.map((tab) => (
+                <PreviewModeButton
+                  key={tab.mode}
+                  active={mode === tab.mode}
+                  onClick={() => setMode(tab.mode)}
+                >
+                  {tab.label}
+                </PreviewModeButton>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
+          {mode === "preview" && previewKind === "html" ? (
+            <HtmlRichPreview html={capture.rawRich ?? ""} />
+          ) : null}
+          {mode === "preview" && previewKind === "markdown" ? (
+            <MarkdownTextPreview markdown={normalizedMarkdownSource} />
+          ) : null}
+          {mode === "preview" && previewKind === "text" ? (
+            <RawTextPreview
+              content={capture.rawText}
+            />
+          ) : null}
+          {mode === "raw_text" ? <RawTextPreview content={capture.rawText} /> : null}
+          {mode === "raw_rich" ? <RawTextPreview content={capture.rawRich ?? ""} /> : null}
         </div>
       </div>
     </section>
+  );
+}
+
+function PreviewModeButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? "rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background"
+          : "rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+function HtmlRichPreview({ html }: { html: string }) {
+  const sanitizedHtml = DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    FORBID_ATTR: ["style", "class"],
+  });
+
+  return (
+    <div
+      className="app-markdown-preview app-selectable app-kind-text-text text-[14px] leading-7"
+      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+    />
+  );
+}
+
+function MarkdownTextPreview({ markdown }: { markdown: string }) {
+  return (
+    <div className="app-markdown-preview app-selectable app-kind-text-text text-[14px] leading-7">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+        {markdown}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+function RawTextPreview({ content }: { content: string }) {
+  return (
+    <div className="app-selectable app-kind-text-text font-mono text-[13px] leading-7 whitespace-pre-wrap">
+      {content || "No raw source available."}
+    </div>
   );
 }
 
@@ -607,6 +719,84 @@ function PreviewEmptyState({
       </p>
     </div>
   );
+}
+
+function preferredTextPreviewMode(capture: ClipboardCapture): TextPreviewMode {
+  return markdownLooksSupported(capture) || canRenderHtmlPreview(capture)
+    ? "preview"
+    : "raw_text";
+}
+
+function canRenderHtmlPreview(capture: ClipboardCapture) {
+  return capture.contentKind === "rich_text"
+    && capture.rawRichFormat === "html"
+    && Boolean(capture.rawRich?.trim());
+}
+
+function canRenderMarkdownPreview(capture: ClipboardCapture) {
+  if (capture.contentKind === "link" || capture.contentKind === "image") {
+    return false;
+  }
+
+  return looksLikeMarkdown(normalizeMarkdownSource(capture.rawText));
+}
+
+function markdownLooksSupported(capture: ClipboardCapture) {
+  return canRenderMarkdownPreview(capture);
+}
+
+function buildTextPreviewTabs(
+  capture: ClipboardCapture,
+  previewKind: "markdown" | "html" | "text",
+) {
+  const tabs: Array<{ mode: TextPreviewMode; label: string }> = [];
+
+  if (previewKind === "markdown") {
+    tabs.push({ mode: "preview", label: "Markdown" });
+  } else if (previewKind === "html") {
+    tabs.push({ mode: "preview", label: "Rich Text" });
+  }
+
+  if (capture.rawText.trim()) {
+    tabs.push({ mode: "raw_text", label: "Raw Text" });
+  }
+
+  if (capture.rawRich?.trim()) {
+    tabs.push({
+      mode: "raw_rich",
+      label: capture.rawRichFormat === "html" ? "Raw HTML" : "Raw Rich",
+    });
+  }
+
+  if (tabs.length === 0) {
+    tabs.push({ mode: "raw_text", label: "Raw Text" });
+  }
+
+  return tabs;
+}
+
+function looksLikeMarkdown(input: string) {
+  const normalized = input.trim();
+  if (!normalized) {
+    return false;
+  }
+
+  return [
+    /^#{1,6}\s/m,
+    /^>\s/m,
+    /^(-|\*|\+)\s/m,
+    /^\d+\.\s/m,
+    /```/,
+    /\|.+\|/,
+    /\[[^\]]+\]\([^)]+\)/,
+    /(\*\*|__)[^*_]+(\*\*|__)/,
+    /`[^`\n]+`/,
+    /~~[^~]+~~/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function normalizeMarkdownSource(input: string) {
+  return input.replace(/[\u200B-\u200D\uFEFF]/g, "");
 }
 
 function capturePreviewTitle(capture: ClipboardCapture) {

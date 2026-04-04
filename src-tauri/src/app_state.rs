@@ -248,6 +248,7 @@ struct FilterLogEntry {
 struct StateData {
     settings: AppSettings,
     runtime: RuntimeState,
+    pending_replay_hashes: VecDeque<RecentHashEntry>,
 }
 
 #[derive(Debug)]
@@ -291,7 +292,11 @@ impl AppState {
                 default_knowledge_root,
                 app_data_dir,
                 settings_path,
-                inner: Mutex::new(StateData { settings, runtime }),
+                inner: Mutex::new(StateData {
+                    settings,
+                    runtime,
+                    pending_replay_hashes: VecDeque::new(),
+                }),
             }),
         };
 
@@ -531,6 +536,18 @@ impl AppState {
         Ok(created_batches)
     }
 
+    pub fn register_replay_hash(&self, hash: String, captured_at: String) -> Result<(), String> {
+        let replay_timestamp = parse_captured_at(&captured_at)?;
+
+        {
+            let mut state = self.lock_state()?;
+            prune_recent_hashes(&mut state.pending_replay_hashes, &replay_timestamp);
+            state.pending_replay_hashes.push_front(RecentHashEntry { hash, captured_at });
+        }
+
+        Ok(())
+    }
+
     pub fn set_watch_running(&self) -> Result<(), String> {
         {
             let mut state = self.lock_state()?;
@@ -574,6 +591,11 @@ impl AppState {
     ) -> Result<bool, String> {
         let mut state = self.lock_state()?;
         prune_recent_hashes(&mut state.runtime.recent_hashes, captured_at);
+        prune_recent_hashes(&mut state.pending_replay_hashes, captured_at);
+
+        if consume_matching_hash(&mut state.pending_replay_hashes, hash) {
+            return Ok(false);
+        }
 
         Ok(state
             .runtime
@@ -1106,6 +1128,18 @@ fn prune_recent_hashes(
             })
             .unwrap_or(false)
     });
+}
+
+fn consume_matching_hash(
+    recent_hashes: &mut VecDeque<RecentHashEntry>,
+    hash: &str,
+) -> bool {
+    let Some(index) = recent_hashes.iter().position(|entry| entry.hash == hash) else {
+        return false;
+    };
+
+    recent_hashes.remove(index);
+    true
 }
 
 fn runtime_file_path(knowledge_root: &Path) -> PathBuf {
