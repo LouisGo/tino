@@ -1,4 +1,6 @@
 use crate::app_state::{AppSettings, AppState, DashboardSnapshot};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use std::fs;
 use tauri::{AppHandle, State};
 
 #[tauri::command]
@@ -20,4 +22,10 @@ pub fn save_app_settings(
     settings: AppSettings,
 ) -> Result<AppSettings, String> {
     state.save_settings(settings)
+}
+
+#[tauri::command]
+pub fn load_image_asset_data_url(path: String) -> Result<String, String> {
+    let bytes = fs::read(&path).map_err(|error| error.to_string())?;
+    Ok(format!("data:image/png;base64,{}", STANDARD.encode(bytes)))
 }

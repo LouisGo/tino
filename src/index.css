@@ -3,7 +3,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
+:root,
+:root[data-theme="tino"] {
   --background: oklch(0.985 0.01 92);
   --foreground: oklch(0.26 0.02 98);
   --card: oklch(1 0 0);
@@ -64,6 +65,138 @@
   --sidebar-ring: oklch(0.72 0.13 171);
 }
 
+:root[data-theme="ocean"] {
+  --primary: oklch(0.58 0.14 241);
+  --primary-foreground: oklch(0.98 0.01 96);
+  --accent: oklch(0.9 0.06 220);
+  --accent-foreground: oklch(0.33 0.04 240);
+  --ring: oklch(0.58 0.14 241);
+  --sidebar-primary: oklch(0.58 0.14 241);
+  --sidebar-accent: oklch(0.92 0.04 225);
+  --sidebar-accent-foreground: oklch(0.31 0.03 238);
+  --sidebar-ring: oklch(0.58 0.14 241);
+}
+
+:root.dark[data-theme="ocean"] {
+  --primary: oklch(0.73 0.13 240);
+  --primary-foreground: oklch(0.17 0.01 240);
+  --accent: oklch(0.35 0.04 231);
+  --accent-foreground: oklch(0.96 0.01 244);
+  --ring: oklch(0.73 0.13 240);
+  --sidebar-primary: oklch(0.73 0.13 240);
+  --sidebar-accent: oklch(0.28 0.04 231);
+  --sidebar-accent-foreground: oklch(0.97 0.01 244);
+  --sidebar-ring: oklch(0.73 0.13 240);
+}
+
+:root {
+  --surface-shell: color-mix(in oklch, var(--sidebar) 86%, transparent);
+  --surface-main: color-mix(in oklch, var(--background) 84%, transparent);
+  --surface-panel: color-mix(in oklch, var(--card) 94%, transparent);
+  --surface-elevated: color-mix(in oklch, var(--background) 58%, var(--card) 42%);
+  --surface-soft: color-mix(in oklch, var(--background) 72%, transparent);
+  --surface-primary-soft: color-mix(in oklch, var(--primary) 14%, transparent);
+  --surface-action-chip: color-mix(in oklch, var(--background) 25%, transparent);
+  --overlay-backdrop: color-mix(in oklch, var(--foreground) 72%, transparent);
+  --overlay-chip: color-mix(in oklch, var(--foreground) 70%, transparent);
+  --overlay-chip-foreground: oklch(0.98 0 0);
+  --gradient-body:
+    radial-gradient(
+      circle at top left,
+      color-mix(in oklch, var(--accent) 26%, transparent) 0,
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--secondary) 55%, transparent),
+      transparent 60%
+    );
+  --gradient-hero-control:
+    radial-gradient(
+      circle at top left,
+      color-mix(in oklch, var(--accent) 30%, transparent) 0,
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--card) 94%, var(--secondary) 6%),
+      color-mix(in oklch, var(--secondary) 78%, var(--card) 22%)
+    );
+  --gradient-hero-clipboard:
+    radial-gradient(
+      circle at top left,
+      color-mix(in oklch, var(--accent) 30%, transparent) 0,
+      transparent 34%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--card) 92%, var(--secondary) 8%),
+      color-mix(in oklch, var(--secondary) 84%, var(--card) 16%)
+    );
+  --gradient-card-header: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 94%, var(--background) 6%),
+    color-mix(in oklch, var(--secondary) 42%, var(--card) 58%)
+  );
+  --gradient-preview-image: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--secondary) 48%, var(--card) 52%),
+    color-mix(in oklch, var(--card) 96%, var(--background) 4%)
+  );
+  --gradient-preview-stage:
+    radial-gradient(
+      circle at top left,
+      color-mix(in oklch, var(--accent) 24%, transparent) 0,
+      transparent 27%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--secondary) 64%, var(--card) 36%),
+      color-mix(in oklch, var(--card) 88%, var(--background) 12%)
+    );
+  --gradient-preview-link:
+    radial-gradient(
+      circle at top left,
+      color-mix(in oklch, var(--accent) 28%, transparent) 0,
+      transparent 36%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+      color-mix(in oklch, var(--secondary) 58%, var(--card) 42%)
+    );
+  --gradient-preview-text: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 96%, var(--background) 4%),
+    color-mix(in oklch, var(--secondary) 56%, var(--card) 44%)
+  );
+  --gradient-lightbox: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 82%, var(--background) 18%),
+    color-mix(in oklch, var(--background) 70%, var(--card) 30%)
+  );
+  --summary-tone-recent: linear-gradient(
+    165deg,
+    color-mix(in oklch, var(--accent) 22%, var(--card) 78%),
+    color-mix(in oklch, var(--card) 92%, var(--secondary) 8%)
+  );
+  --summary-tone-text: linear-gradient(
+    165deg,
+    color-mix(in oklch, var(--secondary) 78%, var(--card) 22%),
+    color-mix(in oklch, var(--card) 90%, var(--background) 10%)
+  );
+  --summary-tone-links: linear-gradient(
+    165deg,
+    color-mix(in oklch, var(--accent) 16%, var(--card) 84%),
+    color-mix(in oklch, var(--card) 93%, var(--background) 7%)
+  );
+  --summary-tone-images: linear-gradient(
+    165deg,
+    color-mix(in oklch, var(--secondary) 72%, var(--accent) 28%),
+    color-mix(in oklch, var(--card) 90%, var(--background) 10%)
+  );
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -92,6 +225,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-surface-shell: var(--surface-shell);
+  --color-surface-main: var(--surface-main);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-primary-soft: var(--surface-primary-soft);
+  --color-surface-action-chip: var(--surface-action-chip);
   --font-sans: "SF Pro Display", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
   --radius-sm: calc(var(--radius) - 6px);
@@ -111,12 +251,94 @@
 
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--color-accent) 26%, transparent) 0, transparent 30%),
-      linear-gradient(180deg, color-mix(in srgb, var(--color-secondary) 55%, transparent), transparent 60%);
+    background-image: var(--gradient-body);
   }
 
   #root {
     @apply min-h-screen;
+  }
+}
+
+@layer components {
+  .app-shell-surface {
+    @apply rounded-[32px] border border-sidebar-border bg-surface-shell p-5 shadow-sm backdrop-blur;
+  }
+
+  .app-main-surface {
+    @apply rounded-[32px] border border-border/80 bg-surface-main p-4 shadow-sm backdrop-blur md:p-6;
+  }
+
+  .app-hero-surface {
+    @apply overflow-hidden rounded-[30px] border border-border/80 bg-surface-panel shadow-sm;
+  }
+
+  .app-hero-control {
+    background-image: var(--gradient-hero-control);
+  }
+
+  .app-hero-clipboard {
+    background-image: var(--gradient-hero-clipboard);
+  }
+
+  .app-card-header-elevated {
+    background-image: var(--gradient-card-header);
+  }
+
+  .app-summary-tile {
+    @apply rounded-[24px] border border-border/80 px-4 py-4 shadow-sm backdrop-blur;
+  }
+
+  .app-summary-tone-recent {
+    background-image: var(--summary-tone-recent);
+  }
+
+  .app-summary-tone-text {
+    background-image: var(--summary-tone-text);
+  }
+
+  .app-summary-tone-links {
+    background-image: var(--summary-tone-links);
+  }
+
+  .app-summary-tone-images {
+    background-image: var(--summary-tone-images);
+  }
+
+  .app-preview-image {
+    background-image: var(--gradient-preview-image);
+  }
+
+  .app-preview-image-stage {
+    background-image: var(--gradient-preview-stage);
+  }
+
+  .app-preview-link {
+    background-image: var(--gradient-preview-link);
+  }
+
+  .app-preview-text {
+    background-image: var(--gradient-preview-text);
+  }
+
+  .app-icon-chip {
+    @apply rounded-2xl bg-surface-primary-soft p-2 text-primary;
+  }
+
+  .app-lightbox-surface {
+    @apply border-border/80 bg-surface-panel text-foreground;
+    background-image: var(--gradient-lightbox);
+  }
+
+  .app-lightbox-header {
+    @apply border-border/70;
+  }
+
+  .app-overlay-backdrop {
+    background-color: var(--overlay-backdrop);
+  }
+
+  .app-overlay-chip {
+    background-color: var(--overlay-chip);
+    color: var(--overlay-chip-foreground);
   }
 }

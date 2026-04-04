@@ -1,13 +1,28 @@
-export type ContentKind = "plain_text" | "rich_text" | "image" | "video" | "file";
+export type ContentKind =
+  | "plain_text"
+  | "rich_text"
+  | "link"
+  | "image"
+  | "video"
+  | "file";
 export type CaptureStatus = "queued" | "archived" | "filtered" | "deduplicated";
 
-export interface CapturePreview {
+export interface ClipboardCapture {
   id: string;
   source: string;
   contentKind: ContentKind;
   preview: string;
+  secondaryPreview?: string | null;
   capturedAt: string;
   status: CaptureStatus;
+  rawText: string;
+  rawRich?: string | null;
+  rawRichFormat?: string | null;
+  linkUrl?: string | null;
+  assetPath?: string | null;
+  imageWidth?: number | null;
+  imageHeight?: number | null;
+  byteSize?: number | null;
 }
 
 export interface DashboardSnapshot {
@@ -19,7 +34,7 @@ export interface DashboardSnapshot {
   appDataDir: string;
   queuePolicy: string;
   captureMode: string;
-  recentCaptures: CapturePreview[];
+  recentCaptures: ClipboardCapture[];
 }
 
 export interface SettingsDraft {

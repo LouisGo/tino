@@ -1,9 +1,29 @@
 import { invoke } from "@tauri-apps/api/core";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
+import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type { DashboardSnapshot, SettingsDraft } from "@/types/shell";
+
+const mockImageAsset = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
+    <defs>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#eef7d0" />
+        <stop offset="100%" stop-color="#b8f06a" />
+      </linearGradient>
+    </defs>
+    <rect width="1280" height="800" rx="56" fill="url(#bg)" />
+    <rect x="96" y="92" width="1088" height="616" rx="36" fill="#ffffff" fill-opacity="0.78" />
+    <rect x="156" y="166" width="448" height="48" rx="24" fill="#d7efaa" />
+    <rect x="156" y="252" width="968" height="34" rx="17" fill="#f0f2e8" />
+    <rect x="156" y="318" width="904" height="34" rx="17" fill="#f0f2e8" />
+    <rect x="156" y="384" width="972" height="34" rx="17" fill="#f0f2e8" />
+    <rect x="156" y="470" width="268" height="144" rx="28" fill="#aef262" />
+    <rect x="464" y="470" width="664" height="144" rx="28" fill="#eff4df" />
+  </svg>`,
+)}`;
 
 const mockSettings: SettingsDraft = {
   knowledgeRoot: "~/tino-inbox",
@@ -25,10 +45,41 @@ const mockSnapshot: DashboardSnapshot = {
     {
       id: "cap_001",
       source: "clipboard",
-      contentKind: "plain_text",
-      preview: "Clipboard capture pipeline writes into daily Markdown files.",
-      capturedAt: new Date().toISOString(),
+      contentKind: "rich_text",
+      preview: "Rust capture pipeline now writes into daily Markdown files.",
+      secondaryPreview: "2 lines · 85 chars",
+      capturedAt: nowIsoString(),
       status: "archived",
+      rawText:
+        "Rust capture pipeline now writes into daily Markdown files.\nNext step is polishing the clipboard board.",
+      rawRich:
+        "<p>Rust capture pipeline now writes into <code>daily/*.md</code>.</p><p>Next step is polishing the clipboard board.</p>",
+      rawRichFormat: "html",
+    },
+    {
+      id: "cap_002",
+      source: "clipboard",
+      contentKind: "link",
+      preview: "openai.com/docs/guides/text",
+      secondaryPreview: "openai.com",
+      capturedAt: minutesAgoIsoString(7),
+      status: "queued",
+      rawText: "https://openai.com/docs/guides/text",
+      linkUrl: "https://openai.com/docs/guides/text",
+    },
+    {
+      id: "cap_003",
+      source: "clipboard",
+      contentKind: "image",
+      preview: "Clipboard image",
+      secondaryPreview: "1280x800 · 68.4 KB",
+      capturedAt: minutesAgoIsoString(15),
+      status: "archived",
+      rawText: "Clipboard image · 1280x800",
+      assetPath: mockImageAsset,
+      imageWidth: 1280,
+      imageHeight: 800,
+      byteSize: 70000,
     },
   ],
 };
@@ -81,6 +132,40 @@ export async function revealPath(path: string) {
   }
 
   await openPath(path);
+}
+
+export async function openExternalTarget(target: string) {
+  if (!target) {
+    return;
+  }
+
+  if (!isTauriRuntime()) {
+    window.open(target, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  if (target.startsWith("http://") || target.startsWith("https://")) {
+    await openUrl(target);
+    return;
+  }
+
+  await openPath(target);
+}
+
+export async function getImageAssetDataUrl(assetPath?: string | null) {
+  if (!assetPath) {
+    return null;
+  }
+
+  if (assetPath.startsWith("data:")) {
+    return assetPath;
+  }
+
+  if (!isTauriRuntime()) {
+    return assetPath;
+  }
+
+  return invoke<string>("load_image_asset_data_url", { path: assetPath });
 }
 
 export async function getAutostartEnabled() {

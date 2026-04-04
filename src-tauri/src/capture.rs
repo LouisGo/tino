@@ -3,12 +3,15 @@ use crate::app_state::{AppState, BatchPromotionSummary, CaptureProcessingResult,
 #[cfg(target_os = "macos")]
 use {
     chrono::Local,
+    image::{GenericImageView, ImageFormat},
     log::{error, info},
     objc2_app_kit::{
-        NSPasteboard, NSPasteboardTypeHTML, NSPasteboardTypeRTF, NSPasteboardTypeString,
+        NSPasteboard, NSPasteboardTypeHTML, NSPasteboardTypePNG, NSPasteboardTypeRTF,
+        NSPasteboardTypeString, NSPasteboardTypeTIFF,
     },
     sha2::{Digest, Sha256},
     std::{
+        io::Cursor,
         thread,
         time::{Duration, Instant},
     },
@@ -156,10 +159,6 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
         .unwrap_or_default();
     let raw_text = raw_text.trim().to_string();
 
-    if raw_text.is_empty() {
-        return Ok(None);
-    }
-
     let rich_text = unsafe { pasteboard.dataForType(NSPasteboardTypeHTML) }
         .and_then(|data| decode_clipboard_bytes("html", data.to_vec()));
 
@@ -169,27 +168,66 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
             .and_then(|data| decode_clipboard_bytes("rtf", data.to_vec())),
     };
 
-    let content_kind = if rich_text.is_some() {
-        "rich_text"
-    } else {
-        "plain_text"
-    };
+    if !raw_text.is_empty() {
+        let content_kind = if looks_like_link(&raw_text) {
+            "link"
+        } else if rich_text.is_some() {
+            "rich_text"
+        } else {
+            "plain_text"
+        };
 
-    let (raw_rich_format, raw_rich) = rich_text
-        .map(|(format, content)| (Some(format), Some(content)))
-        .unwrap_or((None, None));
-    let hash = build_capture_hash(content_kind, &raw_text, raw_rich.as_deref());
+        let (raw_rich_format, raw_rich) = rich_text
+            .map(|(format, content)| (Some(format), Some(content)))
+            .unwrap_or((None, None));
+        let hash =
+            build_capture_hash(content_kind, &raw_text, raw_rich.as_deref(), None::<&[u8]>);
 
-    Ok(Some(CaptureRecord {
-        id: format!("cap_{}", Uuid::now_v7().simple()),
-        source: "clipboard".into(),
-        captured_at: Local::now().to_rfc3339(),
-        content_kind: content_kind.into(),
-        raw_text: raw_text.clone(),
-        raw_rich,
-        raw_rich_format,
-        hash,
-    }))
+        return Ok(Some(CaptureRecord {
+            id: format!("cap_{}", Uuid::now_v7().simple()),
+            source: "clipboard".into(),
+            captured_at: Local::now().to_rfc3339(),
+            content_kind: content_kind.into(),
+            raw_text: raw_text.clone(),
+            raw_rich,
+            raw_rich_format,
+            link_url: if content_kind == "link" {
+                Some(raw_text.clone())
+            } else {
+                None
+            },
+            asset_path: None,
+            image_width: None,
+            image_height: None,
+            byte_size: None,
+            hash,
+            image_bytes: None,
+        }));
+    }
+
+    if let Some((image_bytes, width, height, byte_size)) = read_clipboard_image(&pasteboard)? {
+        let raw_text = format!("Clipboard image · {}x{}", width, height);
+        let hash = build_capture_hash("image", &raw_text, None, Some(image_bytes.as_slice()));
+
+        return Ok(Some(CaptureRecord {
+            id: format!("cap_{}", Uuid::now_v7().simple()),
+            source: "clipboard".into(),
+            captured_at: Local::now().to_rfc3339(),
+            content_kind: "image".into(),
+            raw_text,
+            raw_rich: None,
+            raw_rich_format: None,
+            link_url: None,
+            asset_path: None,
+            image_width: Some(width),
+            image_height: Some(height),
+            byte_size: Some(byte_size as u64),
+            hash,
+            image_bytes: Some(image_bytes),
+        }));
+    }
+
+    Ok(None)
 }
 
 #[cfg(target_os = "macos")]
@@ -208,7 +246,42 @@ fn decode_clipboard_bytes(format: &str, bytes: Vec<u8>) -> Option<(String, Strin
 }
 
 #[cfg(target_os = "macos")]
-fn build_capture_hash(content_kind: &str, raw_text: &str, raw_rich: Option<&str>) -> String {
+fn read_clipboard_image(
+    pasteboard: &NSPasteboard,
+) -> Result<Option<(Vec<u8>, u32, u32, usize)>, String> {
+    let image_data = unsafe { pasteboard.dataForType(NSPasteboardTypePNG) }
+        .map(|data| ("png", data.to_vec()))
+        .or_else(|| unsafe { pasteboard.dataForType(NSPasteboardTypeTIFF) }.map(|data| ("tiff", data.to_vec())));
+
+    let Some((format, bytes)) = image_data else {
+        return Ok(None);
+    };
+
+    let image_format = match format {
+        "png" => ImageFormat::Png,
+        "tiff" => ImageFormat::Tiff,
+        _ => return Ok(None),
+    };
+    let decoded = image::load_from_memory_with_format(&bytes, image_format)
+        .map_err(|error| error.to_string())?;
+    let (width, height) = decoded.dimensions();
+    let mut encoded = Cursor::new(Vec::new());
+    decoded
+        .write_to(&mut encoded, ImageFormat::Png)
+        .map_err(|error| error.to_string())?;
+    let encoded = encoded.into_inner();
+    let byte_size = encoded.len();
+
+    Ok(Some((encoded, width, height, byte_size)))
+}
+
+#[cfg(target_os = "macos")]
+fn build_capture_hash(
+    content_kind: &str,
+    raw_text: &str,
+    raw_rich: Option<&str>,
+    image_bytes: Option<&[u8]>,
+) -> String {
     let mut hasher = Sha256::new();
     hasher.update(content_kind.as_bytes());
     hasher.update([0]);
@@ -219,5 +292,18 @@ fn build_capture_hash(content_kind: &str, raw_text: &str, raw_rich: Option<&str>
         hasher.update(raw_rich.as_bytes());
     }
 
+    if let Some(image_bytes) = image_bytes {
+        hasher.update([0]);
+        hasher.update(image_bytes);
+    }
+
     format!("{:x}", hasher.finalize())
+}
+
+#[cfg(target_os = "macos")]
+fn looks_like_link(input: &str) -> bool {
+    let trimmed = input.trim();
+    trimmed.lines().count() == 1
+        && !trimmed.contains(char::is_whitespace)
+        && (trimmed.starts_with("https://") || trimmed.starts_with("http://"))
 }

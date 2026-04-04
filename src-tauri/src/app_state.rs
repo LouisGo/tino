@@ -16,7 +16,8 @@ const RUNTIME_FILE_NAME: &str = "runtime.json";
 const QUEUE_FILE_NAME: &str = "queue.json";
 const FILTERS_LOG_FILE_NAME: &str = "filters.log";
 const BATCHES_DIR_NAME: &str = "batches";
-const RECENT_CAPTURE_LIMIT: usize = 20;
+const ASSETS_DIR_NAME: &str = "assets";
+const RECENT_CAPTURE_LIMIT: usize = 60;
 const BATCH_TRIGGER_SIZE: usize = 20;
 const BATCH_TRIGGER_MAX_WAIT_MINUTES: i64 = 10;
 const DEFAULT_PROVIDER_BASE_URL: &str = "https://api.openai.com/v1";
@@ -76,15 +77,24 @@ impl AppSettings {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
 pub struct CapturePreview {
     pub id: String,
     pub source: String,
     pub content_kind: String,
     pub preview: String,
+    pub secondary_preview: Option<String>,
     pub captured_at: String,
     pub status: String,
+    pub raw_text: String,
+    pub raw_rich: Option<String>,
+    pub raw_rich_format: Option<String>,
+    pub link_url: Option<String>,
+    pub asset_path: Option<String>,
+    pub image_width: Option<u32>,
+    pub image_height: Option<u32>,
+    pub byte_size: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -101,8 +111,8 @@ pub struct DashboardSnapshot {
     pub recent_captures: Vec<CapturePreview>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
 pub struct CaptureRecord {
     pub id: String,
     pub source: String,
@@ -111,7 +121,14 @@ pub struct CaptureRecord {
     pub raw_text: String,
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
+    pub link_url: Option<String>,
+    pub asset_path: Option<String>,
+    pub image_width: Option<u32>,
+    pub image_height: Option<u32>,
+    pub byte_size: Option<u64>,
     pub hash: String,
+    #[serde(skip, default)]
+    pub image_bytes: Option<Vec<u8>>,
 }
 
 #[derive(Debug)]
@@ -364,23 +381,30 @@ impl AppState {
         let settings = self.current_settings()?;
         let knowledge_root = settings.knowledge_root_path();
         let captured_at = parse_captured_at(&capture.captured_at)?;
+        let mut stored_capture = capture.clone();
         ensure_knowledge_root_layout(&knowledge_root)?;
         ensure_queue_state(&knowledge_root)?;
 
-        if let Some(reason) = detect_filter_reason(&capture.raw_text) {
+        if stored_capture.content_kind == "image" {
+            let asset_path = persist_image_asset(&knowledge_root, &stored_capture)?;
+            stored_capture.asset_path = Some(asset_path.display().to_string());
+            stored_capture.image_bytes = None;
+        }
+
+        if let Some(reason) = detect_filter_reason(&stored_capture) {
             append_filter_log(
                 &knowledge_root,
                 &FilterLogEntry {
-                    id: capture.id.clone(),
-                    captured_at: capture.captured_at.clone(),
-                    hash: capture.hash.clone(),
+                    id: stored_capture.id.clone(),
+                    captured_at: stored_capture.captured_at.clone(),
+                    hash: stored_capture.hash.clone(),
                     reason: reason.into(),
-                    preview: build_preview(&capture.raw_text),
+                    preview: build_preview(&stored_capture.raw_text),
                 },
             )?;
 
             self.record_capture_outcome(
-                capture,
+                &stored_capture,
                 "filtered",
                 None,
                 Some(reason.into()),
@@ -394,9 +418,9 @@ impl AppState {
             });
         }
 
-        if self.is_duplicate_capture(&capture.hash, &captured_at)? {
+        if self.is_duplicate_capture(&stored_capture.hash, &captured_at)? {
             self.record_capture_outcome(
-                capture,
+                &stored_capture,
                 "deduplicated",
                 None,
                 None,
@@ -408,11 +432,11 @@ impl AppState {
             return Ok(CaptureProcessingResult::Deduplicated);
         }
 
-        let archive_path = daily_file_path(&knowledge_root, &capture.captured_at)?;
-        append_capture_to_daily_file(&archive_path, capture)?;
+        let archive_path = daily_file_path(&knowledge_root, &stored_capture.captured_at)?;
+        append_capture_to_daily_file(&archive_path, &knowledge_root, &stored_capture)?;
 
         let queue_depth = if settings.ai_enabled() {
-            enqueue_capture(&knowledge_root, capture)?
+            enqueue_capture(&knowledge_root, &stored_capture)?
         } else {
             queue_depth_for_root(&knowledge_root)?
         };
@@ -424,13 +448,13 @@ impl AppState {
         };
 
         self.record_capture_outcome(
-            capture,
+            &stored_capture,
             status,
             Some(archive_path.display().to_string()),
             None,
             Some(RecentHashEntry {
-                hash: capture.hash.clone(),
-                captured_at: capture.captured_at.clone(),
+                hash: stored_capture.hash.clone(),
+                captured_at: stored_capture.captured_at.clone(),
             }),
             queue_depth,
             &captured_at,
@@ -582,14 +606,10 @@ impl AppState {
             state.runtime.last_filter_reason = filter_reason;
             state.runtime.queue_depth = queue_depth;
             state.runtime.updated_at = now_rfc3339();
-            state.runtime.recent_captures.push_front(CapturePreview {
-                id: capture.id.clone(),
-                source: capture.source.clone(),
-                content_kind: capture.content_kind.clone(),
-                preview: build_preview(&capture.raw_text),
-                captured_at: capture.captured_at.clone(),
-                status: status.into(),
-            });
+            state
+                .runtime
+                .recent_captures
+                .push_front(build_capture_preview(capture, status));
 
             while state.runtime.recent_captures.len() > RECENT_CAPTURE_LIMIT {
                 state.runtime.recent_captures.pop_back();
@@ -798,7 +818,11 @@ fn batch_file_path(knowledge_root: &Path, batch_id: &str) -> PathBuf {
     batches_dir_path(knowledge_root).join(format!("{batch_id}.json"))
 }
 
-fn append_capture_to_daily_file(path: &Path, capture: &CaptureRecord) -> Result<(), String> {
+fn append_capture_to_daily_file(
+    path: &Path,
+    knowledge_root: &Path,
+    capture: &CaptureRecord,
+) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
@@ -818,16 +842,43 @@ fn append_capture_to_daily_file(path: &Path, capture: &CaptureRecord) -> Result<
     }
 
     content.push('\n');
-    content.push_str(&render_capture_entry(capture));
+    content.push_str(&render_capture_entry(capture, knowledge_root));
     fs::write(path, content).map_err(|error| error.to_string())
 }
 
-fn render_capture_entry(capture: &CaptureRecord) -> String {
+fn render_capture_entry(capture: &CaptureRecord, knowledge_root: &Path) -> String {
     let mut entry = String::new();
     entry.push_str(&format!("## {} `{}`\n", capture.captured_at, capture.id));
     entry.push_str(&format!("- Source: {}\n", capture.source));
     entry.push_str(&format!("- Kind: {}\n", capture.content_kind));
     entry.push_str(&format!("- Hash: {}\n\n", capture.hash));
+
+    if let Some(link_url) = &capture.link_url {
+        entry.push_str(&format!("- URL: {}\n\n", link_url));
+    }
+
+    if let (Some(width), Some(height)) = (capture.image_width, capture.image_height) {
+        entry.push_str(&format!("- Dimensions: {}x{}\n", width, height));
+    }
+
+    if let Some(byte_size) = capture.byte_size {
+        entry.push_str(&format!("- Asset Size: {} bytes\n", byte_size));
+    }
+
+    if capture.image_width.is_some() || capture.byte_size.is_some() {
+        entry.push('\n');
+    }
+
+    if capture.content_kind == "image" {
+        if let Some(asset_path) = &capture.asset_path {
+            let markdown_asset_path =
+                markdown_asset_path(knowledge_root, asset_path).unwrap_or_else(|| asset_path.clone());
+            entry.push_str("### Image Preview\n");
+            entry.push_str(&format!("![Clipboard image]({})\n\n", markdown_asset_path));
+            entry.push_str(&format!("- Asset Path: `{}`\n\n", asset_path));
+        }
+    }
+
     entry.push_str("### Readable Text\n");
     entry.push_str(&render_code_block("text", &capture.raw_text));
 
@@ -846,8 +897,12 @@ fn render_code_block(language: &str, content: &str) -> String {
     format!("{fence}{language}\n{content}\n{fence}\n")
 }
 
-fn detect_filter_reason(raw_text: &str) -> Option<&'static str> {
-    let trimmed = raw_text.trim();
+fn detect_filter_reason(capture: &CaptureRecord) -> Option<&'static str> {
+    if capture.content_kind == "image" {
+        return None;
+    }
+
+    let trimmed = capture.raw_text.trim();
     let char_count = trimmed.chars().count();
 
     if char_count < MIN_CAPTURE_TEXT_CHARS {
@@ -864,6 +919,132 @@ fn detect_filter_reason(raw_text: &str) -> Option<&'static str> {
     }
 
     None
+}
+
+fn persist_image_asset(knowledge_root: &Path, capture: &CaptureRecord) -> Result<PathBuf, String> {
+    let image_bytes = capture
+        .image_bytes
+        .as_ref()
+        .ok_or_else(|| format!("image capture {} is missing in-memory bytes", capture.id))?;
+    let captured_at = parse_captured_at(&capture.captured_at)?;
+    let asset_dir = assets_dir_path(knowledge_root).join(captured_at.format("%Y-%m-%d").to_string());
+    fs::create_dir_all(&asset_dir).map_err(|error| error.to_string())?;
+
+    let asset_path = asset_dir.join(format!("{}.png", capture.id));
+    fs::write(&asset_path, image_bytes).map_err(|error| error.to_string())?;
+
+    Ok(asset_path)
+}
+
+fn build_capture_preview(capture: &CaptureRecord, status: &str) -> CapturePreview {
+    CapturePreview {
+        id: capture.id.clone(),
+        source: capture.source.clone(),
+        content_kind: capture.content_kind.clone(),
+        preview: match capture.content_kind.as_str() {
+            "image" => "Clipboard image".into(),
+            "link" => capture
+                .link_url
+                .as_deref()
+                .map(build_link_display)
+                .unwrap_or_else(|| build_preview(&capture.raw_text)),
+            _ => build_preview(&capture.raw_text),
+        },
+        secondary_preview: build_capture_secondary_preview(capture),
+        captured_at: capture.captured_at.clone(),
+        status: status.into(),
+        raw_text: capture.raw_text.clone(),
+        raw_rich: capture.raw_rich.clone(),
+        raw_rich_format: capture.raw_rich_format.clone(),
+        link_url: capture.link_url.clone(),
+        asset_path: capture.asset_path.clone(),
+        image_width: capture.image_width,
+        image_height: capture.image_height,
+        byte_size: capture.byte_size,
+    }
+}
+
+fn build_capture_secondary_preview(capture: &CaptureRecord) -> Option<String> {
+    match capture.content_kind.as_str() {
+        "image" => {
+            let mut parts = Vec::new();
+
+            if let (Some(width), Some(height)) = (capture.image_width, capture.image_height) {
+                parts.push(format!("{}x{}", width, height));
+            }
+
+            if let Some(byte_size) = capture.byte_size {
+                parts.push(format_bytes(byte_size));
+            }
+
+            if parts.is_empty() {
+                None
+            } else {
+                Some(parts.join(" · "))
+            }
+        }
+        "link" => capture
+            .link_url
+            .as_deref()
+            .map(|link_url| build_link_secondary_preview(link_url, &capture.raw_text)),
+        _ => {
+            let line_count = capture.raw_text.lines().count().max(1);
+            Some(format!(
+                "{} line{} · {} chars",
+                line_count,
+                if line_count == 1 { "" } else { "s" },
+                capture.raw_text.chars().count()
+            ))
+        }
+    }
+}
+
+fn build_link_display(link_url: &str) -> String {
+    let normalized = link_url
+        .trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .trim_start_matches("www.");
+    let compact = normalized.split_whitespace().next().unwrap_or(normalized);
+    let mut preview = compact.chars().take(80).collect::<String>();
+
+    if compact.chars().count() > 80 {
+        preview.push('…');
+    }
+
+    preview
+}
+
+fn build_link_secondary_preview(link_url: &str, fallback: &str) -> String {
+    let normalized = link_url
+        .trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://");
+    let host = normalized.split('/').next().unwrap_or(normalized);
+
+    if host.is_empty() {
+        build_preview(fallback)
+    } else {
+        host.to_string()
+    }
+}
+
+fn markdown_asset_path(knowledge_root: &Path, asset_path: &str) -> Option<String> {
+    let relative_asset_path = Path::new(asset_path).strip_prefix(knowledge_root).ok()?;
+    Some(format!("../{}", relative_asset_path.display()))
+}
+
+fn format_bytes(byte_size: u64) -> String {
+    if byte_size < 1024 {
+        return format!("{byte_size} B");
+    }
+
+    let kib = byte_size as f64 / 1024.0;
+    if kib < 1024.0 {
+        return format!("{kib:.1} KB");
+    }
+
+    format!("{:.1} MB", kib / 1024.0)
 }
 
 fn looks_like_otp(input: &str) -> bool {
@@ -939,6 +1120,10 @@ fn filters_log_file_path(knowledge_root: &Path) -> PathBuf {
     knowledge_root.join("_system").join(FILTERS_LOG_FILE_NAME)
 }
 
+fn assets_dir_path(knowledge_root: &Path) -> PathBuf {
+    knowledge_root.join(ASSETS_DIR_NAME)
+}
+
 fn batches_dir_path(knowledge_root: &Path) -> PathBuf {
     knowledge_root.join("_system").join(BATCHES_DIR_NAME)
 }
@@ -946,6 +1131,7 @@ fn batches_dir_path(knowledge_root: &Path) -> PathBuf {
 fn ensure_knowledge_root_layout(knowledge_root: &Path) -> Result<(), String> {
     fs::create_dir_all(knowledge_root.join("daily")).map_err(|error| error.to_string())?;
     fs::create_dir_all(knowledge_root.join("_system")).map_err(|error| error.to_string())?;
+    fs::create_dir_all(assets_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
     fs::create_dir_all(batches_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
     Ok(())
 }

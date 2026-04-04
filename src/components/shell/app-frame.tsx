@@ -1,10 +1,21 @@
-import { Activity, FolderOpen, LayoutPanelTop, Settings2 } from "lucide-react";
+import {
+  Activity,
+  ClipboardList,
+  FolderOpen,
+  LayoutPanelTop,
+  Moon,
+  Palette,
+  Settings2,
+  Sun,
+} from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { themeModes, themeNames } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useAppShellStore } from "@/stores/app-shell-store";
+import { useThemeStore } from "@/stores/theme-store";
 
 type AppFrameProps = {
   children: React.ReactNode;
@@ -21,17 +32,27 @@ const navItems = [
     label: "Setup",
     icon: Settings2,
   },
+  {
+    to: "/clipboard",
+    label: "Clipboard",
+    icon: ClipboardList,
+  },
 ];
 
 export function AppFrame({ children }: AppFrameProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const captureEnabled = useAppShellStore((state) => state.captureEnabled);
   const setCaptureEnabled = useAppShellStore((state) => state.setCaptureEnabled);
+  const mode = useThemeStore((state) => state.mode);
+  const themeName = useThemeStore((state) => state.themeName);
+  const setMode = useThemeStore((state) => state.setMode);
+  const setThemeName = useThemeStore((state) => state.setThemeName);
+  const toggleDarkLight = useThemeStore((state) => state.toggleDarkLight);
 
   return (
     <div className="min-h-screen p-4 md:p-6">
       <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1600px] grid-cols-1 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="flex flex-col rounded-[32px] border border-sidebar-border bg-sidebar/85 p-5 shadow-sm backdrop-blur">
+        <aside className="app-shell-surface flex flex-col">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold tracking-[0.18em] text-primary uppercase">
@@ -41,7 +62,7 @@ export function AppFrame({ children }: AppFrameProps) {
                 Personal Flow OS
               </h1>
             </div>
-            <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+            <div className="app-icon-chip p-3">
               <Activity className="size-5" />
             </div>
           </div>
@@ -76,7 +97,7 @@ export function AppFrame({ children }: AppFrameProps) {
             })}
           </nav>
 
-          <div className="mt-auto space-y-4 rounded-[28px] border border-sidebar-border bg-background/80 p-4">
+          <div className="mt-auto space-y-4 rounded-[28px] border border-sidebar-border bg-surface-elevated p-4">
             <div>
               <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
                 Capture Pipeline
@@ -92,7 +113,7 @@ export function AppFrame({ children }: AppFrameProps) {
               onClick={() => setCaptureEnabled(!captureEnabled)}
             >
               {captureEnabled ? "Pause Capture" : "Resume Capture"}
-              <span className="rounded-full bg-background/20 px-2 py-0.5 text-[11px]">
+              <span className="rounded-full bg-surface-action-chip px-2 py-0.5 text-[11px] text-secondary-foreground">
                 {captureEnabled ? "active" : "paused"}
               </span>
             </Button>
@@ -102,10 +123,66 @@ export function AppFrame({ children }: AppFrameProps) {
                 <FolderOpen className="size-4" />
               </Link>
             </Button>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                Theme
+              </p>
+              <Button
+                variant="outline"
+                className="w-full justify-between"
+                onClick={toggleDarkLight}
+              >
+                Toggle Dark / Light
+                {mode === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
+              </Button>
+              <label className="block space-y-1">
+                <span className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+                  Mode
+                </span>
+                <select
+                  value={mode}
+                  onChange={(event) =>
+                    setMode(event.target.value as (typeof themeModes)[number])
+                  }
+                  className="h-10 w-full rounded-2xl border border-sidebar-border bg-surface-soft px-3 text-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                >
+                  {themeModes.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+                  Palette
+                </span>
+                <select
+                  value={themeName}
+                  onChange={(event) =>
+                    setThemeName(event.target.value as (typeof themeNames)[number])
+                  }
+                  className="h-10 w-full rounded-2xl border border-sidebar-border bg-surface-soft px-3 text-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                >
+                  {themeNames.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Palette className="size-3.5" />
+                Token-driven theme variables
+              </p>
+            </div>
           </div>
         </aside>
 
-        <main className="rounded-[32px] border border-border/80 bg-background/80 p-4 shadow-sm backdrop-blur md:p-6">
+        <main className="app-main-surface">
           {children}
         </main>
       </div>

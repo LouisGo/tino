@@ -6,6 +6,7 @@ import {
 import type { QueryClient } from "@tanstack/react-query";
 
 import { queryClient } from "@/app/query-client";
+import { ClipboardPage } from "@/features/clipboard/clipboard-page";
 import { DashboardPage } from "@/features/dashboard/dashboard-page";
 import { SettingsForm } from "@/features/settings/settings-form";
 import { RootShell } from "@/routes/root-shell";
@@ -30,7 +31,17 @@ const settingsRoute = createRoute({
   component: SettingsForm,
 });
 
-const routeTree = rootRoute.addChildren([dashboardRoute, settingsRoute]);
+const clipboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/clipboard",
+  component: ClipboardPage,
+});
+
+const routeTree = rootRoute.addChildren([
+  dashboardRoute,
+  clipboardRoute,
+  settingsRoute,
+]);
 
 export const router = createRouter({
   routeTree,

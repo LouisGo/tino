@@ -11,11 +11,16 @@ export function useWindowCloseGuard() {
     }
 
     let unlisten: (() => void) | undefined;
+    const currentWindow = getCurrentWindow();
 
-    void getCurrentWindow()
+    void currentWindow
       .onCloseRequested(async (event) => {
         event.preventDefault();
-        await getCurrentWindow().hide();
+        try {
+          await currentWindow.hide();
+        } catch (error) {
+          console.error("failed to hide window on close request", error);
+        }
       })
       .then((dispose) => {
         unlisten = dispose;
