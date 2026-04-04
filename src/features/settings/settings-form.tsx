@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  FileSearch,
   FolderSearch,
   Moon,
   Palette,
@@ -24,12 +25,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { themeModes, themeNames } from "@/lib/theme";
 import {
   getAppSettings,
   getAutostartEnabled,
+  getLogDirectory,
   pickDirectory,
   revealPath,
   saveAppSettings,
@@ -245,24 +254,26 @@ export function SettingsForm() {
               children={(field) => (
                 <div className="space-y-2">
                   <Label htmlFor={field.name}>Clipboard History Window</Label>
-                  <select
-                    id={field.name}
-                    name={field.name}
+                  <Select
                     value={String(field.state.value)}
-                    onBlur={field.handleBlur}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
+                    onValueChange={(nextValue) => {
+                      const value = Number(nextValue);
                       field.handleChange(value);
+                      field.handleBlur();
                       patchSettingsDraft({ clipboardHistoryDays: value });
                     }}
-                    className="h-11 w-full rounded-2xl border border-border/80 bg-background/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
                   >
-                    {[3, 4, 5, 6, 7].map((value) => (
-                      <option key={value} value={value}>
-                        Keep last {value} days
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id={field.name} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 3, 7, 14].map((value) => (
+                        <SelectItem key={value} value={String(value)}>
+                          Keep last {value} {value === 1 ? "day" : "days"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-sm leading-6 text-muted-foreground">
                     Clipboard board and disk-backed clipboard archive are retained
                     inside this rolling window.
@@ -358,37 +369,43 @@ export function SettingsForm() {
                 <span className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
                   Mode
                 </span>
-                <select
+                <Select
                   value={mode}
-                  onChange={(event) =>
-                    setMode(event.target.value as (typeof themeModes)[number])
-                  }
-                  className="h-11 w-full rounded-2xl border border-border/80 bg-background/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
+                  onValueChange={(value) => setMode(value as (typeof themeModes)[number])}
                 >
-                  {themeModes.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {themeModes.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
               <label className="block space-y-2">
                 <span className="text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
                   Palette
                 </span>
-                <select
+                <Select
                   value={themeName}
-                  onChange={(event) =>
-                    setThemeName(event.target.value as (typeof themeNames)[number])
+                  onValueChange={(value) =>
+                    setThemeName(value as (typeof themeNames)[number])
                   }
-                  className="h-11 w-full rounded-2xl border border-border/80 bg-background/80 px-3 text-sm outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30"
                 >
-                  {themeNames.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {themeNames.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Palette className="size-3.5" />
@@ -445,6 +462,33 @@ export function SettingsForm() {
               Current milestone is the no-AI capture-to-daily loop, not the full
               orchestrator.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Logs</CardTitle>
+            <CardDescription>
+              Rust and renderer logs are persisted into the system log directory.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 text-sm leading-6 text-muted-foreground">
+              <p>`rust.log` covers watcher, archive, queue, and command-side activity.</p>
+              <p>`renderer.log` covers UI runtime, console output, and unhandled frontend errors.</p>
+              <p>Retention policy: `10 MB` per file, keep recent `10` rotations, prune files older than `14 days`.</p>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full justify-between"
+              onClick={async () => {
+                const path = await getLogDirectory();
+                await revealPath(path);
+              }}
+            >
+              View Logs
+              <FileSearch className="size-4" />
+            </Button>
           </CardContent>
         </Card>
       </div>

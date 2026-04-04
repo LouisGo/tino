@@ -283,6 +283,18 @@ export function detailRows(capture: ClipboardCapture) {
   return rows;
 }
 
+export function capturePreviewSurfaceClassName(contentKind: ClipboardCapture["contentKind"]) {
+  if (contentKind === "image") {
+    return "app-preview-image";
+  }
+
+  if (contentKind === "link") {
+    return "app-preview-link";
+  }
+
+  return "app-preview-text";
+}
+
 export function formatBytes(byteSize: number) {
   if (byteSize < 1024) {
     return `${byteSize} B`;

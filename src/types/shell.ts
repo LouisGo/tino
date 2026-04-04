@@ -58,6 +58,13 @@ export interface ClipboardPageResult {
   summary: ClipboardPageSummary;
 }
 
+export interface DeleteClipboardCaptureResult {
+  id: string;
+  removedFromHistory: boolean;
+  removedFromStore: boolean;
+  deleted: boolean;
+}
+
 export interface SettingsDraft {
   knowledgeRoot: string;
   baseUrl: string;

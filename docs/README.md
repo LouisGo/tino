@@ -16,4 +16,5 @@
 - `03-planning/`
   - `HANDOFF.md`
   - `技术冻结记录.md`
+  - `日志规范.md`
   - `MVP开发任务拆解.md`

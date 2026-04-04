@@ -1,9 +1,10 @@
 use crate::app_state::{
     AppSettings, AppState, ClipboardPage, ClipboardPageRequest, DashboardSnapshot,
+    DeleteClipboardCaptureResult,
 };
 use serde::Deserialize;
 use std::{fs, path::Path, process::Command};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 #[cfg(target_os = "macos")]
 use {
@@ -27,6 +28,12 @@ pub struct ClipboardReplayRequest {
     asset_path: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteClipboardCaptureRequest {
+    id: String,
+}
+
 #[tauri::command]
 pub fn get_dashboard_snapshot(
     app: AppHandle,
@@ -44,6 +51,14 @@ pub fn get_clipboard_page(
 }
 
 #[tauri::command]
+pub fn delete_clipboard_capture(
+    state: State<'_, AppState>,
+    request: DeleteClipboardCaptureRequest,
+) -> Result<DeleteClipboardCaptureResult, String> {
+    state.delete_clipboard_capture(request.id)
+}
+
+#[tauri::command]
 pub fn get_app_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
     state.current_settings()
 }
@@ -54,6 +69,14 @@ pub fn save_app_settings(
     settings: AppSettings,
 ) -> Result<AppSettings, String> {
     state.save_settings(settings)
+}
+
+#[tauri::command]
+pub fn get_log_directory(app: AppHandle) -> Result<String, String> {
+    app.path()
+        .app_log_dir()
+        .map(|path| path.display().to_string())
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]

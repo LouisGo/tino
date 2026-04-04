@@ -3,12 +3,18 @@ import { useState } from "react";
 import { Search, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { CaptureImageLightbox } from "@/features/clipboard/components/capture-preview";
 import {
   ClipboardCaptureList,
 } from "@/features/clipboard/components/clipboard-capture-list";
 import { ClipboardCaptureDetail } from "@/features/clipboard/components/clipboard-capture-detail";
-import { clipboardFilterOptions, getClipboardFilterOption, groupCapturesByDay, type ClipboardFilter } from "@/features/clipboard/lib/clipboard-board";
+import { clipboardFilterOptions, getClipboardFilterOption, groupCapturesByDay } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
@@ -119,40 +125,51 @@ function ClipboardBoardToolbar() {
         </div>
 
         <div className="flex items-center justify-end">
-          <label className="relative">
+          <div className="relative">
             <span className="sr-only">Filter capture types</span>
-            <select
-              value={filter}
-              onChange={(event) => setFilter(event.target.value as ClipboardFilter)}
-              className={cn(
-                "h-11 w-[132px] appearance-none rounded-[20px] border border-border/70 bg-card/90 px-4 text-sm font-medium shadow-none outline-none transition focus:border-ring focus:ring-[3px] focus:ring-ring/30 sm:w-[148px]",
-                filter === "all" ? "pr-9 sm:pr-10" : "pl-8 pr-9 sm:pr-10",
-              )}
-              style={
-                filter !== "all"
-                  ? {
-                      borderColor: `color-mix(in oklch, ${activeFilter.accentColor} 28%, var(--border))`,
-                      backgroundColor: `color-mix(in oklch, ${activeFilter.accentColor} 8%, var(--card))`,
-                    }
-                  : undefined
-              }
-            >
-              {clipboardFilterOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {filter !== "all" ? (
-              <span
-                className="pointer-events-none absolute top-1/2 left-4 size-2 rounded-full -translate-y-1/2"
-                style={{ backgroundColor: activeFilter.accentColor }}
-              />
-            ) : null}
-            <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted-foreground">
-              ▾
-            </span>
-          </label>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger
+                aria-label="Filter capture types"
+                className={cn(
+                  "w-[132px] border-border/70 bg-card/90 px-4 shadow-none sm:w-[148px]",
+                  filter === "all" ? "pr-9 sm:pr-10" : "pl-4 pr-9 sm:pr-10",
+                )}
+                style={
+                  filter !== "all"
+                    ? {
+                        borderColor: `color-mix(in oklch, ${activeFilter.accentColor} 28%, var(--border))`,
+                        backgroundColor: `color-mix(in oklch, ${activeFilter.accentColor} 8%, var(--card))`,
+                      }
+                    : undefined
+                }
+              >
+                <span className="inline-flex min-w-0 items-center gap-3">
+                  {filter !== "all" ? (
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: activeFilter.accentColor }}
+                    />
+                  ) : null}
+                  <span className="truncate">{activeFilter.label}</span>
+                </span>
+              </SelectTrigger>
+              <SelectContent align="end">
+                {clipboardFilterOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <span className="inline-flex items-center gap-3">
+                      {option.value !== "all" ? (
+                        <span
+                          className="size-2 rounded-full"
+                          style={{ backgroundColor: option.accentColor }}
+                        />
+                      ) : null}
+                      <span>{option.label}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </div>

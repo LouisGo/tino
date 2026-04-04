@@ -199,6 +199,8 @@ MVP 主窗口只做：
 - 剪贴板轮询：`Rust`
 - 本地文件读写：`Rust`
 - AI 调用：`前端`
+- Agent runtime / prompt 编排 / streaming UI：`Renderer`
+- Agent tools 的真实副作用：`Rust command`
 - 运行态：`_system/ JSON`
 
 ### 7.4 数据策略

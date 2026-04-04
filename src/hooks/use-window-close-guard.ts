@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { createRendererLogger } from "@/lib/logger";
 import { isTauriRuntime } from "@/lib/tauri";
 
 export function useWindowCloseGuard() {
@@ -12,6 +13,7 @@ export function useWindowCloseGuard() {
 
     let unlisten: (() => void) | undefined;
     const currentWindow = getCurrentWindow();
+    const logger = createRendererLogger("window-close");
 
     void currentWindow
       .onCloseRequested(async (event) => {
@@ -19,7 +21,7 @@ export function useWindowCloseGuard() {
         try {
           await currentWindow.hide();
         } catch (error) {
-          console.error("failed to hide window on close request", error);
+          logger.error("Failed to hide window on close request", error);
         }
       })
       .then((dispose) => {

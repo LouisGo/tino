@@ -9,6 +9,7 @@ import {
   CaptureDetailPreview,
 } from "@/features/clipboard/components/capture-preview";
 import {
+  capturePreviewSurfaceClassName,
   detailRows,
   formatKindLabel,
   kindBadgeClass,
@@ -17,7 +18,6 @@ import {
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import { copyCaptureToClipboard, openImageInPreview } from "@/lib/tauri";
 import { formatRelativeTimestamp } from "@/lib/time";
-import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
 
 import { ClipboardEmptyState } from "./clipboard-empty-state";
@@ -75,9 +75,11 @@ export function ClipboardCaptureDetail({
         </div>
       </div>
 
-      <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto]">
+      <div
+        className={`grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto] ${capturePreviewSurfaceClassName(capture.contentKind)}`}
+      >
         <div className="min-h-0 min-w-0">
-          <CaptureDetailPreview capture={capture} onOpenImage={onOpenImage} />
+          <CaptureDetailPreview capture={capture} onOpenImage={onOpenImage} sharedSurface />
         </div>
 
         <DetailInformation capture={capture} />
@@ -114,81 +116,49 @@ function TooltipIconButton({
 
 function DetailInformation({ capture }: { capture: ClipboardCapture }) {
   const rows = detailRows(capture);
-  const tableRows = chunkDetailRows(rows, 3);
+  const visibleRows = rows.slice(0, 6);
+  const cells = Array.from({ length: 6 }, (_, index) => visibleRows[index] ?? null);
   const sourceAppIconSrc = useClipboardAssetSrc(capture.sourceAppIconPath);
 
   return (
-    <section className="px-2.5 py-2.5">
-      <div className="overflow-hidden rounded-[18px] border border-border/70 bg-background/65">
-        <div className="overflow-auto">
-          <table className="w-full table-fixed border-collapse">
-            <tbody>
-              {tableRows.map((tableRow, rowIndex) => (
-                <tr
-                  key={`detail-row-${rowIndex}`}
-                  className={cn(rowIndex > 0 ? "border-t border-border/70" : "")}
-                >
-                  {tableRow.map((cell, cellIndex) =>
-                    cell ? (
-                      <td
-                        key={cell.label}
-                        className={cn(
-                          "align-top px-3 py-2.5",
-                          cellIndex > 0 ? "border-l border-border/70" : "",
-                        )}
-                        >
-                          <div className="space-y-0.5">
-                            <div className="text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                              {cell.label}
-                            </div>
-                            <div className="app-selectable break-all text-[13px] leading-5 text-foreground">
-                              {cell.label === "Source App" && sourceAppIconSrc ? (
-                                <span className="inline-flex items-center gap-2">
-                                  <span className="inline-flex size-5 shrink-0 overflow-hidden rounded-md bg-card/80 align-middle">
-                                    <img
-                                      src={sourceAppIconSrc}
-                                      alt={capture.sourceAppName || capture.source || "Source application icon"}
-                                      className="size-full object-cover"
-                                    />
-                                  </span>
-                                  <span>{cell.value}</span>
-                                </span>
-                              ) : (
-                                cell.value
-                              )}
-                            </div>
-                        </div>
-                      </td>
+    <section className="px-2.5 pb-2.5 pt-0">
+      <div className="app-detail-grid-shell overflow-hidden rounded-[18px]">
+        <div className="app-detail-grid h-[156px]">
+          {cells.map((cell, index) => (
+            <div
+              key={cell ? cell.label : `empty-${index}`}
+              className="app-detail-grid-cell min-w-0 px-3 py-2.5"
+            >
+              {cell ? (
+                <div className="flex h-full min-w-0 flex-col justify-center gap-1">
+                  <div className="truncate text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                    {cell.label}
+                  </div>
+                  <div
+                    className="app-selectable min-w-0 truncate text-[13px] leading-5 text-foreground"
+                    title={cell.value}
+                  >
+                    {cell.label === "Source App" && sourceAppIconSrc ? (
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <span className="inline-flex size-5 shrink-0 overflow-hidden rounded-md bg-card/80 align-middle">
+                          <img
+                            src={sourceAppIconSrc}
+                            alt={capture.sourceAppName || capture.source || "Source application icon"}
+                            className="size-full object-cover"
+                          />
+                        </span>
+                        <span className="truncate">{cell.value}</span>
+                      </span>
                     ) : (
-                      <td
-                        key={`empty-${rowIndex}-${cellIndex}`}
-                        className={cn(
-                          "px-3 py-2.5",
-                          cellIndex > 0 ? "border-l border-border/70" : "",
-                        )}
-                      />
-                    ),
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      cell.value
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
-}
-
-function chunkDetailRows<T>(items: T[], size: number) {
-  const result: Array<Array<T | null>> = [];
-
-  for (let index = 0; index < items.length; index += size) {
-    const chunk: Array<T | null> = items.slice(index, index + size);
-    while (chunk.length < size) {
-      chunk.push(null);
-    }
-    result.push(chunk);
-  }
-
-  return result;
 }

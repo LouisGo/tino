@@ -17,6 +17,21 @@ export function AppProviders({ router }: AppProvidersProps) {
   const themeName = useThemeStore((state) => state.themeName);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const suppressContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+
+    window.addEventListener("contextmenu", suppressContextMenu, true);
+    return () => {
+      window.removeEventListener("contextmenu", suppressContextMenu, true);
+    };
+  }, []);
+
+  useEffect(() => {
     applyTheme({ mode, themeName });
   }, [mode, themeName]);
 

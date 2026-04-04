@@ -6,6 +6,7 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
   ClipboardCapture,
+  DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
   SettingsDraft,
@@ -177,12 +178,35 @@ export async function getClipboardPage(request: {
   return invoke<ClipboardPageResult>("get_clipboard_page", { request });
 }
 
+export async function deleteClipboardCapture(id: string) {
+  if (!isTauriRuntime()) {
+    return {
+      id,
+      removedFromHistory: true,
+      removedFromStore: true,
+      deleted: true,
+    } satisfies DeleteClipboardCaptureResult;
+  }
+
+  return invoke<DeleteClipboardCaptureResult>("delete_clipboard_capture", {
+    request: { id },
+  });
+}
+
 export async function getAppSettings() {
   if (!isTauriRuntime()) {
     return mockSettings;
   }
 
   return invoke<SettingsDraft>("get_app_settings");
+}
+
+export async function getLogDirectory() {
+  if (!isTauriRuntime()) {
+    return "~/Library/Logs/com.louistation.tino";
+  }
+
+  return invoke<string>("get_log_directory");
 }
 
 export async function saveAppSettings(settings: SettingsDraft) {

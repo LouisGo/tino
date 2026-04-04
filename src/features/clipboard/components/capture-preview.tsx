@@ -26,7 +26,9 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
+import { capturePreviewSurfaceClassName } from "@/features/clipboard/lib/clipboard-board";
 import { openExternalTarget } from "@/lib/tauri";
+import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
 
 const MIN_IMAGE_SCALE = 0.8;
@@ -41,17 +43,20 @@ type Point = {
 export function CaptureDetailPreview({
   capture,
   onOpenImage,
+  sharedSurface = false,
 }: {
   capture: ClipboardCapture;
   onOpenImage: () => void;
+  sharedSurface?: boolean;
 }) {
   const assetSrc = useClipboardAssetSrc(
     capture.contentKind === "image" ? capture.assetPath : null,
   );
+  const surfaceClassName = sharedSurface ? "" : capturePreviewSurfaceClassName(capture.contentKind);
 
   if (capture.contentKind === "image") {
     return (
-      <section className="app-preview-image flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5">
+      <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5")}>
         <PreviewHeader title="Image Preview" />
         <button
           type="button"
@@ -86,7 +91,7 @@ export function CaptureDetailPreview({
     const hostname = target ? extractHostname(target) : null;
 
     return (
-      <section className="app-preview-link flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5">
+      <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5")}>
         <PreviewHeader
           title="Link Preview"
           controls={(
@@ -120,10 +125,16 @@ export function CaptureDetailPreview({
     );
   }
 
-  return <TextCapturePreview key={capture.id} capture={capture} />;
+  return <TextCapturePreview key={capture.id} capture={capture} sharedSurface={sharedSurface} />;
 }
 
-function TextCapturePreview({ capture }: { capture: ClipboardCapture }) {
+function TextCapturePreview({
+  capture,
+  sharedSurface = false,
+}: {
+  capture: ClipboardCapture;
+  sharedSurface?: boolean;
+}) {
   const [mode, setMode] = useState<TextPreviewMode>(() => preferredTextPreviewMode(capture));
   const normalizedMarkdownSource = normalizeMarkdownSource(capture.rawText);
 
@@ -140,7 +151,12 @@ function TextCapturePreview({ capture }: { capture: ClipboardCapture }) {
         : "Text Preview";
 
   return (
-    <section className="app-preview-text flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5">
+    <section
+      className={cn(
+        sharedSurface ? "" : capturePreviewSurfaceClassName(capture.contentKind),
+        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5",
+      )}
+    >
       <PreviewHeader
         title={previewTitle}
         controls={

@@ -1,15 +1,20 @@
 import {
   Activity,
   ClipboardList,
+  Moon,
   Settings2,
+  SunMedium,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { Separator } from "@/components/ui/separator";
 import { Tooltip } from "@/components/ui/tooltip";
+import { resolveThemeMode } from "@/lib/theme";
 import { isMacOsTauriRuntime } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
+import { useThemeStore } from "@/stores/theme-store";
 
 type AppFrameProps = {
   children: React.ReactNode;
@@ -28,6 +33,31 @@ export function AppFrame({ children }: AppFrameProps) {
   const homeActive = pathname === "/";
   const hasOverlayTitleBar = isMacOsTauriRuntime();
   const appWindow = hasOverlayTitleBar ? getCurrentWindow() : null;
+  const mode = useThemeStore((state) => state.mode);
+  const toggleDarkLight = useThemeStore((state) => state.toggleDarkLight);
+  const [resolvedMode, setResolvedMode] = useState(() => resolveThemeMode(mode));
+
+  useEffect(() => {
+    const updateResolvedMode = () => {
+      setResolvedMode(resolveThemeMode(mode));
+    };
+
+    updateResolvedMode();
+
+    if (typeof window === "undefined" || mode !== "system") {
+      return;
+    }
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener("change", updateResolvedMode);
+
+    return () => {
+      media.removeEventListener("change", updateResolvedMode);
+    };
+  }, [mode]);
+
+  const isDarkMode = resolvedMode === "dark";
+  const themeTooltip = isDarkMode ? "Switch to light" : "Switch to dark";
 
   function handleTitleBarMouseDown(event: React.MouseEvent<HTMLDivElement>) {
     if (!appWindow || event.button !== 0 || event.detail > 1) {
@@ -78,10 +108,10 @@ export function AppFrame({ children }: AppFrameProps) {
           <Link
             to="/"
             className={cn(
-              "app-shell-logo flex size-8.5 items-center justify-center rounded-[14px] p-0 text-sidebar-primary-foreground transition-transform hover:-translate-y-px",
+              "app-shell-logo flex size-8.5 items-center justify-center rounded-[14px] p-0 text-sidebar-primary-foreground transition-colors",
               homeActive
                 ? "shadow-sm ring-1 ring-white/20"
-                : "opacity-92",
+                : "opacity-92 hover:opacity-100 hover:ring-1 hover:ring-white/16",
             )}
             aria-label="Tino home"
           >
@@ -116,7 +146,21 @@ export function AppFrame({ children }: AppFrameProps) {
           })}
         </nav>
 
-        <div className="mt-auto">
+        <div className="mt-auto flex flex-col items-center gap-1.5">
+          <Tooltip content={themeTooltip} placement="bottom">
+            <button
+              type="button"
+              aria-label={themeTooltip}
+              onClick={toggleDarkLight}
+              className="app-sidebar-icon flex size-8 items-center justify-center rounded-[13px] text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            >
+              {isDarkMode ? (
+                <Moon className="size-3.5" />
+              ) : (
+                <SunMedium className="size-3.5" />
+              )}
+            </button>
+          </Tooltip>
           <Tooltip content="Settings" placement="bottom">
             <Link
               to="/settings"

@@ -1,19 +1,28 @@
 mod app_state;
 mod capture;
 mod commands;
+mod storage;
 
 use app_state::AppState;
 #[cfg(target_os = "macos")]
 use objc2_app_kit::NSWindow;
 use serde::{Deserialize, Serialize};
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    time::{Duration, SystemTime},
+};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Manager, PhysicalPosition, PhysicalSize, RunEvent, WindowEvent,
 };
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind, WEBVIEW_TARGET};
 
 const WINDOW_STATE_FILE_NAME: &str = "window-state.json";
+const LOG_MAX_FILE_SIZE_BYTES: u128 = 10_000_000;
+const LOG_KEEP_COUNT: usize = 10;
+const LOG_RETENTION_DAYS: u64 = 14;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -95,6 +104,57 @@ fn focus_main_window(app: &AppHandle) {
     }
 }
 
+fn prune_expired_logs(app: &AppHandle) {
+    let Ok(log_dir) = app.path().app_log_dir() else {
+        return;
+    };
+
+    if let Err(error) = prune_expired_log_files(
+        &log_dir,
+        Duration::from_secs(60 * 60 * 24 * LOG_RETENTION_DAYS),
+    ) {
+        log::warn!(
+            "failed to prune expired logs in {}: {}",
+            log_dir.display(),
+            error
+        );
+    }
+}
+
+fn prune_expired_log_files(log_dir: &Path, max_age: Duration) -> Result<(), String> {
+    if !log_dir.exists() {
+        return Ok(());
+    }
+
+    let now = SystemTime::now();
+
+    for entry in fs::read_dir(log_dir).map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        let path = entry.path();
+
+        if path.extension().and_then(|value| value.to_str()) != Some("log") {
+            continue;
+        }
+
+        let metadata = entry.metadata().map_err(|error| error.to_string())?;
+        let Ok(modified_at) = metadata.modified() else {
+            continue;
+        };
+        let Ok(age) = now.duration_since(modified_at) else {
+            continue;
+        };
+
+        if age <= max_age {
+            continue;
+        }
+
+        fs::remove_file(&path).map_err(|error| error.to_string())?;
+        log::info!("pruned expired log {}", path.display());
+    }
+
+    Ok(())
+}
+
 #[cfg(target_os = "macos")]
 fn configure_native_macos_window(app: &AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
@@ -151,7 +211,34 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut log_targets = vec![
+        Target::new(TargetKind::LogDir {
+            file_name: Some("rust".into()),
+        })
+        .filter(|metadata| !metadata.target().starts_with(WEBVIEW_TARGET)),
+        Target::new(TargetKind::LogDir {
+            file_name: Some("renderer".into()),
+        })
+        .filter(|metadata| metadata.target().starts_with(WEBVIEW_TARGET)),
+    ];
+
+    if cfg!(debug_assertions) {
+        log_targets.push(Target::new(TargetKind::Stdout));
+    }
+
     let app = tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(if cfg!(debug_assertions) {
+                    log::LevelFilter::Debug
+                } else {
+                    log::LevelFilter::Info
+                })
+                .max_file_size(LOG_MAX_FILE_SIZE_BYTES)
+                .rotation_strategy(RotationStrategy::KeepSome(LOG_KEEP_COUNT))
+                .targets(log_targets)
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -160,12 +247,10 @@ pub fn run() {
             None,
         ))
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
+            prune_expired_logs(app.handle());
+
+            if let Ok(log_dir) = app.path().app_log_dir() {
+                log::info!("log directory initialized at {}", log_dir.display());
             }
 
             create_tray(app.handle())?;
@@ -181,8 +266,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::shell::get_dashboard_snapshot,
             commands::shell::get_clipboard_page,
+            commands::shell::delete_clipboard_capture,
             commands::shell::get_app_settings,
             commands::shell::save_app_settings,
+            commands::shell::get_log_directory,
             commands::shell::open_in_preview,
             commands::shell::copy_capture_to_clipboard,
             commands::shell::reveal_in_file_manager
