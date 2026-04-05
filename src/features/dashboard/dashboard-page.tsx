@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   Bot,
@@ -10,10 +10,9 @@ import {
   RefreshCcw,
 } from "lucide-react";
 
+import { queryKeys } from "@/app/query-keys";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { queryKeys } from "@/app/query-keys";
-import { useCommand } from "@/core/commands";
 import {
   Card,
   CardContent,
@@ -21,11 +20,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useCommand } from "@/core/commands";
 import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events";
+import { useScopedT } from "@/i18n";
 import { formatRelativeTimestamp } from "@/lib/time";
 import { getDashboardSnapshot } from "@/lib/tauri";
 
 export function DashboardPage() {
+  const tCommon = useScopedT("common");
+  const tDashboard = useScopedT("dashboard");
   const queryClient = useQueryClient();
   const revealPath = useCommand<{ path: string }>("system.revealPath");
   const { data, isFetching, refetch } = useQuery({
@@ -34,15 +37,18 @@ export function DashboardPage() {
     staleTime: 2 * 60 * 1_000,
     placeholderData: (previousData) => previousData,
   });
+
   useClipboardCaptureEvents(() => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() });
   });
+
   const recentCaptures = data?.recentCaptures.slice(0, 3) ?? [];
   const cards = [
     {
-      label: "Knowledge Root",
-      value: data?.defaultKnowledgeRoot ?? "~/tino-inbox",
-      description: "Current archive workspace used by Rust-side file writes.",
+      label: tDashboard("cards.knowledgeRoot.label"),
+      value:
+        data?.defaultKnowledgeRoot ?? tDashboard("cards.knowledgeRoot.fallbackValue"),
+      description: tDashboard("cards.knowledgeRoot.description"),
       icon: FolderRoot,
       action: data?.defaultKnowledgeRoot
         ? () =>
@@ -50,25 +56,37 @@ export function DashboardPage() {
               path: data.defaultKnowledgeRoot,
             })
         : undefined,
-      actionLabel: "Open knowledge root in file manager",
+      actionLabel: tDashboard("cards.knowledgeRoot.actionLabel"),
     },
     {
-      label: "Queue Policy",
-      value: data?.queuePolicy ?? "20 captures or 10 minutes",
-      description: "Frozen hybrid batch rule reserved for the next milestone.",
+      label: tDashboard("cards.queuePolicy.label"),
+      value: data?.queuePolicy ?? tDashboard("cards.queuePolicy.fallbackValue"),
+      description: tDashboard("cards.queuePolicy.description"),
       icon: Clock3,
       action: undefined,
       actionLabel: undefined,
     },
     {
-      label: "Runtime",
-      value: `${data?.appName ?? "Tino"} ${data?.appVersion ?? "0.1.0"}`,
-      description: `${data?.os ?? "browser"} · ${data?.captureMode ?? "Rust clipboard poller active"}`,
+      label: tDashboard("cards.runtime.label"),
+      value: `${data?.appName ?? tCommon("appName")} ${data?.appVersion ?? "0.1.0"}`,
+      description: tDashboard("cards.runtime.description", {
+        values: {
+          os: data?.os ?? tDashboard("cards.runtime.fallbackOs"),
+          captureMode:
+            data?.captureMode ?? tDashboard("cards.runtime.fallbackCaptureMode"),
+        },
+      }),
       icon: ArrowUpRight,
       action: undefined,
       actionLabel: undefined,
     },
   ] as const;
+
+  const aiItems = [
+    tDashboard("sections.ai.item1"),
+    tDashboard("sections.ai.item2"),
+    tDashboard("sections.ai.item3"),
+  ];
 
   return (
     <div className="app-scroll-area h-full overflow-y-auto pr-2">
@@ -78,17 +96,14 @@ export function DashboardPage() {
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="space-y-3">
                 <p className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">
-                  Control Tower
+                  {tDashboard("hero.eyebrow")}
                 </p>
                 <div className="space-y-2">
                   <h2 className="text-3xl font-semibold tracking-tight">
-                    Clipboard capture now lands in `daily/*.md` through the Rust
-                    runtime.
+                    {tDashboard("hero.title")}
                   </h2>
                   <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                    The shell remains narrow on purpose: keep capture reliable,
-                    expose just enough recent state to verify it, and use a dedicated
-                    board for richer clipboard inspection.
+                    {tDashboard("hero.description")}
                   </p>
                 </div>
               </div>
@@ -99,7 +114,7 @@ export function DashboardPage() {
                 disabled={isFetching}
               >
                 <RefreshCcw className={isFetching ? "animate-spin" : ""} />
-                Refresh Snapshot
+                {tDashboard("hero.refresh")}
               </Button>
             </div>
           </div>
@@ -148,17 +163,16 @@ export function DashboardPage() {
                   <div className="app-icon-chip">
                     <Images className="size-4" />
                   </div>
-                  <CardTitle>Clipboard Board</CardTitle>
+                  <CardTitle>{tDashboard("sections.clipboard.title")}</CardTitle>
                 </div>
                 <CardDescription className="max-w-2xl text-sm leading-6">
-                  Recent captures now live in a dedicated two-panel board with search,
-                  filtering, quick preview, and structured detail.
+                  {tDashboard("sections.clipboard.description")}
                 </CardDescription>
               </div>
 
               <Button asChild>
                 <Link to="/clipboard">
-                  Open Clipboard Board
+                  {tDashboard("sections.clipboard.actionLabel")}
                   <ArrowUpRight />
                 </Link>
               </Button>
@@ -174,7 +188,7 @@ export function DashboardPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <Badge variant="secondary">
-                      {formatKindLabel(capture.contentKind)}
+                      {formatKindLabel(capture.contentKind, tDashboard)}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {formatRelativeTimestamp(capture.capturedAt)}
@@ -190,7 +204,7 @@ export function DashboardPage() {
               ))
             ) : (
               <div className="col-span-full flex min-h-40 items-center justify-center rounded-[24px] border border-dashed border-border/80 bg-surface-soft px-6 text-sm text-muted-foreground">
-                No captures yet.
+                {tDashboard("sections.clipboard.empty")}
               </div>
             )}
           </CardContent>
@@ -204,18 +218,16 @@ export function DashboardPage() {
                   <div className="app-icon-chip">
                     <Bot className="size-4" />
                   </div>
-                  <CardTitle>AI Batch Review</CardTitle>
+                  <CardTitle>{tDashboard("sections.ai.title")}</CardTitle>
                 </div>
                 <CardDescription className="max-w-2xl text-sm leading-6">
-                  Phase 1 starts with contract-first review: Rust exposes ready batch
-                  boundaries, the renderer validates a mock structured result, and the
-                  apply step remains non-persistent.
+                  {tDashboard("sections.ai.description")}
                 </CardDescription>
               </div>
 
               <Button asChild>
                 <Link to="/ai">
-                  Open Batch Review
+                  {tDashboard("sections.ai.actionLabel")}
                   <ArrowUpRight />
                 </Link>
               </Button>
@@ -223,11 +235,7 @@ export function DashboardPage() {
           </CardHeader>
 
           <CardContent className="grid gap-3 p-4 md:grid-cols-3">
-            {[
-              "Rust IPC DTO and command boundaries are now reserved for AI batches.",
-              "Renderer owns the model schema, runtime state machine, and mock review loop.",
-              "Persistence is intentionally blocked until the review contract is stable.",
-            ].map((item) => (
+            {aiItems.map((item) => (
               <div
                 key={item}
                 className="rounded-[24px] border border-border/80 bg-surface-elevated p-4 shadow-sm"
@@ -242,16 +250,25 @@ export function DashboardPage() {
   );
 }
 
-function formatKindLabel(contentKind: string) {
+function formatKindLabel(
+  contentKind: string,
+  tDashboard: (
+    key:
+      | "kindLabels.plainText"
+      | "kindLabels.richText"
+      | "kindLabels.link"
+      | "kindLabels.image",
+  ) => string,
+) {
   switch (contentKind) {
     case "plain_text":
-      return "Text";
+      return tDashboard("kindLabels.plainText");
     case "rich_text":
-      return "Rich Text";
+      return tDashboard("kindLabels.richText");
     case "link":
-      return "Link";
+      return tDashboard("kindLabels.link");
     case "image":
-      return "Image";
+      return tDashboard("kindLabels.image");
     default:
       return contentKind;
   }

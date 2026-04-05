@@ -3,6 +3,7 @@ import { useDeferredValue, useEffect, useMemo } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/app/query-keys";
+import { useShortcutScope } from "@/core/shortcuts";
 import { ClipboardBoardPanel } from "@/features/clipboard/components/clipboard-board-panel";
 import { ClipboardBoardSummary } from "@/features/clipboard/components/clipboard-board-summary";
 import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events";
@@ -22,6 +23,8 @@ export function ClipboardBoardFeature({
   windowMode?: boolean;
   autoFocusSearch?: boolean;
 }) {
+  useShortcutScope("clipboard.panel");
+
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
   const deferredSearch = useDeferredValue(searchValue);

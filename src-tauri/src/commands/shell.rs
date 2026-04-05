@@ -27,7 +27,7 @@ use {
     std::{
         ffi::{c_char, c_void, CStr},
         thread,
-        time::Duration,
+        time::{Duration, Instant},
     },
 };
 
@@ -603,13 +603,17 @@ const CF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
 #[cfg(target_os = "macos")]
 const KEYCODE_V: u16 = 9;
 #[cfg(target_os = "macos")]
-const TARGET_FOCUS_POLL_ATTEMPTS: usize = 40;
+const TARGET_FOCUS_POLL_ATTEMPTS: usize = 24;
 #[cfg(target_os = "macos")]
-const TARGET_FOCUS_POLL_INTERVAL_MS: u64 = 50;
+const TARGET_FOCUS_POLL_INTERVAL_MS: u64 = 25;
 #[cfg(target_os = "macos")]
 const EDITABLE_ANCESTOR_DEPTH_LIMIT: usize = 8;
 #[cfg(target_os = "macos")]
 const TARGET_ACTIVATION_SETTLE_MS: u64 = 80;
+#[cfg(target_os = "macos")]
+const TARGET_FRONTMOST_EARLY_EXIT_POLLS: usize = 3;
+#[cfg(target_os = "macos")]
+const TARGET_FOCUSED_EARLY_EXIT_POLLS: usize = 2;
 
 #[cfg(target_os = "macos")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -750,14 +754,51 @@ fn activate_target_application(application: &NSRunningApplication) -> bool {
 fn wait_for_target_focus_state(pid: pid_t) -> TargetFocusState {
     enable_manual_accessibility(pid);
     let mut best_state = TargetFocusState::Unavailable;
+    let mut frontmost_streak = 0;
+    let mut focused_streak = 0;
+    let wait_started_at = Instant::now();
 
     for attempt in 0..TARGET_FOCUS_POLL_ATTEMPTS {
         let state = detect_target_focus_state(pid);
         if state > best_state {
             best_state = state;
         }
-        if state == TargetFocusState::EditableFocusedElement {
-            return state;
+        match state {
+            TargetFocusState::EditableFocusedElement => {
+                log::info!(
+                    "clipboard return target became editable after {}ms",
+                    wait_started_at.elapsed().as_millis()
+                );
+                return state;
+            }
+            TargetFocusState::FocusedElement => {
+                focused_streak += 1;
+                frontmost_streak = 0;
+
+                if focused_streak >= TARGET_FOCUSED_EARLY_EXIT_POLLS {
+                    log::info!(
+                        "clipboard return using focused target after {}ms",
+                        wait_started_at.elapsed().as_millis()
+                    );
+                    return state;
+                }
+            }
+            TargetFocusState::FrontmostApplication => {
+                frontmost_streak += 1;
+                focused_streak = 0;
+
+                if frontmost_streak >= TARGET_FRONTMOST_EARLY_EXIT_POLLS {
+                    log::info!(
+                        "clipboard return using frontmost app fallback after {}ms",
+                        wait_started_at.elapsed().as_millis()
+                    );
+                    return state;
+                }
+            }
+            TargetFocusState::Unavailable => {
+                frontmost_streak = 0;
+                focused_streak = 0;
+            }
         }
 
         if attempt + 1 < TARGET_FOCUS_POLL_ATTEMPTS {
@@ -765,6 +806,11 @@ fn wait_for_target_focus_state(pid: pid_t) -> TargetFocusState {
         }
     }
 
+    log::info!(
+        "clipboard return focus wait exhausted after {}ms with best state {:?}",
+        wait_started_at.elapsed().as_millis(),
+        best_state
+    );
     best_state
 }
 

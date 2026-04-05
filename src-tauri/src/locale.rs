@@ -92,7 +92,11 @@ pub fn detect_system_locale() -> AppLocale {
     let locale = std::env::var("LC_ALL")
         .ok()
         .filter(|value| !value.is_empty())
-        .or_else(|| std::env::var("LC_MESSAGES").ok().filter(|value| !value.is_empty()))
+        .or_else(|| {
+            std::env::var("LC_MESSAGES")
+                .ok()
+                .filter(|value| !value.is_empty())
+        })
         .or_else(|| std::env::var("LANG").ok().filter(|value| !value.is_empty()));
 
     let Some(locale) = locale else {

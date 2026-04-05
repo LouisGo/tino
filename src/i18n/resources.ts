@@ -24,6 +24,7 @@ function defineLocaleSchema<const T extends Record<string, unknown>>(value: T) {
 export const i18nNamespaces = [
   "common",
   "shell",
+  "dashboard",
   "commands",
   "shortcuts",
   "settings",
@@ -80,6 +81,58 @@ export const enUSResources = defineLocaleSchema({
       open: "Open Tino",
       quit: "Quit",
       tooltip: "Tino",
+    },
+  },
+  dashboard: {
+    hero: {
+      eyebrow: "Control Tower",
+      title: "Clipboard capture now lands in `daily/*.md` through the Rust runtime.",
+      description:
+        "The shell remains narrow on purpose: keep capture reliable, expose just enough recent state to verify it, and use a dedicated board for richer clipboard inspection.",
+      refresh: "Refresh Snapshot",
+    },
+    cards: {
+      knowledgeRoot: {
+        label: "Knowledge Root",
+        description: "Current archive workspace used by Rust-side file writes.",
+        actionLabel: "Open knowledge root in file manager",
+        fallbackValue: "~/tino-inbox",
+      },
+      queuePolicy: {
+        label: "Queue Policy",
+        description: "Frozen hybrid batch rule reserved for the next milestone.",
+        fallbackValue: "20 captures or 10 minutes",
+      },
+      runtime: {
+        label: "Runtime",
+        description: "{{os}} · {{captureMode}}",
+        fallbackOs: "browser",
+        fallbackCaptureMode: "Rust clipboard poller active",
+      },
+    },
+    sections: {
+      clipboard: {
+        title: "Clipboard Board",
+        description:
+          "Recent captures now live in a dedicated two-panel board with search, filtering, quick preview, and structured detail.",
+        actionLabel: "Open Clipboard Board",
+        empty: "No captures yet.",
+      },
+      ai: {
+        title: "AI Batch Review",
+        description:
+          "Phase 1 starts with contract-first review: Rust exposes ready batch boundaries, the renderer validates a mock structured result, and the apply step remains non-persistent.",
+        actionLabel: "Open Batch Review",
+        item1: "Rust IPC DTO and command boundaries are now reserved for AI batches.",
+        item2: "Renderer owns the model schema, runtime state machine, and mock review loop.",
+        item3: "Persistence is intentionally blocked until the review contract is stable.",
+      },
+    },
+    kindLabels: {
+      plainText: "Text",
+      richText: "Rich Text",
+      link: "Link",
+      image: "Image",
     },
   },
   commands: {
@@ -247,6 +300,58 @@ export const zhCNResources = {
       open: "打开 Tino",
       quit: "退出",
       tooltip: "Tino",
+    },
+  },
+  dashboard: {
+    hero: {
+      eyebrow: "控制塔",
+      title: "剪贴板采集现在会通过 Rust 运行时写入 `daily/*.md`。",
+      description:
+        "这个壳层刻意保持克制：先把采集链路做稳，只暴露足够的近期状态用于核验，更完整的剪贴板检查放到专用面板里处理。",
+      refresh: "刷新快照",
+    },
+    cards: {
+      knowledgeRoot: {
+        label: "知识根目录",
+        description: "Rust 侧文件写入当前使用的归档工作区。",
+        actionLabel: "在文件管理器中打开知识根目录",
+        fallbackValue: "~/tino-inbox",
+      },
+      queuePolicy: {
+        label: "队列策略",
+        description: "为下一个里程碑预留的固定混合批处理规则。",
+        fallbackValue: "20 条剪贴板或 10 分钟",
+      },
+      runtime: {
+        label: "运行时",
+        description: "{{os}} · {{captureMode}}",
+        fallbackOs: "浏览器",
+        fallbackCaptureMode: "Rust 剪贴板轮询器运行中",
+      },
+    },
+    sections: {
+      clipboard: {
+        title: "剪贴板面板",
+        description:
+          "近期记录现在集中在一个专用的双栏面板里，支持搜索、筛选、快速预览和结构化详情查看。",
+        actionLabel: "打开剪贴板面板",
+        empty: "还没有剪贴板记录。",
+      },
+      ai: {
+        title: "AI 批次复核",
+        description:
+          "第一阶段从契约优先的复核开始：Rust 暴露可直接消费的批次边界，渲染层校验 mock 结构化结果，apply 步骤暂时仍不落盘。",
+        actionLabel: "打开批次复核",
+        item1: "Rust IPC DTO 与命令边界已经为 AI 批次流程预留。",
+        item2: "渲染层负责模型 schema、运行时状态机和 mock 复核闭环。",
+        item3: "在复核契约稳定之前，持久化能力会继续保持关闭。",
+      },
+    },
+    kindLabels: {
+      plainText: "文本",
+      richText: "富文本",
+      link: "链接",
+      image: "图片",
     },
   },
   commands: {

@@ -13,6 +13,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use uuid::Uuid;
 
 use crate::locale::AppLocalePreference;
@@ -45,10 +46,31 @@ const STARTING_WATCH_STATUS: &str = "Rust clipboard poller starting";
 const DEDUP_WINDOW_MINUTES: i64 = 5;
 const MIN_CAPTURE_TEXT_CHARS: usize = 4;
 const OTP_MAX_CHARS: usize = 8;
+const GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID: &str = "shell.toggleMainWindow";
+const GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_DEFAULT: &str = "CommandOrControl+Shift+Alt+T";
+const GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_ID: &str = "shell.toggleClipboardWindow";
+const GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_DEFAULT: &str = "CommandOrControl+Shift+Alt+V";
 
 fn default_clipboard_history_days() -> u16 {
     DEFAULT_CLIPBOARD_HISTORY_DAYS
 }
+
+#[derive(Debug, Clone, Copy)]
+struct AppGlobalShortcutSpec {
+    id: &'static str,
+    default_accelerator: &'static str,
+}
+
+const APP_GLOBAL_SHORTCUT_SPECS: [AppGlobalShortcutSpec; 2] = [
+    AppGlobalShortcutSpec {
+        id: GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID,
+        default_accelerator: GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_DEFAULT,
+    },
+    AppGlobalShortcutSpec {
+        id: GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_ID,
+        default_accelerator: GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_DEFAULT,
+    },
+];
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -135,6 +157,110 @@ impl AppSettings {
 
     fn ai_enabled(&self) -> bool {
         !self.api_key.trim().is_empty()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ResolvedAppGlobalShortcut {
+    id: &'static str,
+    accelerator: String,
+}
+
+fn resolve_app_global_shortcuts(settings: &AppSettings) -> Vec<ResolvedAppGlobalShortcut> {
+    APP_GLOBAL_SHORTCUT_SPECS
+        .iter()
+        .filter_map(|shortcut| {
+            let accelerator = match settings.shortcut_overrides.get(shortcut.id) {
+                Some(shortcut_override) => shortcut_override.accelerator.clone(),
+                None => Some(shortcut.default_accelerator.to_string()),
+            }?;
+
+            Some(ResolvedAppGlobalShortcut {
+                id: shortcut.id,
+                accelerator,
+            })
+        })
+        .collect()
+}
+
+fn execute_app_global_shortcut(app: &AppHandle, shortcut_id: &str) -> Result<(), String> {
+    match shortcut_id {
+        GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID => {
+            crate::toggle_main_window_visibility(app).map(|_| ())
+        }
+        GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_ID => {
+            crate::toggle_clipboard_window_visibility(app).map(|_| ())
+        }
+        _ => Err(format!("unknown app global shortcut: {shortcut_id}")),
+    }
+}
+
+fn register_app_global_shortcut(
+    app: &AppHandle,
+    shortcut: &ResolvedAppGlobalShortcut,
+) -> Result<(), String> {
+    let shortcut_id = shortcut.id;
+    let accelerator = shortcut.accelerator.clone();
+    let accelerator_for_log = accelerator.clone();
+
+    app.global_shortcut()
+        .on_shortcut(accelerator.as_str(), move |app_handle, _shortcut, event| {
+            if event.state != ShortcutState::Pressed {
+                return;
+            }
+
+            if let Err(error) = execute_app_global_shortcut(app_handle, shortcut_id) {
+                warn!(
+                    "failed to execute app global shortcut {} ({}): {}",
+                    shortcut_id, accelerator_for_log, error
+                );
+            }
+        })
+        .map_err(|error| error.to_string())
+}
+
+fn sync_app_global_shortcuts(
+    app: &AppHandle,
+    previous: Option<&AppSettings>,
+    next: &AppSettings,
+) -> Result<(), String> {
+    let previous_shortcuts = previous
+        .map(resolve_app_global_shortcuts)
+        .unwrap_or_default();
+    let next_shortcuts = resolve_app_global_shortcuts(next);
+    let shortcut_manager = app.global_shortcut();
+    let mut register_errors = Vec::new();
+
+    for shortcut in previous_shortcuts.iter().filter(|shortcut| {
+        !next_shortcuts
+            .iter()
+            .any(|candidate| candidate == *shortcut)
+    }) {
+        if let Err(error) = shortcut_manager.unregister(shortcut.accelerator.as_str()) {
+            warn!(
+                "failed to unregister app global shortcut {} ({}): {}",
+                shortcut.id, shortcut.accelerator, error
+            );
+        }
+    }
+
+    for shortcut in next_shortcuts.iter().filter(|shortcut| {
+        !previous_shortcuts
+            .iter()
+            .any(|candidate| candidate == *shortcut)
+    }) {
+        if let Err(error) = register_app_global_shortcut(app, shortcut) {
+            register_errors.push(format!(
+                "{} ({}): {}",
+                shortcut.id, shortcut.accelerator, error
+            ));
+        }
+    }
+
+    if register_errors.is_empty() {
+        Ok(())
+    } else {
+        Err(register_errors.join("; "))
     }
 }
 
@@ -460,7 +586,13 @@ impl AppState {
         Ok(self.lock_state()?.settings.clone())
     }
 
+    pub fn sync_current_global_shortcuts(&self) -> Result<(), String> {
+        let settings = self.current_settings()?;
+        sync_app_global_shortcuts(&self.shared.app_handle, None, &settings)
+    }
+
     pub fn save_settings(&self, next: AppSettings) -> Result<AppSettings, String> {
+        let previous_settings = self.current_settings()?;
         let normalized = next.normalized(&self.shared.default_knowledge_root);
         ensure_knowledge_root_layout(&normalized.knowledge_root_path())?;
         write_json_file(&self.shared.settings_path, &normalized)?;
@@ -491,6 +623,14 @@ impl AppState {
             state.runtime = runtime;
         }
 
+        if let Err(error) = sync_app_global_shortcuts(
+            &self.shared.app_handle,
+            Some(&previous_settings),
+            &normalized,
+        ) {
+            warn!("failed to sync app global shortcuts after settings change: {error}");
+        }
+
         self.persist_runtime_snapshot()?;
 
         Ok(normalized)
@@ -506,21 +646,61 @@ impl AppState {
                 self.shared.app_log_dir.display().to_string(),
             )
         };
-        let queue_state = if settings.ai_enabled() {
-            format!(
-                "AI queue pending {} · ready batches {}",
-                runtime.queue_depth, runtime.ready_batch_count
-            )
-        } else {
-            format!(
-                "AI queue paused with {} pending · ready batches {} until provider setup completes",
-                runtime.queue_depth, runtime.ready_batch_count
-            )
+        let locale = settings.locale_preference.resolved();
+        let watch_status = match locale {
+            crate::locale::AppLocale::ZhCn => match runtime.watch_status.as_str() {
+                RUNNING_WATCH_STATUS => "Rust 剪贴板轮询器运行中".to_string(),
+                STARTING_WATCH_STATUS => "Rust 剪贴板轮询器启动中".to_string(),
+                "Rust clipboard poller retrying" => "Rust 剪贴板轮询器重试中".to_string(),
+                "Clipboard watcher is only implemented on macOS" => {
+                    "剪贴板监听目前只在 macOS 上实现".to_string()
+                }
+                other => other.to_string(),
+            },
+            crate::locale::AppLocale::EnUs => runtime.watch_status.clone(),
+        };
+        let queue_state = match locale {
+            crate::locale::AppLocale::ZhCn => {
+                if settings.ai_enabled() {
+                    format!(
+                        "AI 队列待处理 {} · 就绪批次 {}",
+                        runtime.queue_depth, runtime.ready_batch_count
+                    )
+                } else {
+                    format!(
+                        "AI 队列已暂停，待处理 {} · 就绪批次 {}，等待完成提供方配置",
+                        runtime.queue_depth, runtime.ready_batch_count
+                    )
+                }
+            }
+            crate::locale::AppLocale::EnUs => {
+                if settings.ai_enabled() {
+                    format!(
+                        "AI queue pending {} · ready batches {}",
+                        runtime.queue_depth, runtime.ready_batch_count
+                    )
+                } else {
+                    format!(
+                        "AI queue paused with {} pending · ready batches {} until provider setup completes",
+                        runtime.queue_depth, runtime.ready_batch_count
+                    )
+                }
+            }
         };
 
-        let batch_state = match &runtime.last_batch_reason {
-            Some(reason) => format!(" · last batch {}", reason),
-            None => String::new(),
+        let batch_state = match (&runtime.last_batch_reason, locale) {
+            (Some(reason), crate::locale::AppLocale::ZhCn) => {
+                let localized_reason = match reason.as_str() {
+                    "capture_count" => "按采集条数触发",
+                    "max_wait" => "按最长等待触发",
+                    other => other,
+                };
+                format!(" · 上一次成批触发：{}", localized_reason)
+            }
+            (Some(reason), crate::locale::AppLocale::EnUs) => {
+                format!(" · last batch {}", reason)
+            }
+            (None, _) => String::new(),
         };
         let recent_captures = load_recent_clipboard_captures(
             &settings.knowledge_root_path(),
@@ -538,13 +718,24 @@ impl AppState {
             default_knowledge_root: settings.knowledge_root.clone(),
             app_data_dir,
             app_log_dir,
-            queue_policy: "20 captures or 10 minutes · exact-match dedupe in 5 minutes".into(),
-            capture_mode: match &runtime.last_error {
-                Some(error) => format!(
-                    "{} · {}{} · last error: {}",
-                    runtime.watch_status, queue_state, batch_state, error
+            queue_policy: match locale {
+                crate::locale::AppLocale::ZhCn => {
+                    "20 条剪贴板或 10 分钟 · 5 分钟内做精确去重".into()
+                }
+                crate::locale::AppLocale::EnUs => {
+                    "20 captures or 10 minutes · exact-match dedupe in 5 minutes".into()
+                }
+            },
+            capture_mode: match (&runtime.last_error, locale) {
+                (Some(error), crate::locale::AppLocale::ZhCn) => format!(
+                    "{} · {}{} · 最近错误：{}",
+                    watch_status, queue_state, batch_state, error
                 ),
-                None => format!("{} · {}{}", runtime.watch_status, queue_state, batch_state),
+                (Some(error), crate::locale::AppLocale::EnUs) => format!(
+                    "{} · {}{} · last error: {}",
+                    watch_status, queue_state, batch_state, error
+                ),
+                (None, _) => format!("{} · {}{}", watch_status, queue_state, batch_state),
             },
             recent_captures,
         })
@@ -2875,6 +3066,7 @@ fn now_rfc3339() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn unique_root() -> PathBuf {
@@ -2907,6 +3099,69 @@ mod tests {
             image_height: None,
             byte_size: None,
         }
+    }
+
+    fn sample_settings() -> AppSettings {
+        AppSettings::defaults(&unique_root())
+    }
+
+    #[test]
+    fn resolve_app_global_shortcuts_uses_defaults_without_overrides() {
+        let settings = sample_settings();
+        let shortcuts = resolve_app_global_shortcuts(&settings);
+
+        assert_eq!(
+            shortcuts,
+            vec![
+                ResolvedAppGlobalShortcut {
+                    id: GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID,
+                    accelerator: GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_DEFAULT.into(),
+                },
+                ResolvedAppGlobalShortcut {
+                    id: GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_ID,
+                    accelerator: GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_DEFAULT.into(),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn resolve_app_global_shortcuts_prefers_persisted_override() {
+        let mut settings = sample_settings();
+        settings.shortcut_overrides = BTreeMap::from([(
+            GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID.into(),
+            AppShortcutOverride {
+                accelerator: Some("Control+Alt+Shift+M".into()),
+            },
+        )]);
+
+        let shortcuts = resolve_app_global_shortcuts(&settings);
+
+        assert_eq!(
+            shortcuts
+                .iter()
+                .find(|shortcut| shortcut.id == GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID)
+                .map(|shortcut| shortcut.accelerator.as_str()),
+            Some("Control+Alt+Shift+M")
+        );
+    }
+
+    #[test]
+    fn resolve_app_global_shortcuts_skips_disabled_override() {
+        let mut settings = sample_settings();
+        settings.shortcut_overrides = BTreeMap::from([(
+            GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID.into(),
+            AppShortcutOverride { accelerator: None },
+        )]);
+
+        let shortcuts = resolve_app_global_shortcuts(&settings);
+
+        assert!(shortcuts
+            .iter()
+            .all(|shortcut| shortcut.id != GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID));
+        assert!(shortcuts
+            .iter()
+            .any(|shortcut| shortcut.id == GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_ID));
     }
 
     #[test]

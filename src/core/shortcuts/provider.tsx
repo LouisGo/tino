@@ -8,12 +8,6 @@ import {
   type ReactNode,
 } from "react";
 
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import {
-  register as registerGlobalShortcut,
-  unregisterAll as unregisterAllGlobalShortcuts,
-} from "@tauri-apps/plugin-global-shortcut";
-
 import { useCommandExecutor } from "@/core/commands";
 import { useI18nLanguage } from "@/i18n";
 import { ShortcutManagerContext } from "@/core/shortcuts/context";
@@ -35,7 +29,6 @@ import type {
   ShortcutManager,
   ShortcutScopeId,
 } from "@/core/shortcuts/types";
-import { isTauriRuntime } from "@/lib/tauri";
 
 export function AppShortcutProvider({
   children,
@@ -170,71 +163,6 @@ export function AppShortcutProvider({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
-
-  useEffect(() => {
-    if (!isTauriRuntime() || getCurrentWindow().label !== "main") {
-      return;
-    }
-
-    let disposed = false;
-
-    const sync = async () => {
-      await unregisterAllGlobalShortcuts();
-
-      const globalShortcuts = resolvedShortcuts.filter(
-        (shortcut) => shortcut.kind === "global" && shortcut.accelerator,
-      );
-
-      for (const shortcut of globalShortcuts) {
-        try {
-          const shortcutId = shortcut.id;
-          await registerGlobalShortcut(shortcut.accelerator as string, (event) => {
-            if (disposed || event.state !== "Pressed") {
-              return;
-            }
-
-            const current = resolvedShortcutsRef.current.find(
-              (candidate) => candidate.kind === "global" && candidate.id === shortcutId,
-            );
-
-            if (!current) {
-              return;
-            }
-
-            const execution = createShortcutExecution(current, {
-              commands,
-              platform,
-              trigger: {
-                event: null,
-                platform,
-                source: "global",
-              },
-            });
-
-            if (!execution) {
-              return;
-            }
-
-            void executeShortcutExecution(commands, execution).catch((error) => {
-              console.error(`[shortcuts] failed to execute "${current.id}"`, error);
-            });
-          });
-        } catch (error) {
-          console.error(
-            `[shortcuts] failed to register global shortcut "${shortcut.id}" (${shortcut.accelerator})`,
-            error,
-          );
-        }
-      }
-    };
-
-    void sync();
-
-    return () => {
-      disposed = true;
-      void unregisterAllGlobalShortcuts();
-    };
-  }, [commands, platform, resolvedShortcuts]);
 
   return (
     <ShortcutManagerContext.Provider value={manager}>

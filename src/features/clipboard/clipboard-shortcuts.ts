@@ -7,7 +7,7 @@ export const clipboardShortcuts = [
     label: "Select Previous Capture",
     description: "Move the detail panel selection to the previous clipboard item.",
     defaults: "ArrowUp",
-    scopes: ["clipboard.window"],
+    scopes: ["clipboard.panel"],
     allowInEditable: true,
     allowRepeat: true,
     command: {
@@ -23,13 +23,77 @@ export const clipboardShortcuts = [
     label: "Select Next Capture",
     description: "Move the detail panel selection to the next clipboard item.",
     defaults: "ArrowDown",
-    scopes: ["clipboard.window"],
+    scopes: ["clipboard.panel"],
     allowInEditable: true,
     allowRepeat: true,
     command: {
       id: "clipboard.selectAdjacentCapture",
       payload: () => ({
         direction: "next",
+      }),
+    },
+  }),
+  defineShortcut<{ boundary: "first" }, void>({
+    id: "clipboard.selectFirstCapture",
+    kind: "local",
+    label: "Select First Capture",
+    description: "Jump to the first clipboard item in the current result set.",
+    defaults: "Home",
+    scopes: ["clipboard.panel"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.selectBoundaryCapture",
+      payload: () => ({
+        boundary: "first",
+      }),
+    },
+  }),
+  defineShortcut<{ boundary: "last" }, void>({
+    id: "clipboard.selectLastCapture",
+    kind: "local",
+    label: "Select Last Capture",
+    description: "Jump to the last clipboard item in the current result set.",
+    defaults: "End",
+    scopes: ["clipboard.panel"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.selectBoundaryCapture",
+      payload: () => ({
+        boundary: "last",
+      }),
+    },
+  }),
+  defineShortcut<{ boundary: "first" }, void>({
+    id: "clipboard.selectFirstCaptureByCommandArrow",
+    kind: "local",
+    label: "Select First Capture by Command Arrow",
+    description: "Jump to the first clipboard item with Command+ArrowUp on macOS.",
+    defaults: {
+      macos: "Command+ArrowUp",
+    },
+    scopes: ["clipboard.panel"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.selectBoundaryCapture",
+      payload: () => ({
+        boundary: "first",
+      }),
+    },
+  }),
+  defineShortcut<{ boundary: "last" }, void>({
+    id: "clipboard.selectLastCaptureByCommandArrow",
+    kind: "local",
+    label: "Select Last Capture by Command Arrow",
+    description: "Jump to the last clipboard item with Command+ArrowDown on macOS.",
+    defaults: {
+      macos: "Command+ArrowDown",
+    },
+    scopes: ["clipboard.panel"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.selectBoundaryCapture",
+      payload: () => ({
+        boundary: "last",
       }),
     },
   }),

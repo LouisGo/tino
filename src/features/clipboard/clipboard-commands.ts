@@ -30,6 +30,10 @@ type ClipboardSelectionDirectionPayload = {
   direction: "next" | "previous";
 };
 
+type ClipboardSelectionBoundaryPayload = {
+  boundary: "first" | "last";
+};
+
 type ClipboardConfirmSelectionPayload = {
   captureId?: string;
 };
@@ -44,6 +48,42 @@ function hasOpenClipboardTransientLayer() {
 
 function isClipboardWindow() {
   return isTauriRuntime() && getCurrentWindow().label === "clipboard";
+}
+
+const WINDOW_HIDE_SETTLE_ATTEMPTS = 6;
+const WINDOW_HIDE_SETTLE_INTERVAL_MS = 8;
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function closeClipboardWindowForConfirmation() {
+  useClipboardBoardStore.getState().resetState();
+
+  if (!isClipboardWindow()) {
+    return;
+  }
+
+  const currentWindow = getCurrentWindow();
+  try {
+    await currentWindow.hide();
+  } catch {
+    return;
+  }
+
+  for (let attempt = 0; attempt < WINDOW_HIDE_SETTLE_ATTEMPTS; attempt += 1) {
+    try {
+      if (!(await currentWindow.isVisible())) {
+        return;
+      }
+    } catch {
+      return;
+    }
+
+    await delay(WINDOW_HIDE_SETTLE_INTERVAL_MS);
+  }
 }
 
 function getSelectedVisibleCapture() {
@@ -135,6 +175,33 @@ export const clipboardCommands = [
       store.setSelectedCaptureId(captures[nextIndex]?.id ?? captures[0].id);
     },
   }),
+  defineCommand<ClipboardSelectionBoundaryPayload, void>({
+    id: "clipboard.selectBoundaryCapture",
+    label: "Select Boundary Capture",
+    isEnabled: ({ boundary }) => {
+      const { previewingImageId, visibleCaptures } = useClipboardBoardStore.getState();
+      return (
+        (boundary === "first" || boundary === "last")
+        && !previewingImageId
+        && !hasOpenClipboardTransientLayer()
+        && visibleCaptures.length > 0
+      );
+    },
+    run: ({ boundary }: ClipboardSelectionBoundaryPayload) => {
+      const captures = useClipboardBoardStore.getState().visibleCaptures;
+      if (captures.length === 0) {
+        return;
+      }
+
+      const targetCapture =
+        boundary === "last" ? captures[captures.length - 1] : captures[0];
+      if (!targetCapture) {
+        return;
+      }
+
+      useClipboardBoardStore.getState().setSelectedCaptureId(targetCapture.id);
+    },
+  }),
   defineCommand<void, void>({
     id: "clipboard.closeImagePreview",
     label: "Close Image Preview",
@@ -173,15 +240,13 @@ export const clipboardCommands = [
         return;
       }
 
+      await closeClipboardWindowForConfirmation();
+
       try {
         const pasted = await returnCaptureToPreviousApp(capture);
         if (!pasted) {
           await copyCaptureToClipboard(capture);
-          useClipboardBoardStore.getState().resetState();
-          return;
         }
-
-        useClipboardBoardStore.getState().resetState();
       } catch (error) {
         const description =
           error instanceof Error
