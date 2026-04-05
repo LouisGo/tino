@@ -259,6 +259,11 @@
     color-mix(in oklch, var(--card) 95%, var(--background) 5%),
     color-mix(in oklch, var(--secondary) 24%, var(--card) 76%)
   );
+  --gradient-animated-tab-active: linear-gradient(
+    to bottom right,
+    color-mix(in oklch, var(--sidebar-primary) 8%, var(--card) 92%),
+    color-mix(in oklch, var(--sidebar-primary) 28%, var(--accent) 72%)
+  );
 }
 
 @theme inline {
@@ -444,6 +449,25 @@
 
   .app-hero-clipboard {
     background-image: var(--gradient-hero-clipboard);
+  }
+
+  .app-animated-tabs-surface {
+    @apply border border-border/80 bg-surface-panel shadow-sm;
+    background-image: var(--gradient-hero-control);
+  }
+
+  .app-animated-tabs-indicator {
+    border-color: color-mix(in oklch, white 18%, var(--border) 82%);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 18%, transparent) 0,
+        transparent 34%
+      ),
+      var(--gradient-animated-tab-active);
+    box-shadow:
+      0 10px 20px -8px color-mix(in oklch, var(--primary) 12%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 26%, transparent);
   }
 
   .app-card-header-elevated {
