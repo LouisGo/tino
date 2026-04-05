@@ -96,7 +96,7 @@ export function AppFrame({ children }: AppFrameProps) {
     <div
       className={cn(
         "relative h-screen min-w-[700px] overflow-hidden px-3 pb-3 md:px-4 md:pb-4",
-        hasOverlayTitleBar ? "pt-10 md:pt-11" : "pt-3 md:pt-4",
+        hasOverlayTitleBar ? "pt-[32px]" : "pt-3 md:pt-4",
       )}
     >
       {hasOverlayTitleBar ? (
@@ -106,7 +106,7 @@ export function AppFrame({ children }: AppFrameProps) {
           onDoubleClick={handleTitleBarDoubleClick}
           className={cn(
             "fixed right-3 z-30 bg-transparent",
-            "top-1 h-8 md:top-1.5 md:h-8.5",
+            "top-0 h-[32px]",
             "left-[92px] md:left-[100px]",
           )}
         />
@@ -117,7 +117,7 @@ export function AppFrame({ children }: AppFrameProps) {
           "app-shell-surface fixed z-20 flex w-[58px] flex-col items-center px-1.5 py-2",
           "left-[max(0.75rem,calc((100vw-1600px)/2+0.75rem))] md:left-[max(1rem,calc((100vw-1600px)/2+1rem))]",
           hasOverlayTitleBar
-            ? "top-10 h-[calc(100vh-3.25rem)] md:top-11 md:h-[calc(100vh-3.75rem)]"
+            ? "top-[32px] h-[calc(100vh-44px)] md:h-[calc(100vh-48px)]"
             : "top-3 h-[calc(100vh-1.5rem)] md:top-4 md:h-[calc(100vh-2rem)]",
         )}
       >
@@ -133,14 +133,21 @@ export function AppFrame({ children }: AppFrameProps) {
           <Link
             to="/"
             className={cn(
-              "app-shell-logo flex size-8.5 items-center justify-center rounded-[14px] p-0 text-sidebar-primary-foreground transition-colors",
+              "app-shell-logo flex size-8.5 items-center justify-center rounded-[14px] p-0 transition-colors",
               homeActive
-                ? "shadow-sm ring-1 ring-white/20"
-                : "opacity-92 hover:opacity-100 hover:ring-1 hover:ring-white/16",
+                ? "app-shell-logo-active text-sidebar-primary-foreground"
+                : "app-shell-logo-idle text-sidebar-primary-foreground/92 hover:text-sidebar-primary-foreground",
             )}
             aria-label={tShell("aria.home")}
           >
-            <Activity className="size-3.5" />
+            <Activity
+              className={cn(
+                "size-3.5 transition-[transform,filter] duration-200",
+                homeActive
+                  ? "scale-[1.04] drop-shadow-[0_0_6px_rgba(255,255,255,0.18)]"
+                  : "scale-100",
+              )}
+            />
           </Link>
         </Tooltip>
 
