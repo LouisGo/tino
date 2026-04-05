@@ -1,7 +1,7 @@
 # Tino Handoff
 
 > 最后更新：2026-04-05  
-> 当前基线提交：`2ccbe84`  
+> 当前基线提交：`60d430e`  
 > 角色：短版 current-state 控制文档  
 > 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
 
@@ -51,13 +51,16 @@
 - `_system/queue.json`
 - `_system/batches/*.json`
 - settings / dashboard 的真实 Rust 持久化与读取
+- Runtime Provider 表单校验与模型下拉
+- settings 页 live provider smoke test
+- Renderer 侧 OpenAI-compatible provider access layer
 - `/ai` 页读取 live batch
 - review 提交写入 `_system/reviews/*.json`
 
 当前仍未真实存在：
 
-- 真实模型调用
-- `generateObject`
+- `/ai` 主链路中的真实模型调用
+- `/ai` review session 的 live `generateObject`
 - `topics/` 写入
 - `_inbox/` 写入
 - 正式 topic index
@@ -67,6 +70,7 @@
 
 - `/ai` 页读取的 batch 可以是 live batch
 - 当前排序结果仍是 renderer 侧 `trial sorting pass`
+- settings 页的 live provider test 已接真实模型，但 `/ai` 主链路仍未接 live `generateObject`
 - `applyBatchDecision` 当前只做审阅应用与留痕，不生成任务
 - 若 `apiKey` 为空，capture 只进 `daily`，不进 AI queue
 
@@ -150,4 +154,4 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 当前仓库的正确理解不是“AI 已接完”，而是：
 
-> 无 AI 原始归档链路已真实跑通；AI review 已有 live batch、审阅页和 review 留痕；真实模型与知识层持久化仍未接入。
+> 无 AI 原始归档链路已真实跑通；AI provider config 与 live smoke test 已接真实模型；AI review 已有 live batch、审阅页和 review 留痕；`/ai` 主链路的真实模型调用与知识层持久化仍未接入。
