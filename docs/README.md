@@ -16,6 +16,7 @@
 - `02-product/Tino AI 能力地图 v0.2.md`
 - `03-planning/`
   - `HANDOFF.md`
+  - `环境与打包流程.md`
   - `技术冻结记录.md`
   - `Tino AI Runtime 与 Agent 工程方案 v0.1.md`
   - `日志规范.md`

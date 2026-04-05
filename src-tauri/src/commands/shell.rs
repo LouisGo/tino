@@ -17,9 +17,11 @@ use {
     libc::pid_t,
     objc2_app_kit::{
         NSApplicationActivationOptions, NSPasteboard, NSPasteboardTypeHTML, NSPasteboardTypePNG,
-        NSPasteboardTypeRTF, NSPasteboardTypeString, NSRunningApplication,
+        NSPasteboardTypeRTF, NSPasteboardTypeString, NSRunningApplication, NSWorkspace,
     },
-    objc2_core_graphics::{CGEvent, CGEventFlags, CGEventSource, CGEventSourceStateID},
+    objc2_core_graphics::{
+        CGEvent, CGEventFlags, CGEventSource, CGEventSourceStateID, CGEventTapLocation,
+    },
     objc2_foundation::{NSData, NSString},
     sha2::{Digest, Sha256},
     std::{
@@ -88,7 +90,7 @@ fn summarize_codesign_output(output: &[u8]) -> String {
 }
 
 #[cfg(target_os = "macos")]
-fn read_codesign_identifier(bundle_path: &Path) -> Result<Option<String>, String> {
+fn read_codesign_details(bundle_path: &Path) -> Result<(Option<String>, Option<String>), String> {
     let output = Command::new("codesign")
         .args(["-dv", "--verbose=4"])
         .arg(bundle_path)
@@ -110,11 +112,18 @@ fn read_codesign_identifier(bundle_path: &Path) -> Result<Option<String>, String
         String::from_utf8_lossy(&output.stderr)
     );
 
-    Ok(combined.lines().find_map(|line| {
+    let identifier = combined.lines().find_map(|line| {
         line.strip_prefix("Identifier=")
             .map(str::trim)
             .map(ToOwned::to_owned)
-    }))
+    });
+    let signature = combined.lines().find_map(|line| {
+        line.strip_prefix("Signature=")
+            .map(str::trim)
+            .map(ToOwned::to_owned)
+    });
+
+    Ok((identifier, signature))
 }
 
 #[cfg(target_os = "macos")]
@@ -150,8 +159,8 @@ fn current_app_bundle_signature_issue(expected_identifier: &str) -> Option<Strin
         ));
     }
 
-    match read_codesign_identifier(&bundle_path) {
-        Ok(Some(actual_identifier)) if actual_identifier != expected_identifier => {
+    match read_codesign_details(&bundle_path) {
+        Ok((Some(actual_identifier), _)) if actual_identifier != expected_identifier => {
             return Some(format!(
                 "The running Tino app at {} has the wrong macOS signing identifier (`{}` instead of `{}`). Reinstall the latest Preview app and reopen it before trying paste back again.",
                 bundle_display,
@@ -178,6 +187,16 @@ fn current_app_bundle_signature_issue(expected_identifier: &str) -> Option<Strin
     }
 
     None
+}
+
+#[cfg(target_os = "macos")]
+fn current_app_uses_adhoc_signature() -> Result<bool, String> {
+    let Some(bundle_path) = current_app_bundle_path() else {
+        return Ok(false);
+    };
+
+    let (_, signature) = read_codesign_details(&bundle_path)?;
+    Ok(signature.as_deref() == Some("adhoc"))
 }
 
 #[tauri::command]
@@ -514,6 +533,16 @@ fn return_capture_to_previous_app_macos(
         return Err(signature_issue);
     }
 
+    if current_app_uses_adhoc_signature().unwrap_or(false) && !is_accessibility_trusted() {
+        log::warn!(
+            "clipboard return skipped because the current app is still ad-hoc signed, so Accessibility trust will not stick across rebuilds"
+        );
+        return Err(
+            "Tino Preview is still using ad-hoc macOS signing. Accessibility permission can reset after every rebuild for ad-hoc signed apps, so repeating the authorization flow is not a stable fix. Set up local signing with `pnpm macos:setup-local-signing`, rebuild/install the app, then grant Accessibility once for that rebuilt copy."
+                .into(),
+        );
+    }
+
     if !is_accessibility_trusted() {
         prompt_for_accessibility_permission();
         let authorization_target = current_app_authorization_target();
@@ -541,18 +570,27 @@ fn return_capture_to_previous_app_macos(
         return Err("failed to reactivate the previous app".into());
     }
 
-    if !wait_for_editable_focus(application.processIdentifier()) {
+    let target_pid = application.processIdentifier();
+    let focus_state = wait_for_target_focus_state(target_pid);
+    if focus_state == TargetFocusState::Unavailable {
         log::warn!(
-            "clipboard return skipped because no editable focused input was detected in {}",
+            "clipboard return skipped because no usable paste target could be restored in {}",
             target_name
         );
         return Ok(ClipboardReturnResult { pasted: false });
+    }
+    if focus_state != TargetFocusState::EditableFocusedElement {
+        log::info!(
+            "clipboard return proceeding with fallback paste into {} using focus state {:?}",
+            target_name,
+            focus_state
+        );
     }
 
     let replay_timestamp = Local::now().to_rfc3339();
     let replay_hash = copy_capture_to_clipboard_macos(capture)?;
     state.register_replay_hash(replay_hash, replay_timestamp, capture.capture_id.clone())?;
-    post_command_v_to_pid(application.processIdentifier())?;
+    post_command_v()?;
     log::info!("clipboard return pasted successfully into {}", target_name);
 
     Ok(ClipboardReturnResult { pasted: true })
@@ -565,11 +603,22 @@ const CF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
 #[cfg(target_os = "macos")]
 const KEYCODE_V: u16 = 9;
 #[cfg(target_os = "macos")]
-const EDITABLE_FOCUS_POLL_ATTEMPTS: usize = 30;
+const TARGET_FOCUS_POLL_ATTEMPTS: usize = 40;
 #[cfg(target_os = "macos")]
-const EDITABLE_FOCUS_POLL_INTERVAL_MS: u64 = 50;
+const TARGET_FOCUS_POLL_INTERVAL_MS: u64 = 50;
 #[cfg(target_os = "macos")]
 const EDITABLE_ANCESTOR_DEPTH_LIMIT: usize = 8;
+#[cfg(target_os = "macos")]
+const TARGET_ACTIVATION_SETTLE_MS: u64 = 80;
+
+#[cfg(target_os = "macos")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum TargetFocusState {
+    Unavailable,
+    FrontmostApplication,
+    FocusedElement,
+    EditableFocusedElement,
+}
 
 #[cfg(target_os = "macos")]
 type AXUIElementRef = *const c_void;
@@ -583,10 +632,16 @@ type CFStringRef = *const c_void;
 unsafe extern "C" {
     fn AXIsProcessTrusted() -> u8;
     fn AXUIElementCreateSystemWide() -> AXUIElementRef;
+    fn AXUIElementCreateApplication(pid: pid_t) -> AXUIElementRef;
     fn AXUIElementCopyAttributeValue(
         element: AXUIElementRef,
         attribute: CFStringRef,
         value: *mut CFTypeRef,
+    ) -> i32;
+    fn AXUIElementSetAttributeValue(
+        element: AXUIElementRef,
+        attribute: CFStringRef,
+        value: CFTypeRef,
     ) -> i32;
     fn AXUIElementIsAttributeSettable(
         element: AXUIElementRef,
@@ -603,6 +658,7 @@ unsafe extern "C" {
     fn CFGetTypeID(value: CFTypeRef) -> usize;
     fn CFBooleanGetTypeID() -> usize;
     fn CFBooleanGetValue(value: CFTypeRef) -> u8;
+    static kCFBooleanTrue: CFTypeRef;
     fn CFStringGetTypeID() -> usize;
     fn CFStringGetLength(value: CFStringRef) -> isize;
     fn CFStringGetMaximumSizeForEncoding(length: isize, encoding: u32) -> isize;
@@ -683,44 +739,104 @@ fn activate_target_application(application: &NSRunningApplication) -> bool {
         | NSApplicationActivationOptions::ActivateIgnoringOtherApps;
 
     let _ = application.unhide();
-    application.activateWithOptions(activation_options)
+    let activated = application.activateWithOptions(activation_options);
+    if activated {
+        thread::sleep(Duration::from_millis(TARGET_ACTIVATION_SETTLE_MS));
+    }
+    activated
 }
 
 #[cfg(target_os = "macos")]
-fn wait_for_editable_focus(pid: pid_t) -> bool {
-    for attempt in 0..EDITABLE_FOCUS_POLL_ATTEMPTS {
-        if focused_editable_element_matches_pid(pid) {
-            return true;
+fn wait_for_target_focus_state(pid: pid_t) -> TargetFocusState {
+    enable_manual_accessibility(pid);
+    let mut best_state = TargetFocusState::Unavailable;
+
+    for attempt in 0..TARGET_FOCUS_POLL_ATTEMPTS {
+        let state = detect_target_focus_state(pid);
+        if state > best_state {
+            best_state = state;
+        }
+        if state == TargetFocusState::EditableFocusedElement {
+            return state;
         }
 
-        if attempt + 1 < EDITABLE_FOCUS_POLL_ATTEMPTS {
-            thread::sleep(Duration::from_millis(EDITABLE_FOCUS_POLL_INTERVAL_MS));
+        if attempt + 1 < TARGET_FOCUS_POLL_ATTEMPTS {
+            thread::sleep(Duration::from_millis(TARGET_FOCUS_POLL_INTERVAL_MS));
         }
     }
 
-    false
+    best_state
 }
 
 #[cfg(target_os = "macos")]
-fn focused_editable_element_matches_pid(pid: pid_t) -> bool {
-    let Some(system_wide) = CfOwned::new(unsafe { AXUIElementCreateSystemWide().cast() }) else {
-        return false;
-    };
-    let Some(focused_element) =
-        ax_copy_attribute_value(system_wide.as_ax_ui_element(), "AXFocusedUIElement")
-    else {
-        return false;
+fn detect_target_focus_state(pid: pid_t) -> TargetFocusState {
+    let is_frontmost = frontmost_application_matches_pid(pid);
+    let focused_element =
+        focused_element_for_application(pid).or_else(|| system_wide_focused_element_for_pid(pid));
+
+    let Some(focused_element) = focused_element else {
+        return if is_frontmost {
+            TargetFocusState::FrontmostApplication
+        } else {
+            TargetFocusState::Unavailable
+        };
     };
 
+    if ax_element_or_ancestor_is_editable(focused_element) {
+        return TargetFocusState::EditableFocusedElement;
+    }
+
+    if is_frontmost {
+        TargetFocusState::FocusedElement
+    } else {
+        TargetFocusState::Unavailable
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn enable_manual_accessibility(pid: pid_t) {
+    let Some(application) = CfOwned::new(unsafe { AXUIElementCreateApplication(pid).cast() })
+    else {
+        return;
+    };
+
+    let attribute = NSString::from_str("AXManualAccessibility");
+    let _ = unsafe {
+        AXUIElementSetAttributeValue(
+            application.as_ax_ui_element(),
+            (&*attribute as *const NSString).cast(),
+            kCFBooleanTrue,
+        )
+    };
+}
+
+#[cfg(target_os = "macos")]
+fn frontmost_application_matches_pid(pid: pid_t) -> bool {
+    NSWorkspace::sharedWorkspace()
+        .frontmostApplication()
+        .is_some_and(|application| application.processIdentifier() == pid)
+}
+
+#[cfg(target_os = "macos")]
+fn focused_element_for_application(pid: pid_t) -> Option<CfOwned> {
+    let application = CfOwned::new(unsafe { AXUIElementCreateApplication(pid).cast() })?;
+    ax_copy_attribute_value(application.as_ax_ui_element(), "AXFocusedUIElement")
+}
+
+#[cfg(target_os = "macos")]
+fn system_wide_focused_element_for_pid(pid: pid_t) -> Option<CfOwned> {
+    let system_wide = CfOwned::new(unsafe { AXUIElementCreateSystemWide().cast() })?;
+    let focused_element =
+        ax_copy_attribute_value(system_wide.as_ax_ui_element(), "AXFocusedUIElement")?;
     let focused_element_ref = focused_element.as_ax_ui_element();
     let mut focused_pid: pid_t = 0;
     if unsafe { AXUIElementGetPid(focused_element_ref, &mut focused_pid) } != AX_ERROR_SUCCESS
         || focused_pid != pid
     {
-        return false;
+        return None;
     }
 
-    ax_element_or_ancestor_is_editable(focused_element)
+    Some(focused_element)
 }
 
 #[cfg(target_os = "macos")]
@@ -868,7 +984,7 @@ fn is_text_input_role(role: &str) -> bool {
 }
 
 #[cfg(target_os = "macos")]
-fn post_command_v_to_pid(pid: pid_t) -> Result<(), String> {
+fn post_command_v() -> Result<(), String> {
     let source = CGEventSource::new(CGEventSourceStateID::HIDSystemState)
         .ok_or_else(|| "failed to create keyboard event source".to_string())?;
     let key_down = CGEvent::new_keyboard_event(Some(&source), KEYCODE_V, true)
@@ -878,9 +994,9 @@ fn post_command_v_to_pid(pid: pid_t) -> Result<(), String> {
 
     CGEvent::set_flags(Some(&key_down), CGEventFlags::MaskCommand);
     CGEvent::set_flags(Some(&key_up), CGEventFlags::MaskCommand);
-    CGEvent::post_to_pid(pid, Some(&key_down));
+    CGEvent::post(CGEventTapLocation::HIDEventTap, Some(&key_down));
     thread::sleep(Duration::from_millis(8));
-    CGEvent::post_to_pid(pid, Some(&key_up));
+    CGEvent::post(CGEventTapLocation::HIDEventTap, Some(&key_up));
 
     Ok(())
 }

@@ -30,8 +30,9 @@
 2. [Tino AI 能力地图 v0.2](/Users/louistation/MySpace/Life/tino/docs/02-product/Tino%20AI%20%E8%83%BD%E5%8A%9B%E5%9C%B0%E5%9B%BE%20v0.2.md)
 3. [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
 4. [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md)
-5. [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP开发任务拆解.md)
-6. [头脑风暴原始记录](/Users/louistation/MySpace/Life/tino/docs/01-discovery/个人信息流软件头脑风暴全过程.md)
+5. [环境与打包流程](/Users/louistation/MySpace/Life/tino/docs/03-planning/%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.md)
+6. [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
+7. [头脑风暴原始记录](/Users/louistation/MySpace/Life/tino/docs/01-discovery/%E4%B8%AA%E4%BA%BA%E4%BF%A1%E6%81%AF%E6%B5%81%E8%BD%AF%E4%BB%B6%E5%A4%B4%E8%84%91%E9%A3%8E%E6%9A%B4%E5%85%A8%E8%BF%87%E7%A8%8B.md)
 
 阅读顺序建议：
 

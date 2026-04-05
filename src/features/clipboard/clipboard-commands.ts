@@ -176,13 +176,8 @@ export const clipboardCommands = [
       try {
         const pasted = await returnCaptureToPreviousApp(capture);
         if (!pasted) {
-          await message(
-            "Tino did not find a focused editable input in the previous app, so nothing was pasted. Keep the cursor in the target input and try again.",
-            {
-              title: "No Editable Input Found",
-              kind: "warning",
-            },
-          );
+          await copyCaptureToClipboard(capture);
+          useClipboardBoardStore.getState().resetState();
           return;
         }
 
@@ -198,6 +193,10 @@ export const clipboardCommands = [
         const requiresPackagedPreviewApp = description.includes(
           "packaged Preview app",
         );
+        const requiresLocalSigning =
+          description.includes("ad-hoc macOS signing")
+          || description.includes("macos:setup-local-signing")
+          || description.includes("ad-hoc signed apps");
         const requiresPreviewReinstall =
           description.includes("wrong macOS signing identifier")
           || description.includes("invalid macOS bundle signature")
@@ -208,11 +207,16 @@ export const clipboardCommands = [
             ? "Accessibility Permission Needed"
             : requiresPackagedPreviewApp
               ? "Packaged Preview App Required"
+              : requiresLocalSigning
+                ? "Local Signing Required"
               : requiresPreviewReinstall
                 ? "Reinstall Preview App"
             : "Clipboard Return Failed",
           kind:
-            requiresAccessibilityPermission || requiresPackagedPreviewApp || requiresPreviewReinstall
+            requiresAccessibilityPermission
+            || requiresPackagedPreviewApp
+            || requiresLocalSigning
+            || requiresPreviewReinstall
               ? "warning"
               : "error",
         });

@@ -48,6 +48,9 @@ These can remain normal TypeScript types in the renderer.
 - `pnpm tauri dev` or `pnpm tauri:dev`: development env on the shared preview data channel
 - `pnpm tauri build` or `pnpm tauri:build:test`: staging/test bundle on the shared preview data channel
 - `pnpm tauri build --production` or `pnpm tauri:build:prod`: production bundle on the isolated production data channel
+- `pnpm tauri:build-install:test` / `pnpm tauri:build-install:staging`: build and install the preview app into `/Applications`
+- `pnpm tauri:build-install:prod`: build and install the production app into `/Applications`
+- On macOS, run `pnpm macos:setup-local-signing` before validating Accessibility-dependent flows such as clipboard paste-back; ad-hoc signing is not a stable substitute for permission testing
 - `pnpm exec tauri ...` bypasses the environment/data-channel wrapper and should be avoided unless you are intentionally debugging the raw Tauri CLI.
 
 - Before `pnpm tauri dev`, bindings are generated automatically via the `dev` script.
