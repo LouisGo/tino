@@ -16,6 +16,7 @@ import { ShortcutSettingsSection } from "@/features/settings/components/shortcut
 import { SettingsStickyTabs } from "@/features/settings/components/settings-sticky-tabs";
 import { WorkspaceSettingsSection } from "@/features/settings/components/workspace-settings-section";
 import { useSettingsController } from "@/features/settings/hooks/use-settings-controller";
+import { useRuntimeProviderForm } from "@/features/settings/hooks/use-runtime-provider-form";
 import { useSettingsScrollSpy } from "@/features/settings/hooks/use-settings-scroll-spy";
 import {
   settingsSectionIds,
@@ -47,6 +48,10 @@ export function SettingsPage() {
   const tabsRef = useRef<HTMLDivElement | null>(null);
   const [contentInsetTop, setContentInsetTop] = useState(10);
   const [scrollOffset, setScrollOffset] = useState(120);
+  const runtimeProviderForm = useRuntimeProviderForm({
+    patchSettingsDraft,
+    settingsDraft,
+  });
   const { activeSectionId, scrollToSection } = useSettingsScrollSpy(settingsSectionIds, {
     scrollViewport,
     scrollOffset,
@@ -161,8 +166,8 @@ export function SettingsPage() {
           />
 
           <AiSettingsSection
+            runtimeProviderForm={runtimeProviderForm}
             settingsDraft={settingsDraft}
-            patchSettingsDraft={patchSettingsDraft}
           />
 
           <AppearanceSettingsSection

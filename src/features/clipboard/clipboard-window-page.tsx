@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
@@ -9,7 +9,6 @@ import { isTauriRuntime } from "@/lib/tauri";
 
 export function ClipboardWindowPage() {
   const [sessionKey, setSessionKey] = useState(0);
-  const pendingSessionResetRef = useRef(false);
   useShortcutScope("clipboard.window");
 
   useEffect(() => {
@@ -81,16 +80,13 @@ export function ClipboardWindowPage() {
 
     void currentWindow.onFocusChanged(({ payload: focused }) => {
       if (!focused) {
-        pendingSessionResetRef.current = true;
         useClipboardBoardStore.getState().resetState();
         void currentWindow.hide();
         return;
       }
 
-      if (pendingSessionResetRef.current) {
-        pendingSessionResetRef.current = false;
-        setSessionKey((current) => current + 1);
-      }
+      useClipboardBoardStore.getState().resetState();
+      setSessionKey((current) => current + 1);
     }).then((dispose) => {
       unlistenFocus = dispose;
     });

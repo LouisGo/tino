@@ -1,331 +1,128 @@
 # Tino Handoff
 
 > 最后更新：2026-04-05  
-> 当前基线提交：`385d6eb`（本轮业务开发起点）  
-> 当前工作区状态：`dirty`（存在未提交代码与文档改动）
+> 当前基线提交：`2ccbe84`  
+> 角色：短版 current-state 控制文档  
+> 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
 
-## 1. 文档目的
+## 1. 先读什么
 
-这份文档是 `Tino` 项目的长期交接手册。  
-它的目标不是记录所有历史讨论，而是让任何一个新会话都能快速回答下面几个问题：
+必读：
 
-- 这个项目要做什么，不做什么
-- 当前做到哪一步了
-- 哪些约束已经冻结，不能随便改
-- 下一步最应该做什么
-- 跑项目、校验项目、继续开发分别要看哪些文件
+1. [AGENTS.md](/Users/louistation/MySpace/Life/tino/AGENTS.md)
+2. [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
+3. 本文
 
-这份文档应持续维护。每次进入新阶段时，优先更新这里，而不是依赖上下文记忆。
+按任务再读：
 
-## 2. 项目一句话定义
+- `/ai` 页、review、mock 链路：  
+  [AI Review 当前实现与 Mock 链路说明](/Users/louistation/MySpace/Life/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
+- AI runtime 分层、后续 Phase 顺序：  
+  [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md)
+- 里程碑与任务拆解：  
+  [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
+- 打包、环境、签名：  
+  [环境与打包流程](/Users/louistation/MySpace/Life/tino/docs/03-planning/%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.md)
+- 产品目标与 AI 能力边界：  
+  [个人信息流软件需求原型文档](/Users/louistation/MySpace/Life/tino/docs/02-product/个人信息流软件需求原型文档.md)  
+  [Tino AI 能力地图 v0.2](/Users/louistation/MySpace/Life/tino/docs/02-product/Tino%20AI%20%E8%83%BD%E5%8A%9B%E5%9C%B0%E5%9B%BE%20v0.2.md)
+
+非必读归档：
+
+- [Handoff 扩展归档 2026-04-05](/Users/louistation/MySpace/Life/tino/docs/03-planning/archive/Handoff%20%E6%89%A9%E5%B1%95%E5%BD%92%E6%A1%A3%202026-04-05.md)
+
+## 2. 项目一句话
 
 `Tino` 是一个运行在 `macOS` 上的个人信息流入口层工具：  
-以低摩擦方式收集用户输入，用 AI 做批量整理，最终以 `Markdown` 落盘，供 Obsidian / 思源笔记等系统直接使用。
+低摩擦收集用户输入，先做原始归档，再用 AI 做批量整理，最终以 `Markdown` 落盘给 Obsidian / 思源等系统使用。
 
-## 3. 参考文档
+## 3. 当前真实状态
 
-按优先级阅读：
+- `M0/M1/M2/M3/M4` 最小真实链路已通
+- `M5 AI Pipeline` 已进入 `Phase 1 Contract First`
+- `M6 Knowledge Output` 未开始
 
-1. [需求原型文档](/Users/louistation/MySpace/Life/tino/docs/02-product/个人信息流软件需求原型文档.md)
-2. [Tino AI 能力地图 v0.2](/Users/louistation/MySpace/Life/tino/docs/02-product/Tino%20AI%20%E8%83%BD%E5%8A%9B%E5%9C%B0%E5%9B%BE%20v0.2.md)
-3. [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
-4. [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md)
-5. [AI Review 当前实现与 Mock 链路说明](/Users/louistation/MySpace/Life/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
-6. [环境与打包流程](/Users/louistation/MySpace/Life/tino/docs/03-planning/%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.md)
-7. [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
-8. [头脑风暴原始记录](/Users/louistation/MySpace/Life/tino/docs/01-discovery/%E4%B8%AA%E4%BA%BA%E4%BF%A1%E6%81%AF%E6%B5%81%E8%BD%AF%E4%BB%B6%E5%A4%B4%E8%84%91%E9%A3%8E%E6%9A%B4%E5%85%A8%E8%BF%87%E7%A8%8B.md)
+当前已真实存在：
 
-阅读顺序建议：
+- Rust 剪贴板轮询
+- `CaptureRecord`
+- `daily/*.md` 原始归档
+- `_system/runtime.json`
+- `_system/queue.json`
+- `_system/batches/*.json`
+- settings / dashboard 的真实 Rust 持久化与读取
+- `/ai` 页读取 live batch
+- review 提交写入 `_system/reviews/*.json`
 
-- 新会话第一次接手：先看 `技术冻结记录` + 本文
-- 要理解产品目标：再看 `需求原型文档` + `Tino AI 能力地图 v0.2`
-- 要开始 AI 开发：先看 `Tino AI Runtime 与 Agent 工程方案 v0.1`
-- 要理解当前 `/ai` 页和 mock 链路：再看 `AI Review 当前实现与 Mock 链路说明`
-- 要继续实现：再看 `MVP开发任务拆解`
+当前仍未真实存在：
 
-## 4. 当前阶段判断
-
-当前项目处于：
-
-- `M0 技术冻结`：已完成
-- `M1 App Shell`：已完成
-- `M2 Capture`：已完成最小真实链路
-- `M4 Archive Pipeline`：已完成最小真实链路
-- `M3 Processing Orchestrator`：已完成最小版本
-- `M8 Debug / Observability`：已有最小真实数据面板
-- `M5 AI Pipeline`：`Phase 1 Contract First` 已启动，仍未接入真实模型与知识层落盘
-- `M6 Knowledge Output`：未开始
-
-换句话说：
-
-- 壳层已经稳定
-- 从 `剪贴板 -> CaptureRecord -> daily/*.md` 的无 AI 闭环已经打通
-- `_system/runtime.json`、`queue.json`、`filters.log`、`batches/*.json` 已开始真实写入
-- dashboard 和 settings 已经接上真实 Rust 侧状态与设置持久化
-- AI 已进入 `Contract First` 阶段：ready batch、review DTO、审阅页和非知识层 review 留痕已开始落地
-- 但真实模型调用、`topics/` / `_inbox/` 输出、正式 topic index、历史补跑仍未开始
-
-## 5. 当前已完成内容
-
-### 5.1 基础技术栈
-
-已接入：
-
-- `Tauri 2`
-- `React 19 + Vite`
-- `Tailwind CSS v4`
-- `shadcn/ui` 基础组件基座
-- `Zustand`
-- `TanStack Router / Query / Table / Form`
-
-关键文件：
-
-- [package.json](/Users/louistation/MySpace/Life/tino/package.json)
-- [vite.config.ts](/Users/louistation/MySpace/Life/tino/vite.config.ts)
-- [components.json](/Users/louistation/MySpace/Life/tino/components.json)
-- [src/index.css](/Users/louistation/MySpace/Life/tino/src/index.css)
-
-### 5.2 Tauri 桌面壳层
-
-已完成：
-
-- 主窗口配置
-- tray 图标与菜单
-- 点击关闭时隐藏窗口
-- autostart / dialog / fs / opener 插件接入
-- Rust 命令桥接入真实状态管理
-
-关键文件：
-
-- [src-tauri/tauri.conf.json](/Users/louistation/MySpace/Life/tino/src-tauri/tauri.conf.json)
-- [src-tauri/src/lib.rs](/Users/louistation/MySpace/Life/tino/src-tauri/src/lib.rs)
-- [src-tauri/src/commands/shell.rs](/Users/louistation/MySpace/Life/tino/src-tauri/src/commands/shell.rs)
-- [src-tauri/capabilities/default.json](/Users/louistation/MySpace/Life/tino/src-tauri/capabilities/default.json)
-
-### 5.3 前端应用壳层
-
-已完成：
-
-- Query client
-- Router
-- App frame
-- Dashboard 调试页
-- Settings 设置页
-- Zustand 壳层状态
-- Tauri JS 侧桥接助手
-- dashboard / settings 真实 Rust 命令接入
-
-关键文件：
-
-- [src/app/providers.tsx](/Users/louistation/MySpace/Life/tino/src/app/providers.tsx)
-- [src/router.tsx](/Users/louistation/MySpace/Life/tino/src/router.tsx)
-- [src/routes/root-shell.tsx](/Users/louistation/MySpace/Life/tino/src/routes/root-shell.tsx)
-- [src/components/shell/app-frame.tsx](/Users/louistation/MySpace/Life/tino/src/components/shell/app-frame.tsx)
-- [src/features/dashboard/dashboard-page.tsx](/Users/louistation/MySpace/Life/tino/src/features/dashboard/dashboard-page.tsx)
-- [src/features/settings/settings-form.tsx](/Users/louistation/MySpace/Life/tino/src/features/settings/settings-form.tsx)
-- [src/stores/app-shell-store.ts](/Users/louistation/MySpace/Life/tino/src/stores/app-shell-store.ts)
-- [src/lib/tauri.ts](/Users/louistation/MySpace/Life/tino/src/lib/tauri.ts)
-
-### 5.4 已落地的真实业务链路
-
-已完成：
-
-- Rust 侧轮询 `NSPasteboard.changeCount`
-- 生成稳定的 `CaptureRecord`
-- 纯文本 / 富文本写入 `daily/YYYY-MM-DD.md`
-- 知识根目录与敏感配置的最小持久化
-- `_system/runtime.json` 运行态快照
-- `_system/queue.json` 待处理队列
-- `_system/filters.log` 最小过滤日志
-- `_system/batches/*.json` 批次提升占位
-- 最小过滤规则
-- `5 分钟` 完全相同内容去重
-- `20 条`或`10 分钟` 的批次触发已落地，但只生成 `pending_ai` 批次文件，不调用模型
-
-关键文件：
-
-- [src-tauri/src/app_state.rs](/Users/louistation/MySpace/Life/tino/src-tauri/src/app_state.rs)
-- [src-tauri/src/capture.rs](/Users/louistation/MySpace/Life/tino/src-tauri/src/capture.rs)
-
-### 5.5 校验链路
-
-当前以下命令通过：
-
-```bash
-pnpm check
-pnpm build
-```
-
-说明：
-
-- `pnpm tauri dev` 在壳层阶段已通过
-- 本轮没有重新做 GUI 人工 smoke test；如果要继续打磨剪贴板体验，建议重新跑一次 `pnpm tauri dev`
-
-## 6. 当前未完成内容
-
-以下是下一阶段仍未完成的内容：
-
-- 剪贴板体验打磨
-- 富文本保真度与噪声内容处理继续收敛
-- 暂停 / 恢复采集的真实语义落地
-- 最近队列 / 最近批次的更细调试视图
-- AI 批次消费与 schema 校验
-- `topics/` / `_inbox/` Markdown 输出
-- topic index 维护
+- 真实模型调用
+- `generateObject`
+- `topics/` 写入
+- `_inbox/` 写入
+- 正式 topic index
 - 历史补跑
 
-## 7. 不允许随意漂移的冻结约束
+## 4. 当前 `/ai` 页必须这样理解
 
-以下约束已经拍板，继续开发时不要轻易改：
+- `/ai` 页读取的 batch 可以是 live batch
+- 当前排序结果仍是 renderer 侧 `trial sorting pass`
+- `applyBatchDecision` 当前只做审阅应用与留痕，不生成任务
+- 若 `apiKey` 为空，capture 只进 `daily`，不进 AI queue
 
-### 7.1 应用形态
+细节说明看：
 
-- 必须常驻后台
-- 必须有 `menubar / tray + Dock + 主窗口`
-- 主窗口关闭时只 `hide`
-- 点击 tray 和 Dock 都打开主窗口
+- [AI Review 当前实现与 Mock 链路说明](/Users/louistation/MySpace/Life/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
 
-### 7.2 主窗口边界
+## 5. 不要漂移的边界
 
-MVP 主窗口只做：
+应用形态：
 
-- 当前状态概览
-- 知识根目录设置
-- AI Provider 设置
-- 最近队列 / 最近批次调试信息
-- 手动触发批处理、暂停 / 恢复采集
+- 常驻后台
+- `menubar / tray + Dock + 主窗口`
+- 主窗口关闭只 `hide`
 
-不要在这个阶段加：
-
-- 聊天窗口
-- 笔记编辑器
-- 历史浏览器
-- 可视化统计大盘
-
-### 7.3 核心职责分层
+职责分层：
 
 - 剪贴板轮询：`Rust`
 - 本地文件读写：`Rust`
-- AI 调用：`前端`
-- Agent runtime / prompt 编排 / streaming UI：`Renderer`
-- Agent tools 的真实副作用：`Rust command`
+- AI 调用：`Renderer`
+- Agent runtime / prompt 编排：`Renderer`
+- 真实副作用：`Rust command`
 - 运行态：`_system/ JSON`
 
-### 7.4 数据策略
+数据边界：
 
-- `daily/`：按天一个 Markdown 文件
-- `topics/`：每个 topic 一个长期 Markdown 文件
-- `_inbox/`：按天一个 Markdown 文件
-- 原始归档与 AI 提炼必须双轨隔离
+- `daily/` 只做原始归档
+- `topics/` / `_inbox/` 是 AI 知识层输出
+- AI 不能直接控制真实文件路径
 
-### 7.5 AI 策略
+AI 策略：
 
-- 批量处理，不做逐条实时
+- 批处理，不做逐条实时
 - 触发条件：`20 条`或`10 分钟`
-- 允许一个批次拆分到多个 topic
-- 批次内按“先聚类再输出”
+- 允许批次内拆分多个 topic
 - 低置信度进入 `_inbox`
-- AI 输出必须结构化，不能直接控制真实文件路径
 
-### 7.6 当前已冻结但尚未完整实现的交互规则
+## 6. 默认开发顺序
 
-- 未配置 AI 时只做 `daily` 归档，不自动累计 AI 债务
-- 历史补跑只按“天”处理
-- 暂停采集不等于关闭剪贴板监听
+如果做输入链路：
 
-## 8. 当前项目结构
+- 优先剪贴板体验、过滤质量、暂停语义、最近状态可见性
 
-```text
-.
-├─ docs/
-│  ├─ 01-discovery/
-│  ├─ 02-product/
-│  └─ 03-planning/
-├─ public/
-├─ src/
-│  ├─ app/
-│  ├─ components/
-│  ├─ features/
-│  ├─ hooks/
-│  ├─ lib/
-│  ├─ routes/
-│  ├─ stores/
-│  └─ types/
-├─ src-tauri/
-│  ├─ capabilities/
-│  ├─ icons/
-│  └─ src/
-└─ rust-toolchain.toml
-```
+如果做 AI：
 
-这套结构目前仍然合理，不需要为了继续做主链路再做目录级重构。
+- `Contract -> Provider Access -> Review -> Persistence`
+- 不要把“接模型”和“写知识层”混成一步
 
-## 9. 下一步推荐开发顺序
-
-严格按下面顺序推进，不要跳：
-
-1. 剪贴板体验打磨
-2. `M8 Debug / Observability` 补足最近队列 / 最近批次视图
-3. `M7 Config / Skill Stub` 的最小持久化补口
-4. `M5 AI Pipeline`
-5. `M6 Knowledge Output`
-
-当前最推荐的具体下一步是：
-
-### Next Task
-
-打磨 `剪贴板采集体验`，但仍然停留在无 AI / 低 AI 耦合阶段。
-
-建议拆成三步：
-
-1. 收敛噪声：继续调过滤规则、避免误收与高频无意义复制
-2. 提升可控性：把暂停 / 恢复采集的真实语义接到 Rust 主链路
-3. 提高可见性：在主窗口明确看到最近 capture、队列、批次状态
-
-为什么现在先做这个：
-
-- 第一条真实业务链路已经打通，当前短板不是“有没有”，而是“好不好用”
-- AI 还没开始，先把输入侧质量和体验收紧，后面 AI 才不会背锅
-- 这一阶段的调整不会破坏冻结边界，但会显著影响日常使用感受
-
-当正式开始 `M5 AI Pipeline` 时：
-
-- 默认以 [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md) 作为技术执行主基线
-- 不跳过其中的 `Contract First -> 最小 LLM 链路 -> Review -> Persistence` 顺序
-- 不把“接入模型”与“Agent runtime”混成同一层实现
-
-## 10. 当前代码里的“真实”与“占位”
-
-### 已真实可用
-
-- Tauri 窗口与 tray
-- autostart 插件接入
-- 目录选择器弹窗
-- 主窗口关闭即隐藏
-- 路由、状态、表单、表格等前端基础设施
-- settings 的最小真实持久化
-- dashboard 的真实 snapshot
-- Rust 剪贴板轮询
-- `CaptureRecord` 生成
-- `daily` 归档
-- `_system` 运行态 / 队列 / 过滤日志 / 批次文件
-
-### 仍是占位 / 未完成
-
-- AI 批次消费
-- AI 结构化输出 schema
-- `topics/` / `_inbox/` 落盘
-- topic index 维护
-- 历史补跑
-- 剪贴板体验细节与暂停语义
-
-## 11. 开发命令
+## 7. 常用命令
 
 ```bash
 pnpm install
 pnpm check
 pnpm build
 pnpm tauri dev
+pnpm mock:ai-review run --profile preview --count 20
 ```
 
 如果只做 Rust 校验：
@@ -334,60 +131,23 @@ pnpm tauri dev
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-## 12. 代码改动原则
+## 8. 维护规则
 
-继续开发时遵守：
+每次阶段变化，至少更新：
 
-- 优先保持冻结边界，不要边写边改架构方向
-- 先打通主链路，再做抽象
-- 不要把 AI、文件写入、捕获、缓冲耦在一个模块里
-- Rust 负责系统与本地资源，前端负责 AI 与 UI
-- 不要引入数据库来“提前优化” `_system`
-- 不要把 `daily` 当成 AI 默认长期上下文
-- 当前阶段优先改善输入质量与可控性，不要抢着扩功能面
-
-## 13. 新会话接手模板
-
-如果在新会话中继续开发，建议直接给出类似说明：
-
-```text
-请先阅读：
-1. docs/03-planning/HANDOFF.md
-2. docs/03-planning/技术冻结记录.md
-3. docs/03-planning/MVP开发任务拆解.md
-
-当前任务：
-优先打磨剪贴板采集体验，不要先做 AI。
-
-当前真实状态：
-- Rust 剪贴板轮询已上线
-- CaptureRecord + daily 归档已打通
-- queue / filters / batches 文件已开始真实写入
-- AI 还未开始，只到 pending_ai batch
-
-要求：
-- 不修改冻结边界
-- 优先改善输入侧体验与调试可见性
-- 文件写入继续放 Rust
-- 完成后至少跑 pnpm check 和 pnpm build
-```
-
-## 14. 维护规则
-
-每次完成一个阶段后，至少更新这四项：
-
-- `最后更新` 日期
+- `最后更新`
 - `当前基线提交`
-- `当前阶段判断`
-- `下一步推荐开发顺序` 中的 `Next Task`
+- `当前真实状态`
+- `/ai` 页真实边界是否变化
 
-如果发生架构级变化，还必须同步更新：
+如果发生架构变化，还要同步：
 
 - [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
-- [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP开发任务拆解.md)
+- [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md)
+- [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
 
-## 15. 当前结论
+## 9. 一句结论
 
-这个仓库已经不再只是一个桌面壳。  
-它已经具备一条真实可运行的无 AI 采集闭环，并且开始写入最小运行态与批次文件。  
-下一阶段不应该急着接 AI，而应该先把剪贴板输入体验、过滤质量、可控性和可见性打磨好。
+当前仓库的正确理解不是“AI 已接完”，而是：
+
+> 无 AI 原始归档链路已真实跑通；AI review 已有 live batch、审阅页和 review 留痕；真实模型与知识层持久化仍未接入。

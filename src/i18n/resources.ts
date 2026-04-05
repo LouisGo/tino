@@ -225,6 +225,32 @@ export const enUSResources = defineLocaleSchema({
     navigation: {
       sectionsAriaLabel: "Settings sections",
     },
+    provider: {
+      apiKey: {
+        description: "Saved with app settings. The UI keeps the middle characters hidden.",
+        hint: "Paste your provider key. It stays masked in the interface.",
+        label: "API key",
+        maskedValue: "Current key: {{key}}",
+        placeholder: "Paste your provider key.",
+        privateBadge: "Private",
+      },
+      baseUrl: {
+        description: "HTTPS endpoint for your OpenAI-compatible provider.",
+        hint: "Leave it on the default OpenAI path or point it at a compatible relay.",
+        label: "Base URL",
+      },
+      model: {
+        description: "Pick from the shared OpenAI model catalog.",
+        hint: "Manual model entry is disabled for now.",
+        label: "Model",
+        placeholder: "Select a model",
+      },
+      status: {
+        apiKeyNeeded: "API key needed",
+        incomplete: "Provider incomplete",
+        ready: "Ready",
+      },
+    },
     sections: {
       ai: {
         description: "Keep endpoint, model, and key together.",
@@ -443,6 +469,32 @@ export const zhCNResources = {
     },
     navigation: {
       sectionsAriaLabel: "设置分区",
+    },
+    provider: {
+      apiKey: {
+        description: "与应用设置一起保存，界面里会隐藏中间字符。",
+        hint: "粘贴你的 provider key，界面里会默认遮挡显示。",
+        label: "API Key",
+        maskedValue: "当前密钥：{{key}}",
+        placeholder: "粘贴你的 provider key。",
+        privateBadge: "私密",
+      },
+      baseUrl: {
+        description: "面向 OpenAI Compatible Provider 的 HTTPS 接口地址。",
+        hint: "可以保留默认 OpenAI 地址，或改成兼容的中转地址。",
+        label: "Base URL",
+      },
+      model: {
+        description: "从统一的 OpenAI 模型目录中选择。",
+        hint: "当前阶段不支持手动输入模型名。",
+        label: "Model",
+        placeholder: "选择模型",
+      },
+      status: {
+        apiKeyNeeded: "需要 API Key",
+        incomplete: "提供方未完成",
+        ready: "已就绪",
+      },
     },
     sections: {
       ai: {

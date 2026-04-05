@@ -6,7 +6,6 @@ import { useShortcutScope } from "@/core/shortcuts";
 import { ClipboardWindowPage } from "@/features/clipboard/clipboard-window-page";
 import { useWindowCloseGuard } from "@/hooks/use-window-close-guard";
 import { isTauriRuntime } from "@/lib/tauri";
-import { cn } from "@/lib/utils";
 
 export function RootShell() {
   useWindowCloseGuard();
@@ -26,13 +25,7 @@ export function RootShell() {
 
   return (
     <AppFrame>
-      <div
-        key={pathname}
-        className={cn(
-          "min-h-0 flex-1",
-          pathname !== "/settings" && "app-route-transition",
-        )}
-      >
+      <div key={pathname} className="app-route-transition min-h-0 flex-1">
         <Outlet />
       </div>
       {/* {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null} */}

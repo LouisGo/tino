@@ -1,6 +1,31 @@
 # Tino
 
-Desktop scaffold for the personal information flow app.
+Desktop app for personal information flow capture, review, and markdown-first knowledge output.
+
+## Start Here
+
+Required:
+
+1. `AGENTS.md`
+2. `docs/03-planning/HANDOFF.md`
+3. `docs/03-planning/技术冻结记录.md`
+
+Read more only by task:
+
+- AI review / mock chain: `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md`
+- AI runtime architecture: `docs/03-planning/Tino AI Runtime 与 Agent 工程方案 v0.1.md`
+- Task breakdown: `docs/03-planning/MVP开发任务拆解.md`
+- Packaging / signing: `docs/03-planning/环境与打包流程.md`
+
+## Commands
+
+```bash
+pnpm install
+pnpm tauri dev
+pnpm build
+pnpm check
+pnpm mock:ai-review run --profile preview --count 20
+```
 
 ## Stack
 
@@ -10,27 +35,3 @@ Desktop scaffold for the personal information flow app.
 - `shadcn/ui`
 - `Zustand`
 - `TanStack Router / Query / Table / Form`
-
-## Commands
-
-```bash
-pnpm install
-pnpm dev
-pnpm tauri dev
-pnpm build
-pnpm check
-```
-
-## Current Scope
-
-- Desktop shell with tray bootstrap
-- Root layout and navigation
-- Query / Router / Table / Form providers
-- Tailwind v4 + shadcn design system baseline
-- Rust command bridge with a mock dashboard snapshot
-
-## Docs
-
-- `docs/02-product/个人信息流软件需求原型文档.md`
-- `docs/03-planning/MVP开发任务拆解.md`
-- `docs/03-planning/技术冻结记录.md`
