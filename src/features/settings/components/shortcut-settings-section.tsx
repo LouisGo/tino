@@ -5,6 +5,7 @@ import { Pause, RotateCcw, Slash, SquarePen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Kbd } from "@/components/ui/kbd";
 import { useShortcutManager } from "@/core/shortcuts";
+import { tx, useScopedT } from "@/i18n";
 import {
   formatShortcutAccelerator,
   isModifierOnlyKey,
@@ -32,6 +33,7 @@ export function ShortcutSettingsSection({
   overrides: ShortcutOverrideRecord;
 }) {
   const manager = useShortcutManager();
+  const t = useScopedT("settings");
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<ShortcutFeedback>(null);
 
@@ -188,11 +190,11 @@ export function ShortcutSettingsSection({
   return (
     <SettingsSection
       section={settingsSections[4]}
-      badge="Applies instantly"
+      badge={tx("settings", "badges.appliesInstantly")}
       action={customizedCount > 0
         ? (
             <SettingsIconButton
-              label="Restore all shortcuts"
+              label={t("actions.restoreAllShortcuts")}
               onClick={restoreAllShortcuts}
             >
               <RotateCcw className="size-4" />

@@ -15,6 +15,7 @@ use std::{
 use tauri::{AppHandle, Emitter, Manager};
 use uuid::Uuid;
 
+use crate::locale::AppLocalePreference;
 use crate::runtime_profile;
 use crate::storage::capture_history_store::{
     CaptureHistoryEntry, CaptureHistoryQuery, CaptureHistoryStore, CaptureHistorySummary,
@@ -63,6 +64,8 @@ pub struct AppSettings {
     pub base_url: String,
     pub api_key: String,
     pub model: String,
+    #[serde(default)]
+    pub locale_preference: AppLocalePreference,
     #[serde(default = "default_clipboard_history_days")]
     pub clipboard_history_days: u16,
     #[serde(default)]
@@ -76,6 +79,7 @@ impl AppSettings {
             base_url: DEFAULT_PROVIDER_BASE_URL.into(),
             api_key: String::new(),
             model: DEFAULT_MODEL.into(),
+            locale_preference: AppLocalePreference::default(),
             clipboard_history_days: DEFAULT_CLIPBOARD_HISTORY_DAYS,
             shortcut_overrides: BTreeMap::new(),
         }
@@ -97,6 +101,8 @@ impl AppSettings {
         if self.model.trim().is_empty() {
             self.model = DEFAULT_MODEL.into();
         }
+
+        self.locale_preference = self.locale_preference.normalized();
 
         self.clipboard_history_days = self
             .clipboard_history_days

@@ -58,11 +58,21 @@ export type AiBatchSummary = {
 
 export type AiDecision = "archive_to_topic" | "send_to_inbox" | "discard";
 
+export type AppLocale = "en-US" | "zh-CN";
+
+export type AppLocaleMode = "manual" | "system";
+
+export type AppLocalePreference = {
+	mode?: AppLocaleMode,
+	locale?: AppLocale | null,
+};
+
 export type AppSettings = {
 	knowledgeRoot: string,
 	baseUrl: string,
 	apiKey: string,
 	model: string,
+	localePreference?: AppLocalePreference,
 	clipboardHistoryDays?: number,
 	shortcutOverrides?: { [key in string]: AppShortcutOverride },
 };

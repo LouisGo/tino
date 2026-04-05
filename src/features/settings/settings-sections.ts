@@ -7,59 +7,56 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { tx, type LocalizedText } from "@/i18n";
+
 type SettingsSectionBase = {
-  description: string;
-  eyebrow: string;
+  description: LocalizedText;
+  eyebrow: LocalizedText;
   icon: LucideIcon;
   id: string;
-  label: string;
-  title: string;
+  label: LocalizedText;
+  title: LocalizedText;
 };
 
 export const settingsSections = [
   {
     id: "workspace",
-    label: "Workspace",
-    title: "Workspace & storage",
-    eyebrow: "Core Pathing",
-    description:
-      "Set the archive path and the clipboard history window.",
+    label: tx("settings", "sections.workspace.label"),
+    title: tx("settings", "sections.workspace.title"),
+    eyebrow: tx("settings", "sections.workspace.eyebrow"),
+    description: tx("settings", "sections.workspace.description"),
     icon: FolderRoot,
   },
   {
     id: "ai",
-    label: "AI",
-    title: "Provider & model",
-    eyebrow: "Runtime Provider",
-    description:
-      "Keep endpoint, model, and key together.",
+    label: tx("settings", "sections.ai.label"),
+    title: tx("settings", "sections.ai.title"),
+    eyebrow: tx("settings", "sections.ai.eyebrow"),
+    description: tx("settings", "sections.ai.description"),
     icon: Sparkles,
   },
   {
     id: "appearance",
-    label: "Appearance",
-    title: "Theme & shell look",
-    eyebrow: "Live Preview",
-    description:
-      "Choose the mode and palette for the shell.",
+    label: tx("settings", "sections.appearance.label"),
+    title: tx("settings", "sections.appearance.title"),
+    eyebrow: tx("settings", "sections.appearance.eyebrow"),
+    description: tx("settings", "sections.appearance.description"),
     icon: Palette,
   },
   {
     id: "automation",
-    label: "Automation",
-    title: "Automation & diagnostics",
-    eyebrow: "Runtime Controls",
-    description:
-      "Control capture, launch behavior, and logs.",
+    label: tx("settings", "sections.automation.label"),
+    title: tx("settings", "sections.automation.title"),
+    eyebrow: tx("settings", "sections.automation.eyebrow"),
+    description: tx("settings", "sections.automation.description"),
     icon: Rocket,
   },
   {
     id: "shortcuts",
-    label: "Shortcuts",
-    title: "Keyboard shortcuts",
-    eyebrow: "Interaction Layer",
-    description:
-      "Edit global bindings and keep local shortcuts visible.",
+    label: tx("settings", "sections.shortcuts.label"),
+    title: tx("settings", "sections.shortcuts.title"),
+    eyebrow: tx("settings", "sections.shortcuts.eyebrow"),
+    description: tx("settings", "sections.shortcuts.description"),
     icon: Keyboard,
   },
 ] as const satisfies readonly SettingsSectionBase[];

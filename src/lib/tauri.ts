@@ -1,4 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { emit } from "@tauri-apps/api/event";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
@@ -11,6 +12,12 @@ import {
   getMockTopicIndexEntries,
   isMockAiBatchId,
 } from "@/features/ai/lib/mock-fixtures";
+import {
+  defaultAppLocalePreference,
+  LOCALE_PREFERENCE_CHANGED_EVENT,
+  normalizeAppLocalePreference,
+  syncLocalePreference,
+} from "@/i18n";
 import { appEnv, dataChannel, isProductionDataChannel } from "@/lib/runtime-profile";
 import type {
   AiBatchPayload as RustAiBatchPayload,
@@ -63,6 +70,7 @@ const mockSettings: SettingsDraft = {
   baseUrl: "https://api.openai.com/v1",
   apiKey: "",
   model: "gpt-5.4-mini",
+  localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: 3,
   shortcutOverrides: {},
 };
@@ -198,6 +206,7 @@ function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
     baseUrl: settings.baseUrl,
     apiKey: settings.apiKey,
     model: settings.model,
+    localePreference: normalizeAppLocalePreference(settings.localePreference),
     clipboardHistoryDays: settings.clipboardHistoryDays ?? 3,
     shortcutOverrides: settings.shortcutOverrides ?? {},
   };
@@ -410,12 +419,17 @@ export async function toggleClipboardWindowVisibility() {
 
 export async function saveAppSettings(settings: SettingsDraft): Promise<SettingsDraft> {
   if (!isTauriRuntime()) {
+    await syncLocalePreference(settings.localePreference);
     return settings;
   }
 
-  return normalizeSettingsDraft(
+  const saved = normalizeSettingsDraft(
     await unwrapTauriResult(tauriCommands.saveAppSettings(settings)),
   );
+
+  await syncLocalePreference(saved.localePreference);
+  void emit(LOCALE_PREFERENCE_CHANGED_EVENT, saved.localePreference);
+  return saved;
 }
 
 export async function pickDirectory(defaultPath?: string) {

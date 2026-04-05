@@ -3,6 +3,7 @@ import type {
   ContextMenuResolvedItem,
   ContextMenuRuntime,
 } from "@/core/context-menu/types";
+import { resolveTextNode } from "@/i18n";
 
 function resolveValue<Context, Value>(
   value: Value | ((context: Context) => Value),
@@ -37,7 +38,7 @@ export class ContextMenuRegistry<Context> {
         {
           key: item.key,
           type: "item",
-          label: resolveValue(item.label, context),
+          label: resolveTextNode(resolveValue(item.label, context)),
           icon: item.icon ? resolveValue(item.icon, context) : undefined,
           danger: typeof item.danger === "function" ? item.danger(context) : item.danger,
           disabled,

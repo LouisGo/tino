@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { defaultAppLocalePreference } from "@/i18n";
 import type { SettingsDraft } from "@/types/shell";
 
 type AppShellState = {
@@ -15,6 +16,7 @@ const initialSettingsDraft: SettingsDraft = {
   baseUrl: "",
   apiKey: "",
   model: "",
+  localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: 3,
   shortcutOverrides: {},
 };

@@ -1,14 +1,12 @@
 import dayjs from "dayjs";
-import "dayjs/locale/zh-cn";
 
-dayjs.locale("zh-cn");
+import { formatAppDateTime } from "@/i18n";
 
 export type TimeInput = string | number | Date;
 
-const DEFAULT_DISPLAY_FORMAT = "MM/DD HH:mm";
-
-function toDayjs(input: TimeInput) {
-  return dayjs(input);
+function toDate(input: TimeInput) {
+  const value = input instanceof Date ? input : new Date(input);
+  return Number.isNaN(value.getTime()) ? null : value;
 }
 
 export function nowIsoString() {
@@ -19,14 +17,14 @@ export function minutesAgoIsoString(minutes: number) {
   return dayjs().subtract(minutes, "minute").toISOString();
 }
 
-export function formatTimestamp(input: TimeInput, format = DEFAULT_DISPLAY_FORMAT) {
-  const value = toDayjs(input);
+export function formatTimestamp(input: TimeInput) {
+  const value = toDate(input);
 
-  if (!value.isValid()) {
+  if (!value) {
     return "--";
   }
 
-  return value.format(format);
+  return formatAppDateTime(value);
 }
 
 export function formatRelativeTimestamp(input: TimeInput) {

@@ -1,4 +1,5 @@
 import { defineCommand, type CommandDefinition } from "@/core/commands";
+import { tx } from "@/i18n";
 import { openExternalLink } from "@/lib/external-links";
 import {
   openImageInPreview,
@@ -23,45 +24,45 @@ type OpenImageInPreviewPayload = {
 export const systemCommands = [
   defineCommand<void, boolean>({
     id: "system.toggleMainWindowVisibility",
-    label: "Toggle Main Window Visibility",
+    label: tx("commands", "system.toggleMainWindowVisibility.label"),
     run: async () => toggleMainWindowVisibility(),
   }),
   defineCommand<void, boolean>({
     id: "system.toggleClipboardWindowVisibility",
-    label: "Toggle Clipboard Window Visibility",
+    label: tx("commands", "system.toggleClipboardWindowVisibility.label"),
     run: async () => toggleClipboardWindowVisibility(),
   }),
   defineCommand<void, void>({
     id: "system.toggleThemeMode",
-    label: "Toggle Theme Mode",
+    label: tx("commands", "system.toggleThemeMode.label"),
     run: () => {
       useThemeStore.getState().toggleDarkLight();
     },
   }),
   defineCommand<void, void>({
     id: "system.navigateHome",
-    label: "Navigate Home",
+    label: tx("commands", "system.navigateHome.label"),
     run: async (_payload, { router }) => {
       await router.navigate({ to: "/" });
     },
   }),
   defineCommand<void, void>({
     id: "system.navigateClipboard",
-    label: "Navigate Clipboard",
+    label: tx("commands", "system.navigateClipboard.label"),
     run: async (_payload, { router }) => {
       await router.navigate({ to: "/clipboard" });
     },
   }),
   defineCommand<void, void>({
     id: "system.navigateSettings",
-    label: "Navigate Settings",
+    label: tx("commands", "system.navigateSettings.label"),
     run: async (_payload, { router }) => {
       await router.navigate({ to: "/settings" });
     },
   }),
   defineCommand<RevealPathPayload, void>({
     id: "system.revealPath",
-    label: "Reveal In File Manager",
+    label: tx("commands", "system.revealPath.label"),
     isEnabled: ({ path }) => Boolean(path.trim()),
     run: async ({ path }: RevealPathPayload) => {
       await revealPath(path);
@@ -69,7 +70,7 @@ export const systemCommands = [
   }),
   defineCommand<OpenExternalTargetPayload, void>({
     id: "system.openExternalTarget",
-    label: "Open Target",
+    label: tx("commands", "system.openExternalTarget.label"),
     isEnabled: ({ target }) => Boolean(target.trim()),
     run: async ({ target }: OpenExternalTargetPayload) => {
       await openExternalLink(target);
@@ -77,7 +78,7 @@ export const systemCommands = [
   }),
   defineCommand<OpenImageInPreviewPayload, void>({
     id: "system.openImageInPreview",
-    label: "Open In Preview",
+    label: tx("commands", "system.openImageInPreview.label"),
     isEnabled: ({ path }) => Boolean(path.trim()),
     run: async ({ path }: OpenImageInPreviewPayload) => {
       await openImageInPreview(path);

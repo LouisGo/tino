@@ -1,6 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AnyRouter } from "@tanstack/react-router";
 
+import type { LocalizedText } from "@/i18n";
+
 export type AppCommandId = string;
 
 export type CommandServices = {
@@ -10,8 +12,8 @@ export type CommandServices = {
 
 export type CommandDefinition<Payload = void, Result = void> = {
   id: AppCommandId;
-  label: string;
-  description?: string;
+  label: LocalizedText;
+  description?: LocalizedText;
   isEnabled?: (payload: Payload, services: CommandServices) => boolean;
   run: (payload: Payload, services: CommandServices) => Result | Promise<Result>;
 };

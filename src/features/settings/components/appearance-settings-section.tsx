@@ -1,5 +1,12 @@
-import { Moon, Palette, Sun, SunMoon } from "lucide-react";
+import { Languages, Moon, Palette, Sun, SunMoon } from "lucide-react";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   SettingsPanel,
   SettingsPanelBody,
@@ -7,8 +14,10 @@ import {
 import { SettingField } from "@/features/settings/components/setting-field";
 import { SettingsSection } from "@/features/settings/components/settings-section";
 import { settingsSections } from "@/features/settings/settings-sections";
+import { getSupportedAppLocales, localeLabels, tx, useLocale, useScopedT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { ThemeMode, ThemeName } from "@/lib/theme";
+import type { AppLocale, AppLocalePreference } from "@/types/shell";
 
 const modeOptions = [
   {
@@ -58,30 +67,39 @@ function optionButtonClassName(active: boolean) {
 }
 
 export function AppearanceSettingsSection({
+  localePreference,
   mode,
+  onLocalePreferenceChange,
   setMode,
   setThemeName,
   themeName,
 }: {
+  localePreference: AppLocalePreference;
   mode: ThemeMode;
+  onLocalePreferenceChange: (value: AppLocalePreference) => void | Promise<void>;
   setMode: (value: ThemeMode) => void;
   setThemeName: (value: ThemeName) => void;
   themeName: ThemeName;
 }) {
   const section = settingsSections[2];
+  const t = useScopedT("settings");
+  const { locale: resolvedLocale } = useLocale();
+  const supportedLocales = getSupportedAppLocales();
+  const localeValue = localePreference.locale ?? "en-US";
 
   return (
-    <SettingsSection section={section} badge="Applies instantly">
+    <SettingsSection section={section} badge={tx("settings", "badges.appliesInstantly")}>
       <SettingsPanel>
         <SettingsPanelBody>
           <SettingField
-            label="Appearance mode"
-            description="Light, dark, or system."
+            label={t("appearance.mode.label")}
+            description={t("appearance.mode.description")}
           >
             <div className="flex flex-wrap gap-2">
               {modeOptions.map((option) => {
                 const active = mode === option.value;
                 const Icon = option.icon;
+                const label = t(`appearance.mode.options.${option.value}`);
 
                 return (
                   <button
@@ -95,7 +113,7 @@ export function AppearanceSettingsSection({
                     aria-pressed={active}
                   >
                     <Icon className="size-3.5" />
-                    <span>{option.label}</span>
+                    <span>{label}</span>
                   </button>
                 );
               })}
@@ -103,8 +121,54 @@ export function AppearanceSettingsSection({
           </SettingField>
 
           <SettingField
-            label="Palette"
-            description="Shell color system."
+            label={t("appearance.language.label")}
+            description={(
+              <span className="space-y-1">
+                <span className="block">{t("appearance.language.description")}</span>
+                <span className="block">
+                  {t("appearance.language.currentValue", {
+                    values: {
+                      locale: localeLabels[resolvedLocale],
+                    },
+                  })}
+                </span>
+              </span>
+            )}
+            action={(
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Languages className="size-3.5" />
+              </span>
+            )}
+          >
+            <div className="max-w-[320px]">
+              <Select
+                value={localeValue}
+                onValueChange={(value) => {
+                  void onLocalePreferenceChange(
+                    {
+                      locale: value as AppLocale,
+                      mode: "manual",
+                    },
+                  );
+                }}
+              >
+                <SelectTrigger aria-label={t("appearance.language.label")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {supportedLocales.map((locale) => (
+                    <SelectItem key={locale} value={locale}>
+                      {localeLabels[locale]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </SettingField>
+
+          <SettingField
+            label={t("appearance.palette.label")}
+            description={t("appearance.palette.description")}
             action={(
               <span className="inline-flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Palette className="size-3.5" />
@@ -136,7 +200,7 @@ export function AppearanceSettingsSection({
                       <p className="text-sm font-medium text-foreground">{option.label}</p>
                       {active ? (
                         <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium text-primary-foreground">
-                          Active
+                          {t("appearance.palette.active")}
                         </span>
                       ) : null}
                     </div>

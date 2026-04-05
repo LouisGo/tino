@@ -1,4 +1,5 @@
 import type { AppCommandId, CommandExecutor } from "@/core/commands";
+import type { LocalizedText } from "@/i18n";
 
 export type AppShortcutId = string;
 export type ShortcutKind = "global" | "local";
@@ -25,8 +26,8 @@ type ShortcutCommandBinding<Payload> = {
 
 type ShortcutDefinitionBase<Payload = void, Result = void> = {
   id: AppShortcutId;
-  label: string;
-  description?: string;
+  label: LocalizedText;
+  description?: LocalizedText;
   defaults: ShortcutDefaultBinding;
   command: ShortcutCommandBinding<Payload>;
   _result?: Result;
@@ -49,13 +50,30 @@ export type ShortcutDefinition<Payload = void, Result = void> =
   | GlobalShortcutDefinition<Payload, Result>
   | LocalShortcutDefinition<Payload, Result>;
 
-export type ResolvedShortcutDefinition = {
+type ResolvedShortcutDefinitionBase = {
   accelerator: string | null;
+  description?: string;
   defaultAccelerator: string | null;
   hasOverride: boolean;
   isEnabled: boolean;
+  label: string;
   source: "default" | "override";
-} & ShortcutDefinition<unknown, unknown>;
+};
+
+export type ResolvedGlobalShortcutDefinition = Omit<
+  GlobalShortcutDefinition<unknown, unknown>,
+  "description" | "label"
+> & ResolvedShortcutDefinitionBase;
+
+export type ResolvedLocalShortcutDefinition = Omit<
+  LocalShortcutDefinition<unknown, unknown>,
+  "description" | "label"
+> & {
+} & ResolvedShortcutDefinitionBase;
+
+export type ResolvedShortcutDefinition =
+  | ResolvedGlobalShortcutDefinition
+  | ResolvedLocalShortcutDefinition;
 
 export type ShortcutTriggerContext = {
   source: "global" | "local" | "manual";

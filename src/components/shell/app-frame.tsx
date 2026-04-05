@@ -13,6 +13,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ShortcutKbd } from "@/core/shortcuts";
+import { useScopedT } from "@/i18n";
 import { resolveThemeMode } from "@/lib/theme";
 import { isMacOsTauriRuntime } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
@@ -22,21 +23,9 @@ type AppFrameProps = {
   children: React.ReactNode;
 };
 
-const navItems = [
-  {
-    to: "/clipboard",
-    label: "Clipboard",
-    icon: ClipboardList,
-    shortcutId: "shell.openClipboard",
-  },
-  {
-    to: "/ai",
-    label: "AI",
-    icon: Bot,
-  },
-];
-
 export function AppFrame({ children }: AppFrameProps) {
+  const tCommon = useScopedT("common");
+  const tShell = useScopedT("shell");
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const homeActive = pathname === "/";
   const hasOverlayTitleBar = isMacOsTauriRuntime();
@@ -65,7 +54,27 @@ export function AppFrame({ children }: AppFrameProps) {
   }, [mode]);
 
   const isDarkMode = resolvedMode === "dark";
-  const themeTooltip = isDarkMode ? "Switch to light" : "Switch to dark";
+  const themeTooltip = isDarkMode
+    ? tCommon("actions.switchToLight")
+    : tCommon("actions.switchToDark");
+  const navItems: Array<{
+    icon: typeof ClipboardList;
+    label: string;
+    shortcutId?: string;
+    to: string;
+  }> = [
+    {
+      to: "/clipboard",
+      label: tCommon("navigation.clipboard"),
+      icon: ClipboardList,
+      shortcutId: "shell.openClipboard",
+    },
+    {
+      to: "/ai",
+      label: tCommon("navigation.ai"),
+      icon: Bot,
+    },
+  ];
 
   function handleTitleBarMouseDown(event: React.MouseEvent<HTMLDivElement>) {
     if (!appWindow || event.button !== 0 || event.detail > 1) {
@@ -115,7 +124,7 @@ export function AppFrame({ children }: AppFrameProps) {
         <Tooltip
           content={(
             <span className="flex items-center gap-2">
-              <span>Home</span>
+              <span>{tCommon("navigation.home")}</span>
               <ShortcutKbd shortcutId="shell.openHome" />
             </span>
           )}
@@ -129,7 +138,7 @@ export function AppFrame({ children }: AppFrameProps) {
                 ? "shadow-sm ring-1 ring-white/20"
                 : "opacity-92 hover:opacity-100 hover:ring-1 hover:ring-white/16",
             )}
-            aria-label="Tino home"
+            aria-label={tShell("aria.home")}
           >
             <Activity className="size-3.5" />
           </Link>
@@ -197,7 +206,7 @@ export function AppFrame({ children }: AppFrameProps) {
           <Tooltip
             content={(
               <span className="flex items-center gap-2">
-                <span>Settings</span>
+                <span>{tCommon("navigation.settings")}</span>
                 <ShortcutKbd shortcutId="shell.openSettings" />
               </span>
             )}
@@ -205,7 +214,7 @@ export function AppFrame({ children }: AppFrameProps) {
           >
             <Link
               to="/settings"
-              aria-label="Settings"
+              aria-label={tCommon("navigation.settings")}
               className={cn(
                 "app-sidebar-icon flex size-8 items-center justify-center rounded-[13px] transition-colors",
                 pathname === "/settings"

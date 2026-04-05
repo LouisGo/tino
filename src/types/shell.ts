@@ -6,6 +6,9 @@ import type {
   AiDecision as RustAiDecision,
   ApplyBatchDecisionRequest as RustApplyBatchDecisionRequest,
   ApplyBatchDecisionResult as RustApplyBatchDecisionResult,
+  AppLocale as RustAppLocale,
+  AppLocaleMode as RustAppLocaleMode,
+  AppLocalePreference as RustAppLocalePreference,
   AppSettings as RustAppSettings,
   AppShortcutOverride as RustAppShortcutOverride,
   BatchDecisionCluster as RustBatchDecisionCluster,
@@ -41,6 +44,9 @@ export type ClipboardPageResult = Omit<RustClipboardPage, "captures"> & {
 };
 
 export type DeleteClipboardCaptureResult = RustDeleteClipboardCaptureResult;
+export type AppLocale = RustAppLocale;
+export type AppLocaleMode = RustAppLocaleMode;
+export type AppLocalePreference = RustAppLocalePreference;
 export type AppShortcutOverride = RustAppShortcutOverride;
 export type ShortcutOverrideRecord = NonNullable<RustAppSettings["shortcutOverrides"]>;
 
@@ -50,6 +56,7 @@ export type SettingsDraft = RequireKeys<
   | "baseUrl"
   | "apiKey"
   | "model"
+  | "localePreference"
   | "clipboardHistoryDays"
   | "shortcutOverrides"
 >;

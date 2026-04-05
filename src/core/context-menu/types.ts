@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import type { AppCommandId } from "@/core/commands";
 import type { CommandExecutor } from "@/core/commands";
+import type { LocalizableNode } from "@/i18n";
 
 export type ContextMenuRuntime = {
   commands: CommandExecutor;
@@ -26,7 +27,7 @@ export type ContextMenuItemDefinition<Context> =
   | {
       key: string;
       type?: "item";
-      label: ReactNode | ((context: Context) => ReactNode);
+      label: LocalizableNode | ((context: Context) => LocalizableNode);
       icon?: ReactNode | ((context: Context) => ReactNode);
       danger?: boolean | ((context: Context) => boolean);
       hidden?: (context: Context, runtime: ContextMenuRuntime) => boolean;
@@ -40,4 +41,3 @@ export type ContextMenuItemDefinition<Context> =
         runtime: ContextMenuRuntime,
       ) => void | Promise<void>;
     };
-

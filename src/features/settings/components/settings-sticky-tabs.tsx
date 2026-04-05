@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 
+import { resolveText, useI18nLanguage, useScopedT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type {
   SettingsSectionDefinition,
@@ -21,15 +22,19 @@ export const SettingsStickyTabs = forwardRef<
   },
   ref,
 ) {
+  useI18nLanguage();
+  const t = useScopedT("settings");
+
   return (
     <div ref={ref} className="rounded-[24px] border border-border/70 bg-card/88 px-2.5 py-2.5 shadow-[0_20px_56px_color-mix(in_oklch,var(--foreground)_8%,transparent)] backdrop-blur-xl">
       <nav
         className="-mx-1 flex items-center gap-1 overflow-x-auto px-1"
-        aria-label="Settings sections"
+        aria-label={t("navigation.sectionsAriaLabel")}
       >
         {sections.map((section) => {
           const Icon = section.icon;
           const active = section.id === activeSectionId;
+          const label = resolveText(section.label);
 
           return (
             <button
@@ -45,7 +50,7 @@ export const SettingsStickyTabs = forwardRef<
               aria-current={active ? "location" : undefined}
             >
               <Icon className="size-4" />
-              <span>{section.label}</span>
+              <span>{label}</span>
             </button>
           );
         })}

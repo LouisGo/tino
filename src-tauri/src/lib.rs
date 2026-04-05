@@ -2,10 +2,12 @@ mod app_state;
 mod capture;
 mod commands;
 pub mod ipc_schema;
+mod locale;
 mod runtime_profile;
 mod storage;
 
 use app_state::{AppState, ClipboardWindowTarget};
+use locale::localized_shell_strings;
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication, NSWindow, NSWorkspace};
 use serde::{Deserialize, Serialize};
@@ -162,16 +164,28 @@ fn focus_native_window(window: &tauri::WebviewWindow, activate_all_windows: bool
 #[cfg(not(target_os = "macos"))]
 fn focus_native_window(_window: &tauri::WebviewWindow, _activate_all_windows: bool) {}
 
+fn current_shell_strings(app: &AppHandle) -> locale::LocalizedShellStrings {
+    let locale = app
+        .try_state::<AppState>()
+        .and_then(|state| state.current_settings().ok())
+        .map(|settings| settings.locale_preference.resolved())
+        .unwrap_or(locale::AppLocale::EnUs);
+
+    localized_shell_strings(locale)
+}
+
 pub(crate) fn open_clipboard_window(app: &AppHandle) {
     record_clipboard_window_target(app);
+    let shell_strings = current_shell_strings(app);
 
     if let Some(window) = app.get_webview_window("clipboard") {
+        let _ = window.set_title(shell_strings.clipboard_window_title);
         focus_window(&window);
         return;
     }
 
     match WebviewWindowBuilder::new(app, "clipboard", WebviewUrl::App("/".into()))
-        .title("Clipboard")
+        .title(shell_strings.clipboard_window_title)
         .inner_size(CLIPBOARD_WINDOW_WIDTH, CLIPBOARD_WINDOW_HEIGHT)
         .min_inner_size(CLIPBOARD_WINDOW_WIDTH, CLIPBOARD_WINDOW_HEIGHT)
         .max_inner_size(CLIPBOARD_WINDOW_WIDTH, CLIPBOARD_WINDOW_HEIGHT)
@@ -327,9 +341,16 @@ fn configure_native_macos_window(app: &AppHandle) {
 fn configure_native_macos_window(_app: &AppHandle) {}
 
 fn create_tray(app: &AppHandle) -> tauri::Result<()> {
-    let open_item = MenuItem::with_id(app, "open", "Open Tino", true, None::<&str>)?;
-    let clipboard_item = MenuItem::with_id(app, "clipboard", "Clipboard", true, None::<&str>)?;
-    let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let shell_strings = current_shell_strings(app);
+    let open_item = MenuItem::with_id(app, "open", shell_strings.tray_open, true, None::<&str>)?;
+    let clipboard_item = MenuItem::with_id(
+        app,
+        "clipboard",
+        shell_strings.tray_clipboard,
+        true,
+        None::<&str>,
+    )?;
+    let quit_item = MenuItem::with_id(app, "quit", shell_strings.tray_quit, true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open_item, &clipboard_item, &quit_item])?;
     let icon = app
         .default_window_icon()
@@ -338,7 +359,7 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
 
     let _ = TrayIconBuilder::with_id("main-tray")
         .icon(icon)
-        .tooltip("Tino")
+        .tooltip(shell_strings.tray_tooltip)
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id().as_ref() {
@@ -425,11 +446,13 @@ pub fn run() {
                 log::info!("current app bundle path: {}", path.display());
             }
 
+            let app_state = AppState::new(app.handle())?;
+            app.manage(app_state.clone());
+
             create_tray(app.handle())?;
             restore_main_window_state(app.handle());
             configure_native_macos_window(app.handle());
 
-            let app_state = AppState::new(app.handle())?;
             #[cfg(target_os = "macos")]
             if let Err(error) =
                 capture::install_source_app_tracker(Some(app.config().identifier.as_str()))
@@ -437,7 +460,6 @@ pub fn run() {
                 log::warn!("failed to install source app tracker: {}", error);
             }
             capture::spawn_clipboard_watcher(app_state.clone());
-            app.manage(app_state);
 
             Ok(())
         })

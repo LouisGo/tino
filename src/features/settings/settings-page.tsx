@@ -3,6 +3,7 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import { filterConfigurableShortcutOverrides } from "@/app/shortcuts";
+import { syncLocalePreference } from "@/i18n";
 import {
   getLogDirectory,
   pickDirectory,
@@ -165,7 +166,18 @@ export function SettingsPage() {
           />
 
           <AppearanceSettingsSection
+            localePreference={settingsDraft.localePreference}
             mode={mode}
+            onLocalePreferenceChange={async (localePreference) => {
+              const nextDraft = {
+                ...settingsDraftRef.current,
+                localePreference,
+              };
+
+              patchSettingsDraft({ localePreference });
+              await syncLocalePreference(localePreference);
+              await saveSettingsDraft(nextDraft);
+            }}
             themeName={themeName}
             setMode={setMode}
             setThemeName={setThemeName}

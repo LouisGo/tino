@@ -15,6 +15,7 @@ import {
 } from "@tauri-apps/plugin-global-shortcut";
 
 import { useCommandExecutor } from "@/core/commands";
+import { useI18nLanguage } from "@/i18n";
 import { ShortcutManagerContext } from "@/core/shortcuts/context";
 import {
   createShortcutExecution,
@@ -46,14 +47,15 @@ export function AppShortcutProvider({
   shortcuts: ShortcutDefinition<unknown, unknown>[];
 }) {
   const commands = useCommandExecutor();
+  const language = useI18nLanguage();
   const platform = useMemo(() => getShortcutPlatform(), []);
   const registry = useMemo(() => new ShortcutRegistry().registerMany(shortcuts), [shortcuts]);
   const [scopes, setScopes] = useState<Array<{ id: ShortcutScopeId; key: number }>>([]);
   const scopeSerialRef = useRef(0);
   const overridesRecord = useMemo(() => overrides ?? {}, [overrides]);
   const resolvedShortcuts = useMemo(
-    () => resolveShortcutCatalog(registry, overridesRecord, platform),
-    [overridesRecord, platform, registry],
+    () => resolveShortcutCatalog(registry, overridesRecord, platform, language),
+    [language, overridesRecord, platform, registry],
   );
   const resolvedShortcutsRef = useRef(resolvedShortcuts);
   const scopesRef = useRef(scopes);
@@ -110,14 +112,20 @@ export function AppShortcutProvider({
         platform,
         shortcutId,
         accelerator,
+        language,
       ),
     getShortcut: (id) =>
       resolvedShortcutsRef.current.find((shortcut) => shortcut.id === id),
     getShortcuts: () => resolvedShortcutsRef.current,
     platform,
     resolveShortcuts: (nextOverrides) =>
-      resolveShortcutCatalog(registry, nextOverrides ?? overridesRecord, platform),
-  }), [activateScope, commands, overridesRecord, platform, registry]);
+      resolveShortcutCatalog(
+        registry,
+        nextOverrides ?? overridesRecord,
+        platform,
+        language,
+      ),
+  }), [activateScope, commands, language, overridesRecord, platform, registry]);
 
   const handleKeyDown = useEffectEvent((event: KeyboardEvent) => {
     if (event.defaultPrevented) {
@@ -132,6 +140,7 @@ export function AppShortcutProvider({
       platform,
       rawScopes,
       event,
+      language,
     );
 
     if (!execution) {

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { useText, useTextNode, type LocalizableNode } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { SettingsSectionDefinition } from "@/features/settings/settings-sections";
 
@@ -12,12 +13,16 @@ export function SettingsSection({
   section,
 }: {
   action?: ReactNode;
-  badge?: ReactNode;
+  badge?: LocalizableNode;
   children: ReactNode;
   className?: string;
   section: SettingsSectionDefinition;
 }) {
   const Icon = section.icon;
+  const badgeNode = useTextNode(badge);
+  const description = useText(section.description);
+  const eyebrow = useText(section.eyebrow);
+  const title = useText(section.title);
 
   return (
     <section
@@ -32,15 +37,15 @@ export function SettingsSection({
             </div>
             <div className="space-y-1">
               <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-                {section.eyebrow}
+                {eyebrow}
               </p>
               <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                {section.title}
+                {title}
               </h2>
             </div>
           </div>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            {section.description}
+            {description}
           </p>
         </div>
 
@@ -48,7 +53,7 @@ export function SettingsSection({
           <div className="flex flex-wrap items-center gap-2">
             {badge ? (
               <Badge variant="secondary" className="w-fit">
-                {badge}
+                {badgeNode}
               </Badge>
             ) : null}
             {action}

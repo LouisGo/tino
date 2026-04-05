@@ -1,4 +1,5 @@
 import type { CommandExecutor } from "@/core/commands";
+import { resolveText } from "@/i18n";
 import { ShortcutRegistry } from "@/core/shortcuts/registry";
 import {
   matchesShortcutEvent,
@@ -20,6 +21,7 @@ export function resolveShortcutCatalog(
   registry: ShortcutRegistry,
   overrides: Record<string, ShortcutBindingOverride>,
   platform: ShortcutPlatform,
+  locale?: string,
 ) {
   return registry
     .getAll()
@@ -34,13 +36,15 @@ export function resolveShortcutCatalog(
       return {
         ...definition,
         accelerator,
+        description: definition.description ? resolveText(definition.description) : undefined,
         defaultAccelerator,
         hasOverride,
         isEnabled: accelerator !== null,
+        label: resolveText(definition.label),
         source: hasOverride ? "override" : "default",
       };
     })
-    .sort((left, right) => left.label.localeCompare(right.label));
+    .sort((left, right) => left.label.localeCompare(right.label, locale));
 }
 
 export function findShortcutConflicts(
@@ -49,6 +53,7 @@ export function findShortcutConflicts(
   platform: ShortcutPlatform,
   shortcutId: AppShortcutId,
   accelerator: string | null | undefined,
+  locale?: string,
 ) {
   const normalized = normalizeShortcutAccelerator(accelerator, platform);
   if (!normalized) {
@@ -60,7 +65,7 @@ export function findShortcutConflicts(
     return [];
   }
 
-  return resolveShortcutCatalog(registry, overrides, platform).filter((candidate) => {
+  return resolveShortcutCatalog(registry, overrides, platform, locale).filter((candidate) => {
     if (candidate.id === shortcutId || candidate.accelerator !== normalized) {
       return false;
     }
@@ -82,8 +87,9 @@ export function findLocalShortcutExecution(
   platform: ShortcutPlatform,
   scopes: ShortcutScopeId[],
   event: KeyboardEvent,
+  locale?: string,
 ) {
-  const resolved = resolveShortcutCatalog(registry, overrides, platform).filter(
+  const resolved = resolveShortcutCatalog(registry, overrides, platform, locale).filter(
     (
       shortcut,
     ): shortcut is ResolvedShortcutDefinition & {
