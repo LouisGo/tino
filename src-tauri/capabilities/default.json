@@ -18,6 +18,13 @@
     "global-shortcut:allow-unregister-all",
     "log:default",
     "opener:default",
-    "autostart:default"
+    "autostart:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "http://**" },
+        { "url": "https://**" }
+      ]
+    }
   ]
 }

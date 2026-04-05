@@ -76,7 +76,8 @@ export function validateRuntimeProviderBaseUrl(value: string) {
 }
 
 export function normalizeRuntimeProviderBaseUrl(value: string) {
-  return value.trim() || defaultRuntimeProviderBaseUrl;
+  const trimmedValue = value.trim().replace(/\/+$/, "");
+  return trimmedValue || defaultRuntimeProviderBaseUrl;
 }
 
 export function validateRuntimeProviderModel(value: string) {

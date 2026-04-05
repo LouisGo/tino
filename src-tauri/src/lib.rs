@@ -1359,6 +1359,7 @@ pub fn run() {
 
             Ok(())
         })
+        .plugin(tauri_plugin_http::init())
         .invoke_handler(ipc_schema::builder().invoke_handler())
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

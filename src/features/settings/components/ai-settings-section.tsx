@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { resolveProviderAccessConfig } from "@/features/ai/lib/provider-access";
+import { RuntimeProviderTestPanel } from "@/features/settings/components/runtime-provider-test-panel";
 import {
   defaultRuntimeProviderBaseUrl,
   maskRuntimeProviderApiKey,
@@ -226,6 +227,8 @@ export function AiSettingsSection({
               );
             }}
           </form.Field>
+
+          <RuntimeProviderTestPanel providerConfig={form.state.values} />
         </SettingsPanelBody>
       </SettingsPanel>
     </SettingsSection>
