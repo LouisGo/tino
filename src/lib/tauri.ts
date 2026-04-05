@@ -6,45 +6,35 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
 import { commands as tauriCommands } from "@/bindings/tauri";
 import {
-  buildMockApplyBatchDecisionResult,
-  getMockAiBatchPayload,
-  getMockAiBatchSummaries,
-  getMockTopicIndexEntries,
-  isMockAiBatchId,
-} from "@/features/ai/lib/mock-fixtures";
-import {
   defaultAppLocalePreference,
   LOCALE_PREFERENCE_CHANGED_EVENT,
   normalizeAppLocalePreference,
   syncLocalePreference,
 } from "@/i18n";
 import { appEnv, dataChannel, isProductionDataChannel } from "@/lib/runtime-profile";
+import {
+} from "@/lib/tauri-ai";
+import { isTauriRuntime, unwrapTauriResult } from "@/lib/tauri-core";
 import type {
-  AiBatchPayload as RustAiBatchPayload,
-  AiBatchSummary as RustAiBatchSummary,
-  ApplyBatchDecisionResult as RustApplyBatchDecisionResult,
   AppSettings as RustAppSettings,
   CapturePreview as RustCapturePreview,
   ClipboardPage as RustClipboardPage,
   DashboardSnapshot as RustDashboardSnapshot,
-  TopicIndexEntry as RustTopicIndexEntry,
 } from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
-  AiBatchPayload,
-  AiBatchSummary,
-  ApplyBatchDecisionRequest,
-  ApplyBatchDecisionResult,
   ClipboardCapture,
   ClipboardPageRequest,
   DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
   SettingsDraft,
-  TopicIndexEntry,
 } from "@/types/shell";
 
 export const clipboardCapturesUpdatedEvent = "clipboard-captures-updated";
+
+export { applyBatchDecision, getAiBatchPayload, getReadyAiBatches, getTopicIndexEntries } from "@/lib/tauri-ai";
+export { isMacOsTauriRuntime, isTauriRuntime } from "@/lib/tauri-core";
 
 const mockImageAsset = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
@@ -153,29 +143,6 @@ function getMockSnapshot(): DashboardSnapshot {
   };
 }
 
-export function isTauriRuntime() {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
-
-export function isMacOsTauriRuntime() {
-  return (
-    isTauriRuntime() &&
-    typeof navigator !== "undefined" &&
-    /mac/i.test(navigator.userAgent)
-  );
-}
-
-async function unwrapTauriResult<T>(
-  result: Promise<{ status: "ok"; data: T } | { status: "error"; error: string }>,
-) {
-  const payload = await result;
-  if (payload.status === "ok") {
-    return payload.data;
-  }
-
-  throw new Error(payload.error);
-}
-
 function normalizeClipboardCapture(capture: RustCapturePreview): ClipboardCapture {
   return {
     id: capture.id ?? "",
@@ -231,24 +198,6 @@ function normalizeDashboardSnapshot(snapshot: RustDashboardSnapshot): DashboardS
   };
 }
 
-function normalizeAiBatchSummary(batch: RustAiBatchSummary): AiBatchSummary {
-  return batch
-}
-
-function normalizeAiBatchPayload(payload: RustAiBatchPayload): AiBatchPayload {
-  return payload
-}
-
-function normalizeTopicIndexEntries(entries: RustTopicIndexEntry[]): TopicIndexEntry[] {
-  return entries
-}
-
-function normalizeApplyBatchDecisionResult(
-  result: RustApplyBatchDecisionResult,
-): ApplyBatchDecisionResult {
-  return result
-}
-
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   if (!isTauriRuntime()) {
     return getMockSnapshot();
@@ -257,47 +206,6 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   return normalizeDashboardSnapshot(
     await unwrapTauriResult(tauriCommands.getDashboardSnapshot()),
   );
-}
-
-export async function getReadyAiBatches(): Promise<AiBatchSummary[]> {
-  if (!isTauriRuntime()) {
-    return getMockAiBatchSummaries()
-  }
-
-  const batches = await unwrapTauriResult(tauriCommands.listReadyAiBatches())
-  return batches.map(normalizeAiBatchSummary)
-}
-
-export async function getAiBatchPayload(batchId: string): Promise<AiBatchPayload> {
-  if (!isTauriRuntime() || isMockAiBatchId(batchId)) {
-    return getMockAiBatchPayload(batchId)
-  }
-
-  return normalizeAiBatchPayload(
-    await unwrapTauriResult(tauriCommands.getAiBatchPayload(batchId)),
-  )
-}
-
-export async function getTopicIndexEntries(): Promise<TopicIndexEntry[]> {
-  if (!isTauriRuntime()) {
-    return getMockTopicIndexEntries()
-  }
-
-  return normalizeTopicIndexEntries(
-    await unwrapTauriResult(tauriCommands.getTopicIndexEntries()),
-  )
-}
-
-export async function applyBatchDecision(
-  request: ApplyBatchDecisionRequest,
-): Promise<ApplyBatchDecisionResult> {
-  if (!isTauriRuntime() || isMockAiBatchId(request.batchId)) {
-    return buildMockApplyBatchDecisionResult(request)
-  }
-
-  return normalizeApplyBatchDecisionResult(
-    await unwrapTauriResult(tauriCommands.applyBatchDecision(request)),
-  )
 }
 
 export async function getClipboardPage(

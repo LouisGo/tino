@@ -787,7 +787,7 @@ mod tests {
     fn sample_upsert(id: &str, kind: &str, status: &str, raw_text: &str) -> CaptureHistoryUpsert {
         CaptureHistoryUpsert {
             id: id.into(),
-            captured_at: "2026-04-04T12:00:00+08:00".into(),
+            captured_at: now_rfc3339(),
             source: "clipboard".into(),
             source_app_name: Some("Tino".into()),
             source_app_bundle_id: Some("dev.tino".into()),

@@ -1,10 +1,14 @@
 mod app_state;
+mod backend;
 mod capture;
 mod commands;
 pub mod ipc_schema;
 mod locale;
+mod native_window_macos;
+mod panel_layout;
 mod runtime_profile;
 mod storage;
+mod window_state;
 
 use app_state::{AppState, ClipboardWindowTarget};
 #[cfg(target_os = "macos")]
@@ -13,24 +17,23 @@ use block2::RcBlock;
 use libc::pid_t;
 use locale::localized_shell_strings;
 #[cfg(target_os = "macos")]
-use objc2::{rc::Retained, runtime::AnyClass, runtime::AnyObject, ClassType, MainThreadMarker};
+use objc2::{rc::Retained, runtime::AnyObject, MainThreadMarker};
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{
-    NSApplicationActivationOptions, NSPanel, NSResponder, NSRunningApplication, NSScreen, NSWindow,
-    NSWindowAnimationBehavior, NSWindowCollectionBehavior, NSWindowStyleMask, NSWorkspace,
-    NSWorkspaceApplicationKey, NSWorkspaceDidActivateApplicationNotification,
+    NSRunningApplication, NSScreen, NSWorkspace, NSWorkspaceApplicationKey,
+    NSWorkspaceDidActivateApplicationNotification,
 };
 #[cfg(target_os = "macos")]
-use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-#[cfg(target_os = "macos")]
-use objc2_foundation::{NSNotification, NSObject, NSObjectProtocol, NSPoint, NSSize, NSString};
-use serde::{Deserialize, Serialize};
+use objc2_foundation::{NSNotification, NSPoint, NSSize, NSString};
+use panel_layout::{
+    resolve_panel_window_layout as compute_panel_window_layout, LogicalDisplayFrame,
+    PanelWindowLayout,
+};
 #[cfg(target_os = "macos")]
 use std::ptr::NonNull;
 #[cfg(target_os = "macos")]
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{
-    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
     time::{Duration, SystemTime},
@@ -42,8 +45,11 @@ use tauri::{
     WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, WEBVIEW_TARGET};
+use window_state::{
+    load_window_state_store, save_window_state_store, PersistedMainWindowState,
+    PersistedPanelWindowState,
+};
 
-const WINDOW_STATE_FILE_NAME: &str = "window-state.json";
 const LOG_MAX_FILE_SIZE_BYTES: u128 = 10_000_000;
 const LOG_KEEP_COUNT: usize = 10;
 const LOG_RETENTION_DAYS: u64 = 14;
@@ -58,87 +64,9 @@ const AX_VALUE_TYPE_CGSIZE: u32 = 2;
 #[cfg(target_os = "macos")]
 static PANEL_WINDOW_TRACKER_INSTALLED: AtomicBool = AtomicBool::new(false);
 
-#[cfg(target_os = "macos")]
-struct TinoPanelIvars;
-
-#[cfg(target_os = "macos")]
-objc2::define_class!(
-    // `nonactivatingPanel` 的语义是围绕 `NSPanel` 设计的。
-    // 这里把通用小窗抽成独立的 panel 子类，确保它可以拿到键盘焦点，
-    // 同时又不把当前前台应用从 Cursor / Ghostty 等切走。
-    #[unsafe(super = NSPanel)]
-    #[name = "TinoPanelWindow"]
-    #[ivars = TinoPanelIvars]
-    struct RawTinoPanelWindow;
-
-    unsafe impl NSObjectProtocol for RawTinoPanelWindow {}
-
-    impl RawTinoPanelWindow {
-        #[unsafe(method(canBecomeKeyWindow))]
-        fn __can_become_key_window(&self) -> bool {
-            true
-        }
-
-        #[unsafe(method(canBecomeMainWindow))]
-        fn __can_become_main_window(&self) -> bool {
-            false
-        }
-    }
-);
-
-#[cfg(target_os = "macos")]
-unsafe extern "C" {
-    fn object_setClass(obj: *mut NSObject, cls: *const AnyClass) -> *const AnyClass;
-}
-
 pub(crate) fn format_system_time_rfc3339(timestamp: SystemTime) -> Result<String, String> {
     let datetime = chrono::DateTime::<chrono::Utc>::from(timestamp).with_timezone(&chrono::Local);
     Ok(datetime.to_rfc3339())
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PersistedMainWindowState {
-    x: i32,
-    y: i32,
-    width: u32,
-    height: u32,
-    maximized: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PersistedPanelWindowState {
-    height: f64,
-    offset_x: f64,
-    offset_y: f64,
-    width: f64,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-struct PersistedWindowStateStore {
-    main: Option<PersistedMainWindowState>,
-    panels: BTreeMap<String, PersistedPanelWindowState>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-enum PersistedWindowStateFile {
-    LegacyMain(PersistedMainWindowState),
-    Store(PersistedWindowStateStore),
-}
-
-impl From<PersistedWindowStateFile> for PersistedWindowStateStore {
-    fn from(value: PersistedWindowStateFile) -> Self {
-        match value {
-            PersistedWindowStateFile::LegacyMain(state) => Self {
-                main: Some(state),
-                panels: BTreeMap::new(),
-            },
-            PersistedWindowStateFile::Store(store) => store,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -158,23 +86,7 @@ struct PanelWindowSpec {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct LogicalDisplayFrame {
-    height: f64,
-    width: f64,
-    x: f64,
-    y: f64,
-}
-
-#[derive(Debug, Clone, Copy)]
 struct LogicalWindowFrame {
-    height: f64,
-    width: f64,
-    x: f64,
-    y: f64,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct PanelWindowLayout {
     height: f64,
     width: f64,
     x: f64,
@@ -257,13 +169,6 @@ const PANEL_WINDOW_SPECS: [PanelWindowSpec; 1] = [PanelWindowSpec {
     window_size: (800.0, 500.0),
 }];
 
-fn window_state_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path()
-        .app_data_dir()
-        .ok()
-        .map(|dir| dir.join(WINDOW_STATE_FILE_NAME))
-}
-
 fn current_executable_path() -> Option<PathBuf> {
     std::env::current_exe().ok()
 }
@@ -276,34 +181,6 @@ fn current_app_bundle_path() -> Option<PathBuf> {
 
     (app_bundle.extension().and_then(|value| value.to_str()) == Some("app"))
         .then(|| app_bundle.to_path_buf())
-}
-
-fn load_window_state_store(app: &AppHandle) -> PersistedWindowStateStore {
-    let Some(path) = window_state_path(app) else {
-        return PersistedWindowStateStore::default();
-    };
-    let Ok(raw) = fs::read_to_string(path) else {
-        return PersistedWindowStateStore::default();
-    };
-
-    serde_json::from_str::<PersistedWindowStateFile>(&raw)
-        .ok()
-        .map(Into::into)
-        .unwrap_or_default()
-}
-
-fn save_window_state_store(app: &AppHandle, store: &PersistedWindowStateStore) {
-    let Some(path) = window_state_path(app) else {
-        return;
-    };
-
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-
-    if let Ok(raw) = serde_json::to_string_pretty(store) {
-        let _ = fs::write(path, raw);
-    }
 }
 
 fn panel_window_spec(label: &str) -> Option<&'static PanelWindowSpec> {
@@ -334,52 +211,15 @@ fn logical_display_frame_from_monitor(monitor: &Monitor) -> LogicalDisplayFrame 
 fn resolve_panel_window_layout(
     spec: &PanelWindowSpec,
     display: &LogicalDisplayFrame,
-    _anchor: Option<&LogicalWindowFrame>,
     persisted: Option<&PersistedPanelWindowState>,
 ) -> PanelWindowLayout {
-    let default_width = spec.window_size.0.min(display.width);
-    let default_height = spec.window_size.1.min(display.height);
-
-    let min_width = spec.min_size.map(|size| size.0).unwrap_or(200.0);
-    let min_height = spec.min_size.map(|size| size.1).unwrap_or(120.0);
-    let max_width = spec.max_size.map(|size| size.0).unwrap_or(display.width);
-    let max_height = spec.max_size.map(|size| size.1).unwrap_or(display.height);
-
-    let width = persisted
-        .map(|state| state.width)
-        .unwrap_or(default_width)
-        .clamp(min_width.min(display.width), max_width.min(display.width));
-    let height = persisted
-        .map(|state| state.height)
-        .unwrap_or(default_height)
-        .clamp(
-            min_height.min(display.height),
-            max_height.min(display.height),
-        );
-    let max_offset_x = (display.width - width).max(0.0);
-    let max_offset_y = (display.height - height).max(0.0);
-    let default_offset_x = ((display.width - width) / 2.0)
-        .max(0.0)
-        .clamp(0.0, max_offset_x);
-    let default_offset_y = ((display.height - height) / 2.0)
-        .max(0.0)
-        .clamp(0.0, max_offset_y);
-
-    let offset_x = persisted
-        .map(|state| state.offset_x)
-        .unwrap_or(default_offset_x)
-        .clamp(0.0, max_offset_x);
-    let offset_y = persisted
-        .map(|state| state.offset_y)
-        .unwrap_or(default_offset_y)
-        .clamp(0.0, max_offset_y);
-
-    PanelWindowLayout {
-        height,
-        width,
-        x: display.x + offset_x,
-        y: display.y + offset_y,
-    }
+    compute_panel_window_layout(
+        spec.window_size,
+        spec.min_size,
+        spec.max_size,
+        display,
+        persisted,
+    )
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -404,21 +244,6 @@ where
     })
     .map_err(|error| error.to_string())?;
     receiver.recv().map_err(|error| error.to_string())
-}
-
-#[cfg(target_os = "macos")]
-fn macos_window_position_for_layout(layout: &PanelWindowLayout) -> NSPoint {
-    NSPoint::new(layout.x, macos_y_for_tauri_top(layout.y))
-}
-
-#[cfg(target_os = "macos")]
-fn macos_y_for_tauri_top(y: f64) -> f64 {
-    macos_y_for_tauri_top_with_display_height(y, CGDisplayPixelsHigh(CGMainDisplayID()) as f64)
-}
-
-#[cfg(target_os = "macos")]
-fn macos_y_for_tauri_top_with_display_height(y: f64, display_height: f64) -> f64 {
-    display_height - y
 }
 
 #[cfg(target_os = "macos")]
@@ -677,80 +502,8 @@ fn resolve_panel_layout_for_target(
     persisted: Option<&PersistedPanelWindowState>,
 ) -> PanelWindowLayout {
     let display = logical_display_frame_from_monitor(&target.monitor);
-    resolve_panel_window_layout(spec, &display, target.anchor.as_ref(), persisted)
-}
-
-#[cfg(target_os = "macos")]
-fn panel_window_handle(window: &WebviewWindow) -> Option<Retained<RawTinoPanelWindow>> {
-    let ns_window = window.ns_window().ok()? as *mut NSObject;
-
-    unsafe {
-        let window_object: &AnyObject = &*ns_window.cast();
-        if window_object.class() != RawTinoPanelWindow::class() {
-            // Tauri 当前创建出来的是普通 `NSWindow`。
-            // 对 panel 来说，只补一个 style mask 不够，所以这里在原生层把它切成
-            // 真正的 `NSPanel` 子类，再复用现有的 Tauri webview 和窗口生命周期。
-            let _ = object_setClass(ns_window, RawTinoPanelWindow::class());
-        }
-
-        Retained::retain(ns_window.cast::<RawTinoPanelWindow>())
-    }
-}
-
-#[cfg(target_os = "macos")]
-fn with_native_window_handles<R>(
-    window: &WebviewWindow,
-    label: &str,
-    operation: impl FnOnce(&NSWindow, Option<&NSPanel>) -> R,
-) -> Option<R> {
-    if is_panel_window_label(label) {
-        let panel = panel_window_handle(window)?;
-        let ns_panel: &NSPanel = unsafe { &*(&*panel as *const RawTinoPanelWindow).cast() };
-        let ns_window: &NSWindow = unsafe { &*(ns_panel as *const NSPanel).cast() };
-        return Some(operation(ns_window, Some(ns_panel)));
-    }
-
-    let ns_window = window.ns_window().ok()?;
-    let ns_window: &NSWindow = unsafe { &*ns_window.cast() };
-    Some(operation(ns_window, None))
-}
-
-#[cfg(target_os = "macos")]
-fn apply_native_window_configuration(
-    ns_window: &NSWindow,
-    ns_panel: Option<&NSPanel>,
-    is_panel: bool,
-) {
-    // 主窗口和 panel 共用一套入口，但 panel 必须显式声明为 non-activating，
-    // 否则会重新抢占应用激活状态，回到左上角切成 Towary 的旧问题。
-    let mut style_mask = ns_window.styleMask();
-    if is_panel {
-        style_mask |= NSWindowStyleMask::NonactivatingPanel;
-    } else {
-        style_mask &= !NSWindowStyleMask::NonactivatingPanel;
-    }
-    ns_window.setStyleMask(style_mask);
-
-    let mut collection_behavior =
-        ns_window.collectionBehavior() | NSWindowCollectionBehavior::MoveToActiveSpace;
-
-    if is_panel {
-        collection_behavior |= NSWindowCollectionBehavior::Transient
-            | NSWindowCollectionBehavior::IgnoresCycle
-            | NSWindowCollectionBehavior::FullScreenAuxiliary;
-    }
-
-    ns_window.setCollectionBehavior(collection_behavior);
-    ns_window.setAnimationBehavior(NSWindowAnimationBehavior::None);
-    ns_window.setHidesOnDeactivate(false);
-
-    if let Some(ns_panel) = ns_panel {
-        // 这些 panel 标志一起决定了它的 Cocoa 行为:
-        // 浮层展示、按需成为 key、以及在切换空间/全屏辅助窗口场景下保持稳定。
-        ns_panel.setFloatingPanel(true);
-        ns_panel.setBecomesKeyOnlyIfNeeded(false);
-        ns_panel.setWorksWhenModal(true);
-    }
+    let _ = target.anchor.as_ref();
+    resolve_panel_window_layout(spec, &display, persisted)
 }
 
 #[cfg(target_os = "macos")]
@@ -761,29 +514,12 @@ fn configure_native_window(window: &WebviewWindow) {
 
     let _ = run_on_main_thread_sync(&app, move || {
         let is_panel = is_panel_window_label(&label);
-        let Some(()) = with_native_window_handles(&window, &label, |ns_window, ns_panel| {
-            apply_native_window_configuration(ns_window, ns_panel, is_panel);
-        }) else {
-            return;
-        };
+        native_window_macos::configure_native_window(&window, is_panel);
     });
 }
 
 #[cfg(not(target_os = "macos"))]
 fn configure_native_window(_window: &WebviewWindow) {}
-
-#[cfg(target_os = "macos")]
-fn focus_window_webview_content(window: &WebviewWindow) {
-    let label = window.label().to_string();
-    let _ = window.with_webview(move |webview| unsafe {
-        let ns_window: &NSWindow = &*webview.ns_window().cast();
-        let webview: &NSResponder = &*webview.inner().cast();
-
-        if !ns_window.makeFirstResponder(Some(webview)) {
-            log::warn!("failed to focus webview content for window {}", label);
-        }
-    });
-}
 
 #[cfg(target_os = "macos")]
 fn present_native_window(
@@ -797,55 +533,7 @@ fn present_native_window(
 
     let _ = run_on_main_thread_sync(&app, move || {
         let is_panel = is_panel_window_label(&label);
-        let Some(()) = with_native_window_handles(&window, &label, |ns_window, ns_panel| {
-            apply_native_window_configuration(ns_window, ns_panel, is_panel);
-
-            if let Some(layout) = layout {
-                if request_focus && ns_window.isVisible() {
-                    ns_window.orderOut(None);
-                }
-
-                ns_window.setContentSize(NSSize::new(layout.width, layout.height));
-                ns_window.setFrameTopLeftPoint(macos_window_position_for_layout(&layout));
-            }
-
-            if ns_window.isMiniaturized() {
-                ns_window.deminiaturize(None);
-            }
-
-            if request_focus {
-                if is_panel {
-                    // panel 的聚焦链路必须和主窗口分开:
-                    // 只把 panel 提到前面并让 webview 成为 first responder，
-                    // 不能走 app activate，否则菜单栏前台应用会被切成 Towary。
-                    ns_window.orderFrontRegardless();
-                    if let Some(content_view) = ns_window.contentView() {
-                        ns_window.makeFirstResponder(Some(&content_view));
-                    }
-                    ns_window.makeKeyWindow();
-                    focus_window_webview_content(&window);
-                } else {
-                    ns_window.makeKeyAndOrderFront(None);
-                    #[allow(deprecated)]
-                    let _ = NSRunningApplication::currentApplication().activateWithOptions(
-                        NSApplicationActivationOptions::ActivateIgnoringOtherApps,
-                    );
-                    ns_window.makeKeyWindow();
-                    ns_window.makeMainWindow();
-                }
-                return;
-            }
-
-            if layout.is_some() || !ns_window.isVisible() || !ns_window.isOnActiveSpace() {
-                if is_panel {
-                    ns_window.orderFrontRegardless();
-                } else {
-                    ns_window.orderFront(None);
-                }
-            }
-        }) else {
-            return;
-        };
+        native_window_macos::present_native_window(&window, is_panel, layout, request_focus);
     });
 }
 
@@ -1205,24 +893,9 @@ fn prune_expired_log_files(log_dir: &Path, max_age: Duration) -> Result<(), Stri
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
 fn configure_native_macos_window(app: &AppHandle) {
-    let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
-        return;
-    };
-
-    configure_native_window(&window);
-
-    let Ok(ns_window) = window.ns_window() else {
-        return;
-    };
-
-    let ns_window: &NSWindow = unsafe { &*ns_window.cast() };
-    ns_window.setMovableByWindowBackground(false);
+    native_window_macos::configure_native_macos_window(app, MAIN_WINDOW_LABEL)
 }
-
-#[cfg(not(target_os = "macos"))]
-fn configure_native_macos_window(_app: &AppHandle) {}
 
 fn create_tray(app: &AppHandle) -> tauri::Result<()> {
     let shell_strings = current_shell_strings(app);
@@ -1397,22 +1070,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn legacy_window_state_file_migrates_into_store() {
-        let legacy = PersistedWindowStateFile::LegacyMain(PersistedMainWindowState {
-            x: 12,
-            y: 24,
-            width: 1280,
-            height: 900,
-            maximized: false,
-        });
-
-        let store = PersistedWindowStateStore::from(legacy);
-
-        assert_eq!(store.main.as_ref().map(|state| state.x), Some(12));
-        assert!(store.panels.is_empty());
-    }
-
-    #[test]
     fn panel_layout_is_clamped_to_target_display() {
         let spec = PANEL_WINDOW_SPECS[0];
         let display = LogicalDisplayFrame {
@@ -1428,7 +1085,7 @@ mod tests {
             offset_y: 500.0,
         };
 
-        let layout = resolve_panel_window_layout(&spec, &display, None, Some(&persisted));
+        let layout = resolve_panel_window_layout(&spec, &display, Some(&persisted));
 
         assert_eq!(layout.width, 800.0);
         assert_eq!(layout.height, 500.0);
@@ -1447,14 +1104,7 @@ mod tests {
             width: 1920.0,
             height: 1080.0,
         };
-        let anchor = LogicalWindowFrame {
-            x: 1260.0,
-            y: 180.0,
-            width: 520.0,
-            height: 720.0,
-        };
-
-        let layout = resolve_panel_window_layout(&spec, &display, Some(&anchor), None);
+        let layout = resolve_panel_window_layout(&spec, &display, None);
 
         assert_eq!(layout.width, 800.0);
         assert_eq!(layout.height, 500.0);
@@ -1466,7 +1116,7 @@ mod tests {
     #[test]
     fn macos_window_position_converts_from_tauri_top_left_space() {
         assert_eq!(
-            macos_y_for_tauri_top_with_display_height(290.0, 1080.0),
+            native_window_macos::macos_y_for_tauri_top_with_display_height(290.0, 1080.0),
             790.0
         );
     }

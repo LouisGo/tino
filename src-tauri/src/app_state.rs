@@ -16,6 +16,13 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use uuid::Uuid;
 
+use crate::backend::clipboard_history::migration::reconcile_capture_history_store;
+use crate::backend::clipboard_history::read::{
+    load_recent_clipboard_captures, query_clipboard_history_page,
+};
+use crate::backend::clipboard_history::write::{
+    delete_capture_with_fallback, persist_capture_preview, promote_capture_reuse_with_fallback,
+};
 use crate::locale::AppLocalePreference;
 use crate::runtime_profile;
 use crate::storage::capture_history_store::{
@@ -761,42 +768,18 @@ impl AppState {
 
         let settings = self.current_settings()?;
         let knowledge_root = settings.knowledge_root_path();
-        let removed_from_history = delete_clipboard_history_entry(
+        let result = delete_capture_with_fallback(
             &knowledge_root,
             settings.clipboard_history_days,
             normalized_id,
         )?;
 
-        let removed_from_store = match CaptureHistoryStore::new(&knowledge_root)
-            .and_then(|store| store.delete_capture(normalized_id))
-        {
-            Ok(removed) => removed,
-            Err(error) => {
-                warn!("failed to delete capture from sqlite store: {error}");
-                if let Err(sync_error) = reconcile_capture_history_store(
-                    &knowledge_root,
-                    settings.clipboard_history_days,
-                ) {
-                    warn!(
-                        "failed to repair sqlite capture history store after delete: {sync_error}"
-                    );
-                }
-                false
-            }
-        };
-
-        let deleted = removed_from_history || removed_from_store;
-        if deleted {
+        if result.deleted {
             self.persist_runtime_snapshot()?;
             self.emit_clipboard_updated();
         }
 
-        Ok(DeleteClipboardCaptureResult {
-            id: normalized_id.to_string(),
-            removed_from_history,
-            removed_from_store,
-            deleted,
-        })
+        Ok(result)
     }
 
     pub fn process_capture(
@@ -1114,31 +1097,14 @@ impl AppState {
 
         let settings = self.current_settings()?;
         let knowledge_root = settings.knowledge_root_path();
-        let promoted_legacy = promote_clipboard_history_entry(
+        let promoted = promote_capture_reuse_with_fallback(
             &knowledge_root,
             settings.clipboard_history_days,
             capture_id,
+            &capture.hash,
             &capture.captured_at,
         )?;
-        let promoted_store = match CaptureHistoryStore::new(&knowledge_root).and_then(|store| {
-            store.promote_capture_reuse(capture_id, &capture.hash, &capture.captured_at)
-        }) {
-            Ok(promoted) => promoted,
-            Err(error) => {
-                warn!("failed to promote replayed capture in sqlite store: {error}");
-                false
-            }
-        };
-
-        if !promoted_store && promoted_legacy {
-            if let Err(sync_error) =
-                reconcile_capture_history_store(&knowledge_root, settings.clipboard_history_days)
-            {
-                warn!("failed to repair sqlite capture history store after replay: {sync_error}");
-            }
-        }
-
-        if !promoted_legacy && !promoted_store {
+        if !promoted {
             return Ok(false);
         }
 
@@ -1199,15 +1165,7 @@ impl AppState {
         };
 
         if should_persist_capture_history(status) {
-            append_clipboard_history_entry(&knowledge_root, &preview)?;
-            if let Err(error) = upsert_capture_history_store(&knowledge_root, &history_upsert) {
-                warn!("failed to persist capture preview into sqlite store: {error}");
-                if let Err(sync_error) =
-                    reconcile_capture_history_store(&knowledge_root, history_days)
-                {
-                    warn!("failed to repair sqlite capture history store from jsonl: {sync_error}");
-                }
-            }
+            persist_capture_preview(&knowledge_root, history_days, &preview, &history_upsert)?;
         }
         self.persist_runtime_snapshot()?;
         self.emit_clipboard_updated();
@@ -1304,23 +1262,7 @@ fn matches_clipboard_search(capture: &CapturePreview, search: &str) -> bool {
     .contains(search)
 }
 
-fn query_clipboard_history_page(
-    knowledge_root: &Path,
-    history_days: u16,
-    request: &ClipboardPageRequest,
-) -> Result<ClipboardPage, String> {
-    match query_capture_history_page_from_store(knowledge_root, history_days, request) {
-        Ok(page) => Ok(page),
-        Err(error) => {
-            warn!(
-                "failed to read capture history from sqlite store, falling back to jsonl: {error}"
-            );
-            query_clipboard_history_page_legacy(knowledge_root, history_days, request)
-        }
-    }
-}
-
-fn query_clipboard_history_page_legacy(
+pub(crate) fn query_clipboard_history_page_legacy(
     knowledge_root: &Path,
     history_days: u16,
     request: &ClipboardPageRequest,
@@ -1392,23 +1334,7 @@ fn query_clipboard_history_page_legacy(
     })
 }
 
-fn load_recent_clipboard_captures(
-    knowledge_root: &Path,
-    history_days: u16,
-    limit: usize,
-) -> Result<Vec<CapturePreview>, String> {
-    match load_recent_clipboard_captures_from_store(knowledge_root, history_days, limit) {
-        Ok(captures) => Ok(captures),
-        Err(error) => {
-            warn!(
-                "failed to read recent captures from sqlite store, falling back to jsonl: {error}"
-            );
-            load_recent_clipboard_captures_legacy(knowledge_root, history_days, limit)
-        }
-    }
-}
-
-fn load_recent_clipboard_captures_legacy(
+pub(crate) fn load_recent_clipboard_captures_legacy(
     knowledge_root: &Path,
     history_days: u16,
     limit: usize,
@@ -1461,7 +1387,7 @@ fn build_capture_history_upsert(
     }
 }
 
-fn capture_preview_to_history_upsert(preview: CapturePreview) -> CaptureHistoryUpsert {
+pub(crate) fn capture_preview_to_history_upsert(preview: CapturePreview) -> CaptureHistoryUpsert {
     CaptureHistoryUpsert {
         id: preview.id,
         captured_at: preview.captured_at,
@@ -1520,14 +1446,14 @@ fn capture_history_summary_to_page_summary(summary: CaptureHistorySummary) -> Cl
     }
 }
 
-fn upsert_capture_history_store(
+pub(crate) fn upsert_capture_history_store(
     knowledge_root: &Path,
     capture: &CaptureHistoryUpsert,
 ) -> Result<(), String> {
     CaptureHistoryStore::new(knowledge_root)?.upsert_capture(capture)
 }
 
-fn query_capture_history_page_from_store(
+pub(crate) fn query_capture_history_page_from_store(
     knowledge_root: &Path,
     history_days: u16,
     request: &ClipboardPageRequest,
@@ -1570,7 +1496,7 @@ fn query_capture_history_page_from_store(
     })
 }
 
-fn load_recent_clipboard_captures_from_store(
+pub(crate) fn load_recent_clipboard_captures_from_store(
     knowledge_root: &Path,
     history_days: u16,
     limit: usize,
@@ -1588,16 +1514,7 @@ fn load_recent_clipboard_captures_from_store(
     Ok(captures)
 }
 
-fn reconcile_capture_history_store(knowledge_root: &Path, history_days: u16) -> Result<(), String> {
-    let captures = load_capture_history_entries_legacy(knowledge_root, history_days)?;
-    let upserts = captures
-        .into_iter()
-        .map(capture_preview_to_history_upsert)
-        .collect::<Vec<_>>();
-    CaptureHistoryStore::new(knowledge_root)?.replace_retained_history(&upserts)
-}
-
-fn append_clipboard_history_entry(
+pub(crate) fn append_clipboard_history_entry(
     knowledge_root: &Path,
     preview: &CapturePreview,
 ) -> Result<(), String> {
@@ -1617,7 +1534,7 @@ fn append_clipboard_history_entry(
         .map_err(|error| error.to_string())
 }
 
-fn promote_clipboard_history_entry(
+pub(crate) fn promote_clipboard_history_entry(
     knowledge_root: &Path,
     history_days: u16,
     capture_id: &str,
@@ -1644,7 +1561,7 @@ fn promote_clipboard_history_entry(
     Ok(true)
 }
 
-fn load_capture_history_entries_legacy(
+pub(crate) fn load_capture_history_entries_legacy(
     knowledge_root: &Path,
     history_days: u16,
 ) -> Result<Vec<CapturePreview>, String> {
@@ -1790,7 +1707,7 @@ fn persist_clipboard_history_entries(
     Ok(())
 }
 
-fn delete_clipboard_history_entry(
+pub(crate) fn delete_clipboard_history_entry(
     knowledge_root: &Path,
     history_days: u16,
     capture_id: &str,
@@ -3026,7 +2943,7 @@ fn batches_dir_path(knowledge_root: &Path) -> PathBuf {
     knowledge_root.join("_system").join(BATCHES_DIR_NAME)
 }
 
-fn ensure_knowledge_root_layout(knowledge_root: &Path) -> Result<(), String> {
+pub(crate) fn ensure_knowledge_root_layout(knowledge_root: &Path) -> Result<(), String> {
     fs::create_dir_all(knowledge_root.join("daily")).map_err(|error| error.to_string())?;
     fs::create_dir_all(knowledge_root.join("_system")).map_err(|error| error.to_string())?;
     fs::create_dir_all(assets_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
