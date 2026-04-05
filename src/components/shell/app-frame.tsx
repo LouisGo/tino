@@ -64,15 +64,16 @@ export function AppFrame({ children }: AppFrameProps) {
     to: string;
   }> = [
     {
+      to: "/ai",
+      label: tCommon("navigation.ai"),
+      icon: Bot,
+      shortcutId: "shell.openAi",
+    },
+    {
       to: "/clipboard",
       label: tCommon("navigation.clipboard"),
       icon: ClipboardList,
       shortcutId: "shell.openClipboard",
-    },
-    {
-      to: "/ai",
-      label: tCommon("navigation.ai"),
-      icon: Bot,
     },
   ];
 

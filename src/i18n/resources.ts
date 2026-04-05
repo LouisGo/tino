@@ -137,6 +137,9 @@ export const enUSResources = defineLocaleSchema({
   },
   commands: {
     system: {
+      navigateAi: {
+        label: "Navigate AI",
+      },
       navigateClipboard: {
         label: "Navigate Clipboard",
       },
@@ -168,6 +171,10 @@ export const enUSResources = defineLocaleSchema({
   },
   shortcuts: {
     shell: {
+      openAi: {
+        description: "Navigate to the AI review route inside the main shell.",
+        label: "Open AI Page",
+      },
       openClipboard: {
         description: "Navigate to the clipboard route inside the main shell.",
         label: "Open Clipboard Page",
@@ -382,6 +389,9 @@ export const zhCNResources = {
   },
   commands: {
     system: {
+      navigateAi: {
+        label: "前往 AI",
+      },
       navigateClipboard: {
         label: "前往剪贴板",
       },
@@ -413,6 +423,10 @@ export const zhCNResources = {
   },
   shortcuts: {
     shell: {
+      openAi: {
+        description: "在主壳层内切换到 AI 复核页面。",
+        label: "打开 AI 页面",
+      },
       openClipboard: {
         description: "在主壳层内切换到剪贴板页面。",
         label: "打开剪贴板页面",

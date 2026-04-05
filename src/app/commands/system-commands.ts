@@ -47,6 +47,13 @@ export const systemCommands = [
     },
   }),
   defineCommand<void, void>({
+    id: "system.navigateAi",
+    label: tx("commands", "system.navigateAi.label"),
+    run: async (_payload, { router }) => {
+      await router.navigate({ to: "/ai" });
+    },
+  }),
+  defineCommand<void, void>({
     id: "system.navigateClipboard",
     label: tx("commands", "system.navigateClipboard.label"),
     run: async (_payload, { router }) => {

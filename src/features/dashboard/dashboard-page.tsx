@@ -161,6 +161,42 @@ export function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <div className="app-icon-chip">
+                    <Bot className="size-4" />
+                  </div>
+                  <CardTitle>{tDashboard("sections.ai.title")}</CardTitle>
+                </div>
+                <CardDescription className="max-w-2xl text-sm leading-6">
+                  {tDashboard("sections.ai.description")}
+                </CardDescription>
+              </div>
+
+              <Button asChild>
+                <Link to="/ai">
+                  {tDashboard("sections.ai.actionLabel")}
+                  <ArrowUpRight />
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="grid gap-3 p-4 md:grid-cols-3">
+            {aiItems.map((item) => (
+              <div
+                key={item}
+                className="rounded-[24px] border border-border/80 bg-surface-elevated p-4 shadow-sm"
+              >
+                <p className="text-sm leading-6 text-muted-foreground">{item}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden border-border/80 bg-surface-panel">
+          <CardHeader className="border-b border-border/70">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="app-icon-chip">
                     <Images className="size-4" />
                   </div>
                   <CardTitle>{tDashboard("sections.clipboard.title")}</CardTitle>
@@ -207,42 +243,6 @@ export function DashboardPage() {
                 {tDashboard("sections.clipboard.empty")}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden border-border/80 bg-surface-panel">
-          <CardHeader className="border-b border-border/70">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="app-icon-chip">
-                    <Bot className="size-4" />
-                  </div>
-                  <CardTitle>{tDashboard("sections.ai.title")}</CardTitle>
-                </div>
-                <CardDescription className="max-w-2xl text-sm leading-6">
-                  {tDashboard("sections.ai.description")}
-                </CardDescription>
-              </div>
-
-              <Button asChild>
-                <Link to="/ai">
-                  {tDashboard("sections.ai.actionLabel")}
-                  <ArrowUpRight />
-                </Link>
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="grid gap-3 p-4 md:grid-cols-3">
-            {aiItems.map((item) => (
-              <div
-                key={item}
-                className="rounded-[24px] border border-border/80 bg-surface-elevated p-4 shadow-sm"
-              >
-                <p className="text-sm leading-6 text-muted-foreground">{item}</p>
-              </div>
-            ))}
           </CardContent>
         </Card>
       </div>

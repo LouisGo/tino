@@ -39,11 +39,23 @@ export const systemShortcuts = [
     },
   }),
   defineShortcut<void, void>({
+    id: "shell.openAi",
+    kind: "local",
+    label: tx("shortcuts", "shell.openAi.label"),
+    description: tx("shortcuts", "shell.openAi.description"),
+    defaults: "CommandOrControl+2",
+    scopes: ["shell.main"],
+    allowInEditable: true,
+    command: {
+      id: "system.navigateAi",
+    },
+  }),
+  defineShortcut<void, void>({
     id: "shell.openClipboard",
     kind: "local",
     label: tx("shortcuts", "shell.openClipboard.label"),
     description: tx("shortcuts", "shell.openClipboard.description"),
-    defaults: "CommandOrControl+2",
+    defaults: "CommandOrControl+3",
     scopes: ["shell.main"],
     allowInEditable: true,
     command: {
