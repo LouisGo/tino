@@ -1,7 +1,11 @@
 use crate::app_state::{AppState, CaptureRecord};
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use std::{fs, path::Path};
+use std::{
+    collections::BTreeSet,
+    fs,
+    path::{Path, PathBuf},
+};
 use tauri::State;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -140,6 +144,16 @@ pub struct ApplyBatchDecisionResult {
     pub message: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PersistedReviewSubmission {
+    saved_at: String,
+    batch_id: String,
+    review_id: String,
+    review: BatchDecisionReview,
+    feedback: ReviewFeedbackRecord,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AiBatchPayload {
@@ -148,7 +162,7 @@ pub struct AiBatchPayload {
     pub available_topics: Vec<TopicIndexEntry>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct StoredBatchFile {
     id: String,
@@ -220,10 +234,21 @@ pub fn apply_batch_decision(
     }
 
     let knowledge_root = state.current_settings()?.knowledge_root_path();
-    let _ = load_stored_batch(&knowledge_root, batch_id)?;
+    let mut stored_batch = load_stored_batch(&knowledge_root, batch_id)?;
+    if !matches!(
+        map_batch_runtime_state(&stored_batch.status),
+        AiBatchRuntimeState::Ready
+    ) {
+        return Err("batch is no longer ready for review".into());
+    }
 
     if request.review.batch_id != batch_id {
         return Err("review.batchId must match batchId".into());
+    }
+
+    let review_id = request.review.review_id.trim();
+    if review_id.is_empty() {
+        return Err("review.reviewId is required".into());
     }
 
     if request.feedback.batch_id != batch_id {
@@ -238,12 +263,71 @@ pub fn apply_batch_decision(
         return Err("review.clusters must not be empty".into());
     }
 
+    let mut cluster_ids = BTreeSet::new();
+    let batch_source_ids = stored_batch
+        .source_ids
+        .iter()
+        .cloned()
+        .collect::<BTreeSet<_>>();
+
+    for cluster in &request.review.clusters {
+        let cluster_id = cluster.cluster_id.trim();
+        if cluster_id.is_empty() {
+            return Err("review.clusters[*].clusterId is required".into());
+        }
+
+        if !cluster_ids.insert(cluster_id.to_string()) {
+            return Err(format!("duplicate clusterId: {cluster_id}"));
+        }
+
+        if !(0.0..=1.0).contains(&cluster.confidence) {
+            return Err(format!(
+                "cluster {} has confidence outside the allowed range",
+                cluster.cluster_id
+            ));
+        }
+
+        for source_id in &cluster.source_ids {
+            if !batch_source_ids.contains(source_id) {
+                return Err(format!(
+                    "cluster {} contains sourceId not present in batch: {}",
+                    cluster.cluster_id, source_id
+                ));
+            }
+        }
+    }
+
+    for edited_cluster_id in &request.feedback.edited_cluster_ids {
+        if !cluster_ids.contains(edited_cluster_id) {
+            return Err(format!(
+                "feedback.editedClusterIds contains unknown clusterId: {}",
+                edited_cluster_id
+            ));
+        }
+    }
+
+    let review_submission = PersistedReviewSubmission {
+        saved_at: crate::format_system_time_rfc3339(std::time::SystemTime::now())?,
+        batch_id: batch_id.to_string(),
+        review_id: review_id.to_string(),
+        review: request.review.clone(),
+        feedback: request.feedback.clone(),
+    };
+    write_json_file(
+        &review_file_path(&knowledge_root, review_id),
+        &review_submission,
+    )?;
+
+    stored_batch.status = "reviewed".into();
+    write_json_file(&batch_file_path(&knowledge_root, batch_id), &stored_batch)?;
+    state.run_periodic_maintenance()?;
+
     Ok(ApplyBatchDecisionResult {
         batch_id: batch_id.to_string(),
         accepted: true,
-        mocked: true,
+        mocked: false,
         runtime_state: AiBatchRuntimeState::Reviewed,
-        message: "Phase 1 contract accepted. Persistence remains disabled.".into(),
+        message: "Review saved. Knowledge persistence remains disabled in this phase.".into(),
     })
 }
 
@@ -348,12 +432,32 @@ fn load_stored_batch(knowledge_root: &Path, batch_id: &str) -> Result<StoredBatc
         return Err("batchId is required".into());
     }
 
-    let path = knowledge_root
-        .join("_system")
-        .join("batches")
-        .join(format!("{normalized_id}.json"));
+    let path = batch_file_path(knowledge_root, normalized_id);
     let bytes = fs::read(path).map_err(|error| error.to_string())?;
     serde_json::from_slice::<StoredBatchFile>(&bytes).map_err(|error| error.to_string())
+}
+
+fn batch_file_path(knowledge_root: &Path, batch_id: &str) -> PathBuf {
+    knowledge_root
+        .join("_system")
+        .join("batches")
+        .join(format!("{batch_id}.json"))
+}
+
+fn review_file_path(knowledge_root: &Path, review_id: &str) -> PathBuf {
+    knowledge_root
+        .join("_system")
+        .join("reviews")
+        .join(format!("{review_id}.json"))
+}
+
+fn write_json_file<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
+    let bytes = serde_json::to_vec_pretty(value).map_err(|error| error.to_string())?;
+    fs::write(path, bytes).map_err(|error| error.to_string())
 }
 
 fn load_topic_index_entries(knowledge_root: &Path) -> Result<Vec<TopicIndexEntry>, String> {

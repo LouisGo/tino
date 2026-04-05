@@ -2,6 +2,7 @@ import { ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { resolveProviderAccessConfig } from "@/features/ai/lib/provider-access";
 import {
   SettingsPanel,
   SettingsPanelBody,
@@ -19,11 +20,17 @@ export function AiSettingsSection({
   settingsDraft: SettingsDraft;
 }) {
   const section = settingsSections[1];
+  const providerAccess = resolveProviderAccessConfig(settingsDraft);
+  const badge = providerAccess.isConfigured
+    ? "Ready"
+    : settingsDraft.apiKey.trim()
+      ? "Provider incomplete"
+      : "API key needed";
 
   return (
     <SettingsSection
       section={section}
-      badge={settingsDraft.baseUrl && settingsDraft.model ? "Configured" : "Endpoint pending"}
+      badge={badge}
     >
       <SettingsPanel>
         <SettingsPanelBody>
@@ -68,6 +75,7 @@ export function AiSettingsSection({
           >
             <Input
               id="provider-api-key"
+              type="password"
               value={settingsDraft.apiKey}
               onChange={(event) => patchSettingsDraft({ apiKey: event.target.value })}
               className="font-mono"

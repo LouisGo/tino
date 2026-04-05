@@ -30,15 +30,17 @@
 2. [Tino AI 能力地图 v0.2](/Users/louistation/MySpace/Life/tino/docs/02-product/Tino%20AI%20%E8%83%BD%E5%8A%9B%E5%9C%B0%E5%9B%BE%20v0.2.md)
 3. [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
 4. [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md)
-5. [环境与打包流程](/Users/louistation/MySpace/Life/tino/docs/03-planning/%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.md)
-6. [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
-7. [头脑风暴原始记录](/Users/louistation/MySpace/Life/tino/docs/01-discovery/%E4%B8%AA%E4%BA%BA%E4%BF%A1%E6%81%AF%E6%B5%81%E8%BD%AF%E4%BB%B6%E5%A4%B4%E8%84%91%E9%A3%8E%E6%9A%B4%E5%85%A8%E8%BF%87%E7%A8%8B.md)
+5. [AI Review 当前实现与 Mock 链路说明](/Users/louistation/MySpace/Life/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
+6. [环境与打包流程](/Users/louistation/MySpace/Life/tino/docs/03-planning/%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.md)
+7. [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
+8. [头脑风暴原始记录](/Users/louistation/MySpace/Life/tino/docs/01-discovery/%E4%B8%AA%E4%BA%BA%E4%BF%A1%E6%81%AF%E6%B5%81%E8%BD%AF%E4%BB%B6%E5%A4%B4%E8%84%91%E9%A3%8E%E6%9A%B4%E5%85%A8%E8%BF%87%E7%A8%8B.md)
 
 阅读顺序建议：
 
 - 新会话第一次接手：先看 `技术冻结记录` + 本文
 - 要理解产品目标：再看 `需求原型文档` + `Tino AI 能力地图 v0.2`
 - 要开始 AI 开发：先看 `Tino AI Runtime 与 Agent 工程方案 v0.1`
+- 要理解当前 `/ai` 页和 mock 链路：再看 `AI Review 当前实现与 Mock 链路说明`
 - 要继续实现：再看 `MVP开发任务拆解`
 
 ## 4. 当前阶段判断
@@ -51,7 +53,8 @@
 - `M4 Archive Pipeline`：已完成最小真实链路
 - `M3 Processing Orchestrator`：已完成最小版本
 - `M8 Debug / Observability`：已有最小真实数据面板
-- `M5 AI Pipeline` / `M6 Knowledge Output`：未开始
+- `M5 AI Pipeline`：`Phase 1 Contract First` 已启动，仍未接入真实模型与知识层落盘
+- `M6 Knowledge Output`：未开始
 
 换句话说：
 
@@ -59,7 +62,8 @@
 - 从 `剪贴板 -> CaptureRecord -> daily/*.md` 的无 AI 闭环已经打通
 - `_system/runtime.json`、`queue.json`、`filters.log`、`batches/*.json` 已开始真实写入
 - dashboard 和 settings 已经接上真实 Rust 侧状态与设置持久化
-- 但 AI 批处理、`topics/` / `_inbox/` 输出、topic index、历史补跑仍未开始
+- AI 已进入 `Contract First` 阶段：ready batch、review DTO、审阅页和非知识层 review 留痕已开始落地
+- 但真实模型调用、`topics/` / `_inbox/` 输出、正式 topic index、历史补跑仍未开始
 
 ## 5. 当前已完成内容
 

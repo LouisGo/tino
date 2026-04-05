@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { Link } from "@tanstack/react-router"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowUpRight,
   FolderTree,
@@ -144,8 +144,8 @@ export function AiReviewPage() {
                   See the result first, then decide whether it looks right.
                 </h2>
                 <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                  Open one batch and the page will immediately show where the content
-                  was sorted, which tags were used, and what the AI changed.
+                  Open one batch to see where the content landed, what already looks
+                  stable, and where you may still want to step in.
                 </p>
               </div>
             </div>
@@ -159,7 +159,8 @@ export function AiReviewPage() {
                 <div className="space-y-1">
                   <CardTitle>Ready Batches</CardTitle>
                   <CardDescription>
-                    Click one batch and the sorted result opens on the right.
+                    Pick a live batch to review. Example data stays in browser-only
+                    preview mode instead of mixing into the app runtime.
                   </CardDescription>
                 </div>
                 <Button
@@ -233,8 +234,8 @@ export function AiReviewPage() {
                 ))
               ) : (
                 <div className="rounded-[22px] border border-dashed border-border/80 bg-surface-soft px-5 py-6 text-sm leading-6 text-muted-foreground">
-                  No ready batches yet. Mock preview data will appear here until the
-                  real queue fills up.
+                  No live batches are ready yet. Once the queue promotes a batch, it
+                  will appear here for review.
                 </div>
               )}
             </CardContent>
@@ -257,6 +258,7 @@ export function AiReviewPage() {
 }
 
 function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
+  const queryClient = useQueryClient()
   const initialState = buildInitialReviewState(payload)
   const [reviewDraft, setReviewDraft] = useState(initialState.reviewDraft)
   const [runtimeState, setRuntimeState] = useState(initialState.runtimeState)
@@ -353,6 +355,10 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
         action: finalAction,
         mocked: result.mocked,
       })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.aiBatchSummaries() })
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.aiBatchPayload(nextReview.batchId),
+      })
     },
     onError: (error) => {
       setFeedbackOpen(true)
@@ -381,6 +387,8 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
   const visibleTags = buildBatchCategoryTags(orderedClusters, capturesById)
   const quickConfirmAction: ReviewAction =
     editedClusterIds.length > 0 ? "accept_with_edits" : "accept_all"
+  const isPreviewResult = isMockAiBatchId(payload.batch.id)
+  const reviewSignals = buildReviewSignalSummary(orderedClusters)
 
   function submitQuickFeedback(nextValue: ValueFeedback) {
     setValueFeedback(nextValue)
@@ -393,6 +401,22 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-[24px] border border-border/80 bg-surface-panel px-5 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">
+            {isPreviewResult ? "Preview example" : "Live batch"}
+          </Badge>
+          <Badge variant="secondary">
+            {isPreviewResult ? "Example sort" : "Trial sorting pass"}
+          </Badge>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          {isPreviewResult
+            ? "This is example data for previewing the review flow."
+            : "You are reviewing a live batch with the current trial sorting pass. Saving your review is real, but Tino still will not write topic pages until the next phase is connected."}
+        </p>
+      </div>
+
       <Card className="overflow-hidden border-border/80 bg-surface-panel">
         <CardContent className="space-y-5 p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -417,9 +441,7 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
 
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">
-                {isMockAiBatchId(payload.batch.id)
-                  ? "Preview result"
-                  : "Live batch"}
+                {isPreviewResult ? "Preview result" : "Live batch"}
               </Badge>
               <Badge variant="secondary">{payload.captures.length} items</Badge>
               {editedClusterIds.length ? (
@@ -454,6 +476,21 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
                 {visibleTags.map((tag) => (
                   <Badge key={tag} variant="secondary">
                     {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {reviewSignals.length ? (
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                What Needs Attention
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {reviewSignals.map((signal) => (
+                  <Badge key={signal} variant="secondary">
+                    {signal}
                   </Badge>
                 ))}
               </div>
@@ -514,6 +551,44 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
                           {tag}
                         </Badge>
                       ))}
+                    </div>
+
+                    <div className="grid gap-3 pt-1 xl:grid-cols-[minmax(0,1fr)_280px]">
+                      <div className="rounded-[20px] border border-border/70 bg-background/85 px-4 py-4">
+                        <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                          Why It Landed Here
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {cluster.reason}
+                        </p>
+                        {cluster.missingContext.length ? (
+                          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                            Still needs: {cluster.missingContext.join(" ")}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="rounded-[20px] border border-border/70 bg-background/85 px-4 py-4">
+                        <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                          Review Signals
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {buildClusterReviewSignals(cluster).map((signal) => (
+                            <Badge key={signal} variant="secondary">
+                              {signal}
+                            </Badge>
+                          ))}
+                        </div>
+                        {cluster.possibleTopics.length ? (
+                          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                            Other possible homes:{" "}
+                            {cluster.possibleTopics
+                              .slice(0, 2)
+                              .map((topic) => topic.topicName)
+                              .join(", ")}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
 
@@ -651,9 +726,7 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
               </Badge>
               <Badge variant="secondary">{payload.batch.id}</Badge>
               <Badge variant="secondary">
-                {isMockAiBatchId(payload.batch.id)
-                  ? "Mock result"
-                  : "Real batch + mock result"}
+                {isPreviewResult ? "Preview example" : "Live batch + trial sort"}
               </Badge>
             </div>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -899,6 +972,69 @@ function summarizeReview(clusters: BatchDecisionCluster[]) {
       discard: 0,
     },
   )
+}
+
+function buildReviewSignalSummary(clusters: BatchDecisionCluster[]) {
+  const lowConfidenceCount = clusters.filter((cluster) => cluster.confidence < 0.65).length
+  const missingContextCount = clusters.filter((cluster) => cluster.missingContext.length > 0).length
+  const inboxCount = clusters.filter((cluster) => cluster.decision === "send_to_inbox").length
+  const summary = []
+
+  if (lowConfidenceCount) {
+    summary.push(
+      `${lowConfidenceCount} result${lowConfidenceCount === 1 ? "" : "s"} need a close look`,
+    )
+  }
+
+  if (missingContextCount) {
+    summary.push(
+      `${missingContextCount} result${missingContextCount === 1 ? "" : "s"} still need context`,
+    )
+  }
+
+  if (inboxCount) {
+    summary.push(`${inboxCount} result${inboxCount === 1 ? "" : "s"} stayed in Inbox`)
+  }
+
+  if (!summary.length) {
+    summary.push("Most results look stable enough for a quick confirmation")
+  }
+
+  return summary
+}
+
+function buildClusterReviewSignals(cluster: BatchDecisionCluster) {
+  const signals = [describeClusterConfidence(cluster.confidence)]
+
+  if (cluster.missingContext.length) {
+    signals.push("Needs more context")
+  }
+
+  if (cluster.decision === "send_to_inbox") {
+    signals.push("Held for your review")
+  }
+
+  if (cluster.decision === "discard") {
+    signals.push("Skipped this pass")
+  }
+
+  if (cluster.possibleTopics.length > 1) {
+    signals.push("Had alternate homes")
+  }
+
+  return signals
+}
+
+function describeClusterConfidence(confidence: number) {
+  if (confidence >= 0.8) {
+    return "Looks solid"
+  }
+
+  if (confidence >= 0.65) {
+    return "Worth a quick check"
+  }
+
+  return "Needs your call"
 }
 
 function describeClusterDestination(cluster: BatchDecisionCluster) {
@@ -1243,16 +1379,16 @@ function buildClusterProcessSteps(cluster: BatchDecisionCluster) {
 
 function buildInitialReviewState(payload: AiBatchPayload): InitialReviewState {
   try {
-    const runningState = transitionBatchRuntimeState(payload.batch.runtimeState, "start_run")
     const reviewDraft = buildMockBatchReview(payload)
-    const readyState = transitionBatchRuntimeState(runningState, "review_ready")
+    const reviewState =
+      payload.batch.runtimeState === "ready" ? "review_pending" : payload.batch.runtimeState
 
     return {
       reviewDraft: {
         ...reviewDraft,
-        runtimeState: readyState,
+        runtimeState: reviewState,
       },
-      runtimeState: readyState,
+      runtimeState: reviewState,
       submitAction: "accept_with_edits",
       reviewNote: "",
       editedClusterIds: [],

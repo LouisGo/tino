@@ -2523,7 +2523,15 @@ fn count_ready_batches(knowledge_root: &Path) -> Result<usize, String> {
 
     for entry in entries {
         let entry = entry.map_err(|error| error.to_string())?;
-        if entry.path().extension().and_then(|ext| ext.to_str()) == Some("json") {
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+
+        let bytes = fs::read(&path).map_err(|error| error.to_string())?;
+        let batch =
+            serde_json::from_slice::<BatchFile>(&bytes).map_err(|error| error.to_string())?;
+        if matches!(batch.status.trim(), "pending_ai" | "ready") {
             count += 1;
         }
     }

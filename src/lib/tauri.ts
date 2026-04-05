@@ -236,16 +236,11 @@ function normalizeAiBatchSummary(batch: RustAiBatchSummary): AiBatchSummary {
 }
 
 function normalizeAiBatchPayload(payload: RustAiBatchPayload): AiBatchPayload {
-  return {
-    ...payload,
-    availableTopics: payload.availableTopics.length
-      ? payload.availableTopics
-      : getMockTopicIndexEntries(),
-  }
+  return payload
 }
 
 function normalizeTopicIndexEntries(entries: RustTopicIndexEntry[]): TopicIndexEntry[] {
-  return entries.length ? entries : getMockTopicIndexEntries()
+  return entries
 }
 
 function normalizeApplyBatchDecisionResult(
@@ -270,9 +265,7 @@ export async function getReadyAiBatches(): Promise<AiBatchSummary[]> {
   }
 
   const batches = await unwrapTauriResult(tauriCommands.listReadyAiBatches())
-  return batches.length
-    ? batches.map(normalizeAiBatchSummary)
-    : getMockAiBatchSummaries()
+  return batches.map(normalizeAiBatchSummary)
 }
 
 export async function getAiBatchPayload(batchId: string): Promise<AiBatchPayload> {
