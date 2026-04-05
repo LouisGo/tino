@@ -1,9 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { AnyRouter } from "@tanstack/react-router";
 
 export type AppCommandId = string;
 
 export type CommandServices = {
   queryClient: QueryClient;
+  router: AnyRouter;
 };
 
 export type CommandDefinition<Payload = void, Result = void> = {

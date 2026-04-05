@@ -1,5 +1,6 @@
 import type {
   AppSettings as RustAppSettings,
+  AppShortcutOverride as RustAppShortcutOverride,
   CapturePreview as RustCapturePreview,
   ClipboardPage as RustClipboardPage,
   ClipboardPageRequest as RustClipboardPageRequest,
@@ -28,10 +29,17 @@ export type ClipboardPageResult = Omit<RustClipboardPage, "captures"> & {
 };
 
 export type DeleteClipboardCaptureResult = RustDeleteClipboardCaptureResult;
+export type AppShortcutOverride = RustAppShortcutOverride;
+export type ShortcutOverrideRecord = NonNullable<RustAppSettings["shortcutOverrides"]>;
 
 export type SettingsDraft = RequireKeys<
   RustAppSettings,
-  "knowledgeRoot" | "baseUrl" | "apiKey" | "model" | "clipboardHistoryDays"
+  "knowledgeRoot"
+  | "baseUrl"
+  | "apiKey"
+  | "model"
+  | "clipboardHistoryDays"
+  | "shortcutOverrides"
 >;
 
 export type ClipboardHistoryFilter = "all" | "text" | "link" | "image";

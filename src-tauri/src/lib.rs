@@ -101,7 +101,7 @@ fn restore_main_window_state(app: &AppHandle) {
     }
 }
 
-fn focus_main_window(app: &AppHandle) {
+pub(crate) fn focus_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
@@ -109,13 +109,13 @@ fn focus_main_window(app: &AppHandle) {
     }
 }
 
-fn focus_window(window: &tauri::WebviewWindow) {
+pub(crate) fn focus_window(window: &tauri::WebviewWindow) {
     let _ = window.show();
     let _ = window.unminimize();
     let _ = window.set_focus();
 }
 
-fn open_clipboard_window(app: &AppHandle) {
+pub(crate) fn open_clipboard_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("clipboard") {
         focus_window(&window);
         return;
@@ -137,6 +137,44 @@ fn open_clipboard_window(app: &AppHandle) {
         Ok(window) => focus_window(&window),
         Err(error) => log::error!("failed to open clipboard window: {}", error),
     }
+}
+
+pub(crate) fn toggle_main_window_visibility(app: &AppHandle) -> Result<bool, String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+
+    let is_visible = window.is_visible().map_err(|error| error.to_string())?;
+
+    if is_visible {
+        window.hide().map_err(|error| error.to_string())?;
+        return Ok(false);
+    }
+
+    focus_main_window(app);
+    Ok(true)
+}
+
+pub(crate) fn toggle_clipboard_window_visibility(app: &AppHandle) -> Result<bool, String> {
+    if let Some(window) = app.get_webview_window("clipboard") {
+        let is_visible = window.is_visible().map_err(|error| error.to_string())?;
+
+        if is_visible {
+            window.hide().map_err(|error| error.to_string())?;
+            return Ok(false);
+        }
+
+        open_clipboard_window(app);
+        return Ok(true);
+    }
+
+    open_clipboard_window(app);
+
+    let window = app
+        .get_webview_window("clipboard")
+        .ok_or_else(|| "clipboard window is not available".to_string())?;
+
+    Ok(window.is_visible().unwrap_or(true))
 }
 
 fn prune_expired_logs(app: &AppHandle) {
@@ -281,6 +319,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,

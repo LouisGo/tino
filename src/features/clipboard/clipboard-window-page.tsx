@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { useShortcutScope } from "@/core/shortcuts";
 import { ClipboardBoardFeature } from "@/features/clipboard/components/clipboard-board-feature";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import { isTauriRuntime } from "@/lib/tauri";
@@ -9,6 +10,7 @@ import { isTauriRuntime } from "@/lib/tauri";
 export function ClipboardWindowPage() {
   const [sessionKey, setSessionKey] = useState(0);
   const pendingSessionResetRef = useRef(false);
+  useShortcutScope("clipboard.window");
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -58,40 +60,6 @@ export function ClipboardWindowPage() {
       rootStyle.background = "transparent";
     }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      if (event.defaultPrevented) {
-        return;
-      }
-
-      const activeElement = document.activeElement;
-      const hasOpenTransientLayer =
-        Boolean(document.querySelector("[data-slot='context-menu-content']"))
-        || Boolean(document.querySelector("[data-slot='alert-dialog-content']"))
-        || Boolean(document.querySelector("[role='listbox']"))
-        || Boolean(document.querySelector(".app-overlay-backdrop"));
-
-      if (hasOpenTransientLayer) {
-        return;
-      }
-
-      if (activeElement instanceof HTMLInputElement
-        && activeElement.dataset.clipboardSearchInput === "true"
-        && useClipboardBoardStore.getState().searchValue.trim().length > 0) {
-        event.preventDefault();
-        useClipboardBoardStore.getState().setSearchValue("");
-        return;
-      }
-
-      pendingSessionResetRef.current = true;
-      useClipboardBoardStore.getState().resetState();
-      event.preventDefault();
-      void currentWindow.hide();
-    };
-
     const handleMouseDown = (event: MouseEvent) => {
       if (event.button !== 0) {
         return;
@@ -109,7 +77,6 @@ export function ClipboardWindowPage() {
       void currentWindow.startDragging();
     };
 
-    window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("mousedown", handleMouseDown);
 
     void currentWindow.onFocusChanged(({ payload: focused }) => {
@@ -129,7 +96,6 @@ export function ClipboardWindowPage() {
     });
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("mousedown", handleMouseDown);
       unlistenFocus();
       htmlStyle.overflow = previousHtmlOverflow;

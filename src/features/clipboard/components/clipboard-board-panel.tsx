@@ -247,10 +247,7 @@ function ClipboardBoardToolbar({
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger
                 aria-label="Filter capture types"
-                className={cn(
-                  "w-[132px] border-border/70 bg-card/90 px-4 shadow-none sm:w-[148px]",
-                  filter === "all" ? "pr-9 sm:pr-10" : "pl-4 pr-9 sm:pr-10",
-                )}
+                className="w-[132px] border-border/70 bg-card/90 pl-4 shadow-none sm:w-[148px]"
                 style={
                   filter !== "all"
                     ? {

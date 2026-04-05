@@ -9,6 +9,8 @@ export const commands = {
 	deleteClipboardCapture: (request: DeleteClipboardCaptureRequest) => typedError<DeleteClipboardCaptureResult, string>(__TAURI_INVOKE("delete_clipboard_capture", { request })),
 	getAppSettings: () => typedError<AppSettings, string>(__TAURI_INVOKE("get_app_settings")),
 	saveAppSettings: (settings: AppSettings) => typedError<AppSettings, string>(__TAURI_INVOKE("save_app_settings", { settings })),
+	toggleMainWindowVisibility: () => typedError<boolean, string>(__TAURI_INVOKE("toggle_main_window_visibility")),
+	toggleClipboardWindowVisibility: () => typedError<boolean, string>(__TAURI_INVOKE("toggle_clipboard_window_visibility")),
 	getLogDirectory: () => typedError<string, string>(__TAURI_INVOKE("get_log_directory")),
 	openInPreview: (path: string) => typedError<null, string>(__TAURI_INVOKE("open_in_preview", { path })),
 	copyCaptureToClipboard: (capture: ClipboardReplayRequest) => typedError<null, string>(__TAURI_INVOKE("copy_capture_to_clipboard", { capture })),
@@ -22,6 +24,11 @@ export type AppSettings = {
 	apiKey: string,
 	model: string,
 	clipboardHistoryDays?: number,
+	shortcutOverrides?: { [key in string]: AppShortcutOverride },
+};
+
+export type AppShortcutOverride = {
+	accelerator?: string | null,
 };
 
 export type CapturePreview = {

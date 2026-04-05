@@ -11,6 +11,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 
 import { Separator } from "@/components/ui/separator";
 import { Tooltip } from "@/components/ui/tooltip";
+import { ShortcutKbd } from "@/core/shortcuts";
 import { resolveThemeMode } from "@/lib/theme";
 import { isMacOsTauriRuntime } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
@@ -104,7 +105,15 @@ export function AppFrame({ children }: AppFrameProps) {
             : "top-3 h-[calc(100vh-1.5rem)] md:top-4 md:h-[calc(100vh-2rem)]",
         )}
       >
-        <Tooltip content="Home" placement="bottom">
+        <Tooltip
+          content={(
+            <span className="flex items-center gap-2">
+              <span>Home</span>
+              <ShortcutKbd shortcutId="shell.openHome" />
+            </span>
+          )}
+          placement="bottom"
+        >
           <Link
             to="/"
             className={cn(
@@ -127,7 +136,16 @@ export function AppFrame({ children }: AppFrameProps) {
             const Icon = item.icon;
 
             return (
-              <Tooltip key={item.to} content={item.label} placement="bottom">
+              <Tooltip
+                key={item.to}
+                content={(
+                  <span className="flex items-center gap-2">
+                    <span>{item.label}</span>
+                    <ShortcutKbd shortcutId="shell.openClipboard" />
+                  </span>
+                )}
+                placement="bottom"
+              >
                 <Link
                   aria-label={item.label}
                   to={item.to}
@@ -147,7 +165,15 @@ export function AppFrame({ children }: AppFrameProps) {
         </nav>
 
         <div className="mt-auto flex flex-col items-center gap-1.5">
-          <Tooltip content={themeTooltip} placement="bottom">
+          <Tooltip
+            content={(
+              <span className="flex items-center gap-2">
+                <span>{themeTooltip}</span>
+                <ShortcutKbd shortcutId="shell.toggleThemeMode" />
+              </span>
+            )}
+            placement="bottom"
+          >
             <button
               type="button"
               aria-label={themeTooltip}
@@ -161,7 +187,15 @@ export function AppFrame({ children }: AppFrameProps) {
               )}
             </button>
           </Tooltip>
-          <Tooltip content="Settings" placement="bottom">
+          <Tooltip
+            content={(
+              <span className="flex items-center gap-2">
+                <span>Settings</span>
+                <ShortcutKbd shortcutId="shell.openSettings" />
+              </span>
+            )}
+            placement="bottom"
+          >
             <Link
               to="/settings"
               aria-label="Settings"

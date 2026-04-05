@@ -13,6 +13,7 @@
 
 - `01-discovery/个人信息流软件头脑风暴全过程.md`
 - `02-product/个人信息流软件需求原型文档.md`
+- `02-product/Tino AI能力地图 v0.1.md`
 - `03-planning/`
   - `HANDOFF.md`
   - `技术冻结记录.md`

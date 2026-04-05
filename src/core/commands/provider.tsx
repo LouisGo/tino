@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 
 import { useQueryClient } from "@tanstack/react-query";
+import type { AnyRouter } from "@tanstack/react-router";
 
 import { CommandExecutorContext } from "@/core/commands/context";
 import { CommandExecutor } from "@/core/commands/executor";
@@ -10,9 +11,11 @@ import type { CommandDefinition } from "@/core/commands/types";
 export function AppCommandProvider({
   children,
   commands,
+  router,
 }: {
   children: ReactNode;
   commands: CommandDefinition<unknown, unknown>[];
+  router: AnyRouter;
 }) {
   const queryClient = useQueryClient();
   const registry = useMemo(() => new CommandRegistry().registerMany(commands), [commands]);
@@ -20,8 +23,9 @@ export function AppCommandProvider({
     () =>
       new CommandExecutor(registry, {
         queryClient,
+        router,
       }),
-    [queryClient, registry],
+    [queryClient, registry, router],
   );
 
   return (

@@ -1,9 +1,12 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
 import { queryKeys } from "@/app/query-keys";
 import { defineCommand, type CommandDefinition } from "@/core/commands";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import {
   copyCaptureToClipboard,
   deleteClipboardCapture,
+  isTauriRuntime,
   revealPath,
 } from "@/lib/tauri";
 import type { ClipboardCapture, DeleteClipboardCaptureResult } from "@/types/shell";
@@ -22,6 +25,49 @@ type ClipboardCaptureAssetPayload = {
 };
 
 export const clipboardCommands = [
+  defineCommand<void, void>({
+    id: "clipboard.dismissWindowSession",
+    label: "Dismiss Clipboard Window Session",
+    run: async () => {
+      const hasOpenTransientLayer =
+        Boolean(document.querySelector("[data-slot='context-menu-content']"))
+        || Boolean(document.querySelector("[data-slot='alert-dialog-content']"))
+        || Boolean(document.querySelector("[role='listbox']"));
+      if (hasOpenTransientLayer) {
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      const store = useClipboardBoardStore.getState();
+      if (
+        activeElement instanceof HTMLInputElement
+        && activeElement.dataset.clipboardSearchInput === "true"
+        && store.searchValue.trim().length > 0
+      ) {
+        store.setSearchValue("");
+        return;
+      }
+
+      store.resetState();
+
+      if (!isTauriRuntime()) {
+        return;
+      }
+
+      const currentWindow = getCurrentWindow();
+      if (currentWindow.label === "clipboard") {
+        await currentWindow.hide();
+      }
+    },
+  }),
+  defineCommand<void, void>({
+    id: "clipboard.closeImagePreview",
+    label: "Close Image Preview",
+    isEnabled: () => Boolean(useClipboardBoardStore.getState().previewingImageId),
+    run: () => {
+      useClipboardBoardStore.getState().setPreviewingImageId(null);
+    },
+  }),
   defineCommand<ClipboardCaptureIdPayload, void>({
     id: "clipboard.selectCapture",
     label: "Select Capture",

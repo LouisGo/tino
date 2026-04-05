@@ -15,11 +15,11 @@ use std::{
 use tauri::{AppHandle, Emitter, Manager};
 use uuid::Uuid;
 
+use crate::runtime_profile;
 use crate::storage::capture_history_store::{
     CaptureHistoryEntry, CaptureHistoryQuery, CaptureHistoryStore, CaptureHistorySummary,
     CaptureHistoryUpsert,
 };
-use crate::runtime_profile;
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const RUNTIME_FILE_NAME: &str = "runtime.json";
@@ -49,6 +49,13 @@ fn default_clipboard_history_days() -> u16 {
     DEFAULT_CLIPBOARD_HISTORY_DAYS
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AppShortcutOverride {
+    #[serde(default)]
+    pub accelerator: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
@@ -58,6 +65,8 @@ pub struct AppSettings {
     pub model: String,
     #[serde(default = "default_clipboard_history_days")]
     pub clipboard_history_days: u16,
+    #[serde(default)]
+    pub shortcut_overrides: BTreeMap<String, AppShortcutOverride>,
 }
 
 impl AppSettings {
@@ -68,6 +77,7 @@ impl AppSettings {
             api_key: String::new(),
             model: DEFAULT_MODEL.into(),
             clipboard_history_days: DEFAULT_CLIPBOARD_HISTORY_DAYS,
+            shortcut_overrides: BTreeMap::new(),
         }
     }
 
@@ -91,6 +101,27 @@ impl AppSettings {
         self.clipboard_history_days = self
             .clipboard_history_days
             .clamp(MIN_CLIPBOARD_HISTORY_DAYS, MAX_CLIPBOARD_HISTORY_DAYS);
+
+        self.shortcut_overrides = self
+            .shortcut_overrides
+            .into_iter()
+            .filter_map(|(shortcut_id, shortcut_override)| {
+                let shortcut_id = shortcut_id.trim();
+                if shortcut_id.is_empty() {
+                    return None;
+                }
+
+                let accelerator = shortcut_override
+                    .accelerator
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty());
+
+                Some((
+                    shortcut_id.to_string(),
+                    AppShortcutOverride { accelerator },
+                ))
+            })
+            .collect();
 
         self
     }
@@ -352,7 +383,10 @@ impl AppState {
             .path()
             .app_data_dir()
             .map_err(|error| error.to_string())?;
-        let app_log_dir = app.path().app_log_dir().map_err(|error| error.to_string())?;
+        let app_log_dir = app
+            .path()
+            .app_log_dir()
+            .map_err(|error| error.to_string())?;
 
         fs::create_dir_all(&app_data_dir).map_err(|error| error.to_string())?;
         fs::create_dir_all(&app_log_dir).map_err(|error| error.to_string())?;

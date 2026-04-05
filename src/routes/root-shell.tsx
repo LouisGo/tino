@@ -2,6 +2,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Outlet, useRouterState } from "@tanstack/react-router";
 
 import { AppFrame } from "@/components/shell/app-frame";
+import { useShortcutScope } from "@/core/shortcuts";
 import { ClipboardWindowPage } from "@/features/clipboard/clipboard-window-page";
 import { useWindowCloseGuard } from "@/hooks/use-window-close-guard";
 import { isTauriRuntime } from "@/lib/tauri";
@@ -11,6 +12,7 @@ export function RootShell() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isClipboardWindow =
     isTauriRuntime() && getCurrentWindow().label === "clipboard";
+  useShortcutScope("shell.main", { active: !isClipboardWindow });
 
   if (isClipboardWindow) {
     return (

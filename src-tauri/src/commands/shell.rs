@@ -79,6 +79,18 @@ pub fn save_app_settings(
 
 #[tauri::command]
 #[specta::specta]
+pub fn toggle_main_window_visibility(app: AppHandle) -> Result<bool, String> {
+    crate::toggle_main_window_visibility(&app)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn toggle_clipboard_window_visibility(app: AppHandle) -> Result<bool, String> {
+    crate::toggle_clipboard_window_visibility(&app)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn get_log_directory(app: AppHandle) -> Result<String, String> {
     app.path()
         .app_log_dir()

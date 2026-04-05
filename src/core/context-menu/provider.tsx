@@ -77,6 +77,8 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         closeMenu();
       }
     };

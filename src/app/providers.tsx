@@ -1,12 +1,15 @@
 import { useEffect, useRef } from "react";
 
 import { emit, listen } from "@tauri-apps/api/event";
+import { useQuery } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, type AnyRouter } from "@tanstack/react-router";
 
 import { appCommands } from "@/app/commands";
+import { appShortcuts, filterConfigurableShortcutOverrides } from "@/app/shortcuts";
 import { AppCommandProvider } from "@/core/commands";
 import { ContextMenuProvider } from "@/core/context-menu";
+import { AppShortcutProvider } from "@/core/shortcuts";
 import { queryClient } from "@/app/query-client";
 import {
   applyTheme,
@@ -16,7 +19,8 @@ import {
   THEME_PREFERENCE_CHANGED_EVENT,
   type ThemePreference,
 } from "@/lib/theme";
-import { isTauriRuntime } from "@/lib/tauri";
+import { getAppSettings, isTauriRuntime } from "@/lib/tauri";
+import { useAppShellStore } from "@/stores/app-shell-store";
 import { useThemeStore } from "@/stores/theme-store";
 
 type AppProvidersProps = {
@@ -24,9 +28,27 @@ type AppProvidersProps = {
 };
 
 export function AppProviders({ router }: AppProvidersProps) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppShellRuntime router={router} />
+      {/* {import.meta.env.DEV ? <ReactQueryDevtools initialIsOpen={false} /> : null} */}
+    </QueryClientProvider>
+  );
+}
+
+function AppShellRuntime({ router }: AppProvidersProps) {
   const mode = useThemeStore((state) => state.mode);
   const themeName = useThemeStore((state) => state.themeName);
+  const setSettingsDraft = useAppShellStore((state) => state.setSettingsDraft);
+  const shortcutOverrides = useAppShellStore((state) => state.settingsDraft.shortcutOverrides);
+  const sanitizedShortcutOverrides = filterConfigurableShortcutOverrides(shortcutOverrides);
   const suppressThemeBroadcastRef = useRef(false);
+  const { data: settings } = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: getAppSettings,
+    staleTime: Number.POSITIVE_INFINITY,
+    placeholderData: (previousData) => previousData,
+  });
 
   useEffect(() => {
     applyTheme({ mode, themeName });
@@ -107,14 +129,24 @@ export function AppProviders({ router }: AppProvidersProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!settings) {
+      return;
+    }
+
+    setSettingsDraft(settings);
+  }, [setSettingsDraft, settings]);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppCommandProvider commands={appCommands}>
+    <AppCommandProvider commands={appCommands} router={router}>
+      <AppShortcutProvider
+        shortcuts={appShortcuts}
+        overrides={sanitizedShortcutOverrides}
+      >
         <ContextMenuProvider>
           <RouterProvider router={router} context={{ queryClient }} />
         </ContextMenuProvider>
-      </AppCommandProvider>
-      {/* {import.meta.env.DEV ? <ReactQueryDevtools initialIsOpen={false} /> : null} */}
-    </QueryClientProvider>
+      </AppShortcutProvider>
+    </AppCommandProvider>
   );
 }

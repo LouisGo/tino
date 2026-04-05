@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useEffectEvent,
   useRef,
   useState,
   startTransition,
@@ -27,6 +26,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { useCommand } from "@/core/commands";
+import { useShortcutScope } from "@/core/shortcuts";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import { capturePreviewSurfaceClassName } from "@/features/clipboard/lib/clipboard-board";
 import {
@@ -325,20 +325,7 @@ export function CaptureImageLightbox({
   onClose: () => void;
 }) {
   const assetSrc = useClipboardAssetSrc(capture?.assetPath);
-  const handleKeyDown = useEffectEvent((event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      onClose();
-    }
-  });
-
-  useEffect(() => {
-    if (!capture) {
-      return;
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [capture]);
+  useShortcutScope("clipboard.imagePreview", { active: Boolean(capture) });
 
   if (!capture || capture.contentKind !== "image" || typeof document === "undefined") {
     return null;

@@ -48,6 +48,7 @@ const mockSettings: SettingsDraft = {
   apiKey: "",
   model: "gpt-5.4-mini",
   clipboardHistoryDays: 3,
+  shortcutOverrides: {},
 };
 
 const mockSnapshot: DashboardSnapshot = {
@@ -182,6 +183,7 @@ function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
     apiKey: settings.apiKey,
     model: settings.model,
     clipboardHistoryDays: settings.clipboardHistoryDays ?? 3,
+    shortcutOverrides: settings.shortcutOverrides ?? {},
   };
 }
 
@@ -306,6 +308,22 @@ export async function getLogDirectory() {
   }
 
   return unwrapTauriResult(tauriCommands.getLogDirectory());
+}
+
+export async function toggleMainWindowVisibility() {
+  if (!isTauriRuntime()) {
+    return true;
+  }
+
+  return unwrapTauriResult(tauriCommands.toggleMainWindowVisibility());
+}
+
+export async function toggleClipboardWindowVisibility() {
+  if (!isTauriRuntime()) {
+    return true;
+  }
+
+  return unwrapTauriResult(tauriCommands.toggleClipboardWindowVisibility());
 }
 
 export async function saveAppSettings(settings: SettingsDraft): Promise<SettingsDraft> {

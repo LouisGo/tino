@@ -3,7 +3,10 @@ import { openExternalLink } from "@/lib/external-links";
 import {
   openImageInPreview,
   revealPath,
+  toggleClipboardWindowVisibility,
+  toggleMainWindowVisibility,
 } from "@/lib/tauri";
+import { useThemeStore } from "@/stores/theme-store";
 
 type RevealPathPayload = {
   path: string;
@@ -18,6 +21,44 @@ type OpenImageInPreviewPayload = {
 };
 
 export const systemCommands = [
+  defineCommand<void, boolean>({
+    id: "system.toggleMainWindowVisibility",
+    label: "Toggle Main Window Visibility",
+    run: async () => toggleMainWindowVisibility(),
+  }),
+  defineCommand<void, boolean>({
+    id: "system.toggleClipboardWindowVisibility",
+    label: "Toggle Clipboard Window Visibility",
+    run: async () => toggleClipboardWindowVisibility(),
+  }),
+  defineCommand<void, void>({
+    id: "system.toggleThemeMode",
+    label: "Toggle Theme Mode",
+    run: () => {
+      useThemeStore.getState().toggleDarkLight();
+    },
+  }),
+  defineCommand<void, void>({
+    id: "system.navigateHome",
+    label: "Navigate Home",
+    run: async (_payload, { router }) => {
+      await router.navigate({ to: "/" });
+    },
+  }),
+  defineCommand<void, void>({
+    id: "system.navigateClipboard",
+    label: "Navigate Clipboard",
+    run: async (_payload, { router }) => {
+      await router.navigate({ to: "/clipboard" });
+    },
+  }),
+  defineCommand<void, void>({
+    id: "system.navigateSettings",
+    label: "Navigate Settings",
+    run: async (_payload, { router }) => {
+      await router.navigate({ to: "/settings" });
+    },
+  }),
   defineCommand<RevealPathPayload, void>({
     id: "system.revealPath",
     label: "Reveal In File Manager",
