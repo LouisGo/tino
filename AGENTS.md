@@ -44,6 +44,12 @@ These can remain normal TypeScript types in the renderer.
 
 ## Operational Rules
 
+- Use the repo wrapper commands for Tauri environments instead of invoking `pnpm exec tauri ...` directly:
+- `pnpm tauri dev` or `pnpm tauri:dev`: development env on the shared preview data channel
+- `pnpm tauri build` or `pnpm tauri:build:test`: staging/test bundle on the shared preview data channel
+- `pnpm tauri build --production` or `pnpm tauri:build:prod`: production bundle on the isolated production data channel
+- `pnpm exec tauri ...` bypasses the environment/data-channel wrapper and should be avoided unless you are intentionally debugging the raw Tauri CLI.
+
 - Before `pnpm tauri dev`, bindings are generated automatically via the `dev` script.
 - Before `pnpm build`, bindings are generated automatically.
 - Before `pnpm typecheck`, bindings are generated automatically.

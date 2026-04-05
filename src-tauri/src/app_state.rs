@@ -19,6 +19,7 @@ use crate::storage::capture_history_store::{
     CaptureHistoryEntry, CaptureHistoryQuery, CaptureHistoryStore, CaptureHistorySummary,
     CaptureHistoryUpsert,
 };
+use crate::runtime_profile;
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const RUNTIME_FILE_NAME: &str = "runtime.json";
@@ -133,9 +134,12 @@ pub struct DashboardSnapshot {
     pub app_name: String,
     pub app_version: String,
     pub build_channel: String,
+    pub app_env: String,
+    pub data_channel: String,
     pub os: String,
     pub default_knowledge_root: String,
     pub app_data_dir: String,
+    pub app_log_dir: String,
     pub queue_policy: String,
     pub capture_mode: String,
     pub recent_captures: Vec<CapturePreview>,
@@ -331,6 +335,7 @@ struct SharedState {
     app_handle: AppHandle,
     default_knowledge_root: PathBuf,
     app_data_dir: PathBuf,
+    app_log_dir: PathBuf,
     settings_path: PathBuf,
     inner: Mutex<StateData>,
 }
@@ -347,10 +352,12 @@ impl AppState {
             .path()
             .app_data_dir()
             .map_err(|error| error.to_string())?;
+        let app_log_dir = app.path().app_log_dir().map_err(|error| error.to_string())?;
 
         fs::create_dir_all(&app_data_dir).map_err(|error| error.to_string())?;
+        fs::create_dir_all(&app_log_dir).map_err(|error| error.to_string())?;
 
-        let default_knowledge_root = home_dir.join("tino-inbox");
+        let default_knowledge_root = runtime_profile::default_knowledge_root(&home_dir);
         let settings_path = app_data_dir.join(SETTINGS_FILE_NAME);
         let settings = load_settings(&settings_path, &default_knowledge_root)?;
         let knowledge_root = settings.knowledge_root_path();
@@ -378,6 +385,7 @@ impl AppState {
                 app_handle: app.clone(),
                 default_knowledge_root,
                 app_data_dir,
+                app_log_dir,
                 settings_path,
                 inner: Mutex::new(StateData {
                     settings,
@@ -433,12 +441,13 @@ impl AppState {
     }
 
     pub fn dashboard_snapshot(&self, app: &AppHandle) -> Result<DashboardSnapshot, String> {
-        let (settings, runtime, app_data_dir) = {
+        let (settings, runtime, app_data_dir, app_log_dir) = {
             let state = self.lock_state()?;
             (
                 state.settings.clone(),
                 state.runtime.clone(),
                 self.shared.app_data_dir.display().to_string(),
+                self.shared.app_log_dir.display().to_string(),
             )
         };
         let queue_state = if settings.ai_enabled() {
@@ -466,14 +475,13 @@ impl AppState {
         Ok(DashboardSnapshot {
             app_name: app.package_info().name.clone(),
             app_version: app.package_info().version.to_string(),
-            build_channel: if cfg!(debug_assertions) {
-                "debug".into()
-            } else {
-                "release".into()
-            },
+            build_channel: runtime_profile::build_channel_label(),
+            app_env: runtime_profile::app_env().into(),
+            data_channel: runtime_profile::data_channel().into(),
             os: std::env::consts::OS.into(),
             default_knowledge_root: settings.knowledge_root.clone(),
             app_data_dir,
+            app_log_dir,
             queue_policy: "20 captures or 10 minutes · exact-match dedupe in 5 minutes".into(),
             capture_mode: match &runtime.last_error {
                 Some(error) => format!(

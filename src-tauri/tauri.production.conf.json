@@ -1,0 +1,21 @@
+{
+  "productName": "Tino",
+  "identifier": "com.louistation.tino.production",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Tino",
+        "width": 1480,
+        "height": 960,
+        "minWidth": 700,
+        "minHeight": 720,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ]
+  }
+}

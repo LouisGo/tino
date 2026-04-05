@@ -2,6 +2,7 @@ mod app_state;
 mod capture;
 mod commands;
 pub mod ipc_schema;
+mod runtime_profile;
 mod storage;
 
 use app_state::AppState;
@@ -291,6 +292,11 @@ pub fn run() {
             if let Ok(log_dir) = app.path().app_log_dir() {
                 log::info!("log directory initialized at {}", log_dir.display());
             }
+            log::info!(
+                "runtime profile: env={} data_channel={}",
+                runtime_profile::app_env(),
+                runtime_profile::data_channel()
+            );
 
             create_tray(app.handle())?;
             restore_main_window_state(app.handle());

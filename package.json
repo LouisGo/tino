@@ -12,7 +12,11 @@
     "check": "pnpm lint && pnpm typecheck && pnpm check:rust",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "node scripts/tauri-run.mjs",
+    "tauri:dev": "pnpm tauri dev",
+    "tauri:build:test": "pnpm tauri build",
+    "tauri:build:staging": "pnpm tauri build",
+    "tauri:build:prod": "pnpm tauri build --production"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

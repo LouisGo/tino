@@ -4,6 +4,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
 import { commands as tauriCommands } from "@/bindings/tauri";
+import { appEnv, dataChannel, isProductionDataChannel } from "@/lib/runtime-profile";
 import type {
   AppSettings as RustAppSettings,
   CapturePreview as RustCapturePreview,
@@ -42,7 +43,7 @@ const mockImageAsset = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 const mockSettings: SettingsDraft = {
-  knowledgeRoot: "~/tino-inbox",
+  knowledgeRoot: isProductionDataChannel ? "~/tino-inbox-production" : "~/tino-inbox-preview",
   baseUrl: "https://api.openai.com/v1",
   apiKey: "",
   model: "gpt-5.4-mini",
@@ -50,12 +51,19 @@ const mockSettings: SettingsDraft = {
 };
 
 const mockSnapshot: DashboardSnapshot = {
-  appName: "Tino",
+  appName: isProductionDataChannel ? "Tino" : "Tino Preview",
   appVersion: "0.1.0",
-  buildChannel: "debug",
+  buildChannel: `${appEnv} (${dataChannel})`,
+  appEnv,
+  dataChannel,
   os: "browser",
   defaultKnowledgeRoot: mockSettings.knowledgeRoot,
-  appDataDir: "~/Library/Application Support/com.louistation.tino",
+  appDataDir: isProductionDataChannel
+    ? "~/Library/Application Support/com.louistation.tino.production"
+    : "~/Library/Application Support/com.louistation.tino.preview",
+  appLogDir: isProductionDataChannel
+    ? "~/Library/Logs/com.louistation.tino.production"
+    : "~/Library/Logs/com.louistation.tino.preview",
   queuePolicy: "20 captures or 10 minutes",
   captureMode: "Rust clipboard poller active",
   recentCaptures: [
