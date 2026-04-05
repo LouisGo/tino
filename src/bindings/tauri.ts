@@ -4,6 +4,10 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
+	listReadyAiBatches: () => typedError<AiBatchSummary[], string>(__TAURI_INVOKE("list_ready_ai_batches")),
+	getAiBatchPayload: (batchId: string) => typedError<AiBatchPayload, string>(__TAURI_INVOKE("get_ai_batch_payload", { batchId })),
+	getTopicIndexEntries: () => typedError<TopicIndexEntry[], string>(__TAURI_INVOKE("get_topic_index_entries")),
+	applyBatchDecision: (request: ApplyBatchDecisionRequest) => typedError<ApplyBatchDecisionResult, string>(__TAURI_INVOKE("apply_batch_decision", { request })),
 	getDashboardSnapshot: () => typedError<DashboardSnapshot, string>(__TAURI_INVOKE("get_dashboard_snapshot")),
 	getClipboardPage: (request: ClipboardPageRequest) => typedError<ClipboardPage, string>(__TAURI_INVOKE("get_clipboard_page", { request })),
 	deleteClipboardCapture: (request: DeleteClipboardCaptureRequest) => typedError<DeleteClipboardCaptureResult, string>(__TAURI_INVOKE("delete_clipboard_capture", { request })),
@@ -14,10 +18,46 @@ export const commands = {
 	getLogDirectory: () => typedError<string, string>(__TAURI_INVOKE("get_log_directory")),
 	openInPreview: (path: string) => typedError<null, string>(__TAURI_INVOKE("open_in_preview", { path })),
 	copyCaptureToClipboard: (capture: ClipboardReplayRequest) => typedError<null, string>(__TAURI_INVOKE("copy_capture_to_clipboard", { capture })),
+	returnCaptureToPreviousApp: (capture: ClipboardReplayRequest) => typedError<ClipboardReturnResult, string>(__TAURI_INVOKE("return_capture_to_previous_app", { capture })),
 	revealInFileManager: (path: string) => typedError<null, string>(__TAURI_INVOKE("reveal_in_file_manager", { path })),
 };
 
 /* Types */
+export type AiBatchCapture = {
+	id: string,
+	contentKind: string,
+	capturedAt: string,
+	source: string,
+	sourceAppName: string | null,
+	sourceAppBundleId: string | null,
+	preview: string,
+	rawText: string,
+	rawRich: string | null,
+	rawRichFormat: string | null,
+	linkUrl: string | null,
+};
+
+export type AiBatchPayload = {
+	batch: AiBatchSummary,
+	captures: AiBatchCapture[],
+	availableTopics: TopicIndexEntry[],
+};
+
+export type AiBatchRuntimeState = "ready" | "running" | "schema_failed" | "review_pending" | "reviewed" | "persisting" | "persisted" | "failed";
+
+export type AiBatchSummary = {
+	id: string,
+	runtimeState: AiBatchRuntimeState,
+	createdAt: string,
+	triggerReason: string,
+	captureCount: number,
+	firstCapturedAt: string,
+	lastCapturedAt: string,
+	sourceIds: string[],
+};
+
+export type AiDecision = "archive_to_topic" | "send_to_inbox" | "discard";
+
 export type AppSettings = {
 	knowledgeRoot: string,
 	baseUrl: string,
@@ -29,6 +69,45 @@ export type AppSettings = {
 
 export type AppShortcutOverride = {
 	accelerator?: string | null,
+};
+
+export type ApplyBatchDecisionRequest = {
+	batchId: string,
+	review: BatchDecisionReview,
+	feedback: ReviewFeedbackRecord,
+};
+
+export type ApplyBatchDecisionResult = {
+	batchId: string,
+	accepted: boolean,
+	mocked: boolean,
+	runtimeState: AiBatchRuntimeState,
+	message: string,
+};
+
+export type BatchDecisionCluster = {
+	clusterId: string,
+	sourceIds: string[],
+	decision: AiDecision,
+	topicSlugSuggestion: string | null,
+	topicNameSuggestion: string | null,
+	title: string,
+	summary: string,
+	keyPoints: string[],
+	tags: string[],
+	confidence: number,
+	reason: string,
+	possibleTopics: PossibleTopicSuggestion[],
+	missingContext: string[],
+};
+
+export type BatchDecisionReview = {
+	reviewId: string,
+	batchId: string,
+	runtimeState: AiBatchRuntimeState,
+	createdAt: string,
+	modelSchemaVersion: string,
+	clusters: BatchDecisionCluster[],
 };
 
 export type CapturePreview = {
@@ -78,12 +157,17 @@ export type ClipboardPageSummary = {
 };
 
 export type ClipboardReplayRequest = {
+	captureId: string | null,
 	contentKind: string,
 	rawText: string,
 	rawRich: string | null,
 	rawRichFormat: string | null,
 	linkUrl: string | null,
 	assetPath: string | null,
+};
+
+export type ClipboardReturnResult = {
+	pasted: boolean,
 };
 
 export type DashboardSnapshot = {
@@ -110,6 +194,31 @@ export type DeleteClipboardCaptureResult = {
 	removedFromHistory: boolean,
 	removedFromStore: boolean,
 	deleted: boolean,
+};
+
+export type PossibleTopicSuggestion = {
+	topicSlug: string,
+	topicName: string,
+	reason: string | null,
+};
+
+export type ReviewAction = "accept_all" | "accept_with_edits" | "reroute_to_inbox" | "reroute_topic" | "discard";
+
+export type ReviewFeedbackRecord = {
+	batchId: string,
+	reviewId: string,
+	action: ReviewAction,
+	editedClusterIds: string[],
+	note: string | null,
+	submittedAt: string,
+};
+
+export type TopicIndexEntry = {
+	topicSlug: string,
+	topicName: string,
+	topicSummary: string,
+	recentTags: string[],
+	lastUpdatedAt: string,
 };
 
 /* Tauri Specta runtime */

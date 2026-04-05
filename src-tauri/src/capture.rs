@@ -362,6 +362,10 @@ fn run_macos_clipboard_watcher(state: AppState) {
                             let _ = state.set_watch_running();
                             info!("deduplicated clipboard capture {}", capture.id);
                         }
+                        Ok(CaptureProcessingResult::Reused) => {
+                            let _ = state.set_watch_running();
+                            info!("reused clipboard capture {}", capture.id);
+                        }
                         Err(error) => {
                             error!("failed to process capture {}: {error}", capture.id);
                             let _ = state.set_watch_error(format!("processing failed: {error}"));

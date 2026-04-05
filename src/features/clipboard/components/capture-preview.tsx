@@ -183,7 +183,7 @@ function TextCapturePreview({
         }
       />
 
-      <div className="min-h-0 min-w-0 flex-1 overflow-auto px-3.5 pb-3.5 pt-2">
+      <div className="app-scroll-area min-h-0 min-w-0 flex-1 overflow-auto px-3.5 pb-3.5 pt-2">
         {mode === "preview" && previewKind === "html" ? (
           <HtmlRichPreview html={capture.rawRich ?? ""} />
         ) : null}

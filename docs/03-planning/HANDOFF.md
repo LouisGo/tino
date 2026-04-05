@@ -1,8 +1,8 @@
 # Tino Handoff
 
-> 最后更新：2026-04-04  
+> 最后更新：2026-04-05  
 > 当前基线提交：`385d6eb`（本轮业务开发起点）  
-> 当前工作区状态：`dirty`（存在未提交文档改动：`docs/README.md`）
+> 当前工作区状态：`dirty`（存在未提交代码与文档改动）
 
 ## 1. 文档目的
 
@@ -27,14 +27,17 @@
 按优先级阅读：
 
 1. [需求原型文档](/Users/louistation/MySpace/Life/tino/docs/02-product/个人信息流软件需求原型文档.md)
-2. [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
-3. [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP开发任务拆解.md)
-4. [头脑风暴原始记录](/Users/louistation/MySpace/Life/tino/docs/01-discovery/个人信息流软件头脑风暴全过程.md)
+2. [Tino AI 能力地图 v0.2](/Users/louistation/MySpace/Life/tino/docs/02-product/Tino%20AI%20%E8%83%BD%E5%8A%9B%E5%9C%B0%E5%9B%BE%20v0.2.md)
+3. [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
+4. [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md)
+5. [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP开发任务拆解.md)
+6. [头脑风暴原始记录](/Users/louistation/MySpace/Life/tino/docs/01-discovery/个人信息流软件头脑风暴全过程.md)
 
 阅读顺序建议：
 
 - 新会话第一次接手：先看 `技术冻结记录` + 本文
-- 要理解产品目标：再看 `需求原型文档`
+- 要理解产品目标：再看 `需求原型文档` + `Tino AI 能力地图 v0.2`
+- 要开始 AI 开发：先看 `Tino AI Runtime 与 Agent 工程方案 v0.1`
 - 要继续实现：再看 `MVP开发任务拆解`
 
 ## 4. 当前阶段判断
@@ -279,6 +282,12 @@ MVP 主窗口只做：
 - 第一条真实业务链路已经打通，当前短板不是“有没有”，而是“好不好用”
 - AI 还没开始，先把输入侧质量和体验收紧，后面 AI 才不会背锅
 - 这一阶段的调整不会破坏冻结边界，但会显著影响日常使用感受
+
+当正式开始 `M5 AI Pipeline` 时：
+
+- 默认以 [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md) 作为技术执行主基线
+- 不跳过其中的 `Contract First -> 最小 LLM 链路 -> Review -> Persistence` 顺序
+- 不把“接入模型”与“Agent runtime”混成同一层实现
 
 ## 10. 当前代码里的“真实”与“占位”
 

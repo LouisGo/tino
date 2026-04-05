@@ -43,6 +43,7 @@ function AppShellRuntime({ router }: AppProvidersProps) {
   const shortcutOverrides = useAppShellStore((state) => state.settingsDraft.shortcutOverrides);
   const sanitizedShortcutOverrides = filterConfigurableShortcutOverrides(shortcutOverrides);
   const suppressThemeBroadcastRef = useRef(false);
+  const hydratedSettingsRef = useRef(false);
   const { data: settings } = useQuery({
     queryKey: ["app-settings"],
     queryFn: getAppSettings,
@@ -130,10 +131,11 @@ function AppShellRuntime({ router }: AppProvidersProps) {
   }, []);
 
   useEffect(() => {
-    if (!settings) {
+    if (!settings || hydratedSettingsRef.current) {
       return;
     }
 
+    hydratedSettingsRef.current = true;
     setSettingsDraft(settings);
   }, [setSettingsDraft, settings]);
 

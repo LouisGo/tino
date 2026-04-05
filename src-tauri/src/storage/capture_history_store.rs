@@ -186,6 +186,50 @@ impl CaptureHistoryStore {
         Ok(())
     }
 
+    pub fn promote_capture_reuse(
+        &self,
+        capture_id: &str,
+        hash: &str,
+        replayed_at: &str,
+    ) -> Result<bool, String> {
+        let mut connection = self.open_connection()?;
+        let transaction = connection
+            .transaction()
+            .map_err(|error| error.to_string())?;
+        let timestamp = now_rfc3339();
+        let replayed_day = capture_day(replayed_at)?;
+        let changed = transaction
+            .execute(
+                r#"
+                UPDATE capture_history
+                SET
+                    captured_at = ?1,
+                    captured_day = ?2,
+                    updated_at = ?3
+                WHERE id = ?4
+                "#,
+                params![replayed_at, &replayed_day, &timestamp, capture_id],
+            )
+            .map_err(|error| error.to_string())?;
+
+        if changed == 0 {
+            transaction.rollback().map_err(|error| error.to_string())?;
+            return Ok(false);
+        }
+
+        if !hash.trim().is_empty() {
+            transaction
+                .execute(
+                    "DELETE FROM capture_history WHERE hash = ?1 AND id <> ?2",
+                    params![hash, capture_id],
+                )
+                .map_err(|error| error.to_string())?;
+        }
+
+        transaction.commit().map_err(|error| error.to_string())?;
+        Ok(true)
+    }
+
     pub fn list_recent_captures(
         &self,
         history_days: u16,

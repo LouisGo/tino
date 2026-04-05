@@ -9,6 +9,7 @@ const initialClipboardBoardState = {
   selectedCaptureId: null,
   previewingImageId: null,
   pendingDeleteCapture: null,
+  visibleCaptures: [] as ClipboardCapture[],
 };
 
 type ClipboardBoardState = {
@@ -17,6 +18,7 @@ type ClipboardBoardState = {
   selectedCaptureId: string | null;
   previewingImageId: string | null;
   pendingDeleteCapture: ClipboardCapture | null;
+  visibleCaptures: ClipboardCapture[];
   resetState: () => void;
   setSearchValue: (value: string) => void;
   setFilter: (value: ClipboardFilter) => void;
@@ -24,6 +26,7 @@ type ClipboardBoardState = {
   setSelectedCaptureId: (value: string | null) => void;
   setPreviewingImageId: (value: string | null) => void;
   setPendingDeleteCapture: (capture: ClipboardCapture | null) => void;
+  setVisibleCaptures: (captures: ClipboardCapture[]) => void;
   removeCapture: (captureId: string) => void;
 };
 
@@ -39,6 +42,7 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
   setSelectedCaptureId: (value) => set({ selectedCaptureId: value }),
   setPreviewingImageId: (value) => set({ previewingImageId: value }),
   setPendingDeleteCapture: (capture) => set({ pendingDeleteCapture: capture }),
+  setVisibleCaptures: (captures) => set({ visibleCaptures: captures }),
   removeCapture: (captureId) =>
     set((state) => ({
       selectedCaptureId:
@@ -47,5 +51,6 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
         state.previewingImageId === captureId ? null : state.previewingImageId,
       pendingDeleteCapture:
         state.pendingDeleteCapture?.id === captureId ? null : state.pendingDeleteCapture,
+      visibleCaptures: state.visibleCaptures.filter((capture) => capture.id !== captureId),
     })),
 }));

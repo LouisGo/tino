@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo } from "react";
+import { useDeferredValue, useEffect, useMemo } from "react";
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -89,6 +89,29 @@ export function ClipboardBoardFeature({
     !firstPage && isPending ? "loading" : !firstPage && isError ? "error" : "ready";
   const errorMessage =
     error instanceof Error ? error.message : "Clipboard history could not be loaded.";
+
+  useEffect(() => {
+    const store = useClipboardBoardStore.getState();
+    store.setVisibleCaptures(captures);
+
+    if (captures.length === 0) {
+      if (store.selectedCaptureId !== null) {
+        store.setSelectedCaptureId(null);
+      }
+      return;
+    }
+
+    if (!store.selectedCaptureId || !captures.some((capture) => capture.id === store.selectedCaptureId)) {
+      store.setSelectedCaptureId(captures[0].id);
+    }
+  }, [captures]);
+
+  useEffect(
+    () => () => {
+      useClipboardBoardStore.getState().setVisibleCaptures([]);
+    },
+    [],
+  );
 
   return (
     <div className={showSummary ? "space-y-3" : ""}>

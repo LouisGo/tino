@@ -4,21 +4,37 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
 import { commands as tauriCommands } from "@/bindings/tauri";
+import {
+  buildMockApplyBatchDecisionResult,
+  getMockAiBatchPayload,
+  getMockAiBatchSummaries,
+  getMockTopicIndexEntries,
+  isMockAiBatchId,
+} from "@/features/ai/lib/mock-fixtures";
 import { appEnv, dataChannel, isProductionDataChannel } from "@/lib/runtime-profile";
 import type {
+  AiBatchPayload as RustAiBatchPayload,
+  AiBatchSummary as RustAiBatchSummary,
+  ApplyBatchDecisionResult as RustApplyBatchDecisionResult,
   AppSettings as RustAppSettings,
   CapturePreview as RustCapturePreview,
   ClipboardPage as RustClipboardPage,
   DashboardSnapshot as RustDashboardSnapshot,
+  TopicIndexEntry as RustTopicIndexEntry,
 } from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
+  AiBatchPayload,
+  AiBatchSummary,
+  ApplyBatchDecisionRequest,
+  ApplyBatchDecisionResult,
   ClipboardCapture,
   ClipboardPageRequest,
   DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
   SettingsDraft,
+  TopicIndexEntry,
 } from "@/types/shell";
 
 export const clipboardCapturesUpdatedEvent = "clipboard-captures-updated";
@@ -206,6 +222,29 @@ function normalizeDashboardSnapshot(snapshot: RustDashboardSnapshot): DashboardS
   };
 }
 
+function normalizeAiBatchSummary(batch: RustAiBatchSummary): AiBatchSummary {
+  return batch
+}
+
+function normalizeAiBatchPayload(payload: RustAiBatchPayload): AiBatchPayload {
+  return {
+    ...payload,
+    availableTopics: payload.availableTopics.length
+      ? payload.availableTopics
+      : getMockTopicIndexEntries(),
+  }
+}
+
+function normalizeTopicIndexEntries(entries: RustTopicIndexEntry[]): TopicIndexEntry[] {
+  return entries.length ? entries : getMockTopicIndexEntries()
+}
+
+function normalizeApplyBatchDecisionResult(
+  result: RustApplyBatchDecisionResult,
+): ApplyBatchDecisionResult {
+  return result
+}
+
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   if (!isTauriRuntime()) {
     return getMockSnapshot();
@@ -214,6 +253,49 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   return normalizeDashboardSnapshot(
     await unwrapTauriResult(tauriCommands.getDashboardSnapshot()),
   );
+}
+
+export async function getReadyAiBatches(): Promise<AiBatchSummary[]> {
+  if (!isTauriRuntime()) {
+    return getMockAiBatchSummaries()
+  }
+
+  const batches = await unwrapTauriResult(tauriCommands.listReadyAiBatches())
+  return batches.length
+    ? batches.map(normalizeAiBatchSummary)
+    : getMockAiBatchSummaries()
+}
+
+export async function getAiBatchPayload(batchId: string): Promise<AiBatchPayload> {
+  if (!isTauriRuntime() || isMockAiBatchId(batchId)) {
+    return getMockAiBatchPayload(batchId)
+  }
+
+  return normalizeAiBatchPayload(
+    await unwrapTauriResult(tauriCommands.getAiBatchPayload(batchId)),
+  )
+}
+
+export async function getTopicIndexEntries(): Promise<TopicIndexEntry[]> {
+  if (!isTauriRuntime()) {
+    return getMockTopicIndexEntries()
+  }
+
+  return normalizeTopicIndexEntries(
+    await unwrapTauriResult(tauriCommands.getTopicIndexEntries()),
+  )
+}
+
+export async function applyBatchDecision(
+  request: ApplyBatchDecisionRequest,
+): Promise<ApplyBatchDecisionResult> {
+  if (!isTauriRuntime() || isMockAiBatchId(request.batchId)) {
+    return buildMockApplyBatchDecisionResult(request)
+  }
+
+  return normalizeApplyBatchDecisionResult(
+    await unwrapTauriResult(tauriCommands.applyBatchDecision(request)),
+  )
 }
 
 export async function getClipboardPage(
@@ -436,6 +518,7 @@ export async function copyCaptureToClipboard(capture: ClipboardCapture) {
 
   await unwrapTauriResult(
     tauriCommands.copyCaptureToClipboard({
+      captureId: capture.id,
       contentKind: capture.contentKind,
       rawText: capture.rawText,
       rawRich: capture.rawRich ?? null,
@@ -444,6 +527,27 @@ export async function copyCaptureToClipboard(capture: ClipboardCapture) {
       assetPath: capture.assetPath ?? null,
     }),
   );
+}
+
+export async function returnCaptureToPreviousApp(capture: ClipboardCapture) {
+  if (!isTauriRuntime()) {
+    await copyCaptureToClipboard(capture);
+    return true;
+  }
+
+  const result = await unwrapTauriResult(
+    tauriCommands.returnCaptureToPreviousApp({
+      captureId: capture.id,
+      contentKind: capture.contentKind,
+      rawText: capture.rawText,
+      rawRich: capture.rawRich ?? null,
+      rawRichFormat: capture.rawRichFormat ?? null,
+      linkUrl: capture.linkUrl ?? null,
+      assetPath: capture.assetPath ?? null,
+    }),
+  );
+
+  return result.pasted;
 }
 
 export function resolveAssetUrl(assetPath?: string | null) {

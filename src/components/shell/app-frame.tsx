@@ -1,5 +1,6 @@
 import {
   Activity,
+  Bot,
   ClipboardList,
   Moon,
   Settings2,
@@ -26,6 +27,12 @@ const navItems = [
     to: "/clipboard",
     label: "Clipboard",
     icon: ClipboardList,
+    shortcutId: "shell.openClipboard",
+  },
+  {
+    to: "/ai",
+    label: "AI",
+    icon: Bot,
   },
 ];
 
@@ -79,7 +86,7 @@ export function AppFrame({ children }: AppFrameProps) {
   return (
     <div
       className={cn(
-        "relative min-h-screen min-w-[700px] px-3 pb-3 md:px-4 md:pb-4",
+        "relative h-screen min-w-[700px] overflow-hidden px-3 pb-3 md:px-4 md:pb-4",
         hasOverlayTitleBar ? "pt-10 md:pt-11" : "pt-3 md:pt-4",
       )}
     >
@@ -112,7 +119,7 @@ export function AppFrame({ children }: AppFrameProps) {
               <ShortcutKbd shortcutId="shell.openHome" />
             </span>
           )}
-          placement="bottom"
+          placement="right"
         >
           <Link
             to="/"
@@ -141,10 +148,10 @@ export function AppFrame({ children }: AppFrameProps) {
                 content={(
                   <span className="flex items-center gap-2">
                     <span>{item.label}</span>
-                    <ShortcutKbd shortcutId="shell.openClipboard" />
+                    {item.shortcutId ? <ShortcutKbd shortcutId={item.shortcutId} /> : null}
                   </span>
                 )}
-                placement="bottom"
+                placement="right"
               >
                 <Link
                   aria-label={item.label}
@@ -172,7 +179,7 @@ export function AppFrame({ children }: AppFrameProps) {
                 <ShortcutKbd shortcutId="shell.toggleThemeMode" />
               </span>
             )}
-            placement="bottom"
+            placement="right"
           >
             <button
               type="button"
@@ -194,7 +201,7 @@ export function AppFrame({ children }: AppFrameProps) {
                 <ShortcutKbd shortcutId="shell.openSettings" />
               </span>
             )}
-            placement="bottom"
+            placement="right"
           >
             <Link
               to="/settings"
@@ -212,8 +219,8 @@ export function AppFrame({ children }: AppFrameProps) {
         </div>
       </aside>
 
-      <div className="mx-auto max-w-[1600px] pl-[68px]">
-        <main className="app-main-surface relative z-0 min-w-0">
+      <div className="mx-auto flex h-full max-w-[1600px] min-h-0 pl-[68px]">
+        <main className="app-main-surface relative z-0 flex min-h-0 min-w-0 flex-1 flex-col">
           {children}
         </main>
       </div>

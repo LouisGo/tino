@@ -3,10 +3,14 @@ use std::{fs, path::PathBuf};
 use specta_typescript::Typescript;
 use tauri_specta::{collect_commands, Builder};
 
-use crate::commands::shell;
+use crate::commands::{ai, shell};
 
 pub fn builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new().commands(collect_commands![
+        ai::list_ready_ai_batches,
+        ai::get_ai_batch_payload,
+        ai::get_topic_index_entries,
+        ai::apply_batch_decision,
         shell::get_dashboard_snapshot,
         shell::get_clipboard_page,
         shell::delete_clipboard_capture,
@@ -17,6 +21,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         shell::get_log_directory,
         shell::open_in_preview,
         shell::copy_capture_to_clipboard,
+        shell::return_capture_to_previous_app,
         shell::reveal_in_file_manager,
     ])
 }

@@ -1,11 +1,23 @@
 import type {
+  AiBatchCapture as RustAiBatchCapture,
+  AiBatchPayload as RustAiBatchPayload,
+  AiBatchRuntimeState as RustAiBatchRuntimeState,
+  AiBatchSummary as RustAiBatchSummary,
+  AiDecision as RustAiDecision,
+  ApplyBatchDecisionRequest as RustApplyBatchDecisionRequest,
+  ApplyBatchDecisionResult as RustApplyBatchDecisionResult,
   AppSettings as RustAppSettings,
   AppShortcutOverride as RustAppShortcutOverride,
+  BatchDecisionCluster as RustBatchDecisionCluster,
+  BatchDecisionReview as RustBatchDecisionReview,
   CapturePreview as RustCapturePreview,
   ClipboardPage as RustClipboardPage,
   ClipboardPageRequest as RustClipboardPageRequest,
   DashboardSnapshot as RustDashboardSnapshot,
   DeleteClipboardCaptureResult as RustDeleteClipboardCaptureResult,
+  ReviewAction as RustReviewAction,
+  ReviewFeedbackRecord as RustReviewFeedbackRecord,
+  TopicIndexEntry as RustTopicIndexEntry,
 } from "@/bindings/tauri";
 
 type RequireKeys<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
@@ -48,3 +60,16 @@ export type ClipboardPageRequest = Omit<RustClipboardPageRequest, "search" | "fi
   search?: string | null;
   filter?: ClipboardHistoryFilter | null;
 };
+
+export type AiBatchRuntimeState = RustAiBatchRuntimeState;
+export type AiDecision = RustAiDecision;
+export type ReviewAction = RustReviewAction;
+export type AiBatchSummary = RustAiBatchSummary;
+export type AiBatchCapture = RustAiBatchCapture;
+export type TopicIndexEntry = RustTopicIndexEntry;
+export type BatchDecisionCluster = RustBatchDecisionCluster;
+export type BatchDecisionReview = RustBatchDecisionReview;
+export type ReviewFeedbackRecord = RustReviewFeedbackRecord;
+export type ApplyBatchDecisionRequest = RustApplyBatchDecisionRequest;
+export type ApplyBatchDecisionResult = RustApplyBatchDecisionResult;
+export type AiBatchPayload = RustAiBatchPayload;

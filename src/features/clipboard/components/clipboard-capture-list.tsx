@@ -41,6 +41,9 @@ export function ClipboardCaptureList({
   const isAutoLoadingRef = useRef(false);
   const isLoadTriggerVisibleRef = useRef(false);
   const selectCapture = useCommand<{ captureId: string }>("clipboard.selectCapture");
+  const confirmCapture = useCommand<{ captureId?: string } | undefined>(
+    "clipboard.confirmWindowSelection",
+  );
   const { onContextMenu } = useContextMenu(clipboardCaptureContextMenu, {
     onOpen: (capture) => {
       void selectCapture.execute({ captureId: capture.id });
@@ -98,9 +101,29 @@ export function ClipboardCaptureList({
     };
   }, [hasNextPage, loadTrigger, scrollViewport]);
 
+  useEffect(() => {
+    if (!scrollViewport || !selectedCaptureId) {
+      return;
+    }
+
+    const captureId =
+      typeof CSS === "undefined" ? selectedCaptureId : CSS.escape(selectedCaptureId);
+    const selectedElement = scrollViewport.querySelector<HTMLElement>(
+      `[data-capture-id="${captureId}"]`,
+    );
+
+    selectedElement?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [scrollViewport, selectedCaptureId]);
+
   return (
     <div className="flex h-full min-h-0 flex-col border-r border-border/70 bg-card/78">
-      <div ref={setScrollViewport} className="min-h-0 flex-1 overflow-y-auto p-2.5">
+      <div
+        ref={setScrollViewport}
+        className="app-scroll-area min-h-0 flex-1 overflow-y-auto p-2.5"
+      >
         <div className="space-y-3">
           {hasCaptures ? (
             groups.map((group) => (
@@ -113,7 +136,10 @@ export function ClipboardCaptureList({
                     <button
                       key={capture.id}
                       type="button"
+                      data-capture-id={capture.id}
                       onClick={() => void selectCapture.execute({ captureId: capture.id })}
+                      onDoubleClick={() =>
+                        void confirmCapture.execute({ captureId: capture.id })}
                       onContextMenu={(event) => onContextMenu(event, capture)}
                       className={cn(
                         "flex h-[50px] w-full items-center gap-3 rounded-[16px] border px-3 text-left transition",

@@ -1,26 +1,38 @@
 use crate::app_state::{
-    AppSettings, AppState, ClipboardPage, ClipboardPageRequest, DashboardSnapshot,
-    DeleteClipboardCaptureResult,
+    AppSettings, AppState, ClipboardPage, ClipboardPageRequest, ClipboardWindowTarget,
+    DashboardSnapshot, DeleteClipboardCaptureResult,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use specta::Type;
-use std::{fs, path::Path, process::Command};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 use tauri::{AppHandle, Manager, State};
 
 #[cfg(target_os = "macos")]
 use {
     chrono::Local,
+    libc::pid_t,
     objc2_app_kit::{
-        NSPasteboard, NSPasteboardTypeHTML, NSPasteboardTypePNG, NSPasteboardTypeRTF,
-        NSPasteboardTypeString,
+        NSApplicationActivationOptions, NSPasteboard, NSPasteboardTypeHTML, NSPasteboardTypePNG,
+        NSPasteboardTypeRTF, NSPasteboardTypeString, NSRunningApplication,
     },
+    objc2_core_graphics::{CGEvent, CGEventFlags, CGEventSource, CGEventSourceStateID},
     objc2_foundation::{NSData, NSString},
     sha2::{Digest, Sha256},
+    std::{
+        ffi::{c_char, c_void, CStr},
+        thread,
+        time::Duration,
+    },
 };
 
 #[derive(Debug, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipboardReplayRequest {
+    capture_id: Option<String>,
     content_kind: String,
     raw_text: String,
     raw_rich: Option<String>,
@@ -33,6 +45,139 @@ pub struct ClipboardReplayRequest {
 #[serde(rename_all = "camelCase")]
 pub struct DeleteClipboardCaptureRequest {
     id: String,
+}
+
+#[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardReturnResult {
+    pub pasted: bool,
+}
+
+#[cfg(target_os = "macos")]
+fn current_executable_path() -> Option<PathBuf> {
+    std::env::current_exe().ok()
+}
+
+#[cfg(target_os = "macos")]
+fn current_app_bundle_path() -> Option<PathBuf> {
+    let executable = current_executable_path()?;
+    let macos_dir = executable.parent()?;
+    let contents_dir = macos_dir.parent()?;
+    let app_bundle = contents_dir.parent()?;
+
+    (app_bundle.extension().and_then(|value| value.to_str()) == Some("app"))
+        .then(|| app_bundle.to_path_buf())
+}
+
+#[cfg(target_os = "macos")]
+fn current_app_authorization_target() -> String {
+    current_app_bundle_path()
+        .map(|path| path.display().to_string())
+        .or_else(|| current_executable_path().map(|path| path.display().to_string()))
+        .unwrap_or_else(|| "the currently running Tino app".to_string())
+}
+
+#[cfg(target_os = "macos")]
+fn summarize_codesign_output(output: &[u8]) -> String {
+    String::from_utf8_lossy(output)
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or("unknown codesign failure")
+        .to_string()
+}
+
+#[cfg(target_os = "macos")]
+fn read_codesign_identifier(bundle_path: &Path) -> Result<Option<String>, String> {
+    let output = Command::new("codesign")
+        .args(["-dv", "--verbose=4"])
+        .arg(bundle_path)
+        .output()
+        .map_err(|error| error.to_string())?;
+
+    if !output.status.success() {
+        let message = if output.stderr.is_empty() {
+            summarize_codesign_output(&output.stdout)
+        } else {
+            summarize_codesign_output(&output.stderr)
+        };
+        return Err(message);
+    }
+
+    let combined = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    Ok(combined.lines().find_map(|line| {
+        line.strip_prefix("Identifier=")
+            .map(str::trim)
+            .map(ToOwned::to_owned)
+    }))
+}
+
+#[cfg(target_os = "macos")]
+fn verify_codesign_bundle(bundle_path: &Path) -> Result<(), String> {
+    let output = Command::new("codesign")
+        .args(["--verify", "--deep", "--strict", "--verbose=4"])
+        .arg(bundle_path)
+        .output()
+        .map_err(|error| error.to_string())?;
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let message = if output.stderr.is_empty() {
+        summarize_codesign_output(&output.stdout)
+    } else {
+        summarize_codesign_output(&output.stderr)
+    };
+    Err(message)
+}
+
+#[cfg(target_os = "macos")]
+fn current_app_bundle_signature_issue(expected_identifier: &str) -> Option<String> {
+    let bundle_path = current_app_bundle_path()?;
+    let bundle_display = bundle_path.display().to_string();
+    let code_resources_path = bundle_path.join("Contents/_CodeSignature/CodeResources");
+
+    if !code_resources_path.exists() {
+        return Some(format!(
+            "The running Tino app at {} is missing its macOS signature files. Reinstall the latest Preview app and reopen it before trying paste back again.",
+            bundle_display
+        ));
+    }
+
+    match read_codesign_identifier(&bundle_path) {
+        Ok(Some(actual_identifier)) if actual_identifier != expected_identifier => {
+            return Some(format!(
+                "The running Tino app at {} has the wrong macOS signing identifier (`{}` instead of `{}`). Reinstall the latest Preview app and reopen it before trying paste back again.",
+                bundle_display,
+                actual_identifier,
+                expected_identifier
+            ));
+        }
+        Ok(_) => {}
+        Err(error) => {
+            return Some(format!(
+                "Tino could not inspect the macOS signature for {} ({}). Reinstall the latest Preview app and reopen it before trying paste back again.",
+                bundle_display,
+                error
+            ));
+        }
+    }
+
+    if let Err(error) = verify_codesign_bundle(&bundle_path) {
+        return Some(format!(
+            "The running Tino app at {} has an invalid macOS bundle signature ({}). Reinstall the latest Preview app and reopen it before trying paste back again.",
+            bundle_display,
+            error
+        ));
+    }
+
+    None
 }
 
 #[tauri::command]
@@ -132,7 +277,7 @@ pub fn copy_capture_to_clipboard(
     {
         let replay_timestamp = Local::now().to_rfc3339();
         let replay_hash = copy_capture_to_clipboard_macos(&capture)?;
-        state.register_replay_hash(replay_hash, replay_timestamp)?;
+        state.register_replay_hash(replay_hash, replay_timestamp, capture.capture_id.clone())?;
         return Ok(());
     }
 
@@ -141,6 +286,27 @@ pub fn copy_capture_to_clipboard(
         let _ = state;
         let _ = capture;
         Err("Clipboard replay is only supported on macOS".into())
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn return_capture_to_previous_app(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    capture: ClipboardReplayRequest,
+) -> Result<ClipboardReturnResult, String> {
+    #[cfg(target_os = "macos")]
+    {
+        return return_capture_to_previous_app_macos(&app, state.inner(), &capture);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app;
+        let _ = state;
+        let _ = capture;
+        Err("Clipboard return is only supported on macOS".into())
     }
 }
 
@@ -303,6 +469,420 @@ fn copy_capture_to_clipboard_macos(capture: &ClipboardReplayRequest) -> Result<S
             ))
         }
     }
+}
+
+#[cfg(target_os = "macos")]
+fn return_capture_to_previous_app_macos(
+    app: &AppHandle,
+    state: &AppState,
+    capture: &ClipboardReplayRequest,
+) -> Result<ClipboardReturnResult, String> {
+    let Some(target) = state.clipboard_window_target()? else {
+        log::warn!("clipboard return skipped because no previous app target was recorded");
+        return Ok(ClipboardReturnResult { pasted: false });
+    };
+    let target_name = target
+        .app_name
+        .as_deref()
+        .or(target.bundle_id.as_deref())
+        .unwrap_or("the previous app");
+    let Some(application) = resolve_clipboard_window_target(&target) else {
+        log::warn!(
+            "clipboard return skipped because the previous app target could not be resolved for {}",
+            target_name
+        );
+        return Ok(ClipboardReturnResult { pasted: false });
+    };
+
+    if current_app_bundle_path().is_none() {
+        let authorization_target = current_app_authorization_target();
+        log::warn!(
+            "clipboard return skipped because the current runtime is not a packaged app bundle: {}",
+            authorization_target
+        );
+        return Err(format!(
+            "Tino paste back requires the packaged Preview app. The current process is the unbundled development runtime at {} launched by `pnpm tauri dev`, and macOS cannot grant Accessibility permission to that copy from System Settings. Build/install and run the Preview app instead.",
+            authorization_target
+        ));
+    }
+
+    if let Some(signature_issue) = current_app_bundle_signature_issue(&app.config().identifier) {
+        log::warn!(
+            "clipboard return skipped because the current app bundle signature is invalid: {}",
+            signature_issue
+        );
+        return Err(signature_issue);
+    }
+
+    if !is_accessibility_trusted() {
+        prompt_for_accessibility_permission();
+        let authorization_target = current_app_authorization_target();
+        log::warn!(
+            "clipboard return skipped because Accessibility access is not granted for {} (current app target: {})",
+            target_name,
+            authorization_target
+        );
+        return Err(format!(
+            "Tino needs macOS Accessibility permission before it can paste back into {}. Make sure you enabled the same app copy that is currently running: {}. Then fully quit and reopen that same app before trying again.",
+            target_name,
+            authorization_target
+        ));
+    }
+
+    if let Some(window) = app.get_webview_window("clipboard") {
+        let _ = window.hide();
+    }
+
+    if !activate_target_application(&application) {
+        log::warn!(
+            "clipboard return failed because the previous app could not be reactivated for {}",
+            target_name
+        );
+        return Err("failed to reactivate the previous app".into());
+    }
+
+    if !wait_for_editable_focus(application.processIdentifier()) {
+        log::warn!(
+            "clipboard return skipped because no editable focused input was detected in {}",
+            target_name
+        );
+        return Ok(ClipboardReturnResult { pasted: false });
+    }
+
+    let replay_timestamp = Local::now().to_rfc3339();
+    let replay_hash = copy_capture_to_clipboard_macos(capture)?;
+    state.register_replay_hash(replay_hash, replay_timestamp, capture.capture_id.clone())?;
+    post_command_v_to_pid(application.processIdentifier())?;
+    log::info!("clipboard return pasted successfully into {}", target_name);
+
+    Ok(ClipboardReturnResult { pasted: true })
+}
+
+#[cfg(target_os = "macos")]
+const AX_ERROR_SUCCESS: i32 = 0;
+#[cfg(target_os = "macos")]
+const CF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
+#[cfg(target_os = "macos")]
+const KEYCODE_V: u16 = 9;
+#[cfg(target_os = "macos")]
+const EDITABLE_FOCUS_POLL_ATTEMPTS: usize = 30;
+#[cfg(target_os = "macos")]
+const EDITABLE_FOCUS_POLL_INTERVAL_MS: u64 = 50;
+#[cfg(target_os = "macos")]
+const EDITABLE_ANCESTOR_DEPTH_LIMIT: usize = 8;
+
+#[cfg(target_os = "macos")]
+type AXUIElementRef = *const c_void;
+#[cfg(target_os = "macos")]
+type CFTypeRef = *const c_void;
+#[cfg(target_os = "macos")]
+type CFStringRef = *const c_void;
+
+#[cfg(target_os = "macos")]
+#[link(name = "ApplicationServices", kind = "framework")]
+unsafe extern "C" {
+    fn AXIsProcessTrusted() -> u8;
+    fn AXUIElementCreateSystemWide() -> AXUIElementRef;
+    fn AXUIElementCopyAttributeValue(
+        element: AXUIElementRef,
+        attribute: CFStringRef,
+        value: *mut CFTypeRef,
+    ) -> i32;
+    fn AXUIElementIsAttributeSettable(
+        element: AXUIElementRef,
+        attribute: CFStringRef,
+        settable: *mut u8,
+    ) -> i32;
+    fn AXUIElementGetPid(element: AXUIElementRef, pid: *mut pid_t) -> i32;
+}
+
+#[cfg(target_os = "macos")]
+#[link(name = "CoreFoundation", kind = "framework")]
+unsafe extern "C" {
+    fn CFRelease(value: CFTypeRef);
+    fn CFGetTypeID(value: CFTypeRef) -> usize;
+    fn CFBooleanGetTypeID() -> usize;
+    fn CFBooleanGetValue(value: CFTypeRef) -> u8;
+    fn CFStringGetTypeID() -> usize;
+    fn CFStringGetLength(value: CFStringRef) -> isize;
+    fn CFStringGetMaximumSizeForEncoding(length: isize, encoding: u32) -> isize;
+    fn CFStringGetCString(
+        value: CFStringRef,
+        buffer: *mut c_char,
+        buffer_size: isize,
+        encoding: u32,
+    ) -> u8;
+}
+
+#[cfg(target_os = "macos")]
+struct CfOwned(CFTypeRef);
+
+#[cfg(target_os = "macos")]
+impl CfOwned {
+    fn new(value: CFTypeRef) -> Option<Self> {
+        (!value.is_null()).then_some(Self(value))
+    }
+
+    fn as_ax_ui_element(&self) -> AXUIElementRef {
+        self.0.cast()
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl Drop for CfOwned {
+    fn drop(&mut self) {
+        unsafe {
+            CFRelease(self.0);
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn resolve_clipboard_window_target(
+    target: &ClipboardWindowTarget,
+) -> Option<objc2::rc::Retained<NSRunningApplication>> {
+    if target.process_id > 0 {
+        if let Some(application) =
+            NSRunningApplication::runningApplicationWithProcessIdentifier(target.process_id)
+        {
+            return Some(application);
+        }
+    }
+
+    let bundle_id = target.bundle_id.as_deref()?.trim();
+    if bundle_id.is_empty() {
+        return None;
+    }
+
+    let applications = NSRunningApplication::runningApplicationsWithBundleIdentifier(
+        &NSString::from_str(bundle_id),
+    );
+    applications.firstObject()
+}
+
+#[cfg(target_os = "macos")]
+fn is_accessibility_trusted() -> bool {
+    unsafe { AXIsProcessTrusted() != 0 }
+}
+
+#[cfg(target_os = "macos")]
+fn prompt_for_accessibility_permission() {
+    let status = Command::new("open")
+        .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        .status();
+
+    if let Err(error) = status {
+        log::warn!("failed to open Accessibility settings: {}", error);
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn activate_target_application(application: &NSRunningApplication) -> bool {
+    #[allow(deprecated)]
+    let activation_options = NSApplicationActivationOptions::ActivateAllWindows
+        | NSApplicationActivationOptions::ActivateIgnoringOtherApps;
+
+    let _ = application.unhide();
+    application.activateWithOptions(activation_options)
+}
+
+#[cfg(target_os = "macos")]
+fn wait_for_editable_focus(pid: pid_t) -> bool {
+    for attempt in 0..EDITABLE_FOCUS_POLL_ATTEMPTS {
+        if focused_editable_element_matches_pid(pid) {
+            return true;
+        }
+
+        if attempt + 1 < EDITABLE_FOCUS_POLL_ATTEMPTS {
+            thread::sleep(Duration::from_millis(EDITABLE_FOCUS_POLL_INTERVAL_MS));
+        }
+    }
+
+    false
+}
+
+#[cfg(target_os = "macos")]
+fn focused_editable_element_matches_pid(pid: pid_t) -> bool {
+    let Some(system_wide) = CfOwned::new(unsafe { AXUIElementCreateSystemWide().cast() }) else {
+        return false;
+    };
+    let Some(focused_element) =
+        ax_copy_attribute_value(system_wide.as_ax_ui_element(), "AXFocusedUIElement")
+    else {
+        return false;
+    };
+
+    let focused_element_ref = focused_element.as_ax_ui_element();
+    let mut focused_pid: pid_t = 0;
+    if unsafe { AXUIElementGetPid(focused_element_ref, &mut focused_pid) } != AX_ERROR_SUCCESS
+        || focused_pid != pid
+    {
+        return false;
+    }
+
+    ax_element_or_ancestor_is_editable(focused_element)
+}
+
+#[cfg(target_os = "macos")]
+fn ax_element_or_ancestor_is_editable(element: CfOwned) -> bool {
+    let mut current = Some(element);
+
+    for _ in 0..EDITABLE_ANCESTOR_DEPTH_LIMIT {
+        let Some(candidate) = current.take() else {
+            return false;
+        };
+        let candidate_ref = candidate.as_ax_ui_element();
+
+        if ax_element_looks_editable(candidate_ref) {
+            return true;
+        }
+
+        let Some(parent) = ax_copy_attribute_value(candidate_ref, "AXParent") else {
+            return false;
+        };
+        if parent.as_ax_ui_element() == candidate_ref {
+            return false;
+        }
+
+        current = Some(parent);
+    }
+
+    false
+}
+
+#[cfg(target_os = "macos")]
+fn ax_element_looks_editable(element: AXUIElementRef) -> bool {
+    let is_editable = ax_copy_attribute_value(element, "AXEditable")
+        .as_ref()
+        .and_then(cf_bool_value)
+        .unwrap_or(false);
+    if is_editable {
+        return true;
+    }
+
+    if ax_attribute_is_settable(element, "AXValue") {
+        return true;
+    }
+
+    if ax_attribute_is_settable(element, "AXSelectedTextRange")
+        || ax_copy_attribute_value(element, "AXSelectedTextRange").is_some()
+    {
+        return true;
+    }
+
+    ax_copy_attribute_value(element, "AXRole")
+        .as_ref()
+        .and_then(cf_string_value)
+        .is_some_and(|role| is_text_input_role(role.as_str()))
+}
+
+#[cfg(target_os = "macos")]
+fn ax_copy_attribute_value(element: AXUIElementRef, attribute: &str) -> Option<CfOwned> {
+    let attribute = NSString::from_str(attribute);
+    let mut value: CFTypeRef = std::ptr::null();
+    let status = unsafe {
+        AXUIElementCopyAttributeValue(element, (&*attribute as *const NSString).cast(), &mut value)
+    };
+
+    if status != AX_ERROR_SUCCESS {
+        return None;
+    }
+
+    CfOwned::new(value)
+}
+
+#[cfg(target_os = "macos")]
+fn ax_attribute_is_settable(element: AXUIElementRef, attribute: &str) -> bool {
+    let attribute = NSString::from_str(attribute);
+    let mut settable = 0;
+    (unsafe {
+        AXUIElementIsAttributeSettable(
+            element,
+            (&*attribute as *const NSString).cast(),
+            &mut settable,
+        )
+    }) == AX_ERROR_SUCCESS
+        && settable != 0
+}
+
+#[cfg(target_os = "macos")]
+fn cf_bool_value(value: &CfOwned) -> Option<bool> {
+    if unsafe { CFGetTypeID(value.0) } != unsafe { CFBooleanGetTypeID() } {
+        return None;
+    }
+
+    Some(unsafe { CFBooleanGetValue(value.0) != 0 })
+}
+
+#[cfg(target_os = "macos")]
+fn cf_string_value(value: &CfOwned) -> Option<String> {
+    if unsafe { CFGetTypeID(value.0) } != unsafe { CFStringGetTypeID() } {
+        return None;
+    }
+
+    cf_string_ref_to_string(value.0.cast())
+}
+
+#[cfg(target_os = "macos")]
+fn cf_string_ref_to_string(value: CFStringRef) -> Option<String> {
+    let length = unsafe { CFStringGetLength(value) };
+    if length == 0 {
+        return Some(String::new());
+    }
+
+    let capacity = unsafe { CFStringGetMaximumSizeForEncoding(length, CF_STRING_ENCODING_UTF8) };
+    if capacity <= 0 {
+        return None;
+    }
+
+    let mut buffer = vec![0; capacity as usize + 1];
+    let converted = unsafe {
+        CFStringGetCString(
+            value,
+            buffer.as_mut_ptr().cast(),
+            buffer.len() as isize,
+            CF_STRING_ENCODING_UTF8,
+        ) != 0
+    };
+    if !converted {
+        return None;
+    }
+
+    unsafe { CStr::from_ptr(buffer.as_ptr().cast()) }
+        .to_str()
+        .ok()
+        .map(ToOwned::to_owned)
+}
+
+#[cfg(target_os = "macos")]
+fn is_text_input_role(role: &str) -> bool {
+    matches!(
+        role,
+        "AXComboBox"
+            | "AXSearchField"
+            | "AXSecureTextField"
+            | "AXTextArea"
+            | "AXTextField"
+            | "AXTextView"
+    )
+}
+
+#[cfg(target_os = "macos")]
+fn post_command_v_to_pid(pid: pid_t) -> Result<(), String> {
+    let source = CGEventSource::new(CGEventSourceStateID::HIDSystemState)
+        .ok_or_else(|| "failed to create keyboard event source".to_string())?;
+    let key_down = CGEvent::new_keyboard_event(Some(&source), KEYCODE_V, true)
+        .ok_or_else(|| "failed to create paste key-down event".to_string())?;
+    let key_up = CGEvent::new_keyboard_event(Some(&source), KEYCODE_V, false)
+        .ok_or_else(|| "failed to create paste key-up event".to_string())?;
+
+    CGEvent::set_flags(Some(&key_down), CGEventFlags::MaskCommand);
+    CGEvent::set_flags(Some(&key_up), CGEventFlags::MaskCommand);
+    CGEvent::post_to_pid(pid, Some(&key_down));
+    thread::sleep(Duration::from_millis(8));
+    CGEvent::post_to_pid(pid, Some(&key_up));
+
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]

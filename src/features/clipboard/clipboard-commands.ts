@@ -1,4 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { message } from "@tauri-apps/plugin-dialog";
 
 import { queryKeys } from "@/app/query-keys";
 import { defineCommand, type CommandDefinition } from "@/core/commands";
@@ -8,6 +9,7 @@ import {
   deleteClipboardCapture,
   isTauriRuntime,
   revealPath,
+  returnCaptureToPreviousApp,
 } from "@/lib/tauri";
 import type { ClipboardCapture, DeleteClipboardCaptureResult } from "@/types/shell";
 
@@ -24,16 +26,56 @@ type ClipboardCaptureAssetPayload = {
   path: string;
 };
 
+type ClipboardSelectionDirectionPayload = {
+  direction: "next" | "previous";
+};
+
+type ClipboardConfirmSelectionPayload = {
+  captureId?: string;
+};
+
+function hasOpenClipboardTransientLayer() {
+  return (
+    Boolean(document.querySelector("[data-slot='context-menu-content']"))
+    || Boolean(document.querySelector("[data-slot='alert-dialog-content']"))
+    || Boolean(document.querySelector("[role='listbox']"))
+  );
+}
+
+function isClipboardWindow() {
+  return isTauriRuntime() && getCurrentWindow().label === "clipboard";
+}
+
+function getSelectedVisibleCapture() {
+  const { selectedCaptureId, visibleCaptures } = useClipboardBoardStore.getState();
+  if (visibleCaptures.length === 0) {
+    return null;
+  }
+
+  return (
+    visibleCaptures.find((capture) => capture.id === selectedCaptureId)
+    ?? visibleCaptures[0]
+  );
+}
+
+function getCaptureForConfirmation(
+  payload?: ClipboardConfirmSelectionPayload,
+) {
+  const captureId = payload?.captureId?.trim();
+  if (!captureId) {
+    return getSelectedVisibleCapture();
+  }
+
+  const { visibleCaptures } = useClipboardBoardStore.getState();
+  return visibleCaptures.find((capture) => capture.id === captureId) ?? null;
+}
+
 export const clipboardCommands = [
   defineCommand<void, void>({
     id: "clipboard.dismissWindowSession",
     label: "Dismiss Clipboard Window Session",
     run: async () => {
-      const hasOpenTransientLayer =
-        Boolean(document.querySelector("[data-slot='context-menu-content']"))
-        || Boolean(document.querySelector("[data-slot='alert-dialog-content']"))
-        || Boolean(document.querySelector("[role='listbox']"));
-      if (hasOpenTransientLayer) {
+      if (hasOpenClipboardTransientLayer()) {
         return;
       }
 
@@ -60,6 +102,39 @@ export const clipboardCommands = [
       }
     },
   }),
+  defineCommand<ClipboardSelectionDirectionPayload, void>({
+    id: "clipboard.selectAdjacentCapture",
+    label: "Select Adjacent Capture",
+    isEnabled: ({ direction }) => {
+      const { previewingImageId, visibleCaptures } = useClipboardBoardStore.getState();
+      return (
+        (direction === "next" || direction === "previous")
+        && !previewingImageId
+        && !hasOpenClipboardTransientLayer()
+        && visibleCaptures.length > 0
+      );
+    },
+    run: ({ direction }: ClipboardSelectionDirectionPayload) => {
+      const store = useClipboardBoardStore.getState();
+      const captures = store.visibleCaptures;
+      if (captures.length === 0) {
+        return;
+      }
+
+      const currentIndex = captures.findIndex(
+        (capture) => capture.id === store.selectedCaptureId,
+      );
+      const fallbackIndex = direction === "previous" ? captures.length - 1 : 0;
+      const baseIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
+      const offset = direction === "previous" ? -1 : 1;
+      const nextIndex = Math.min(
+        captures.length - 1,
+        Math.max(0, baseIndex + offset),
+      );
+
+      store.setSelectedCaptureId(captures[nextIndex]?.id ?? captures[0].id);
+    },
+  }),
   defineCommand<void, void>({
     id: "clipboard.closeImagePreview",
     label: "Close Image Preview",
@@ -82,6 +157,66 @@ export const clipboardCommands = [
     isEnabled: ({ captureId }) => Boolean(captureId.trim()),
     run: ({ captureId }: ClipboardCaptureIdPayload) => {
       useClipboardBoardStore.getState().setPreviewingImageId(captureId);
+    },
+  }),
+  defineCommand<ClipboardConfirmSelectionPayload | undefined, void>({
+    id: "clipboard.confirmWindowSelection",
+    label: "Confirm Clipboard Window Selection",
+    isEnabled: (payload) =>
+      isClipboardWindow()
+      && !useClipboardBoardStore.getState().previewingImageId
+      && !hasOpenClipboardTransientLayer()
+      && Boolean(getCaptureForConfirmation(payload)),
+    run: async (payload) => {
+      const capture = getCaptureForConfirmation(payload);
+      if (!capture) {
+        return;
+      }
+
+      try {
+        const pasted = await returnCaptureToPreviousApp(capture);
+        if (!pasted) {
+          await message(
+            "Tino did not find a focused editable input in the previous app, so nothing was pasted. Keep the cursor in the target input and try again.",
+            {
+              title: "No Editable Input Found",
+              kind: "warning",
+            },
+          );
+          return;
+        }
+
+        useClipboardBoardStore.getState().resetState();
+      } catch (error) {
+        const description =
+          error instanceof Error
+            ? error.message
+            : "Clipboard content could not be returned to the previous app.";
+        const requiresAccessibilityPermission = description.includes(
+          "Accessibility permission",
+        );
+        const requiresPackagedPreviewApp = description.includes(
+          "packaged Preview app",
+        );
+        const requiresPreviewReinstall =
+          description.includes("wrong macOS signing identifier")
+          || description.includes("invalid macOS bundle signature")
+          || description.includes("missing its macOS signature files")
+          || description.includes("Reinstall the latest Preview app");
+        await message(description, {
+          title: requiresAccessibilityPermission
+            ? "Accessibility Permission Needed"
+            : requiresPackagedPreviewApp
+              ? "Packaged Preview App Required"
+              : requiresPreviewReinstall
+                ? "Reinstall Preview App"
+            : "Clipboard Return Failed",
+          kind:
+            requiresAccessibilityPermission || requiresPackagedPreviewApp || requiresPreviewReinstall
+              ? "warning"
+              : "error",
+        });
+      }
     },
   }),
   defineCommand<ClipboardCapturePayload, void>({

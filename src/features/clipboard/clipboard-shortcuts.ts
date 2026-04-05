@@ -1,6 +1,50 @@
 import { defineShortcut, type ShortcutDefinition } from "@/core/shortcuts";
 
 export const clipboardShortcuts = [
+  defineShortcut<{ direction: "previous" }, void>({
+    id: "clipboard.selectPreviousCapture",
+    kind: "local",
+    label: "Select Previous Capture",
+    description: "Move the detail panel selection to the previous clipboard item.",
+    defaults: "ArrowUp",
+    scopes: ["clipboard.window"],
+    allowInEditable: true,
+    allowRepeat: true,
+    command: {
+      id: "clipboard.selectAdjacentCapture",
+      payload: () => ({
+        direction: "previous",
+      }),
+    },
+  }),
+  defineShortcut<{ direction: "next" }, void>({
+    id: "clipboard.selectNextCapture",
+    kind: "local",
+    label: "Select Next Capture",
+    description: "Move the detail panel selection to the next clipboard item.",
+    defaults: "ArrowDown",
+    scopes: ["clipboard.window"],
+    allowInEditable: true,
+    allowRepeat: true,
+    command: {
+      id: "clipboard.selectAdjacentCapture",
+      payload: () => ({
+        direction: "next",
+      }),
+    },
+  }),
+  defineShortcut<void, void>({
+    id: "clipboard.confirmWindowSelection",
+    kind: "local",
+    label: "Confirm Clipboard Selection",
+    description: "Return the selected capture to the previously focused app.",
+    defaults: "Enter",
+    scopes: ["clipboard.window"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.confirmWindowSelection",
+    },
+  }),
   defineShortcut<void, void>({
     id: "clipboard.dismissWindow",
     kind: "local",

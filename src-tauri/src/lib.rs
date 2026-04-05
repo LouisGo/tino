@@ -5,9 +5,9 @@ pub mod ipc_schema;
 mod runtime_profile;
 mod storage;
 
-use app_state::AppState;
+use app_state::{AppState, ClipboardWindowTarget};
 #[cfg(target_os = "macos")]
-use objc2_app_kit::NSWindow;
+use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication, NSWindow, NSWorkspace};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -29,6 +29,11 @@ const LOG_MAX_FILE_SIZE_BYTES: u128 = 10_000_000;
 const LOG_KEEP_COUNT: usize = 10;
 const LOG_RETENTION_DAYS: u64 = 14;
 
+pub(crate) fn format_system_time_rfc3339(timestamp: SystemTime) -> Result<String, String> {
+    let datetime = chrono::DateTime::<chrono::Utc>::from(timestamp).with_timezone(&chrono::Local);
+    Ok(datetime.to_rfc3339())
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PersistedWindowState {
@@ -44,6 +49,20 @@ fn window_state_path(app: &AppHandle) -> Option<PathBuf> {
         .app_data_dir()
         .ok()
         .map(|dir| dir.join(WINDOW_STATE_FILE_NAME))
+}
+
+fn current_executable_path() -> Option<PathBuf> {
+    std::env::current_exe().ok()
+}
+
+fn current_app_bundle_path() -> Option<PathBuf> {
+    let executable = current_executable_path()?;
+    let macos_dir = executable.parent()?;
+    let contents_dir = macos_dir.parent()?;
+    let app_bundle = contents_dir.parent()?;
+
+    (app_bundle.extension().and_then(|value| value.to_str()) == Some("app"))
+        .then(|| app_bundle.to_path_buf())
 }
 
 fn load_window_state(app: &AppHandle) -> Option<PersistedWindowState> {
@@ -105,6 +124,7 @@ pub(crate) fn focus_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.unminimize();
+        focus_native_window(&window, true);
         let _ = window.set_focus();
     }
 }
@@ -112,10 +132,39 @@ pub(crate) fn focus_main_window(app: &AppHandle) {
 pub(crate) fn focus_window(window: &tauri::WebviewWindow) {
     let _ = window.show();
     let _ = window.unminimize();
+    focus_native_window(window, false);
     let _ = window.set_focus();
 }
 
+#[cfg(target_os = "macos")]
+fn focus_native_window(window: &tauri::WebviewWindow, activate_all_windows: bool) {
+    #[allow(deprecated)]
+    let activation_options = if activate_all_windows {
+        NSApplicationActivationOptions::ActivateAllWindows
+            | NSApplicationActivationOptions::ActivateIgnoringOtherApps
+    } else {
+        NSApplicationActivationOptions::ActivateIgnoringOtherApps
+    };
+    let current_application = NSRunningApplication::currentApplication();
+    let _ = current_application.activateWithOptions(activation_options);
+
+    let Ok(ns_window) = window.ns_window() else {
+        return;
+    };
+
+    let ns_window: &NSWindow = unsafe { &*ns_window.cast() };
+    ns_window.makeKeyAndOrderFront(None);
+    ns_window.makeKeyWindow();
+    ns_window.makeMainWindow();
+    ns_window.orderFrontRegardless();
+}
+
+#[cfg(not(target_os = "macos"))]
+fn focus_native_window(_window: &tauri::WebviewWindow, _activate_all_windows: bool) {}
+
 pub(crate) fn open_clipboard_window(app: &AppHandle) {
+    record_clipboard_window_target(app);
+
     if let Some(window) = app.get_webview_window("clipboard") {
         focus_window(&window);
         return;
@@ -176,6 +225,38 @@ pub(crate) fn toggle_clipboard_window_visibility(app: &AppHandle) -> Result<bool
 
     Ok(window.is_visible().unwrap_or(true))
 }
+
+#[cfg(target_os = "macos")]
+fn record_clipboard_window_target(app: &AppHandle) {
+    let Some(state) = app.try_state::<AppState>() else {
+        return;
+    };
+
+    let workspace = NSWorkspace::sharedWorkspace();
+    let frontmost = workspace.frontmostApplication();
+    let current = NSRunningApplication::currentApplication();
+
+    let target = frontmost.and_then(|application| {
+        if application.processIdentifier() == current.processIdentifier() {
+            return None;
+        }
+
+        Some(ClipboardWindowTarget {
+            app_name: application.localizedName().map(|value| value.to_string()),
+            bundle_id: application
+                .bundleIdentifier()
+                .map(|value| value.to_string()),
+            process_id: application.processIdentifier(),
+        })
+    });
+
+    if let Err(error) = state.set_clipboard_window_target(target) {
+        log::warn!("failed to record clipboard window target: {}", error);
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn record_clipboard_window_target(_app: &AppHandle) {}
 
 fn prune_expired_logs(app: &AppHandle) {
     let Ok(log_dir) = app.path().app_log_dir() else {
@@ -336,6 +417,13 @@ pub fn run() {
                 runtime_profile::app_env(),
                 runtime_profile::data_channel()
             );
+            log::info!("tauri identifier: {}", app.config().identifier);
+            if let Some(path) = current_executable_path() {
+                log::info!("current executable path: {}", path.display());
+            }
+            if let Some(path) = current_app_bundle_path() {
+                log::info!("current app bundle path: {}", path.display());
+            }
 
             create_tray(app.handle())?;
             restore_main_window_state(app.handle());

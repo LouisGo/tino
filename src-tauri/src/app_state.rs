@@ -116,10 +116,7 @@ impl AppSettings {
                     .map(|value| value.trim().to_string())
                     .filter(|value| !value.is_empty());
 
-                Some((
-                    shortcut_id.to_string(),
-                    AppShortcutOverride { accelerator },
-                ))
+                Some((shortcut_id.to_string(), AppShortcutOverride { accelerator }))
             })
             .collect();
 
@@ -206,6 +203,13 @@ pub struct DeleteClipboardCaptureResult {
     pub deleted: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct ClipboardWindowTarget {
+    pub app_name: Option<String>,
+    pub bundle_id: Option<String>,
+    pub process_id: i32,
+}
+
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipboardPageRequest {
@@ -247,6 +251,7 @@ pub enum CaptureProcessingResult {
     Queued { path: PathBuf, queue_depth: usize },
     Filtered { reason: String },
     Deduplicated,
+    Reused,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -342,6 +347,15 @@ struct BatchFile {
 struct RecentHashEntry {
     hash: String,
     captured_at: String,
+    #[serde(default)]
+    capture_id: Option<String>,
+}
+
+#[derive(Debug)]
+enum CaptureHashDisposition {
+    Fresh,
+    Duplicate,
+    Reused(RecentHashEntry),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -359,6 +373,7 @@ struct StateData {
     settings: AppSettings,
     runtime: RuntimeState,
     pending_replay_hashes: VecDeque<RecentHashEntry>,
+    clipboard_window_target: Option<ClipboardWindowTarget>,
 }
 
 #[derive(Debug)]
@@ -425,6 +440,7 @@ impl AppState {
                     settings,
                     runtime,
                     pending_replay_hashes: VecDeque::new(),
+                    clipboard_window_target: None,
                 }),
             }),
         };
@@ -624,18 +640,26 @@ impl AppState {
             });
         }
 
-        if self.is_duplicate_capture(&stored_capture.hash, &captured_at)? {
-            self.record_capture_outcome(
-                &stored_capture,
-                "deduplicated",
-                None,
-                None,
-                None,
-                queue_depth_for_root(&knowledge_root)?,
-                &captured_at,
-            )?;
+        match self.resolve_capture_hash_disposition(&stored_capture.hash, &captured_at)? {
+            CaptureHashDisposition::Duplicate => {
+                self.record_capture_outcome(
+                    &stored_capture,
+                    "deduplicated",
+                    None,
+                    None,
+                    None,
+                    queue_depth_for_root(&knowledge_root)?,
+                    &captured_at,
+                )?;
 
-            return Ok(CaptureProcessingResult::Deduplicated);
+                return Ok(CaptureProcessingResult::Deduplicated);
+            }
+            CaptureHashDisposition::Reused(replay_entry) => {
+                if self.record_capture_reuse(&stored_capture, &replay_entry, &captured_at)? {
+                    return Ok(CaptureProcessingResult::Reused);
+                }
+            }
+            CaptureHashDisposition::Fresh => {}
         }
 
         if stored_capture.content_kind == "image" {
@@ -676,6 +700,7 @@ impl AppState {
             Some(RecentHashEntry {
                 hash: stored_capture.hash.clone(),
                 captured_at: stored_capture.captured_at.clone(),
+                capture_id: None,
             }),
             queue_depth,
             &captured_at,
@@ -773,18 +798,39 @@ impl AppState {
         Ok(created_batches)
     }
 
-    pub fn register_replay_hash(&self, hash: String, captured_at: String) -> Result<(), String> {
+    pub fn register_replay_hash(
+        &self,
+        hash: String,
+        captured_at: String,
+        capture_id: Option<String>,
+    ) -> Result<(), String> {
         let replay_timestamp = parse_captured_at(&captured_at)?;
 
         {
             let mut state = self.lock_state()?;
             prune_recent_hashes(&mut state.pending_replay_hashes, &replay_timestamp);
-            state
-                .pending_replay_hashes
-                .push_front(RecentHashEntry { hash, captured_at });
+            state.pending_replay_hashes.push_front(RecentHashEntry {
+                hash,
+                captured_at,
+                capture_id: capture_id
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty()),
+            });
         }
 
         Ok(())
+    }
+
+    pub fn set_clipboard_window_target(
+        &self,
+        target: Option<ClipboardWindowTarget>,
+    ) -> Result<(), String> {
+        self.lock_state()?.clipboard_window_target = target;
+        Ok(())
+    }
+
+    pub fn clipboard_window_target(&self) -> Result<Option<ClipboardWindowTarget>, String> {
+        Ok(self.lock_state()?.clipboard_window_target.clone())
     }
 
     pub fn set_watch_running(&self) -> Result<(), String> {
@@ -827,24 +873,100 @@ impl AppState {
         self.persist_runtime_snapshot()
     }
 
-    fn is_duplicate_capture(
+    fn resolve_capture_hash_disposition(
         &self,
         hash: &str,
         captured_at: &DateTime<FixedOffset>,
-    ) -> Result<bool, String> {
+    ) -> Result<CaptureHashDisposition, String> {
         let mut state = self.lock_state()?;
         prune_recent_hashes(&mut state.runtime.recent_hashes, captured_at);
         prune_recent_hashes(&mut state.pending_replay_hashes, captured_at);
 
-        if consume_matching_hash(&mut state.pending_replay_hashes, hash) {
+        if let Some(replay_entry) = consume_matching_hash(&mut state.pending_replay_hashes, hash) {
+            return Ok(CaptureHashDisposition::Reused(replay_entry));
+        }
+
+        Ok(
+            if state
+                .runtime
+                .recent_hashes
+                .iter()
+                .any(|entry| entry.hash == hash)
+            {
+                CaptureHashDisposition::Duplicate
+            } else {
+                CaptureHashDisposition::Fresh
+            },
+        )
+    }
+
+    fn record_capture_reuse(
+        &self,
+        capture: &CaptureRecord,
+        replay_entry: &RecentHashEntry,
+        captured_at: &DateTime<FixedOffset>,
+    ) -> Result<bool, String> {
+        let Some(capture_id) = replay_entry
+            .capture_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        else {
+            return Ok(false);
+        };
+
+        let settings = self.current_settings()?;
+        let knowledge_root = settings.knowledge_root_path();
+        let promoted_legacy = promote_clipboard_history_entry(
+            &knowledge_root,
+            settings.clipboard_history_days,
+            capture_id,
+            &capture.captured_at,
+        )?;
+        let promoted_store = match CaptureHistoryStore::new(&knowledge_root).and_then(|store| {
+            store.promote_capture_reuse(capture_id, &capture.hash, &capture.captured_at)
+        }) {
+            Ok(promoted) => promoted,
+            Err(error) => {
+                warn!("failed to promote replayed capture in sqlite store: {error}");
+                false
+            }
+        };
+
+        if !promoted_store && promoted_legacy {
+            if let Err(sync_error) =
+                reconcile_capture_history_store(&knowledge_root, settings.clipboard_history_days)
+            {
+                warn!("failed to repair sqlite capture history store after replay: {sync_error}");
+            }
+        }
+
+        if !promoted_legacy && !promoted_store {
             return Ok(false);
         }
 
-        Ok(state
-            .runtime
-            .recent_hashes
-            .iter()
-            .any(|entry| entry.hash == hash))
+        let queue_depth = queue_depth_for_root(&knowledge_root)?;
+
+        {
+            let mut state = self.lock_state()?;
+            prune_recent_hashes(&mut state.runtime.recent_hashes, captured_at);
+            state.runtime.recent_hashes.push_front(RecentHashEntry {
+                hash: capture.hash.clone(),
+                captured_at: capture.captured_at.clone(),
+                capture_id: Some(capture_id.to_string()),
+            });
+            state.runtime.watch_status = RUNNING_WATCH_STATUS.into();
+            state.runtime.last_error = None;
+            state.runtime.last_archive_path = None;
+            state.runtime.last_filter_reason = None;
+            state.runtime.queue_depth = queue_depth;
+            state.runtime.updated_at = now_rfc3339();
+            state.runtime.recent_captures.clear();
+        }
+
+        self.persist_runtime_snapshot()?;
+        self.emit_clipboard_updated();
+        Ok(true)
     }
 
     fn record_capture_outcome(
@@ -1296,6 +1418,33 @@ fn append_clipboard_history_entry(
     file.write_all(serialized.as_bytes())
         .and_then(|_| file.write_all(b"\n"))
         .map_err(|error| error.to_string())
+}
+
+fn promote_clipboard_history_entry(
+    knowledge_root: &Path,
+    history_days: u16,
+    capture_id: &str,
+    replayed_at: &str,
+) -> Result<bool, String> {
+    let mut entries_by_day = load_clipboard_history_entries_by_day(knowledge_root, history_days)?;
+    let mut promoted_capture = None;
+
+    for captures_by_id in entries_by_day.values_mut() {
+        if let Some(capture) = captures_by_id.remove(capture_id) {
+            promoted_capture = Some(capture);
+            break;
+        }
+    }
+
+    let Some(mut capture) = promoted_capture else {
+        return Ok(false);
+    };
+
+    capture.captured_at = replayed_at.to_string();
+    let _ = upsert_clipboard_history_entry(&mut entries_by_day, capture)?;
+    entries_by_day.retain(|_, captures_by_id| !captures_by_id.is_empty());
+    persist_clipboard_history_entries(knowledge_root, history_days, &entries_by_day)?;
+    Ok(true)
 }
 
 fn load_capture_history_entries_legacy(
@@ -2635,13 +2784,15 @@ fn prune_recent_hashes(
     });
 }
 
-fn consume_matching_hash(recent_hashes: &mut VecDeque<RecentHashEntry>, hash: &str) -> bool {
+fn consume_matching_hash(
+    recent_hashes: &mut VecDeque<RecentHashEntry>,
+    hash: &str,
+) -> Option<RecentHashEntry> {
     let Some(index) = recent_hashes.iter().position(|entry| entry.hash == hash) else {
-        return false;
+        return None;
     };
 
-    recent_hashes.remove(index);
-    true
+    recent_hashes.remove(index)
 }
 
 fn runtime_file_path(knowledge_root: &Path) -> PathBuf {
