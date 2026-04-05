@@ -2,18 +2,27 @@ use crate::app_state::{AppState, BatchPromotionSummary, CaptureProcessingResult,
 
 #[cfg(target_os = "macos")]
 use {
+    block2::RcBlock,
     chrono::Local,
     image::{GenericImageView, ImageFormat},
     log::{error, info},
+    objc2::{rc::Retained, runtime::AnyObject},
     objc2_app_kit::{
         NSBitmapImageFileType, NSBitmapImageRep, NSPasteboard, NSPasteboardTypeHTML,
         NSPasteboardTypePNG, NSPasteboardTypeRTF, NSPasteboardTypeString, NSPasteboardTypeTIFF,
-        NSRunningApplication, NSWorkspace,
+        NSRunningApplication, NSWorkspace, NSWorkspaceApplicationKey,
+        NSWorkspaceDidActivateApplicationNotification,
     },
-    objc2_foundation::{NSDictionary, NSString},
+    objc2_foundation::{NSDictionary, NSNotification, NSString},
     sha2::{Digest, Sha256},
     std::{
+        collections::VecDeque,
         io::Cursor,
+        ptr::NonNull,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Mutex, OnceLock,
+        },
         thread,
         time::{Duration, Instant},
     },
@@ -26,6 +35,256 @@ const CLIPBOARD_POLL_INTERVAL: Duration = Duration::from_millis(500);
 const BATCH_CHECK_INTERVAL: Duration = Duration::from_secs(15);
 #[cfg(target_os = "macos")]
 const MAINTENANCE_INTERVAL: Duration = Duration::from_secs(60 * 5);
+
+#[cfg(target_os = "macos")]
+struct SourceAttributionConfig {
+    history_limit: usize,
+    screenshot_source_lookback_window: Duration,
+    screenshot_return_window: Duration,
+    screenshot_context_window: Duration,
+    ambiguous_image_types: &'static [&'static str],
+    known_capture_tool_hints: &'static [&'static str],
+    inline_capture_host_hints: &'static [&'static str],
+}
+
+#[cfg(target_os = "macos")]
+const SOURCE_ATTRIBUTION_CONFIG: SourceAttributionConfig = SourceAttributionConfig {
+    history_limit: 16,
+    screenshot_source_lookback_window: Duration::from_secs(5),
+    screenshot_return_window: Duration::from_secs(2),
+    screenshot_context_window: Duration::from_secs(30),
+    ambiguous_image_types: &[
+        "public.png",
+        "public.tiff",
+        "NSPasteboardTypePNG",
+        "NSTIFFPboardType",
+    ],
+    known_capture_tool_hints: &[
+        "cleanshot",
+        "cleanshot x",
+        "longshot",
+        "monosnap",
+        "screen capture",
+        "screencapture",
+        "screencaptureui",
+        "screenshot",
+        "shottr",
+        "snagit",
+        "xnip",
+    ],
+    inline_capture_host_hints: &[
+        "com.tencent.qq",
+        "qq",
+        "tencent qq",
+        "wecom",
+        "wechat work",
+        "wework",
+        "企业微信",
+        "com.tencent.xinwechat",
+        "wechat",
+        "weixin",
+        "feishu",
+        "飞书",
+        "lark",
+        "telegram",
+        "signal",
+        "whatsapp",
+        "discord",
+        "slack",
+        "microsoft teams",
+        "teams",
+        "line",
+        "messenger",
+        "facebook messenger",
+        "skype",
+        "dingtalk",
+        "钉钉",
+    ],
+};
+
+#[cfg(target_os = "macos")]
+static SOURCE_APP_ACTIVATION_HISTORY: OnceLock<SourceAppActivationHistory> = OnceLock::new();
+#[cfg(target_os = "macos")]
+static SOURCE_APP_TRACKER_INSTALLED: AtomicBool = AtomicBool::new(false);
+
+#[cfg(target_os = "macos")]
+#[derive(Clone, Debug, Default)]
+struct SourceAppSnapshot {
+    app_name: Option<String>,
+    bundle_id: Option<String>,
+    icon_bytes: Option<Vec<u8>>,
+}
+
+#[cfg(target_os = "macos")]
+impl SourceAppSnapshot {
+    fn from_parts(
+        app_name: Option<String>,
+        bundle_id: Option<String>,
+        icon_bytes: Option<Vec<u8>>,
+    ) -> Self {
+        Self {
+            app_name,
+            bundle_id,
+            icon_bytes,
+        }
+    }
+
+    fn into_tuple(self) -> (Option<String>, Option<String>, Option<Vec<u8>>) {
+        (self.app_name, self.bundle_id, self.icon_bytes)
+    }
+
+    fn is_empty(&self) -> bool {
+        self.bundle_id
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or_default()
+            .is_empty()
+            && self
+                .app_name
+                .as_deref()
+                .map(str::trim)
+                .unwrap_or_default()
+                .is_empty()
+    }
+
+    fn same_identity(&self, other: &Self) -> bool {
+        match (
+            self.bundle_id.as_deref().map(str::trim),
+            other.bundle_id.as_deref().map(str::trim),
+        ) {
+            (Some(lhs), Some(rhs)) if !lhs.is_empty() && !rhs.is_empty() => lhs == rhs,
+            _ => match (
+                self.app_name.as_deref().map(str::trim),
+                other.app_name.as_deref().map(str::trim),
+            ) {
+                (Some(lhs), Some(rhs)) if !lhs.is_empty() && !rhs.is_empty() => lhs == rhs,
+                _ => false,
+            },
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Clone, Debug)]
+struct AppActivationRecord {
+    observed_at: Instant,
+    app: SourceAppSnapshot,
+}
+
+#[cfg(target_os = "macos")]
+struct SourceAppActivationHistory {
+    self_bundle_id: Option<String>,
+    entries: Mutex<VecDeque<AppActivationRecord>>,
+}
+
+#[cfg(target_os = "macos")]
+impl SourceAppActivationHistory {
+    fn new(self_bundle_id: Option<String>) -> Self {
+        Self {
+            self_bundle_id,
+            entries: Mutex::new(VecDeque::with_capacity(
+                SOURCE_ATTRIBUTION_CONFIG.history_limit,
+            )),
+        }
+    }
+
+    fn record(&self, app: SourceAppSnapshot, observed_at: Instant) {
+        if app.is_empty() {
+            return;
+        }
+
+        let Ok(mut entries) = self.entries.lock() else {
+            return;
+        };
+
+        if let Some(last) = entries.back_mut() {
+            if last.app.same_identity(&app) {
+                last.observed_at = observed_at;
+                last.app = app;
+                return;
+            }
+        }
+
+        entries.push_back(AppActivationRecord { observed_at, app });
+        while entries.len() > SOURCE_ATTRIBUTION_CONFIG.history_limit {
+            entries.pop_front();
+        }
+    }
+
+    fn infer_screenshot_source(
+        &self,
+        frontmost: &SourceAppSnapshot,
+        detected_at: Instant,
+    ) -> Option<SourceAppSnapshot> {
+        let entries = self.entries.lock().ok()?;
+        let recent = entries
+            .iter()
+            .filter(|entry| !self.is_self_app(&entry.app))
+            .filter(|entry| {
+                detected_at.saturating_duration_since(entry.observed_at)
+                    <= SOURCE_ATTRIBUTION_CONFIG.screenshot_context_window
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        infer_screenshot_source_candidate(frontmost, detected_at, &recent)
+    }
+
+    fn is_self_app(&self, app: &SourceAppSnapshot) -> bool {
+        let Some(self_bundle_id) = self.self_bundle_id.as_deref().map(str::trim) else {
+            return false;
+        };
+
+        let Some(bundle_id) = app.bundle_id.as_deref().map(str::trim) else {
+            return false;
+        };
+
+        !self_bundle_id.is_empty() && self_bundle_id == bundle_id
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub fn install_source_app_tracker(self_bundle_id: Option<&str>) -> Result<(), String> {
+    let history = SOURCE_APP_ACTIVATION_HISTORY.get_or_init(|| {
+        SourceAppActivationHistory::new(self_bundle_id.map(|bundle_id| bundle_id.to_string()))
+    });
+
+    if SOURCE_APP_TRACKER_INSTALLED.swap(true, Ordering::SeqCst) {
+        return Ok(());
+    }
+
+    if let Some(frontmost) = current_frontmost_application_snapshot(&NSWorkspace::sharedWorkspace())
+    {
+        history.record(frontmost, Instant::now());
+    }
+
+    let notification_center = NSWorkspace::sharedWorkspace().notificationCenter();
+    let activation_history = SOURCE_APP_ACTIVATION_HISTORY
+        .get()
+        .ok_or_else(|| "source app activation history was not initialized".to_string())?;
+    let activation_block = RcBlock::new(move |notification: NonNull<NSNotification>| {
+        let notification = unsafe { notification.as_ref() };
+        let Some(application) = running_application_from_notification(notification) else {
+            return;
+        };
+
+        activation_history.record(
+            source_app_snapshot_from_running_application(&application),
+            Instant::now(),
+        );
+    });
+
+    unsafe {
+        let _ = notification_center.addObserverForName_object_queue_usingBlock(
+            Some(NSWorkspaceDidActivateApplicationNotification),
+            None,
+            None,
+            &activation_block,
+        );
+    }
+
+    Ok(())
+}
 
 pub fn spawn_clipboard_watcher(state: AppState) {
     #[cfg(target_os = "macos")]
@@ -72,8 +331,9 @@ fn run_macos_clipboard_watcher(state: AppState) {
             Ok(change_count) if change_count == last_change_count => continue,
             Ok(change_count) => {
                 last_change_count = change_count;
+                let detected_at = Instant::now();
 
-                match read_capture_record() {
+                match read_capture_record(detected_at) {
                     Ok(Some(capture)) => match state.process_capture(&capture) {
                         Ok(CaptureProcessingResult::Archived { path }) => {
                             let _ = state.set_watch_running();
@@ -170,10 +430,10 @@ fn current_change_count() -> Result<isize, String> {
 }
 
 #[cfg(target_os = "macos")]
-fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
+fn read_capture_record(detected_at: Instant) -> Result<Option<CaptureRecord>, String> {
     let pasteboard = NSPasteboard::generalPasteboard();
     let (source_app_name, source_app_bundle_id, source_app_icon_bytes) =
-        read_clipboard_source_application(&pasteboard);
+        read_clipboard_source_application(&pasteboard, detected_at);
     let plain_text = unsafe { pasteboard.stringForType(NSPasteboardTypeString) }
         .map(|text| text.to_string())
         .unwrap_or_default();
@@ -262,6 +522,7 @@ fn read_capture_record() -> Result<Option<CaptureRecord>, String> {
 #[cfg(target_os = "macos")]
 fn read_clipboard_source_application(
     pasteboard: &NSPasteboard,
+    detected_at: Instant,
 ) -> (Option<String>, Option<String>, Option<Vec<u8>>) {
     let workspace = NSWorkspace::sharedWorkspace();
     let item = pasteboard
@@ -280,12 +541,29 @@ fn read_clipboard_source_application(
         .and_then(|item| infer_source_bundle_id_from_item_types(&workspace, item))
     {
         return resolve_source_application(&workspace, &bundle_id);
-    };
+    }
 
-    workspace
-        .frontmostApplication()
-        .as_deref()
-        .map(snapshot_running_application)
+    let frontmost = current_frontmost_application_snapshot(&workspace);
+    let suppress_frontmost_fallback = item
+        .as_ref()
+        .is_some_and(|item| should_suppress_frontmost_fallback_for_item(pasteboard, item));
+
+    if suppress_frontmost_fallback {
+        if let Some(frontmost) = frontmost.as_ref() {
+            if let Some(candidate) = infer_screenshot_source_application(frontmost, detected_at) {
+                return candidate.into_tuple();
+            }
+
+            if app_supports_inline_capture_fallback(frontmost) {
+                return frontmost.clone().into_tuple();
+            }
+        }
+
+        return (None, None, None);
+    }
+
+    frontmost
+        .map(SourceAppSnapshot::into_tuple)
         .unwrap_or((None, None, None))
 }
 
@@ -341,6 +619,154 @@ fn infer_source_bundle_id_from_item_types(
 }
 
 #[cfg(target_os = "macos")]
+fn current_frontmost_application_snapshot(workspace: &NSWorkspace) -> Option<SourceAppSnapshot> {
+    workspace
+        .frontmostApplication()
+        .as_deref()
+        .map(source_app_snapshot_from_running_application)
+}
+
+#[cfg(target_os = "macos")]
+fn infer_screenshot_source_application(
+    frontmost: &SourceAppSnapshot,
+    detected_at: Instant,
+) -> Option<SourceAppSnapshot> {
+    SOURCE_APP_ACTIVATION_HISTORY
+        .get()
+        .and_then(|history| history.infer_screenshot_source(frontmost, detected_at))
+}
+
+#[cfg(target_os = "macos")]
+fn infer_screenshot_source_candidate(
+    frontmost: &SourceAppSnapshot,
+    detected_at: Instant,
+    recent_activations: &[AppActivationRecord],
+) -> Option<SourceAppSnapshot> {
+    // Screenshot flows often look like "source app -> capture tool -> source app"
+    // before the poller notices the pasteboard change, so we detect that bounce.
+    let last = recent_activations.last()?;
+    let last_age = detected_at.saturating_duration_since(last.observed_at);
+
+    if !last.app.same_identity(frontmost) {
+        return if last_age <= SOURCE_ATTRIBUTION_CONFIG.screenshot_source_lookback_window
+            && app_looks_like_capture_tool(&last.app)
+        {
+            Some(last.app.clone())
+        } else {
+            None
+        };
+    }
+
+    if last_age > SOURCE_ATTRIBUTION_CONFIG.screenshot_return_window {
+        return None;
+    }
+
+    let previous = recent_activations.iter().rev().nth(1)?;
+    if detected_at.saturating_duration_since(previous.observed_at)
+        > SOURCE_ATTRIBUTION_CONFIG.screenshot_source_lookback_window
+    {
+        return None;
+    }
+
+    if app_looks_like_capture_tool(&previous.app) {
+        return Some(previous.app.clone());
+    }
+
+    let frontmost_return_pattern = recent_activations.iter().rev().skip(2).any(|entry| {
+        detected_at.saturating_duration_since(entry.observed_at)
+            <= SOURCE_ATTRIBUTION_CONFIG.screenshot_context_window
+            && entry.app.same_identity(frontmost)
+    });
+
+    frontmost_return_pattern.then(|| previous.app.clone())
+}
+
+#[cfg(target_os = "macos")]
+fn app_looks_like_capture_tool(app: &SourceAppSnapshot) -> bool {
+    app_matches_hint_list(app, SOURCE_ATTRIBUTION_CONFIG.known_capture_tool_hints)
+}
+
+#[cfg(target_os = "macos")]
+fn app_supports_inline_capture_fallback(app: &SourceAppSnapshot) -> bool {
+    app_matches_hint_list(app, SOURCE_ATTRIBUTION_CONFIG.inline_capture_host_hints)
+}
+
+#[cfg(target_os = "macos")]
+fn app_matches_hint_list(app: &SourceAppSnapshot, hints: &[&str]) -> bool {
+    let bundle_id = app.bundle_id.as_deref().unwrap_or_default();
+    let app_name = app.app_name.as_deref().unwrap_or_default();
+
+    hints
+        .iter()
+        .any(|hint| text_matches_hint(bundle_id, hint) || text_matches_hint(app_name, hint))
+}
+
+#[cfg(target_os = "macos")]
+fn text_matches_hint(text: &str, hint: &str) -> bool {
+    let normalized_text = text.trim().to_ascii_lowercase();
+    let normalized_hint = hint.trim().to_ascii_lowercase();
+
+    if normalized_text.is_empty() || normalized_hint.is_empty() {
+        return false;
+    }
+
+    if normalized_hint.len() <= 3 {
+        return normalized_text == normalized_hint
+            || normalized_text
+                .split(|char: char| !char.is_ascii_alphanumeric())
+                .any(|token| token == normalized_hint);
+    }
+
+    normalized_text.contains(&normalized_hint)
+}
+
+#[cfg(target_os = "macos")]
+fn should_suppress_frontmost_fallback_for_item(
+    pasteboard: &NSPasteboard,
+    item: &objc2_app_kit::NSPasteboardItem,
+) -> bool {
+    let type_names = item
+        .types()
+        .iter()
+        .map(|pasteboard_type| pasteboard_type.to_string())
+        .collect::<Vec<_>>();
+    let has_plain_text = unsafe { pasteboard.stringForType(NSPasteboardTypeString) }
+        .map(|text| !text.to_string().trim().is_empty())
+        .unwrap_or(false);
+    let has_rich_text = unsafe { pasteboard.dataForType(NSPasteboardTypeHTML) }.is_some()
+        || unsafe { pasteboard.dataForType(NSPasteboardTypeRTF) }.is_some();
+
+    should_suppress_frontmost_fallback(&type_names, has_plain_text, has_rich_text)
+}
+
+#[cfg(target_os = "macos")]
+fn should_suppress_frontmost_fallback(
+    type_names: &[String],
+    has_plain_text: bool,
+    has_rich_text: bool,
+) -> bool {
+    let has_image_payload = type_names.iter().any(|type_name| {
+        SOURCE_ATTRIBUTION_CONFIG
+            .ambiguous_image_types
+            .iter()
+            .any(|known_type| type_name == known_type)
+    });
+
+    has_image_payload && !has_plain_text && !has_rich_text
+}
+
+#[cfg(target_os = "macos")]
+fn running_application_from_notification(
+    notification: &NSNotification,
+) -> Option<Retained<NSRunningApplication>> {
+    let user_info = notification.userInfo()?;
+    let typed_user_info = unsafe { user_info.cast_unchecked::<NSString, AnyObject>() };
+    let application = typed_user_info.objectForKey(unsafe { NSWorkspaceApplicationKey })?;
+
+    application.downcast::<NSRunningApplication>().ok()
+}
+
+#[cfg(target_os = "macos")]
 fn resolve_source_application(
     workspace: &NSWorkspace,
     bundle_id: &str,
@@ -350,7 +776,7 @@ fn resolve_source_application(
         NSRunningApplication::runningApplicationsWithBundleIdentifier(&bundle_identifier);
 
     if let Some(application) = applications.firstObject() {
-        return snapshot_running_application(&application);
+        return source_app_snapshot_from_running_application(&application).into_tuple();
     }
 
     let app_url = workspace.URLForApplicationWithBundleIdentifier(&bundle_identifier);
@@ -366,14 +792,14 @@ fn resolve_source_application(
         .map(|path| workspace.iconForFile(&path))
         .and_then(|icon| ns_image_to_png_bytes(&icon));
 
-    (app_name, Some(bundle_id.to_string()), icon_bytes)
+    SourceAppSnapshot::from_parts(app_name, Some(bundle_id.to_string()), icon_bytes).into_tuple()
 }
 
 #[cfg(target_os = "macos")]
-fn snapshot_running_application(
+fn source_app_snapshot_from_running_application(
     application: &NSRunningApplication,
-) -> (Option<String>, Option<String>, Option<Vec<u8>>) {
-    let name = application.localizedName().map(|value| value.to_string());
+) -> SourceAppSnapshot {
+    let app_name = application.localizedName().map(|value| value.to_string());
     let bundle_id = application
         .bundleIdentifier()
         .map(|value| value.to_string());
@@ -381,7 +807,7 @@ fn snapshot_running_application(
         .icon()
         .and_then(|icon| ns_image_to_png_bytes(&icon));
 
-    (name, bundle_id, icon_bytes)
+    SourceAppSnapshot::from_parts(app_name, bundle_id, icon_bytes)
 }
 
 #[cfg(target_os = "macos")]
@@ -660,4 +1086,137 @@ fn looks_like_link(input: &str) -> bool {
     trimmed.lines().count() == 1
         && !trimmed.contains(char::is_whitespace)
         && (trimmed.starts_with("https://") || trimmed.starts_with("http://"))
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod tests {
+    use super::{
+        app_looks_like_capture_tool, app_supports_inline_capture_fallback,
+        infer_screenshot_source_candidate, should_suppress_frontmost_fallback, text_matches_hint,
+        AppActivationRecord, SourceAppSnapshot,
+    };
+    use std::time::{Duration, Instant};
+
+    fn snapshot(name: &str, bundle_id: &str) -> SourceAppSnapshot {
+        SourceAppSnapshot::from_parts(Some(name.to_string()), Some(bundle_id.to_string()), None)
+    }
+
+    fn activation(now: Instant, age: Duration, name: &str, bundle_id: &str) -> AppActivationRecord {
+        AppActivationRecord {
+            observed_at: now - age,
+            app: snapshot(name, bundle_id),
+        }
+    }
+
+    #[test]
+    fn infers_capture_tool_when_frontmost_app_returns_after_screenshot() {
+        let now = Instant::now();
+        let safari = snapshot("Safari", "com.apple.Safari");
+        let recent = vec![
+            activation(now, Duration::from_secs(12), "Safari", "com.apple.Safari"),
+            activation(
+                now,
+                Duration::from_millis(900),
+                "Screenshot",
+                "com.apple.Screenshot",
+            ),
+            activation(
+                now,
+                Duration::from_millis(150),
+                "Safari",
+                "com.apple.Safari",
+            ),
+        ];
+
+        let inferred = infer_screenshot_source_candidate(&safari, now, &recent)
+            .expect("should infer the screenshot tool");
+
+        assert_eq!(inferred.bundle_id.as_deref(), Some("com.apple.Screenshot"));
+    }
+
+    #[test]
+    fn does_not_mislabel_regular_app_switch_as_screenshot_source() {
+        let now = Instant::now();
+        let preview = snapshot("Preview", "com.apple.Preview");
+        let recent = vec![
+            activation(now, Duration::from_secs(9), "Safari", "com.apple.Safari"),
+            activation(
+                now,
+                Duration::from_millis(200),
+                "Preview",
+                "com.apple.Preview",
+            ),
+        ];
+
+        let inferred = infer_screenshot_source_candidate(&preview, now, &recent);
+
+        assert!(inferred.is_none());
+    }
+
+    #[test]
+    fn recognizes_common_capture_tool_names() {
+        let screenshot = snapshot("ScreenCaptureUI", "com.apple.screencaptureui");
+        let cleanshot = snapshot("CleanShot X", "com.bjango.cleanshotx");
+        let shottr = snapshot("Shottr", "cc.ffitch.shottr");
+        let browser = snapshot("Safari", "com.apple.Safari");
+
+        assert!(app_looks_like_capture_tool(&screenshot));
+        assert!(app_looks_like_capture_tool(&cleanshot));
+        assert!(app_looks_like_capture_tool(&shottr));
+        assert!(!app_looks_like_capture_tool(&browser));
+    }
+
+    #[test]
+    fn recognizes_inline_capture_hosts() {
+        let qq = snapshot("QQ", "com.tencent.qq");
+        let wechat = snapshot("WeChat", "com.tencent.xinWeChat");
+        let wecom = snapshot("企业微信", "com.tencent.WeWorkMac");
+        let feishu = snapshot("飞书", "com.bytedance.feishu");
+        let telegram = snapshot("Telegram", "ru.keepcoder.Telegram");
+        let signal = snapshot("Signal", "org.whispersystems.signal-desktop");
+        let whatsapp = snapshot("WhatsApp", "net.whatsapp.WhatsApp");
+        let browser = snapshot("Safari", "com.apple.Safari");
+
+        assert!(app_supports_inline_capture_fallback(&qq));
+        assert!(app_supports_inline_capture_fallback(&wechat));
+        assert!(app_supports_inline_capture_fallback(&wecom));
+        assert!(app_supports_inline_capture_fallback(&feishu));
+        assert!(app_supports_inline_capture_fallback(&telegram));
+        assert!(app_supports_inline_capture_fallback(&signal));
+        assert!(app_supports_inline_capture_fallback(&whatsapp));
+        assert!(!app_supports_inline_capture_fallback(&browser));
+    }
+
+    #[test]
+    fn short_hints_match_tokens_but_not_unrelated_longer_words() {
+        assert!(text_matches_hint("QQ", "qq"));
+        assert!(text_matches_hint("com.tencent.qq", "qq"));
+        assert!(!text_matches_hint("QQMusic", "qq"));
+        assert!(!text_matches_hint("com.tencent.qqmusic", "qq"));
+    }
+
+    #[test]
+    fn suppresses_frontmost_fallback_for_ambiguous_image_only_payloads() {
+        let type_names = vec![
+            "public.png".to_string(),
+            "org.nspasteboard.AutoGeneratedType".to_string(),
+        ];
+
+        assert!(should_suppress_frontmost_fallback(
+            &type_names,
+            false,
+            false
+        ));
+    }
+
+    #[test]
+    fn keeps_frontmost_fallback_for_text_payloads() {
+        let type_names = vec!["public.utf8-plain-text".to_string()];
+
+        assert!(!should_suppress_frontmost_fallback(
+            &type_names,
+            true,
+            false
+        ));
+    }
 }

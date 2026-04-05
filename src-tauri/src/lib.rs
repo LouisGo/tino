@@ -303,6 +303,12 @@ pub fn run() {
             configure_native_macos_window(app.handle());
 
             let app_state = AppState::new(app.handle())?;
+            #[cfg(target_os = "macos")]
+            if let Err(error) =
+                capture::install_source_app_tracker(Some(app.config().identifier.as_str()))
+            {
+                log::warn!("failed to install source app tracker: {}", error);
+            }
             capture::spawn_clipboard_watcher(app_state.clone());
             app.manage(app_state);
 
