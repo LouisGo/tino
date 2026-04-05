@@ -2,6 +2,14 @@
 
 This repository uses Rust as the single source of truth for Tauri IPC types and commands.
 
+## Shared Project Skills
+
+Shared repo-local skills live under `.agents/skills/`.
+
+- Read `.agents/skills/tino-task-router/SKILL.md` when the task is mainly about deciding what context to load or which planning doc to trust.
+- Read `.agents/skills/tino-ai-review-phase1/SKILL.md` before working on `/ai`, `applyBatchDecision`, live batch behavior, or the mock review chain.
+- Keep these skills short and pointer-based. Do not duplicate their content into README or handoff docs.
+
 ## Required IPC Flow
 
 Use this flow whenever a renderer-facing type crosses the Rust <-> renderer boundary.
