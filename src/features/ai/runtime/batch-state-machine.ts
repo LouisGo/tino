@@ -27,10 +27,12 @@ const stateTransitions: Record<
     mark_failed: "failed",
   },
   review_pending: {
+    start_run: "running",
     submit_review: "reviewed",
     mark_failed: "failed",
   },
   reviewed: {
+    start_run: "running",
     begin_persist: "persisting",
     mark_failed: "failed",
   },

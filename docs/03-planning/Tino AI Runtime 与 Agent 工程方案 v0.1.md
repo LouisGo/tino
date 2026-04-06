@@ -108,7 +108,7 @@
 
 - 读取 AI Provider 配置
 - 基于 `Vercel AI SDK Core` 创建模型客户端
-- 通过 `@ai-sdk/openai-compatible` 适配 OpenAI Compatible Provider
+- 通过 `@ai-sdk/openai` 适配 OpenAI / OpenAI-compatible `Responses API`
 - 统一处理超时、网络错误、认证失败、空响应等基础错误
 - 提供 `generateObject` 这类结构化调用入口
 
@@ -440,7 +440,7 @@ src-tauri/src/commands/
 任务：
 
 - 接入 `Vercel AI SDK Core`
-- 接入 `@ai-sdk/openai-compatible`
+- 接入 `@ai-sdk/openai`
 - 打通 provider config -> model client -> `generateObject`
 - 建立统一错误分类
 - 实现单批次手动触发运行

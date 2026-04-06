@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useForm } from "@tanstack/react-form";
 
 import {
+  getDefaultRuntimeProviderBaseUrlForModel,
   getRuntimeProviderFormValues,
+  isDeepSeekRuntimeProviderModel,
   normalizeRuntimeProviderApiKey,
   normalizeRuntimeProviderBaseUrl,
   normalizeRuntimeProviderModel,
@@ -50,7 +52,10 @@ export function useRuntimeProviderForm({
         return false;
       }
 
-      const normalizedValue = normalizeRuntimeProviderBaseUrl(value);
+      const normalizedValue = normalizeRuntimeProviderBaseUrl(
+        value,
+        form.state.values.model,
+      );
       patchSettingsDraft({ baseUrl: normalizedValue });
 
       if (form.state.values.baseUrl !== normalizedValue) {
@@ -65,11 +70,30 @@ export function useRuntimeProviderForm({
   const commitModel = useCallback(
     (value: string) => {
       const normalizedValue = normalizeRuntimeProviderModel(value);
-      patchSettingsDraft({ model: normalizedValue });
+      const currentBaseUrl = form.state.values.baseUrl.trim();
+      const previousDefaultBaseUrl = getDefaultRuntimeProviderBaseUrlForModel(
+        form.state.values.model,
+      );
+      const nextDefaultBaseUrl = getDefaultRuntimeProviderBaseUrlForModel(normalizedValue);
+      const forceOfficialBaseUrl = isDeepSeekRuntimeProviderModel(normalizedValue);
+      const shouldReplaceBaseUrl =
+        forceOfficialBaseUrl
+        || currentBaseUrl.length === 0
+        || currentBaseUrl === previousDefaultBaseUrl;
+      const nextBaseUrl = shouldReplaceBaseUrl ? nextDefaultBaseUrl : currentBaseUrl;
+
+      patchSettingsDraft({
+        baseUrl: nextBaseUrl,
+        model: normalizedValue,
+      });
+
+      if (form.state.values.baseUrl !== nextBaseUrl) {
+        form.setFieldValue("baseUrl", nextBaseUrl);
+      }
 
       return normalizedValue;
     },
-    [patchSettingsDraft],
+    [form, patchSettingsDraft],
   );
 
   const commitApiKey = useCallback(

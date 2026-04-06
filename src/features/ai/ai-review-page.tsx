@@ -42,6 +42,7 @@ import { getAiBatchPayload, getReadyAiBatches } from "@/lib/tauri-ai"
 import { formatRelativeTimestamp } from "@/lib/time"
 import type {
   AiBatchPayload,
+  ApplyBatchDecisionResult,
   BatchDecisionCluster,
   BatchDecisionReview,
   ReviewAction,
@@ -239,14 +240,21 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
     feedbackOpen,
     feedbackReasons,
     feedbackStatus,
+    liveRunError,
+    liveRunProgress,
+    liveRunSummary,
+    providerAccess,
     reviewDraft,
     reviewNote,
+    runLiveReviewMutation,
     runtimeState,
+    settingsQuery,
     setFeedbackOpen,
     setFeedbackReasons,
     setFeedbackStatus,
     setReviewNote,
     setSubmitAction,
+    submitResult,
     setValueFeedback,
     submitAction,
     submitQuickFeedback,
@@ -254,11 +262,66 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
     valueFeedback,
   } = useAiReviewWorkspace(payload)
 
+  const isPreviewResult = isMockAiBatchId(payload.batch.id)
+
   if (!reviewDraft) {
     return (
       <Card className="overflow-hidden border-border/80 bg-surface-panel">
-        <CardContent className="flex min-h-[420px] items-center justify-center p-8 text-center text-sm leading-7 text-muted-foreground">
-          The preview result could not be built for this batch.
+        <CardHeader className="border-b border-border/70">
+          <CardTitle>Run One Live Candidate</CardTitle>
+          <CardDescription>
+            This hidden intervention step runs the current provider once against the
+            ready batch and keeps the result in renderer memory until you apply it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{formatBatchRuntimeStateLabel(runtimeState)}</Badge>
+            <Badge variant="secondary">Live batch</Badge>
+            <Badge variant="secondary">
+              {providerAccess?.providerLabel ?? "Provider pending"}
+            </Badge>
+          </div>
+
+          <p className="text-sm leading-6 text-muted-foreground">
+            Tino will call the configured model, validate the structured result, and
+            turn it into a candidate review. Applying that result now writes to
+            controlled topic or inbox files through the Rust boundary.
+          </p>
+
+          {liveRunError ? (
+            <div className="rounded-[18px] border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm leading-6 text-destructive">
+              {liveRunError}
+            </div>
+          ) : null}
+
+          {liveRunProgress ? <LiveRunProgressCard progress={liveRunProgress} /> : null}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              onClick={() => runLiveReviewMutation.mutate()}
+              disabled={!providerAccess?.isConfigured || settingsQuery.isLoading || runLiveReviewMutation.isPending}
+            >
+              <RefreshCcw className={runLiveReviewMutation.isPending ? "animate-spin" : ""} />
+              {runLiveReviewMutation.isPending ? "Running live candidate" : "Run live candidate"}
+            </Button>
+
+            <Button type="button" variant="outline" asChild>
+              <Link to="/settings">
+                Open settings
+                <ArrowUpRight className="size-3.5" />
+              </Link>
+            </Button>
+          </div>
+
+          <p className="text-xs leading-6 text-muted-foreground">
+            {settingsQuery.isLoading
+              ? "Loading provider settings..."
+              : providerAccess?.isConfigured
+                ? "Provider looks ready. This run is manual on purpose."
+                : "Base URL, model, and API key must be configured before this batch can run live."}
+          </p>
         </CardContent>
       </Card>
     )
@@ -266,13 +329,13 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
 
   const {
     capturesById,
-    isPreviewResult,
     orderedClusters,
     outcomeSummary,
     quickConfirmAction,
     reviewSignals,
     visibleTags,
   } = buildAiOrganizerWorkspaceViewState(payload, reviewDraft, editedClusterIds)
+  const isPersistedResult = runtimeState === "persisted"
 
   return (
     <div className="space-y-4">
@@ -282,15 +345,90 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
             {isPreviewResult ? "Preview example" : "Live batch"}
           </Badge>
           <Badge variant="secondary">
-            {isPreviewResult ? "Example sort" : "Trial sorting pass"}
+            {isPreviewResult ? "Example sort" : "Manual live candidate"}
           </Badge>
+          {!isPreviewResult && liveRunSummary ? (
+            <Badge variant="secondary">{liveRunSummary.metadata.responseModel}</Badge>
+          ) : null}
         </div>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
           {isPreviewResult
             ? "This is example data for previewing the review flow."
-            : "You are reviewing a live batch with the current trial sorting pass. Saving your review is real, but Tino still will not write topic pages until the next phase is connected."}
+            : liveRunSummary
+              ? `Manual live candidate generated in ${liveRunSummary.metadata.durationMs} ms via ${liveRunSummary.metadata.providerLabel}. Applying it now writes the routed output into topic or inbox files.`
+              : "This batch now holds a live candidate result in renderer memory. Review it here before applying it to the knowledge layer."}
         </p>
       </div>
+
+      {!isPreviewResult && liveRunSummary ? (
+        <Card className="overflow-hidden border-border/80 bg-surface-panel">
+          <CardContent className="grid gap-3 p-4 md:grid-cols-4">
+            <RunMetric
+              label="Model"
+              value={liveRunSummary.metadata.responseModel}
+              hint={liveRunSummary.metadata.providerLabel}
+            />
+            <RunMetric
+              label="Duration"
+              value={`${liveRunSummary.metadata.durationMs} ms`}
+              hint="Single manual run"
+            />
+            <RunMetric
+              label="Tokens"
+              value={formatTokenSummary(
+                liveRunSummary.metadata.inputTokens,
+                liveRunSummary.metadata.outputTokens,
+              )}
+              hint="Input + output"
+            />
+            <RunMetric
+              label="Topic Refs"
+              value={`${liveRunSummary.relevantTopicCount}`}
+              hint="Top-N context"
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {runLiveReviewMutation.isPending && liveRunProgress ? (
+        <LiveRunProgressCard progress={liveRunProgress} />
+      ) : null}
+
+      {submitResult ? (
+        <Card className="overflow-hidden border-border/80 bg-surface-panel">
+          <CardHeader className="border-b border-border/70">
+            <CardTitle>Knowledge Write Completed</CardTitle>
+            <CardDescription>{submitResult.message}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">
+                {formatBatchRuntimeStateLabel(submitResult.runtimeState)}
+              </Badge>
+              <Badge variant="secondary">
+                {submitResult.persistedOutputs.length} output
+                {submitResult.persistedOutputs.length === 1 ? "" : "s"}
+              </Badge>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {submitResult.persistedOutputs.map((output) => (
+                <div
+                  key={output.clusterId}
+                  className="rounded-[20px] border border-border/70 bg-background/85 px-4 py-4"
+                >
+                  <p className="text-sm font-semibold">
+                    {formatPersistedOutputTitle(output)}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {formatPersistedOutputDetail(output)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="overflow-hidden border-border/80 bg-surface-panel">
         <CardContent className="space-y-5 p-5">
@@ -316,11 +454,24 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
 
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">
-                {isPreviewResult ? "Preview result" : "Live batch"}
+                {isPreviewResult ? "Preview result" : "Live candidate"}
               </Badge>
               <Badge variant="secondary">{payload.captures.length} items</Badge>
               {editedClusterIds.length ? (
                 <Badge variant="secondary">{editedClusterIds.length} edit(s)</Badge>
+              ) : null}
+              {!isPreviewResult ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => runLiveReviewMutation.mutate()}
+                  disabled={runLiveReviewMutation.isPending || isPersistedResult}
+                >
+                  <RefreshCcw className={runLiveReviewMutation.isPending ? "animate-spin" : ""} />
+                  {runLiveReviewMutation.isPending ? "Running" : "Rerun candidate"}
+                </Button>
               ) : null}
             </div>
           </div>
@@ -601,8 +752,16 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
               </Badge>
               <Badge variant="secondary">{payload.batch.id}</Badge>
               <Badge variant="secondary">
-                {isPreviewResult ? "Preview example" : "Live batch + trial sort"}
+                {isPreviewResult ? "Preview example" : "Live batch + live candidate"}
               </Badge>
+              {!isPreviewResult && liveRunSummary ? (
+                <Badge variant="secondary">
+                  {formatTokenSummary(
+                    liveRunSummary.metadata.inputTokens,
+                    liveRunSummary.metadata.outputTokens,
+                  )}
+                </Badge>
+              ) : null}
             </div>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
               Need provider or model changes?{" "}
@@ -715,13 +874,13 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
               type="button"
               variant="outline"
               onClick={() =>
-                void submitReviewMutation.mutateAsync({
+                submitReviewMutation.mutate({
                   actionOverride: submitAction,
                 })
               }
-              disabled={submitReviewMutation.isPending}
+              disabled={submitReviewMutation.isPending || isPersistedResult}
             >
-              Submit Detailed Review
+              Apply Detailed Review
             </Button>
           </div>
         </div>
@@ -766,24 +925,178 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
               : [...current, reason],
           )
         }
-        primaryActionLabel={editedClusterIds.length ? "Keep Edited Result" : "Keep This Result"}
+        primaryActionLabel={editedClusterIds.length ? "Apply Edited Result" : "Apply This Result"}
         onPrimaryAction={() =>
-          void submitReviewMutation.mutateAsync({
+          submitReviewMutation.mutate({
             actionOverride: quickConfirmAction,
           })
         }
         primaryPending={submitReviewMutation.isPending}
-        primaryDisabled={!valueFeedback}
+        primaryDisabled={!valueFeedback || isPersistedResult}
         secondaryActionLabel="Close"
         footerNote={
-          valueFeedback
-            ? "This submits review feedback only. File writes still stay disabled in this phase."
+          isPersistedResult
+            ? "This batch has already been persisted. Refresh or choose another batch if you want a new pass."
+            : valueFeedback
+            ? "This applies the current result and writes the routed output into topic or inbox files."
             : "Choose one rating first. Detailed reasons are optional."
         }
         status={feedbackStatus}
       />
     </div>
   )
+}
+
+function RunMetric({
+  hint,
+  label,
+  value,
+}: {
+  hint: string
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-[20px] border border-border/70 bg-background/85 px-4 py-4">
+      <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-semibold">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{hint}</p>
+    </div>
+  )
+}
+
+function LiveRunProgressCard({
+  progress,
+}: {
+  progress: {
+    eventCount: number
+    firstReasoningLatencyMs: number | null
+    firstTextLatencyMs: number | null
+    lastEventType: string | null
+    phase: "starting" | "streaming" | "fallback"
+    receivedChars: number
+    reasoningChars: number
+    reasoningText: string
+    text: string
+  }
+}) {
+  const thinkingText = progress.reasoningText.trim()
+  const previewText = progress.text.trim()
+  const hasThinkingTrace = progress.reasoningChars > 0 || thinkingText.length > 0
+  const statusCopy =
+    progress.phase === "starting"
+      ? "Request sent. Waiting for provider activity."
+      : progress.phase === "streaming"
+        ? progress.receivedChars > 0
+          ? hasThinkingTrace
+            ? "Provider is exposing its thinking trace and streaming the final JSON."
+            : "Provider is streaming a JSON response."
+          : hasThinkingTrace
+            ? "Provider is still thinking before the final JSON arrives."
+            : "Provider is connected and still thinking. Some providers stay silent until the final JSON arrives."
+        : "Streaming path failed after retries. Retrying once with the sync fallback."
+
+  return (
+    <Card className="overflow-hidden border-border/80 bg-surface-panel">
+      <CardHeader className="border-b border-border/70">
+        <CardTitle>Live Run Status</CardTitle>
+        <CardDescription>{statusCopy}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{formatLiveRunPhaseLabel(progress.phase)}</Badge>
+          <Badge variant="secondary">{progress.eventCount} events</Badge>
+          {progress.reasoningChars > 0 ? (
+            <Badge variant="secondary">{progress.reasoningChars} thinking chars</Badge>
+          ) : null}
+          <Badge variant="secondary">{progress.receivedChars} chars</Badge>
+          {progress.firstReasoningLatencyMs !== null ? (
+            <Badge variant="secondary">Thinking {progress.firstReasoningLatencyMs} ms</Badge>
+          ) : null}
+          {progress.firstTextLatencyMs !== null ? (
+            <Badge variant="secondary">First token {progress.firstTextLatencyMs} ms</Badge>
+          ) : null}
+          {progress.lastEventType ? (
+            <Badge variant="secondary">{progress.lastEventType}</Badge>
+          ) : null}
+        </div>
+
+        {hasThinkingTrace ? (
+          <div className="rounded-[20px] border border-border/70 bg-background/85 px-4 py-4">
+            <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+              Thinking Trace
+            </p>
+            <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-6 text-muted-foreground">
+              {thinkingText || "No thinking text received yet."}
+            </pre>
+          </div>
+        ) : null}
+
+        <div className="rounded-[20px] border border-border/70 bg-background/85 px-4 py-4">
+          <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+            Output Preview
+          </p>
+          <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-6 text-muted-foreground">
+            {previewText || "No final text received yet."}
+          </pre>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function formatLiveRunPhaseLabel(phase: "starting" | "streaming" | "fallback") {
+  if (phase === "starting") {
+    return "Waiting"
+  }
+
+  if (phase === "streaming") {
+    return "Streaming"
+  }
+
+  return "Fallback"
+}
+
+function formatTokenSummary(inputTokens: number | undefined, outputTokens: number | undefined) {
+  if (inputTokens === undefined && outputTokens === undefined) {
+    return "Tokens unavailable"
+  }
+
+  const input = inputTokens ?? 0
+  const output = outputTokens ?? 0
+  return `${input} in / ${output} out`
+}
+
+function formatPersistedOutputTitle(
+  output: ApplyBatchDecisionResult["persistedOutputs"][number],
+) {
+  switch (output.destination) {
+    case "topic":
+      return output.topicName ?? output.topicSlug ?? "Topic write"
+    case "inbox":
+      return "Inbox write"
+    case "discard":
+      return "Discarded"
+  }
+}
+
+function formatPersistedOutputDetail(
+  output: ApplyBatchDecisionResult["persistedOutputs"][number],
+) {
+  switch (output.destination) {
+    case "topic":
+      return output.filePath
+        ? `${output.filePath} · cluster ${output.clusterId}`
+        : `cluster ${output.clusterId}`
+    case "inbox":
+      return output.filePath
+        ? `${output.filePath} · cluster ${output.clusterId}`
+        : `cluster ${output.clusterId}`
+    case "discard":
+      return `No file write · cluster ${output.clusterId}`
+  }
 }
 
 function buildAiOrganizerWorkspaceViewState(

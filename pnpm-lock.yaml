@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@ai-sdk/openai-compatible':
-        specifier: ^2.0.38
-        version: 2.0.38(zod@4.3.6)
+      '@ai-sdk/openai':
+        specifier: ^3.0.50
+        version: 3.0.50(zod@4.3.6)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -174,8 +174,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/openai-compatible@2.0.38':
-    resolution: {integrity: sha512-rwyHjQRl93dv+/YftsnBd+nhIip92ltOcpP0iCawSptO09rabYclh2o/7G3QXNtTtVhFgESpbwjcBKTmWP3k2A==}
+  '@ai-sdk/openai@3.0.50':
+    resolution: {integrity: sha512-7M7bklrS+gckzPdpQpC3iG5aN5aQPRJdAJQ5jt7sEgYCqDgUuef9x4Nd570+ghIfKTZvV6tSqeeTuD6De/bZig==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -2481,7 +2481,7 @@ snapshots:
       '@vercel/oidc': 3.1.0
       zod: 4.3.6
 
-  '@ai-sdk/openai-compatible@2.0.38(zod@4.3.6)':
+  '@ai-sdk/openai@3.0.50(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@ai-sdk/provider-utils': 4.0.22(zod@4.3.6)

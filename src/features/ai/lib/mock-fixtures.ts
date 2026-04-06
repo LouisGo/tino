@@ -191,11 +191,41 @@ export function isMockAiBatchId(batchId: string) {
 export function buildMockApplyBatchDecisionResult(
   request: ApplyBatchDecisionRequest,
 ): ApplyBatchDecisionResult {
+  const persistedOutputs = request.review.clusters.map((cluster) => {
+    const destination: ApplyBatchDecisionResult["persistedOutputs"][number]["destination"] =
+      request.feedback.action === "discard"
+        ? "discard"
+        : request.feedback.action === "reroute_to_inbox"
+          ? cluster.decision === "discard"
+            ? "discard"
+            : "inbox"
+          : cluster.decision === "archive_to_topic"
+            ? "topic"
+            : cluster.decision === "send_to_inbox"
+              ? "inbox"
+              : "discard"
+
+    return {
+      clusterId: cluster.clusterId,
+      destination,
+      filePath:
+        destination === "topic"
+          ? `topics/${cluster.topicSlugSuggestion ?? "mock-topic"}.md`
+          : destination === "inbox"
+            ? "_inbox/2026-04-06.md"
+            : null,
+      topicSlug: destination === "topic" ? (cluster.topicSlugSuggestion ?? "mock-topic") : null,
+      topicName:
+        destination === "topic" ? (cluster.topicNameSuggestion ?? "Mock Topic") : null,
+    }
+  })
+
   return {
     batchId: request.batchId,
     accepted: true,
     mocked: true,
-    runtimeState: "reviewed",
-    message: `Mock review accepted via ${request.feedback.action} at ${nowIsoString()}.`,
+    runtimeState: "persisted",
+    message: `Mock apply completed via ${request.feedback.action} at ${nowIsoString()}.`,
+    persistedOutputs,
   }
 }

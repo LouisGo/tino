@@ -1,17 +1,26 @@
-import { useEffect, useState } from "react"
+import { startTransition, useEffect, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { queryKeys } from "@/app/query-keys"
 import type { FloatingFeedbackStatus } from "@/components/feedback/floating-feedback-card"
 import { buildMockBatchReview } from "@/features/ai/lib/mock-review"
+import { resolveProviderAccessConfig, type ProviderCallMetadata } from "@/features/ai/lib/provider-access"
+import { isMockAiBatchId } from "@/features/ai/lib/mock-fixtures"
 import { transitionBatchRuntimeState } from "@/features/ai/runtime/batch-state-machine"
+import {
+  isLiveBatchReviewError,
+  runLiveBatchReview,
+  type LiveBatchReviewProgress,
+} from "@/features/ai/runtime/live-batch-review"
 import { createRendererLogger } from "@/lib/logger"
+import { getAppSettings } from "@/lib/tauri"
 import { applyBatchDecision } from "@/lib/tauri-ai"
 import type {
   AiBatchPayload,
   AiBatchRuntimeState,
+  ApplyBatchDecisionResult,
   BatchDecisionReview,
   ReviewAction,
 } from "@/types/shell"
@@ -34,6 +43,13 @@ type SubmitReviewInput = {
   feedbackReasonsOverride?: string[]
 }
 
+type LiveRunSummary = {
+  metadata: ProviderCallMetadata
+  relevantTopicCount: number
+}
+
+type LiveRunProgress = LiveBatchReviewProgress
+
 export function useAiReviewWorkspace(payload: AiBatchPayload) {
   const queryClient = useQueryClient()
   const [initialState] = useState(() => buildInitialReviewState(payload))
@@ -46,9 +62,25 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
   const [feedbackReasons, setFeedbackReasons] = useState<string[]>([])
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [feedbackStatus, setFeedbackStatus] = useState<FloatingFeedbackStatus | null>(null)
+  const [liveRunError, setLiveRunError] = useState<string | null>(null)
+  const [liveRunProgress, setLiveRunProgress] = useState<LiveRunProgress | null>(null)
+  const [liveRunSummary, setLiveRunSummary] = useState<LiveRunSummary | null>(null)
+  const [submitResult, setSubmitResult] = useState<ApplyBatchDecisionResult | null>(null)
+  const isPreviewBatch = isMockAiBatchId(payload.batch.id)
+
+  const settingsQuery = useQuery({
+    queryKey: queryKeys.appSettings(),
+    queryFn: getAppSettings,
+    staleTime: Number.POSITIVE_INFINITY,
+    placeholderData: (previousData) => previousData,
+  })
+
+  const providerAccess = settingsQuery.data
+    ? resolveProviderAccessConfig(settingsQuery.data)
+    : null
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (!reviewDraft || typeof window === "undefined") {
       return
     }
 
@@ -59,7 +91,7 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
     return () => {
       window.clearTimeout(timer)
     }
-  }, [])
+  }, [reviewDraft])
 
   useEffect(() => {
     if (feedbackStatus?.tone !== "success" || typeof window === "undefined") {
@@ -76,10 +108,102 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
     }
   }, [feedbackStatus])
 
+  const runLiveReviewMutation = useMutation({
+    mutationFn: async () => {
+      if (isPreviewBatch) {
+        return {
+          review: buildMockBatchReview(payload),
+          summary: null,
+        }
+      }
+
+      if (!settingsQuery.data) {
+        throw new Error("Provider settings are still loading.")
+      }
+
+      if (!providerAccess?.isConfigured) {
+        throw new Error(
+          "Complete Base URL, model, and API key before running a live candidate.",
+        )
+      }
+
+      const result = await runLiveBatchReview(payload, settingsQuery.data, {
+        onProgress: (progress) => {
+          startTransition(() => {
+            setLiveRunProgress(progress)
+          })
+        },
+      })
+      return {
+        review: result.review,
+        summary: {
+          metadata: result.metadata,
+          relevantTopicCount: result.relevantTopics.length,
+        } satisfies LiveRunSummary,
+      }
+    },
+    onMutate: () => {
+      setLiveRunError(null)
+      setLiveRunProgress({
+        eventCount: 0,
+        firstReasoningLatencyMs: null,
+        firstTextLatencyMs: null,
+        lastEventType: null,
+        phase: "starting",
+        receivedChars: 0,
+        reasoningChars: 0,
+        reasoningText: "",
+        text: "",
+      })
+      setLiveRunSummary(null)
+      setSubmitResult(null)
+      setFeedbackStatus(null)
+      setRuntimeState((current) => {
+        try {
+          return transitionBatchRuntimeState(current, "start_run")
+        } catch {
+          return "running"
+        }
+      })
+    },
+    onSuccess: ({ review, summary }) => {
+      setLiveRunProgress(null)
+      setReviewDraft(review)
+      setRuntimeState(review.runtimeState)
+      setEditedClusterIds([])
+      setReviewNote("")
+      setFeedbackOpen(false)
+      setLiveRunSummary(summary)
+      logger.info("Prepared live AI candidate", {
+        batchId: review.batchId,
+        clusterCount: review.clusters.length,
+        responseModel: summary?.metadata.responseModel,
+      })
+    },
+    onError: (error) => {
+      const nextState =
+        isLiveBatchReviewError(error) && error.code === "schema_invalid"
+          ? "schema_failed"
+          : "failed"
+
+      setRuntimeState(nextState)
+      setLiveRunError(
+        error instanceof Error
+          ? error.message
+          : "Failed to prepare a live candidate for this batch.",
+      )
+      logger.error("Failed to prepare live AI candidate", error)
+    },
+  })
+
   const submitReviewMutation = useMutation({
     mutationFn: async (input?: SubmitReviewInput) => {
       if (!reviewDraft) {
         throw new Error("No review draft available")
+      }
+
+      if (runtimeState === "persisted") {
+        throw new Error("This batch has already been persisted.")
       }
 
       const finalAction = input?.actionOverride ?? submitAction
@@ -118,20 +242,24 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
     },
     onSuccess: ({
       finalAction,
-      nextRuntimeState,
       nextReview,
       submittedValueFeedback,
       result,
     }) => {
-      setRuntimeState(nextRuntimeState)
-      setReviewDraft(nextReview)
+      setRuntimeState(result.runtimeState)
+      setReviewDraft({
+        ...nextReview,
+        runtimeState: result.runtimeState,
+      })
+      setSubmitResult(result)
       setFeedbackStatus(buildFeedbackSuccessStatus(submittedValueFeedback))
       logger.info("Submitted AI review", {
         batchId: nextReview.batchId,
         action: finalAction,
         mocked: result.mocked,
+        runtimeState: result.runtimeState,
+        persistedOutputCount: result.persistedOutputs.length,
       })
-      void queryClient.invalidateQueries({ queryKey: queryKeys.aiBatchSummaries() })
       void queryClient.invalidateQueries({
         queryKey: queryKeys.aiBatchPayload(nextReview.batchId),
       })
@@ -150,7 +278,7 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
   function submitQuickFeedback(nextValue: ValueFeedback) {
     setValueFeedback(nextValue)
     setFeedbackStatus(null)
-    void submitReviewMutation.mutateAsync({
+    submitReviewMutation.mutate({
       actionOverride: editedClusterIds.length > 0 ? "accept_with_edits" : "accept_all",
       valueFeedbackOverride: nextValue,
     })
@@ -185,9 +313,15 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
     feedbackOpen,
     feedbackReasons,
     feedbackStatus,
+    liveRunError,
+    liveRunProgress,
+    liveRunSummary,
+    providerAccess,
     reviewDraft,
     reviewNote,
+    runLiveReviewMutation,
     runtimeState,
+    settingsQuery,
     setEditedClusterIds,
     setFeedbackOpen,
     setFeedbackReasons,
@@ -196,6 +330,7 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
     setReviewNote,
     setRuntimeState,
     setSubmitAction,
+    submitResult,
     setValueFeedback,
     submitAction,
     submitQuickFeedback,
@@ -205,6 +340,16 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
 }
 
 export function buildInitialReviewState(payload: AiBatchPayload): InitialReviewState {
+  if (!isMockAiBatchId(payload.batch.id)) {
+    return {
+      reviewDraft: null,
+      runtimeState: payload.batch.runtimeState,
+      submitAction: "accept_with_edits",
+      reviewNote: "",
+      editedClusterIds: [],
+    }
+  }
+
   try {
     const reviewDraft = buildMockBatchReview(payload)
     const reviewState =
@@ -282,7 +427,7 @@ function buildFeedbackSuccessStatus(
 }
 
 function resolveSubmittedReviewState(currentState: AiBatchRuntimeState) {
-  if (currentState === "reviewed") {
+  if (currentState === "reviewed" || currentState === "persisted") {
     return currentState
   }
 

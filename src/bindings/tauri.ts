@@ -93,6 +93,7 @@ export type ApplyBatchDecisionResult = {
 	mocked: boolean,
 	runtimeState: AiBatchRuntimeState,
 	message: string,
+	persistedOutputs: PersistedKnowledgeOutput[],
 };
 
 export type BatchDecisionCluster = {
@@ -204,6 +205,16 @@ export type DeleteClipboardCaptureResult = {
 	removedFromHistory: boolean,
 	removedFromStore: boolean,
 	deleted: boolean,
+};
+
+export type PersistedKnowledgeDestination = "topic" | "inbox" | "discard";
+
+export type PersistedKnowledgeOutput = {
+	clusterId: string,
+	destination: PersistedKnowledgeDestination,
+	filePath: string | null,
+	topicSlug: string | null,
+	topicName: string | null,
 };
 
 export type PossibleTopicSuggestion = {

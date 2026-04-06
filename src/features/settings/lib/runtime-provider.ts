@@ -1,6 +1,8 @@
 import type { SettingsDraft } from "@/types/shell";
 
-export const defaultRuntimeProviderBaseUrl = "https://api.openai.com/v1";
+export const defaultOpenAiRuntimeProviderBaseUrl = "https://api.openai.com/v1";
+export const defaultDeepSeekRuntimeProviderBaseUrl = "https://api.deepseek.com/v1";
+export const defaultRuntimeProviderBaseUrl = defaultOpenAiRuntimeProviderBaseUrl;
 export const defaultRuntimeProviderModel = "gpt-5.4-mini";
 
 export const runtimeProviderModels = [
@@ -13,6 +15,16 @@ export const runtimeProviderModels = [
     value: "gpt-5.4-mini",
     label: "GPT-5.4 Mini",
     description: "Faster default for everyday batch reviews.",
+  },
+  {
+    value: "deepseek-chat",
+    label: "DeepSeek Chat",
+    description: "Direct DeepSeek official API control group via chat completions.",
+  },
+  {
+    value: "deepseek-reasoner",
+    label: "DeepSeek Reasoner",
+    description: "Direct DeepSeek reasoning model for comparing long-thinking streams.",
   },
 ] as const;
 
@@ -40,12 +52,25 @@ export function normalizeRuntimeProviderModel(value: string): RuntimeProviderMod
     : defaultRuntimeProviderModel;
 }
 
+export function getDefaultRuntimeProviderBaseUrlForModel(model: string) {
+  return isDeepSeekRuntimeProviderModel(model)
+    ? defaultDeepSeekRuntimeProviderBaseUrl
+    : defaultOpenAiRuntimeProviderBaseUrl;
+}
+
+export function isDeepSeekRuntimeProviderModel(value: string) {
+  return value.trim().startsWith("deepseek-");
+}
+
 export function getRuntimeProviderFormValues(
   settingsDraft: RuntimeProviderFormValues,
 ): RuntimeProviderFormValues {
+  const model = normalizeRuntimeProviderModel(settingsDraft.model);
+
   return {
-    baseUrl: settingsDraft.baseUrl.trim() || defaultRuntimeProviderBaseUrl,
-    model: normalizeRuntimeProviderModel(settingsDraft.model),
+    baseUrl:
+      settingsDraft.baseUrl.trim() || getDefaultRuntimeProviderBaseUrlForModel(model),
+    model,
     apiKey: settingsDraft.apiKey,
   };
 }
@@ -75,9 +100,9 @@ export function validateRuntimeProviderBaseUrl(value: string) {
   return undefined;
 }
 
-export function normalizeRuntimeProviderBaseUrl(value: string) {
+export function normalizeRuntimeProviderBaseUrl(value: string, model = defaultRuntimeProviderModel) {
   const trimmedValue = value.trim().replace(/\/+$/, "");
-  return trimmedValue || defaultRuntimeProviderBaseUrl;
+  return trimmedValue || getDefaultRuntimeProviderBaseUrlForModel(model);
 }
 
 export function validateRuntimeProviderModel(value: string) {

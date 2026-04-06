@@ -1,7 +1,7 @@
 # Tino Handoff
 
 > 最后更新：2026-04-06
-> 当前基线提交：`cfa983e`
+> 当前基线提交：`395ef47`
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
 
@@ -39,8 +39,8 @@
 ## 3. 当前真实状态
 
 - `M0/M1/M2/M3/M4` 最小真实链路已通
-- `M5 AI Pipeline` 已进入 `Phase 1 Contract First`
-- `M6 Knowledge Output` 未开始
+- `M5 AI Pipeline` 已进入 `Phase 2 Minimal LLM Link`
+- `M6 Knowledge Output` 已进入 `Manual Persistence Bridge`
 
 当前已真实存在：
 
@@ -53,25 +53,27 @@
 - settings / dashboard 的真实 Rust 持久化与读取
 - Runtime Provider 表单校验与模型下拉
 - settings 页 live provider smoke test
-- Renderer 侧 OpenAI-compatible provider access layer
+- Renderer 侧 OpenAI Responses provider access layer（支持自定义 `baseURL`）
 - `/ai` 页读取 live batch（当前主要作为隐藏干预 / 校准面）
+- `/ai` 页支持单批次 manual live candidate run（renderer 侧 live `generateObject`）
 - review 提交写入 `_system/reviews/*.json`
+- `applyBatchDecision` 受控写入 `topics/*.md`
+- `applyBatchDecision` 受控写入 `_inbox/YYYY-MM-DD.md`
+- review 提交后 batch 状态更新为 `persisted`
 
 当前仍未真实存在：
 
-- `/ai` 主链路中的真实模型调用
-- `/ai` 隐藏干预链路中的 live `generateObject`
-- `topics/` 写入
-- `_inbox/` 写入
-- 正式 topic index
+- 静默后台自动落盘
+- 独立正式 topic index 资产
 - 历史补跑
 
 ## 4. 当前 `/ai` 页必须这样理解
 
 - `/ai` 页读取的 batch 可以是 live batch
-- 当前排序结果仍是 renderer 侧 `trial sorting pass`
-- settings 页的 live provider test 已接真实模型，但 `/ai` 主链路仍未接 live `generateObject`
-- `applyBatchDecision` 当前只做审阅应用与留痕，不生成任务
+- preview batch 仍使用 mock 结果
+- live batch 现在可以手动触发 renderer 侧 live `generateObject`
+- live candidate 在提交前只保留在 renderer 内存中
+- `applyBatchDecision` 当前负责审阅应用、review 留痕与受控知识落盘，但仍不生成 batch、不调用模型
 - `/ai` 当前更接近隐藏干预 / 校准界面，不是普通用户的主产品路径
 - 若 `apiKey` 为空，capture 只进 `daily`，不进 AI queue
 
@@ -119,7 +121,7 @@ AI 策略：
 
 如果做 AI：
 
-- `Contract -> Provider Access -> Runtime -> Persistence -> Hidden Intervention`
+- `Contract -> Provider Access -> Runtime -> Hidden Intervention -> Persistence`
 - 不要把“接模型”和“写知识层”混成一步
 - 不要把 `/ai review` 误当成普通用户主体验
 
@@ -158,4 +160,4 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 当前仓库的正确理解不是“AI 已接完”，而是：
 
-> 无 AI 原始归档链路已真实跑通；AI provider config 与 live smoke test 已接真实模型；`/ai` 当前主要承担隐藏干预与校准；普通用户主路径仍应理解为静默输入、后台编译与知识结果交付；真实模型主链路与知识层持久化仍未接入。
+> 无 AI 原始归档链路已真实跑通；AI provider config 与 live smoke test 已接真实模型；`/ai` 当前主要承担隐藏干预与校准，并已支持单批次 manual live candidate run + manual persistence apply；普通用户主路径仍应理解为静默输入、后台编译与知识结果交付；自动静默落盘仍未接入。

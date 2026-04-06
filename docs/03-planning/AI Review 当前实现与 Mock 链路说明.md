@@ -1,7 +1,7 @@
 # AI Review 当前实现与 Mock 链路说明
 
 > 日期：2026-04-06
-> 适用阶段：`M5 AI Pipeline / Phase 1 Contract First`
+> 适用阶段：`M6 Knowledge Output / Manual Persistence Bridge`
 
 ## 1. 这份文档解决什么问题
 
@@ -19,31 +19,31 @@
 
 ## 2. 当前 `/ai` 页的真实边界
 
-当前 AI review 能力已经进入 `Contract First` 阶段，但还没有进入真实模型执行阶段。
+当前 AI review 能力已经进入手动持久化桥接阶段，可以在隐藏干预面中对 live batch 手动触发一次真实模型调用，并在确认后将结果写入知识层。
 
 当前真实存在的部分：
 
 - Rust 侧已经提供 `ready batch` 读取能力
 - Rust 侧已经提供 AI review 相关 IPC DTO
 - renderer 侧已经有 AI review 页面
+- renderer 侧现在可以对 live batch 手动执行一次 live `generateObject`
 - review 提交后会真实写入 `_system/reviews/*.json`
-- review 提交后会把对应 batch 从 `pending_ai/ready` 更新为 `reviewed`
+- review 提交后会按程序控制写入 `topics/*.md` 或 `_inbox/YYYY-MM-DD.md`
+- review 提交后会把对应 batch 更新为 `persisted`
 
 当前仍未接入的部分：
 
-- 未调用真实模型
-- 未执行真实 `generateObject`
-- 未写入 `topics/`
-- 未写入 `_inbox/`
-- 未刷新正式 topic index
+- 静默后台自动落盘
+- 独立正式 topic index 资产
+- 历史补跑
 
 因此，当前 `/ai` 页里展示的是：
 
-> live batch + renderer 侧 trial sorting pass
+> preview batch + mock result
 
-而不是：
+或者：
 
-> live batch + real model output
+> live batch + renderer 侧 manual live `generateObject` result
 
 同时它应被理解为：
 
@@ -51,28 +51,30 @@
 
 ## 3. `applyBatchDecision` 的当前语义
 
-当前 `applyBatchDecision` 不是“生成 AI 任务”的命令。  
+当前 `applyBatchDecision` 不是“生成 AI 任务”的命令。
 它只在用户已经打开 review 页面并提交审阅结果时才会触发。
 
 当前它负责：
 
 - 校验 `batchId` / `reviewId` / `clusterId`
 - 校验 cluster 的 `sourceIds` 是否确实来自对应 batch
+- 校验 `sourceIds` 不会跨 cluster 重复引用
 - 校验 `editedClusterIds` 是否引用了存在的 cluster
 - 将 review 与 feedback 写入 `_system/reviews/*.json`
-- 将 batch 状态更新为 `reviewed`
+- 按程序控制写入 `topics/*.md` 或 `_inbox/YYYY-MM-DD.md`
+- 将 batch 状态更新为 `persisted`
 
 当前它明确不负责：
 
 - 生成 batch
 - 调用模型
-- 写入 topic 文件
-- 写入 inbox 文件
+- 自动静默触发后台编译
+- 任意路径写文件
 
 换句话说：
 
 - `queue -> batches/*.json` 才是“任务生成”
-- `applyBatchDecision` 只是“审阅应用”
+- `applyBatchDecision` 是“审阅应用 + 受控持久化”
 
 ## 4. 当前 live batch 是怎么产生的
 
@@ -96,7 +98,7 @@
 
 ## 5. Mock 链路的目标
 
-为了验证当前 review 链路而不依赖真实模型，仓库新增了一条“接近真实场景”的 mock 数据链路。
+为了验证当前 review 链路、以及在不调用真实模型时复现 live batch 场景，仓库保留了一条“接近真实场景”的 mock 数据链路。
 
 目标不是伪造浏览器内 demo fixture，而是：
 
@@ -192,8 +194,9 @@ pnpm mock:ai-review status --knowledge-root /tmp/tino-ai-review-mock
 
 截至这份文档，当前 AI review 的正确描述应当是：
 
-> Tino 已具备 live batch 的读取、展示、审阅提交和 review 留痕能力；
-> 但当前排序结果仍是 renderer 侧的 trial sorting pass，尚未接入真实模型与知识层持久化。
-> `/ai` 当前主要服务校准、抽检与异常干预，而不是普通用户的日常使用主路径。
+> Tino 已具备 live batch 的读取、展示、manual live candidate run、审阅提交、review 留痕以及手动受控持久化能力；
+> live `generateObject` 当前仍发生在 renderer 侧，`topics/` / `_inbox/` 写入仍必须经过 Rust command；
+> `/ai` 当前主要服务校准、抽检与异常干预，而不是普通用户的日常使用主路径；
+> 真正尚未接通的是“静默后台自动编译并自动交付”。
 
 如果后续有人说“AI 已经做完了”或者“`applyBatchDecision` 没有生成任务”，都属于对当前实现阶段的误读。

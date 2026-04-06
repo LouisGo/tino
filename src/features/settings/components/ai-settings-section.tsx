@@ -12,7 +12,7 @@ import {
 import { resolveProviderAccessConfig } from "@/features/ai/lib/provider-access";
 import { RuntimeProviderTestPanel } from "@/features/settings/components/runtime-provider-test-panel";
 import {
-  defaultRuntimeProviderBaseUrl,
+  getDefaultRuntimeProviderBaseUrlForModel,
   maskRuntimeProviderApiKey,
   runtimeProviderModels,
   validateRuntimeProviderApiKey,
@@ -47,6 +47,9 @@ export function AiSettingsSection({
       ? t("provider.status.incomplete")
       : t("provider.status.apiKeyNeeded");
   const { commitApiKey, commitBaseUrl, commitModel, form } = runtimeProviderForm;
+  const providerBaseUrlPlaceholder = getDefaultRuntimeProviderBaseUrlForModel(
+    form.state.values.model,
+  );
 
   return (
     <SettingsSection section={section} badge={badge}>
@@ -80,7 +83,7 @@ export function AiSettingsSection({
                         field.handleBlur();
                         commitBaseUrl(field.state.value);
                       }}
-                      placeholder={defaultRuntimeProviderBaseUrl}
+                      placeholder={providerBaseUrlPlaceholder}
                       aria-invalid={message.tone === "error"}
                       aria-describedby="provider-base-url-message"
                       spellCheck={false}
