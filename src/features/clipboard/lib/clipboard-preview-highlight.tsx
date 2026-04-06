@@ -9,6 +9,10 @@ type HighlightTextNode = {
 };
 
 const HIGHLIGHT_CLASS_NAME = "app-search-highlight";
+const HIGHLIGHT_DATA_ATTRIBUTE = "data-preview-highlight";
+const HIGHLIGHT_DATA_VALUE = "true";
+
+export const PREVIEW_HIGHLIGHT_SELECTOR = `mark[${HIGHLIGHT_DATA_ATTRIBUTE}="${HIGHLIGHT_DATA_VALUE}"]`;
 
 export function normalizeHighlightQuery(query: string) {
   const normalized = query.trim();
@@ -36,7 +40,15 @@ export function highlightTextContent(
 
   return segments.map((segment, index) => (
     isHighlightedSegment(segment, normalizedQuery)
-      ? <mark key={`${segment}-${index}`} className={HIGHLIGHT_CLASS_NAME}>{segment}</mark>
+      ? (
+          <mark
+            key={`${segment}-${index}`}
+            className={HIGHLIGHT_CLASS_NAME}
+            data-preview-highlight={HIGHLIGHT_DATA_VALUE}
+          >
+            {segment}
+          </mark>
+        )
       : segment
   ));
 }
@@ -130,6 +142,7 @@ function buildHighlightedHastNodes(content: string, query: string) {
             tagName: "mark",
             properties: {
               className: [HIGHLIGHT_CLASS_NAME],
+              [HIGHLIGHT_DATA_ATTRIBUTE]: HIGHLIGHT_DATA_VALUE,
             },
             children: [{ type: "text", value: segment }],
           }
@@ -155,6 +168,7 @@ function buildHighlightedFragment(content: string, query: string) {
     if (isHighlightedSegment(segment, query)) {
       const mark = document.createElement("mark");
       mark.className = HIGHLIGHT_CLASS_NAME;
+      mark.setAttribute(HIGHLIGHT_DATA_ATTRIBUTE, HIGHLIGHT_DATA_VALUE);
       mark.textContent = segment;
       fragment.append(mark);
       continue;

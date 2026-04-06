@@ -1,5 +1,7 @@
 import {
+  useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState,
   startTransition,
@@ -28,6 +30,7 @@ import { useCommand } from "@/core/commands";
 import { useShortcutScope } from "@/core/shortcuts";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import {
+  PREVIEW_HIGHLIGHT_SELECTOR,
   createRehypeHighlightPlugin,
   highlightSanitizedHtmlContent,
   highlightTextContent,
@@ -168,12 +171,71 @@ function TextCapturePreview({
   const [mode, setMode] = useState<TextPreviewMode>(() => preferredTextPreviewMode(capture));
   const normalizedMarkdownSource = normalizeMarkdownSource(capture.rawText);
   const normalizedHighlightQuery = normalizeHighlightQuery(highlightQuery);
+  const deferredHighlightQuery = useDeferredValue(normalizedHighlightQuery);
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollFrameRef = useRef<number | null>(null);
+  const lastHandledScrollKeyRef = useRef<string | null>(null);
 
   const htmlPreview = canRenderHtmlPreview(capture);
   const markdownPreview = canRenderMarkdownPreview(capture);
   const previewKind = markdownPreview ? "markdown" : htmlPreview ? "html" : "text";
   const tabs = buildTextPreviewTabs(capture, previewKind);
   const showModeToggle = tabs.length > 1;
+  const previewScrollKey = `${capture.id}:${mode}:${deferredHighlightQuery}`;
+
+  useEffect(() => {
+    if (!deferredHighlightQuery) {
+      lastHandledScrollKeyRef.current = null;
+      return;
+    }
+
+    const scrollViewport = scrollViewportRef.current;
+    if (!scrollViewport) {
+      return;
+    }
+
+    if (lastHandledScrollKeyRef.current === previewScrollKey) {
+      return;
+    }
+
+    if (pendingScrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(pendingScrollFrameRef.current);
+    }
+
+    pendingScrollFrameRef.current = window.requestAnimationFrame(() => {
+      pendingScrollFrameRef.current = null;
+
+      const highlights = Array.from(
+        scrollViewport.querySelectorAll<HTMLElement>(PREVIEW_HIGHLIGHT_SELECTOR),
+      );
+
+      if (highlights.length === 0) {
+        lastHandledScrollKeyRef.current = previewScrollKey;
+        return;
+      }
+
+      const firstHiddenHighlight = highlights.find(
+        (highlight) => !isElementFullyVisibleWithin(highlight, scrollViewport),
+      );
+
+      if (firstHiddenHighlight) {
+        firstHiddenHighlight.scrollIntoView({
+          behavior: prefersReducedMotion() ? "auto" : "smooth",
+          block: "nearest",
+          inline: "nearest",
+        });
+      }
+
+      lastHandledScrollKeyRef.current = previewScrollKey;
+    });
+
+    return () => {
+      if (pendingScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(pendingScrollFrameRef.current);
+        pendingScrollFrameRef.current = null;
+      }
+    };
+  }, [deferredHighlightQuery, previewScrollKey]);
 
   return (
     <section
@@ -202,28 +264,31 @@ function TextCapturePreview({
         actions={toolbarActions}
       />
 
-      <div className="app-scroll-area min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-4 pt-3">
+      <div
+        ref={scrollViewportRef}
+        className="app-scroll-area min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-4 pt-3"
+      >
         {mode === "preview" && previewKind === "html" ? (
-          <HtmlRichPreview html={capture.rawRich ?? ""} highlightQuery={normalizedHighlightQuery} />
+          <HtmlRichPreview html={capture.rawRich ?? ""} highlightQuery={deferredHighlightQuery} />
         ) : null}
         {mode === "preview" && previewKind === "markdown" ? (
-          <MarkdownTextPreview markdown={normalizedMarkdownSource} highlightQuery={normalizedHighlightQuery} />
+          <MarkdownTextPreview markdown={normalizedMarkdownSource} highlightQuery={deferredHighlightQuery} />
         ) : null}
         {mode === "preview" && previewKind === "text" ? (
           <RawTextPreview
             content={capture.rawText}
-            highlightQuery={normalizedHighlightQuery}
+            highlightQuery={deferredHighlightQuery}
           />
         ) : null}
         {mode === "raw_text" ? (
           <RawTextPreview
             content={capture.rawText}
-            highlightQuery={normalizedHighlightQuery}
+            highlightQuery={deferredHighlightQuery}
             tone={previewKind === "text" ? "reading" : "raw"}
           />
         ) : null}
         {mode === "raw_rich" ? (
-          <RawTextPreview content={capture.rawRich ?? ""} highlightQuery={normalizedHighlightQuery} />
+          <RawTextPreview content={capture.rawRich ?? ""} highlightQuery={deferredHighlightQuery} />
         ) : null}
       </div>
     </section>
@@ -285,11 +350,17 @@ function HtmlRichPreview({
   html: string;
   highlightQuery: string;
 }) {
-  const sanitizedHtml = DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true },
-    FORBID_ATTR: ["style", "class"],
-  });
-  const highlightedHtml = highlightSanitizedHtmlContent(sanitizedHtml, highlightQuery);
+  const sanitizedHtml = useMemo(
+    () => DOMPurify.sanitize(html, {
+      USE_PROFILES: { html: true },
+      FORBID_ATTR: ["style", "class"],
+    }),
+    [html],
+  );
+  const highlightedHtml = useMemo(
+    () => highlightSanitizedHtmlContent(sanitizedHtml, highlightQuery),
+    [highlightQuery, sanitizedHtml],
+  );
 
   const handleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     const target = getExternalLinkTargetFromEventTarget(event.target);
@@ -317,11 +388,20 @@ function MarkdownTextPreview({
   markdown: string;
   highlightQuery: string;
 }) {
+  const highlightPlugin = useMemo(
+    () => createRehypeHighlightPlugin(highlightQuery),
+    [highlightQuery],
+  );
+  const rehypePlugins = useMemo(
+    () => [rehypeSanitize, highlightPlugin],
+    [highlightPlugin],
+  );
+
   return (
     <div className="app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] text-[13px] leading-[1.7]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize, createRehypeHighlightPlugin(highlightQuery)]}
+        rehypePlugins={rehypePlugins}
         components={{
           a: ({ href, children, ...props }) => {
             const target = resolveExternalLinkTarget(href ?? "");
@@ -366,6 +446,11 @@ function RawTextPreview({
   highlightQuery: string;
   tone?: "raw" | "reading";
 }) {
+  const highlightedContent = useMemo(
+    () => highlightTextContent(content, highlightQuery, "No raw source available."),
+    [content, highlightQuery],
+  );
+
   return (
     <div
       className={cn(
@@ -375,9 +460,27 @@ function RawTextPreview({
           : "w-0 min-w-full max-w-full font-mono text-[13px] leading-7 break-all",
       )}
     >
-      {highlightTextContent(content, highlightQuery, "No raw source available.")}
+      {highlightedContent}
     </div>
   );
+}
+
+function isElementFullyVisibleWithin(element: HTMLElement, scrollViewport: HTMLElement) {
+  const elementRect = element.getBoundingClientRect();
+  const viewportRect = scrollViewport.getBoundingClientRect();
+
+  return (
+    elementRect.top >= viewportRect.top
+    && elementRect.bottom <= viewportRect.bottom
+    && elementRect.left >= viewportRect.left
+    && elementRect.right <= viewportRect.right
+  );
+}
+
+function prefersReducedMotion() {
+  return typeof window !== "undefined"
+    && typeof window.matchMedia === "function"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 export function CaptureImageLightbox({
