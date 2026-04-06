@@ -30,6 +30,7 @@ import {
   type ThemePreference,
 } from "@/lib/theme";
 import { getAppSettings, isTauriRuntime } from "@/lib/tauri";
+import { preloadNonCriticalRouteChunks } from "@/router";
 import { useAppShellStore } from "@/stores/app-shell-store";
 import { useThemeStore } from "@/stores/theme-store";
 import type { AppLocalePreference } from "@/types/shell";
@@ -97,6 +98,31 @@ function AppShellRuntime({ router }: AppProvidersProps) {
       media.removeEventListener("change", handleChange);
     };
   }, [mode, themeName]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const preload = () => {
+      preloadNonCriticalRouteChunks();
+      void import("@/features/clipboard/components/capture-preview");
+    };
+
+    if (typeof window.requestIdleCallback === "function") {
+      const idleId = window.requestIdleCallback(preload, { timeout: 1_500 });
+      return () => {
+        if (typeof window.cancelIdleCallback === "function") {
+          window.cancelIdleCallback(idleId);
+        }
+      };
+    }
+
+    const timeoutId = window.setTimeout(preload, 400);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {

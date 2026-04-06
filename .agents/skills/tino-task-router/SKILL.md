@@ -1,6 +1,6 @@
 ---
 name: tino-task-router
-description: Use this skill for Tino repo tasks that need fast context routing or current-state alignment. Classify whether the task is Rust IPC, current AI review behavior, AI runtime architecture, packaging/signing, or product-boundary work, then read only the minimum matching docs instead of bulk-loading README or archived planning docs.
+description: "Use this skill for Tino repo tasks that need fast context routing or current-state alignment. Classify whether the task is Rust IPC, current AI review behavior, AI runtime architecture, packaging/signing, or product-boundary work, then read only the minimum matching docs instead of bulk-loading README or archived planning docs."
 ---
 
 # Tino Task Router

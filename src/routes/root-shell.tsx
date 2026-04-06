@@ -1,11 +1,19 @@
+import { lazy, Suspense } from "react";
+
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Outlet, useRouterState } from "@tanstack/react-router";
 
 import { AppFrame } from "@/components/shell/app-frame";
 import { useShortcutScope } from "@/core/shortcuts";
-import { ClipboardWindowPage } from "@/features/clipboard/clipboard-window-page";
 import { useWindowCloseGuard } from "@/hooks/use-window-close-guard";
 import { isTauriRuntime } from "@/lib/tauri";
+
+const ClipboardWindowPage = lazy(async () => {
+  const module = await import("@/features/clipboard/clipboard-window-page");
+  return {
+    default: module.ClipboardWindowPage,
+  };
+});
 
 export function RootShell() {
   useWindowCloseGuard();
@@ -16,10 +24,10 @@ export function RootShell() {
 
   if (isClipboardWindow) {
     return (
-      <>
+      <Suspense fallback={<div className="h-full bg-transparent" />}>
         <ClipboardWindowPage />
         {/* {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null} */}
-      </>
+      </Suspense>
     );
   }
 

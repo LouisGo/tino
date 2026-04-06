@@ -1,6 +1,6 @@
 ---
 name: tino-ai-review-phase1
-description: Use this skill for Tino /ai work in the current M5 Phase 1 state: review page semantics, live batch debugging, applyBatchDecision behavior, queue-to-batch promotion, or running the near-real mock chain without calling a real model.
+description: "Use this skill for Tino /ai work in the current M5 Phase 1 state: review page semantics, live batch debugging, applyBatchDecision behavior, queue-to-batch promotion, or running the near-real mock chain without calling a real model."
 ---
 
 # Tino AI Review Phase 1

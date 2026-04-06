@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 
 import { Copy, Expand, ImageIcon } from "lucide-react";
 
@@ -8,9 +8,6 @@ import { useCommand } from "@/core/commands";
 import { useContextMenu } from "@/core/context-menu";
 import { clipboardCaptureContextMenu } from "@/features/clipboard/clipboard-capture-context-menu";
 import { Tooltip } from "@/components/ui/tooltip";
-import {
-  CaptureDetailPreview,
-} from "@/features/clipboard/components/capture-preview";
 import {
   capturePreviewSurfaceClassName,
   detailRows,
@@ -23,6 +20,13 @@ import { formatRelativeTimestamp } from "@/lib/time";
 import type { ClipboardCapture } from "@/types/shell";
 
 import { ClipboardEmptyState } from "./clipboard-empty-state";
+
+const CaptureDetailPreview = lazy(async () => {
+  const module = await import("@/features/clipboard/components/capture-preview");
+  return {
+    default: module.CaptureDetailPreview,
+  };
+});
 
 export function ClipboardCaptureDetail({
   capture,
@@ -95,7 +99,9 @@ export function ClipboardCaptureDetail({
         onContextMenu={(event) => onContextMenu(event, capture)}
       >
         <div className="min-h-0 min-w-0">
-          <CaptureDetailPreview capture={capture} onOpenImage={onOpenImage} sharedSurface />
+          <Suspense fallback={<div className="h-full w-full" />}>
+            <CaptureDetailPreview capture={capture} onOpenImage={onOpenImage} sharedSurface />
+          </Suspense>
         </div>
 
         <DetailInformation capture={capture} />
