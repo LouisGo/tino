@@ -447,7 +447,7 @@ export function DashboardPage() {
                   >
                     <SelectTrigger
                       aria-label={tDashboard("chat.modelLabel")}
-                      className="app-home-model-trigger min-h-[3.25rem] w-[220px] rounded-full py-2 md:w-[260px]"
+                      className="app-home-model-trigger min-h-[3.25rem] w-[180px] rounded-full py-2 md:w-[200px]"
                     >
                       {selectedHomeProvider ? (
                         <div className="flex min-w-0 flex-1 flex-col items-start leading-none">

@@ -311,7 +311,10 @@ export function createAiObjectGenerator(settings: ProviderAccessConfig): AiObjec
           object: object as T,
         };
       } catch (error) {
-        const normalizedError = normalizeProviderAccessError(error, access.baseUrl);
+        const normalizedError = normalizeProviderAccessError(error, {
+          baseUrl: access.baseUrl,
+          model: access.model,
+        });
         logger.error("Streamed JSON object generation failed", {
           apiMode: access.apiMode,
           baseUrl: access.baseUrl,
@@ -372,7 +375,10 @@ export function createAiObjectGenerator(settings: ProviderAccessConfig): AiObjec
           text: result.text,
         };
       } catch (error) {
-        const normalizedError = normalizeProviderAccessError(error, access.baseUrl);
+        const normalizedError = normalizeProviderAccessError(error, {
+          baseUrl: access.baseUrl,
+          model: access.model,
+        });
         logger.error("Provider text generation failed", {
           apiMode: access.apiMode,
           baseUrl: access.baseUrl,
@@ -487,12 +493,25 @@ function buildProviderName(providerHost: string | null) {
   return providerHost.replace(/[^a-z0-9]+/gi, "-").replace(/(^-|-$)/g, "") || "openai";
 }
 
-function normalizeProviderAccessError(error: unknown, baseUrl: string) {
+function normalizeProviderAccessError(
+  error: unknown,
+  context: {
+    baseUrl: string;
+    model: string;
+  },
+) {
   const normalizedError = error instanceof Error ? error : new Error(String(error));
+  const providerHost = getProviderHost(context.baseUrl) ?? "the selected provider";
 
   if (RetryError.isInstance(error) && isAbortLikeError(error.lastError)) {
     return new Error(
       "Provider stream stalled or exceeded the configured timeout before a complete response arrived.",
+    );
+  }
+
+  if (RetryError.isInstance(error) && isRelayModelUnavailableError(error.lastError)) {
+    return new Error(
+      `Model "${context.model}" is not currently available on ${providerHost}. Try another model or provider.`,
     );
   }
 
@@ -508,8 +527,14 @@ function normalizeProviderAccessError(error: unknown, baseUrl: string) {
     );
   }
 
+  if (isRelayModelUnavailableError(error)) {
+    return new Error(
+      `Model "${context.model}" is not currently available on ${providerHost}. Try another model or provider.`,
+    );
+  }
+
   if (APICallError.isInstance(error) && error.message === "Invalid JSON response") {
-    const baseUrlPathname = safePathname(baseUrl);
+    const baseUrlPathname = safePathname(context.baseUrl);
     const pathHint =
       baseUrlPathname === "/" || baseUrlPathname === ""
         ? " Try using a Base URL that ends with /v1 if your relay follows the OpenAI path layout."
@@ -810,6 +835,13 @@ function isAbortLikeError(error: unknown) {
     error.name === "AbortError" ||
     error.name === "TimeoutError" ||
     /abort|timed out|timeout|cancelled/i.test(error.message)
+  );
+}
+
+function isRelayModelUnavailableError(error: unknown) {
+  return (
+    error instanceof Error &&
+    /no available providers/i.test(error.message)
   );
 }
 
