@@ -20,6 +20,9 @@ export const commands = {
 	openInPreview: (path: string) => typedError<null, string>(__TAURI_INVOKE("open_in_preview", { path })),
 	copyCaptureToClipboard: (capture: ClipboardReplayRequest) => typedError<null, string>(__TAURI_INVOKE("copy_capture_to_clipboard", { capture })),
 	returnCaptureToPreviousApp: (capture: ClipboardReplayRequest) => typedError<ClipboardReturnResult, string>(__TAURI_INVOKE("return_capture_to_previous_app", { capture })),
+	getAccessibilityPermissionStatus: () => __TAURI_INVOKE<boolean>("get_accessibility_permission_status"),
+	openAccessibilitySettings: () => typedError<null, string>(__TAURI_INVOKE("open_accessibility_settings")),
+	requestAppRestart: () => typedError<null, string>(__TAURI_INVOKE("request_app_restart")),
 	revealInFileManager: (path: string) => typedError<null, string>(__TAURI_INVOKE("reveal_in_file_manager", { path })),
 };
 

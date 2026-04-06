@@ -15,7 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LoaderCircle, Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { LoaderCircle, RotateCcw, Search, ShieldAlert, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { useCommand } from "@/core/commands";
@@ -32,9 +33,15 @@ import {
 } from "@/features/clipboard/components/clipboard-capture-list";
 import { ClipboardCaptureDetail } from "@/features/clipboard/components/clipboard-capture-detail";
 import { clipboardFilterOptions, getClipboardFilterOption, groupCapturesByDay } from "@/features/clipboard/lib/clipboard-board";
+import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
-import { getClipboardWindowTargetAppName } from "@/lib/tauri";
+import {
+  getClipboardWindowTargetAppName,
+  openAccessibilitySettings,
+  requestAppRestart,
+} from "@/lib/tauri";
 import { cn } from "@/lib/utils";
+import { useScopedT } from "@/i18n";
 import type { ClipboardCapture } from "@/types/shell";
 
 const WINDOW_SELECTION_TIP_IDLE_MS = 2000;
@@ -250,16 +257,17 @@ export function ClipboardBoardPanel({
         )}
       >
         <ClipboardBoardToolbar autoFocusSearch={autoFocusSearch} />
+        <ClipboardAccessibilityBanner />
 
         <div className={cn("overflow-hidden", windowMode && "min-h-0 flex-1")}>
           <div
             className={cn(
-              "grid grid-cols-[minmax(224px,24%)_minmax(0,1fr)] items-stretch gap-0 md:grid-cols-[236px_minmax(0,1fr)] lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[264px_minmax(0,1fr)] 2xl:grid-cols-[280px_minmax(0,1fr)]",
+              "grid min-h-0 grid-cols-[clamp(14rem,24vw,24rem)_minmax(0,1fr)] items-stretch gap-0",
               windowMode
                 ? "h-full"
                 : fillHeight
-                ? "h-[calc(100vh-3.75rem)]"
-                : "h-[clamp(34rem,68vh,46rem)] xl:h-[calc(100vh-18rem)]",
+                  ? "h-[calc(100vh-3.75rem)]"
+                  : "h-[clamp(34rem,68vh,46rem)] xl:h-[calc(100vh-18rem)]",
             )}
           >
             <ClipboardCaptureList
@@ -334,6 +342,73 @@ export function ClipboardBoardPanel({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function ClipboardAccessibilityBanner() {
+  const tCommon = useScopedT("common");
+  const phase = useClipboardAccessibilityStore((state) => state.phase);
+
+  if (phase === "idle") {
+    return null;
+  }
+
+  const restartRequired = phase === "restartRequired";
+
+  return (
+    <div
+      className={cn(
+        "border-b px-3 py-3 sm:px-4",
+        restartRequired
+          ? "border-emerald-500/18 bg-emerald-500/8"
+          : "border-amber-500/18 bg-amber-500/8",
+      )}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-1.5">
+          <div className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+            {restartRequired ? (
+              <RotateCcw className="size-4 text-emerald-600" />
+            ) : (
+              <ShieldAlert className="size-4 text-amber-600" />
+            )}
+            <span>
+              {restartRequired
+                ? tCommon("clipboardPermission.bannerRestartTitle")
+                : tCommon("clipboardPermission.bannerEnableTitle")}
+            </span>
+          </div>
+          <p className="max-w-3xl text-[13px] leading-5 text-muted-foreground">
+            {restartRequired
+              ? tCommon("clipboardPermission.bannerRestartDescription")
+              : tCommon("clipboardPermission.bannerEnableDescription")}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {restartRequired ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                void requestAppRestart();
+              }}
+            >
+              {tCommon("clipboardPermission.bannerRestartAction")}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void openAccessibilitySettings();
+              }}
+            >
+              {tCommon("clipboardPermission.bannerOpenSettingsAction")}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -66,6 +66,35 @@ export const enUSResources = defineLocaleSchema({
       home: "Home",
       settings: "Settings",
     },
+    clipboardPermission: {
+      enableDialogTitle: "Enable Accessibility, Then Restart Tino",
+      enableDialogBody: [
+        "Tino needs macOS Accessibility permission to paste content back into the previous app.",
+        "",
+        "Turn on Tino in System Settings > Privacy & Security > Accessibility.",
+        "After you enable Tino there, fully quit and reopen Tino before trying again.",
+        "",
+        "On some Macs the checkbox changes immediately, but the running app still needs a restart before paste back can work.",
+      ].join("\n"),
+      restartDialogTitle: "Restart Tino to Finish Accessibility Setup",
+      restartDialogBody: [
+        "Accessibility permission now appears to be enabled for Tino.",
+        "",
+        "To make paste back work reliably, fully quit and reopen Tino before trying again.",
+        "",
+        "Restart Tino now?",
+      ].join("\n"),
+      restartDialogConfirm: "Restart Tino Now",
+      restartDialogLater: "Later",
+      bannerEnableTitle: "Enable Accessibility for paste back, then reopen Tino.",
+      bannerEnableDescription:
+        "Turn on Tino in System Settings > Privacy & Security > Accessibility. When you come back, Tino will keep checking and remind you to restart if needed.",
+      bannerOpenSettingsAction: "Open Accessibility Settings",
+      bannerRestartTitle: "Accessibility is enabled. Restart Tino to finish setup.",
+      bannerRestartDescription:
+        "macOS permission now appears to be on for this app copy, but paste back may still fail until Tino starts fresh.",
+      bannerRestartAction: "Restart Tino Now",
+    },
   },
   shell: {
     aria: {
@@ -386,6 +415,35 @@ export const zhCNResources = {
       clipboard: "剪贴板",
       home: "首页",
       settings: "设置",
+    },
+    clipboardPermission: {
+      enableDialogTitle: "先开启辅助功能权限，再重启 Tino",
+      enableDialogBody: [
+        "Tino 需要 macOS 的辅助功能权限，才能把内容回填到上一个应用。",
+        "",
+        "请前往“系统设置 > 隐私与安全性 > 辅助功能”，把 Tino 打开。",
+        "打开之后，请先彻底退出并重新打开 Tino，再回来重试。",
+        "",
+        "有些 Mac 上即使勾选已经生效，当前正在运行的 Tino 仍然要重启一次，回填功能才会正常工作。",
+      ].join("\n"),
+      restartDialogTitle: "重启 Tino，完成辅助功能设置",
+      restartDialogBody: [
+        "看起来 Tino 的辅助功能权限已经打开了。",
+        "",
+        "为了让回填功能稳定生效，请先彻底退出并重新打开 Tino。",
+        "",
+        "现在重启 Tino 吗？",
+      ].join("\n"),
+      restartDialogConfirm: "立即重启 Tino",
+      restartDialogLater: "稍后再说",
+      bannerEnableTitle: "先开启辅助功能权限，再重新打开 Tino。",
+      bannerEnableDescription:
+        "请前往“系统设置 > 隐私与安全性 > 辅助功能”打开 Tino。你回来后，应用会继续检查权限状态，并在需要时提醒你重启。",
+      bannerOpenSettingsAction: "打开辅助功能设置",
+      bannerRestartTitle: "辅助功能已开启，请重启 Tino 完成设置。",
+      bannerRestartDescription:
+        "看起来当前这份应用副本的 macOS 权限已经打开了，但在 Tino 重新启动之前，回填仍然可能失败。",
+      bannerRestartAction: "立即重启 Tino",
     },
   },
   shell: {

@@ -470,6 +470,30 @@ export async function getClipboardWindowTargetAppName(): Promise<string | null> 
   return unwrapTauriResult(tauriCommands.getClipboardWindowTargetAppName());
 }
 
+export async function getAccessibilityPermissionStatus() {
+  if (!isTauriRuntime()) {
+    return false;
+  }
+
+  return tauriCommands.getAccessibilityPermissionStatus();
+}
+
+export async function openAccessibilitySettings() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  await unwrapTauriResult(tauriCommands.openAccessibilitySettings());
+}
+
+export async function requestAppRestart() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  await unwrapTauriResult(tauriCommands.requestAppRestart());
+}
+
 export function resolveAssetUrl(assetPath?: string | null) {
   if (!assetPath) {
     return null;

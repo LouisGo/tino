@@ -22,6 +22,7 @@ import {
   syncLocalePreference,
 } from "@/i18n";
 import { queryClient } from "@/app/query-client";
+import { useClipboardAccessibilityPermissionFlow } from "@/features/clipboard/hooks/use-clipboard-accessibility-permission-flow";
 import {
   applyTheme,
   getInitialThemePreference,
@@ -52,6 +53,7 @@ export function AppProviders({ router }: AppProvidersProps) {
 }
 
 function AppShellRuntime({ router }: AppProvidersProps) {
+  useClipboardAccessibilityPermissionFlow();
   const mode = useThemeStore((state) => state.mode);
   const themeName = useThemeStore((state) => state.themeName);
   const setSettingsDraft = useAppShellStore((state) => state.setSettingsDraft);

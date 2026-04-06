@@ -23,6 +23,9 @@ pub fn builder() -> Builder<tauri::Wry> {
         shell::open_in_preview,
         shell::copy_capture_to_clipboard,
         shell::return_capture_to_previous_app,
+        shell::get_accessibility_permission_status,
+        shell::open_accessibility_settings,
+        shell::request_app_restart,
         shell::reveal_in_file_manager,
     ])
 }

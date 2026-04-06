@@ -345,6 +345,33 @@ pub fn return_capture_to_previous_app(
 
 #[tauri::command]
 #[specta::specta]
+pub fn get_accessibility_permission_status() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        return is_accessibility_trusted();
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        false
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn open_accessibility_settings() -> Result<(), String> {
+    open_accessibility_settings_impl()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn request_app_restart(app: AppHandle) -> Result<(), String> {
+    app.request_restart();
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn reveal_in_file_manager(path: String) -> Result<(), String> {
     let trimmed = path.trim();
     if trimmed.is_empty() {
@@ -558,7 +585,9 @@ fn return_capture_to_previous_app_macos(
     }
 
     if !is_accessibility_trusted() {
-        prompt_for_accessibility_permission();
+        if let Err(error) = open_accessibility_settings_impl() {
+            log::warn!("failed to open Accessibility settings: {}", error);
+        }
         let authorization_target = current_app_authorization_target();
         log::warn!(
             "clipboard return skipped because Accessibility access is not granted for {} (current app target: {})",
@@ -566,7 +595,7 @@ fn return_capture_to_previous_app_macos(
             authorization_target
         );
         return Err(format!(
-            "Tino needs macOS Accessibility permission before it can paste back into {}. Make sure you enabled the same app copy that is currently running: {}. Then fully quit and reopen that same app before trying again.",
+            "Tino needs macOS Accessibility permission before it can paste back into {}. Make sure you enabled the same app copy that is currently running: {}. After you turn that checkbox on in System Settings, fully quit and reopen that same Tino app before trying again. On some Macs the permission does not take effect until the app is restarted.",
             target_name,
             authorization_target
         ));
@@ -740,14 +769,25 @@ fn is_accessibility_trusted() -> bool {
 }
 
 #[cfg(target_os = "macos")]
-fn prompt_for_accessibility_permission() {
+fn open_accessibility_settings_impl() -> Result<(), String> {
     let status = Command::new("open")
         .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
-        .status();
+        .status()
+        .map_err(|error| error.to_string())?;
 
-    if let Err(error) = status {
-        log::warn!("failed to open Accessibility settings: {}", error);
+    if !status.success() {
+        return Err(format!(
+            "failed to open Accessibility settings (exit code {})",
+            status.code().unwrap_or_default()
+        ));
     }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn open_accessibility_settings_impl() -> Result<(), String> {
+    Err("Accessibility settings are only available on macOS".into())
 }
 
 #[cfg(target_os = "macos")]

@@ -3,7 +3,12 @@ import { message } from "@tauri-apps/plugin-dialog";
 
 import { queryKeys } from "@/app/query-keys";
 import { defineCommand, type CommandDefinition } from "@/core/commands";
+import {
+  promptForAccessibilityRestart,
+  showAccessibilityPermissionDialog,
+} from "@/features/clipboard/lib/accessibility-permission-flow";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
+import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import {
   copyCaptureToClipboard,
   deleteClipboardCapture,
@@ -240,6 +245,11 @@ export const clipboardCommands = [
         return;
       }
 
+      if (useClipboardAccessibilityStore.getState().phase === "restartRequired") {
+        await promptForAccessibilityRestart();
+        return;
+      }
+
       await closeClipboardWindowForConfirmation();
 
       try {
@@ -267,19 +277,24 @@ export const clipboardCommands = [
           || description.includes("invalid macOS bundle signature")
           || description.includes("missing its macOS signature files")
           || description.includes("Reinstall the latest Preview app");
+        if (requiresAccessibilityPermission) {
+          useClipboardAccessibilityStore
+            .getState()
+            .beginPermissionGrantFlow(description);
+          await showAccessibilityPermissionDialog();
+          return;
+        }
+
         await message(description, {
-          title: requiresAccessibilityPermission
-            ? "Accessibility Permission Needed"
-            : requiresPackagedPreviewApp
-              ? "Packaged Preview App Required"
-              : requiresLocalSigning
-                ? "Local Signing Required"
+          title: requiresPackagedPreviewApp
+            ? "Packaged Preview App Required"
+            : requiresLocalSigning
+              ? "Local Signing Required"
               : requiresPreviewReinstall
                 ? "Reinstall Preview App"
-            : "Clipboard Return Failed",
+              : "Clipboard Return Failed",
           kind:
-            requiresAccessibilityPermission
-            || requiresPackagedPreviewApp
+            requiresPackagedPreviewApp
             || requiresLocalSigning
             || requiresPreviewReinstall
               ? "warning"
