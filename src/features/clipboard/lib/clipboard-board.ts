@@ -29,19 +29,19 @@ export const clipboardFilterOptions: ClipboardFilterOption[] = [
     value: "text",
     label: "Text",
     shortLabel: "Text",
-    accentColor: "var(--kind-text)",
+    accentColor: "var(--clipboard-kind-text)",
   },
   {
     value: "image",
     label: "Images",
     shortLabel: "Images",
-    accentColor: "var(--kind-image)",
+    accentColor: "var(--clipboard-kind-image)",
   },
   {
     value: "link",
     label: "Links",
     shortLabel: "Links",
-    accentColor: "var(--kind-link)",
+    accentColor: "var(--clipboard-kind-link)",
   },
 ];
 

@@ -119,19 +119,19 @@ export function ClipboardCaptureList({
   }, [scrollViewport, selectedCaptureId]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col border-r border-border/70 bg-card/78">
+    <div className="flex h-full min-h-0 flex-col border-r border-border/55 bg-card/72">
       <div
         ref={setScrollViewport}
-        className="app-scroll-area min-h-0 flex-1 overflow-y-auto p-2.5"
+        className="app-scroll-area min-h-0 flex-1 overflow-y-auto p-2"
       >
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {hasCaptures ? (
             groups.map((group) => (
               <section key={group.key} className="space-y-1.5">
-                <p className="px-1 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                <p className="px-1 text-[9px] font-semibold tracking-[0.18em] text-muted-foreground/78 uppercase">
                   {group.label}
                 </p>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {group.captures.map((capture) => (
                     <button
                       key={capture.id}
@@ -142,16 +142,16 @@ export function ClipboardCaptureList({
                         void confirmCapture.execute({ captureId: capture.id })}
                       onContextMenu={(event) => onContextMenu(event, capture)}
                       className={cn(
-                        "flex h-[50px] w-full items-center gap-3 rounded-[16px] border px-3 text-left transition",
+                        "flex h-[44px] w-full items-center gap-2.5 rounded-[14px] border px-2.5 text-left transition",
                         selectedCaptureId === capture.id
-                          ? "border-primary/25 bg-primary/10 shadow-sm"
-                          : "border-transparent bg-background/55 hover:border-border/80 hover:bg-secondary/50",
+                          ? "border-primary/18 bg-primary/[0.08] shadow-none"
+                          : "border-transparent bg-transparent hover:border-border/55 hover:bg-secondary/34",
                       )}
                     >
                       <CaptureThumb capture={capture} />
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">
+                        <p className="truncate text-[13px] font-medium text-foreground/92">
                           {captureListSummary(capture)}
                         </p>
                       </div>
@@ -191,7 +191,7 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
 
   if (capture.contentKind === "image" && thumbnailSrc) {
     return (
-      <div className="size-8 shrink-0 overflow-hidden rounded-[12px] bg-secondary/80 ring-1 ring-border/40">
+      <div className="size-[30px] shrink-0 overflow-hidden rounded-[10px] bg-secondary/70 ring-1 ring-border/30">
         <img
           src={thumbnailSrc}
           alt={capture.preview || "Clipboard image thumbnail"}
@@ -204,8 +204,8 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
   }
 
   return (
-    <div className="flex size-8 shrink-0 items-center justify-center rounded-[12px] bg-secondary/80 text-muted-foreground">
-      {renderKindIcon(capture.contentKind, "size-4")}
+    <div className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-secondary/70 text-muted-foreground/84">
+      {renderKindIcon(capture.contentKind, "size-[15px]")}
     </div>
   );
 }

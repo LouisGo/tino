@@ -17,7 +17,6 @@ import remarkGfm from "remark-gfm";
 import {
   Expand,
   ExternalLink,
-  Link2,
   Minus,
   Plus,
   RotateCcw,
@@ -50,10 +49,14 @@ export function CaptureDetailPreview({
   capture,
   onOpenImage,
   sharedSurface = false,
+  toolbarMeta,
+  toolbarActions,
 }: {
   capture: ClipboardCapture;
   onOpenImage: () => void;
   sharedSurface?: boolean;
+  toolbarMeta?: ReactNode;
+  toolbarActions?: ReactNode;
 }) {
   const openTarget = useCommand<{ target: string }>("system.openExternalTarget");
   const assetSrc = useClipboardAssetSrc(
@@ -63,8 +66,8 @@ export function CaptureDetailPreview({
 
   if (capture.contentKind === "image") {
     return (
-      <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5")}>
-        <PreviewHeader title="Image Preview" />
+      <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden")}>
+        <PreviewToolbar meta={toolbarMeta} actions={toolbarActions} />
         <button
           type="button"
           onClick={onOpenImage}
@@ -98,31 +101,28 @@ export function CaptureDetailPreview({
     const hostname = target ? extractHostname(target) : null;
 
     return (
-      <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5")}>
-        <PreviewHeader
-          title="Link Preview"
+      <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden")}>
+        <PreviewToolbar
+          meta={toolbarMeta}
           controls={(
             <button
               type="button"
               onClick={() => void openTarget.execute({ target })}
-              className="app-kind-text-link inline-flex h-8 items-center gap-2 rounded-full border border-border/70 bg-card/85 px-3 text-xs font-medium shadow-sm transition hover:border-primary/30 hover:bg-secondary/60"
+              className="app-preview-inline-action app-kind-text-link inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium"
             >
-              Preview in browser
-              <ExternalLink className="size-4" />
+              Open Link
+              <ExternalLink className="size-3.5" />
             </button>
           )}
+          actions={toolbarActions}
         />
-        <div className="flex min-h-0 flex-1 flex-col items-start justify-between px-3.5 pb-3.5 pt-2 text-left">
-          <div className="space-y-3">
-            <div className="app-kind-badge-link inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
-              <Link2 className="size-3.5" />
-              Link capture
-            </div>
-            <div className="space-y-2.5">
+        <div className="flex min-h-0 flex-1 flex-col items-start justify-between px-4 pb-4 pt-4 text-left">
+          <div className="space-y-2.5">
+            <div className="space-y-2">
               <p className="app-kind-text-link text-lg font-semibold leading-7">
                 {hostname ?? "Link capture"}
               </p>
-              <p className="app-selectable break-all font-mono text-sm leading-6 text-muted-foreground">
+              <p className="app-selectable break-all font-mono text-[13px] leading-6 text-muted-foreground/86">
                 {target}
               </p>
             </div>
@@ -132,15 +132,27 @@ export function CaptureDetailPreview({
     );
   }
 
-  return <TextCapturePreview key={capture.id} capture={capture} sharedSurface={sharedSurface} />;
+  return (
+    <TextCapturePreview
+      key={capture.id}
+      capture={capture}
+      sharedSurface={sharedSurface}
+      toolbarMeta={toolbarMeta}
+      toolbarActions={toolbarActions}
+    />
+  );
 }
 
 function TextCapturePreview({
   capture,
   sharedSurface = false,
+  toolbarMeta,
+  toolbarActions,
 }: {
   capture: ClipboardCapture;
   sharedSurface?: boolean;
+  toolbarMeta?: ReactNode;
+  toolbarActions?: ReactNode;
 }) {
   const [mode, setMode] = useState<TextPreviewMode>(() => preferredTextPreviewMode(capture));
   const normalizedMarkdownSource = normalizeMarkdownSource(capture.rawText);
@@ -150,25 +162,19 @@ function TextCapturePreview({
   const previewKind = markdownPreview ? "markdown" : htmlPreview ? "html" : "text";
   const tabs = buildTextPreviewTabs(capture, previewKind);
   const showModeToggle = tabs.length > 1;
-  const previewTitle =
-    previewKind === "markdown"
-      ? "Markdown Preview"
-      : previewKind === "html"
-        ? "Rich Text Preview"
-        : "Text Preview";
 
   return (
     <section
       className={cn(
         sharedSurface ? "" : capturePreviewSurfaceClassName(capture.contentKind),
-        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden px-2.5 py-2.5",
+        "flex h-full min-h-0 min-w-0 flex-col overflow-hidden",
       )}
     >
-      <PreviewHeader
-        title={previewTitle}
+      <PreviewToolbar
+        meta={toolbarMeta}
         controls={
           showModeToggle ? (
-            <div className="inline-flex h-7 items-center gap-0.5 rounded-full border border-border/70 bg-background/82 p-0.5 shadow-sm backdrop-blur">
+            <div className="inline-flex h-[26px] items-center gap-0.5 rounded-full border border-border/55 bg-background/78 p-0.5 shadow-none">
               {tabs.map((tab) => (
                 <PreviewModeButton
                   key={tab.mode}
@@ -181,9 +187,10 @@ function TextCapturePreview({
             </div>
           ) : null
         }
+        actions={toolbarActions}
       />
 
-      <div className="app-scroll-area min-h-0 min-w-0 flex-1 overflow-auto px-3.5 pb-3.5 pt-2">
+      <div className="app-scroll-area min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-4 pt-3">
         {mode === "preview" && previewKind === "html" ? (
           <HtmlRichPreview html={capture.rawRich ?? ""} />
         ) : null}
@@ -195,26 +202,38 @@ function TextCapturePreview({
             content={capture.rawText}
           />
         ) : null}
-        {mode === "raw_text" ? <RawTextPreview content={capture.rawText} /> : null}
+        {mode === "raw_text" ? (
+          <RawTextPreview
+            content={capture.rawText}
+            tone={previewKind === "text" ? "reading" : "raw"}
+          />
+        ) : null}
         {mode === "raw_rich" ? <RawTextPreview content={capture.rawRich ?? ""} /> : null}
       </div>
     </section>
   );
 }
 
-function PreviewHeader({
-  title,
+function PreviewToolbar({
+  meta,
   controls,
+  actions,
 }: {
-  title: string;
+  meta?: ReactNode;
   controls?: ReactNode;
+  actions?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-10 min-w-0 shrink-0 items-center justify-between gap-3 px-3.5 py-1.5">
-      <p className="min-w-0 text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-        {title}
-      </p>
-      {controls ? <div className="shrink-0">{controls}</div> : null}
+    <div className="app-preview-toolbar sticky top-0 z-10 shrink-0">
+      <div className="flex min-h-[42px] min-w-0 items-center justify-between gap-2.5 px-3 py-1.5">
+        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
+          {meta}
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+          {controls ? <div className="shrink-0">{controls}</div> : null}
+          {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -234,8 +253,8 @@ function PreviewModeButton({
       onClick={onClick}
       className={
         active
-          ? "rounded-full bg-foreground px-2.5 py-1 text-[12px] font-medium text-background"
-          : "rounded-full px-2.5 py-1 text-[12px] font-medium text-muted-foreground transition hover:text-foreground"
+          ? "rounded-full bg-foreground px-2.5 py-[3px] text-[11px] font-medium text-background"
+          : "rounded-full px-2.5 py-[3px] text-[11px] font-medium text-muted-foreground/80 transition hover:text-foreground"
       }
     >
       {children}
@@ -261,7 +280,7 @@ function HtmlRichPreview({ html }: { html: string }) {
 
   return (
     <div
-      className="app-markdown-preview app-selectable app-kind-text-text text-[14px] leading-7"
+      className="app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] text-[13px] leading-[1.7]"
       onClick={handleClick}
       dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
     />
@@ -270,7 +289,7 @@ function HtmlRichPreview({ html }: { html: string }) {
 
 function MarkdownTextPreview({ markdown }: { markdown: string }) {
   return (
-    <div className="app-markdown-preview app-selectable app-kind-text-text text-[14px] leading-7">
+    <div className="app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] text-[13px] leading-[1.7]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSanitize]}
@@ -309,9 +328,22 @@ function MarkdownTextPreview({ markdown }: { markdown: string }) {
   );
 }
 
-function RawTextPreview({ content }: { content: string }) {
+function RawTextPreview({
+  content,
+  tone = "raw",
+}: {
+  content: string;
+  tone?: "raw" | "reading";
+}) {
   return (
-    <div className="app-selectable app-kind-text-text w-0 min-w-full max-w-full overflow-x-hidden font-mono text-[13px] leading-7 whitespace-pre-wrap break-all [overflow-wrap:anywhere]">
+    <div
+      className={cn(
+        "app-selectable app-kind-text-text overflow-x-hidden whitespace-pre-wrap [overflow-wrap:anywhere]",
+        tone === "reading"
+          ? "w-full max-w-[72ch] font-sans text-[13px] leading-[1.7] text-foreground/90 break-words"
+          : "w-0 min-w-full max-w-full font-mono text-[13px] leading-7 break-all",
+      )}
+    >
       {content || "No raw source available."}
     </div>
   );

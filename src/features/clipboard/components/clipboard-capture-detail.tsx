@@ -12,7 +12,6 @@ import {
   capturePreviewSurfaceClassName,
   detailRows,
   formatKindLabel,
-  kindBadgeClass,
   statusVariant,
 } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
@@ -50,57 +49,62 @@ export function ClipboardCaptureDetail({
     );
   }
 
+  const toolbarMeta = (
+    <>
+      <Badge className="px-1.5 py-0.5 text-[10px] font-medium">
+        {formatKindLabel(capture.contentKind)}
+      </Badge>
+      <Badge variant={statusVariant(capture.status)} className="px-1.5 py-0.5 text-[10px] font-medium">
+        {capture.status}
+      </Badge>
+      <span className="shrink-0 text-[9px] text-muted-foreground/76">
+        {formatRelativeTimestamp(capture.capturedAt)}
+      </span>
+    </>
+  );
+
+  const toolbarActions = (
+    <>
+      <TooltipIconButton
+        label="Copy Again"
+        onClick={() => void copyCapture.execute({ capture })}
+      >
+        <Copy />
+      </TooltipIconButton>
+      {capture.contentKind === "image" && capture.assetPath ? (
+        <TooltipIconButton label="Enlarge" onClick={onOpenImage}>
+          <Expand />
+        </TooltipIconButton>
+      ) : null}
+      {capture.contentKind === "image" && capture.assetPath ? (
+        <TooltipIconButton
+          label="Open in Preview"
+          onClick={() =>
+            void openImagePreview.execute({
+              path: capture.assetPath ?? "",
+            })}
+        >
+          <ImageIcon />
+        </TooltipIconButton>
+      ) : null}
+    </>
+  );
+
   return (
     <>
-      <div
-        className="app-card-header-elevated flex h-[50px] items-center justify-between gap-3 border-b border-border/70 px-4"
-        onContextMenu={(event) => onContextMenu(event, capture)}
-      >
-        <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
-          <Badge className={kindBadgeClass(capture.contentKind)}>
-            {formatKindLabel(capture.contentKind)}
-          </Badge>
-          <Badge variant={statusVariant(capture.status)}>
-            {capture.status}
-          </Badge>
-          <span className="shrink-0 text-[11px] text-muted-foreground">
-            {formatRelativeTimestamp(capture.capturedAt)}
-          </span>
-        </div>
-
-        <div className="flex shrink-0 items-center justify-end gap-2 whitespace-nowrap">
-          <TooltipIconButton
-            label="Copy Again"
-            onClick={() => void copyCapture.execute({ capture })}
-          >
-            <Copy />
-          </TooltipIconButton>
-          {capture.contentKind === "image" && capture.assetPath ? (
-            <TooltipIconButton label="Enlarge" onClick={onOpenImage}>
-              <Expand />
-            </TooltipIconButton>
-          ) : null}
-          {capture.contentKind === "image" && capture.assetPath ? (
-            <TooltipIconButton
-              label="Open in Preview"
-              onClick={() =>
-                void openImagePreview.execute({
-                  path: capture.assetPath ?? "",
-                })}
-            >
-              <ImageIcon />
-            </TooltipIconButton>
-          ) : null}
-        </div>
-      </div>
-
       <div
         className={`grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto] ${capturePreviewSurfaceClassName(capture.contentKind)}`}
         onContextMenu={(event) => onContextMenu(event, capture)}
       >
         <div className="min-h-0 min-w-0">
           <Suspense fallback={<div className="h-full w-full" />}>
-            <CaptureDetailPreview capture={capture} onOpenImage={onOpenImage} sharedSurface />
+            <CaptureDetailPreview
+              capture={capture}
+              onOpenImage={onOpenImage}
+              sharedSurface
+              toolbarMeta={toolbarMeta}
+              toolbarActions={toolbarActions}
+            />
           </Suspense>
         </div>
 
@@ -125,7 +129,7 @@ function TooltipIconButton({
         <Button
           variant="outline"
           size="icon"
-          className="size-8 rounded-[14px] border-border/70 bg-card/75 shadow-none [&_svg]:size-3.5"
+          className="size-7 rounded-[10px] border-border/50 bg-background/42 text-muted-foreground/80 shadow-none transition hover:bg-secondary/50 hover:text-foreground [&_svg]:size-3"
           aria-label={label}
           onClick={onClick}
         >
@@ -143,26 +147,26 @@ function DetailInformation({ capture }: { capture: ClipboardCapture }) {
   const sourceAppIconSrc = useClipboardAssetSrc(capture.sourceAppIconPath);
 
   return (
-    <section className="px-2.5 pb-2.5 pt-0">
-      <div className="app-detail-grid-shell overflow-hidden rounded-[18px]">
-        <div className="app-detail-grid h-[120px]">
+    <section className="px-2 pb-2 pt-0">
+      <div className="app-detail-grid-shell overflow-hidden rounded-[16px]">
+        <div className="app-detail-grid h-[108px]">
           {cells.map((cell, index) => (
             <div
               key={cell ? cell.label : `empty-${index}`}
-              className="app-detail-grid-cell min-w-0 px-3 py-2.5"
+              className="app-detail-grid-cell min-w-0 px-2.5 py-2"
             >
               {cell ? (
-                <div className="flex h-full min-w-0 flex-col justify-center gap-1">
-                  <div className="truncate text-[10px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                <div className="flex h-full min-w-0 flex-col justify-center gap-0.5">
+                  <div className="truncate text-[9px] font-medium tracking-[0.12em] text-muted-foreground/74 uppercase">
                     {cell.label}
                   </div>
                   <div
-                    className="app-selectable min-w-0 truncate text-[13px] leading-5 text-foreground"
+                    className="app-selectable min-w-0 truncate text-[12px] leading-5 text-foreground/80"
                     title={cell.value}
                   >
                     {cell.label === "Source App" && sourceAppIconSrc ? (
                       <span className="inline-flex min-w-0 items-center gap-2">
-                        <span className="inline-flex size-5 shrink-0 overflow-hidden rounded-md bg-card/80 align-middle">
+                        <span className="inline-flex size-[18px] shrink-0 overflow-hidden rounded-md bg-card/72 align-middle">
                           <img
                             src={sourceAppIconSrc}
                             alt={capture.sourceAppName || capture.source || "Source application icon"}

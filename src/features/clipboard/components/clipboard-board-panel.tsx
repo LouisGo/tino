@@ -125,7 +125,7 @@ export function ClipboardBoardPanel({
         <div className={cn("overflow-hidden", windowMode && "min-h-0 flex-1")}>
           <div
             className={cn(
-              "grid grid-cols-[minmax(240px,28%)_minmax(0,1fr)] items-stretch gap-0 md:grid-cols-[260px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)]",
+              "grid grid-cols-[minmax(224px,24%)_minmax(0,1fr)] items-stretch gap-0 md:grid-cols-[236px_minmax(0,1fr)] lg:grid-cols-[248px_minmax(0,1fr)] xl:grid-cols-[264px_minmax(0,1fr)] 2xl:grid-cols-[280px_minmax(0,1fr)]",
               windowMode
                 ? "h-full"
                 : fillHeight
@@ -214,10 +214,10 @@ function ClipboardBoardToolbar({
   const hasSearchValue = searchValue.trim().length > 0;
 
   return (
-    <div className="app-board-toolbar border-b border-border/70 px-3 py-3 sm:px-4">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-3">
+    <div className="app-board-toolbar border-b border-border/55 px-2.5 py-2.5 sm:px-3 sm:py-2.5">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-2.5">
         <div className="relative min-w-0">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground/80" />
           <Input
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
@@ -225,18 +225,18 @@ function ClipboardBoardToolbar({
             data-clipboard-search-input="true"
             autoFocus={autoFocusSearch}
             className={cn(
-              "h-11 rounded-[20px] border-border/70 bg-card/90 pl-10 text-sm shadow-none",
-              hasSearchValue ? "pr-11" : "",
+              "h-10 rounded-[18px] border-border/55 bg-background/70 pl-9 text-[13px] shadow-none placeholder:text-muted-foreground/78 focus-visible:border-border/70 focus-visible:bg-card/88 focus-visible:ring-[2px] focus-visible:ring-ring/18",
+              hasSearchValue ? "pr-10" : "",
             )}
           />
           {hasSearchValue ? (
             <button
               type="button"
               onClick={() => setSearchValue("")}
-              className="absolute top-1/2 right-3 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition hover:bg-secondary/80 hover:text-foreground"
+              className="absolute top-1/2 right-2.5 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground/80 transition hover:bg-secondary/70 hover:text-foreground"
               aria-label="Clear search keyword"
             >
-              <X className="size-3.5" />
+              <X className="size-3" />
             </button>
           ) : null}
         </div>
@@ -247,7 +247,7 @@ function ClipboardBoardToolbar({
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger
                 aria-label="Filter capture types"
-                className="w-[132px] border-border/70 bg-card/90 pl-4 shadow-none sm:w-[148px]"
+                className="h-10 w-[124px] rounded-[18px] border-border/55 bg-background/70 pl-3.5 text-[13px] shadow-none focus:border-border/70 focus:ring-[2px] focus:ring-ring/18 sm:w-[140px]"
                 style={
                   filter !== "all"
                     ? {

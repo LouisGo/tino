@@ -33,6 +33,12 @@
   --sidebar-accent-foreground: oklch(0.34 0.03 165);
   --sidebar-border: oklch(0.9 0.01 92);
   --sidebar-ring: oklch(0.53 0.12 171);
+  --scrollbar-size: 10px;
+  --scrollbar-track: color-mix(in oklch, var(--foreground) 5%, transparent);
+  --scrollbar-thumb: color-mix(in oklch, var(--foreground) 18%, transparent);
+  --scrollbar-thumb-hover: color-mix(in oklch, var(--foreground) 26%, transparent);
+  --scrollbar-thumb-active: color-mix(in oklch, var(--foreground) 34%, transparent);
+  --scrollbar-thumb-border: color-mix(in oklch, var(--background) 78%, transparent);
 }
 
 .dark {
@@ -63,12 +69,23 @@
   --sidebar-accent-foreground: oklch(0.96 0.01 96);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.72 0.13 171);
-  --kind-text: oklch(0.72 0.012 260);
-  --kind-text-soft: oklch(0.3 0.012 255);
-  --kind-link: oklch(0.79 0.07 255);
-  --kind-link-soft: oklch(0.32 0.035 252);
-  --kind-image: oklch(0.8 0.07 305);
-  --kind-image-soft: oklch(0.32 0.035 304);
+  --scrollbar-track: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --scrollbar-thumb: color-mix(in oklch, var(--foreground) 16%, transparent);
+  --scrollbar-thumb-hover: color-mix(in oklch, var(--foreground) 24%, transparent);
+  --scrollbar-thumb-active: color-mix(in oklch, var(--foreground) 32%, transparent);
+  --scrollbar-thumb-border: color-mix(in oklch, var(--background) 64%, transparent);
+  --clipboard-kind-text: oklch(0.72 0.01 255);
+  --clipboard-kind-text-soft: oklch(0.3 0.01 255);
+  --clipboard-kind-link: oklch(0.77 0.09 255);
+  --clipboard-kind-link-soft: oklch(0.32 0.04 252);
+  --clipboard-kind-image: oklch(0.77 0.11 292);
+  --clipboard-kind-image-soft: oklch(0.32 0.05 292);
+  --kind-text: var(--clipboard-kind-text);
+  --kind-text-soft: var(--clipboard-kind-text-soft);
+  --kind-link: var(--clipboard-kind-link);
+  --kind-link-soft: var(--clipboard-kind-link-soft);
+  --kind-image: var(--clipboard-kind-image);
+  --kind-image-soft: var(--clipboard-kind-image-soft);
   --gradient-preview-image: linear-gradient(
     180deg,
     color-mix(in oklch, var(--card) 88%, var(--background) 12%),
@@ -147,12 +164,18 @@
   --overlay-backdrop: color-mix(in oklch, black 80%, transparent);
   --overlay-chip: color-mix(in oklch, var(--foreground) 70%, transparent);
   --overlay-chip-foreground: oklch(0.98 0 0);
-  --kind-text: oklch(0.5 0.015 260);
-  --kind-text-soft: oklch(0.94 0.01 255);
-  --kind-link: oklch(0.6 0.085 255);
-  --kind-link-soft: oklch(0.95 0.03 252);
-  --kind-image: oklch(0.64 0.085 305);
-  --kind-image-soft: oklch(0.95 0.03 304);
+  --clipboard-kind-text: oklch(0.5 0.01 255);
+  --clipboard-kind-text-soft: oklch(0.94 0.008 255);
+  --clipboard-kind-link: oklch(0.59 0.11 255);
+  --clipboard-kind-link-soft: oklch(0.95 0.035 252);
+  --clipboard-kind-image: oklch(0.62 0.12 292);
+  --clipboard-kind-image-soft: oklch(0.95 0.04 292);
+  --kind-text: var(--clipboard-kind-text);
+  --kind-text-soft: var(--clipboard-kind-text-soft);
+  --kind-link: var(--clipboard-kind-link);
+  --kind-link-soft: var(--clipboard-kind-link-soft);
+  --kind-image: var(--clipboard-kind-image);
+  --kind-image-soft: var(--clipboard-kind-image-soft);
   --gradient-body:
     radial-gradient(
       circle at top left,
@@ -314,6 +337,40 @@
     @apply border-border outline-ring/50;
     user-select: none;
     -webkit-user-select: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  *::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    min-height: 36px;
+    border: 2px solid var(--scrollbar-thumb-border);
+    border-radius: 999px;
+    background: var(--scrollbar-thumb);
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
   }
 
   input,
@@ -354,29 +411,7 @@
 @layer components {
   .app-scroll-area {
     scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklch, var(--foreground) 20%, transparent) transparent;
-  }
-
-  .app-scroll-area::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-
-  .app-scroll-area::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .app-scroll-area::-webkit-scrollbar-thumb {
-    border: 2px solid transparent;
-    border-radius: 999px;
-    background: color-mix(in oklch, var(--foreground) 18%, transparent);
-    background-clip: padding-box;
-  }
-
-  .app-scroll-area::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in oklch, var(--foreground) 28%, transparent);
-    background-clip: padding-box;
+    overscroll-behavior: contain;
   }
 
   .app-shell-surface {
@@ -471,7 +506,7 @@
   }
 
   .app-card-header-elevated {
-    background-color: color-mix(in oklch, var(--card) 94%, var(--background) 6%);
+    background-color: color-mix(in oklch, var(--card) 92%, var(--background) 8%);
   }
 
   .app-board-surface {
@@ -480,7 +515,74 @@
   }
 
   .app-board-toolbar {
-    background-color: color-mix(in oklch, var(--card) 95%, var(--background) 5%);
+    background-color: color-mix(in oklch, var(--card) 90%, var(--background) 10%);
+  }
+
+  .app-preview-toolbar {
+    position: sticky;
+    top: 0;
+    isolation: isolate;
+    background-color: color-mix(in oklch, var(--card) 94%, var(--background) 6%);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 94%, var(--background) 6%),
+        color-mix(in oklch, var(--card) 86%, var(--background) 14%) 74%,
+        transparent
+      );
+    box-shadow: inset 0 -1px 0 color-mix(in oklch, var(--border) 58%, transparent);
+  }
+
+  .app-preview-toolbar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, white 14%, transparent) 0,
+        transparent 34%
+      );
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .dark .app-preview-toolbar {
+    background-color: color-mix(in oklch, var(--card) 90%, var(--background) 10%);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 90%, var(--background) 10%),
+        color-mix(in oklch, var(--card) 82%, var(--background) 18%) 74%,
+        transparent
+      );
+    box-shadow: inset 0 -1px 0 color-mix(in oklch, var(--border) 44%, transparent);
+  }
+
+  .dark .app-preview-toolbar::after {
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, white 8%, transparent) 0,
+        transparent 34%
+      );
+    opacity: 0.46;
+  }
+
+  .app-preview-inline-action {
+    border: 1px solid color-mix(in oklch, var(--border) 62%, transparent);
+    background-color: color-mix(in oklch, var(--card) 62%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in oklch, white 16%, transparent);
+    transition:
+      border-color 180ms ease,
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .app-preview-inline-action:hover {
+    border-color: color-mix(in oklch, var(--primary) 24%, var(--border));
+    background-color: color-mix(in oklch, var(--secondary) 62%, var(--card) 38%);
   }
 
   .app-summary-tile {
@@ -615,14 +717,18 @@
   }
 
   .app-preview-text {
-    background-color: color-mix(in oklch, var(--card) 96%, var(--background) 4%);
+    background-color: color-mix(in oklch, var(--card) 97%, var(--background) 3%);
     background-image:
       radial-gradient(
         circle at 8% 10%,
         color-mix(in oklch, var(--kind-text) 10%, transparent) 0,
-        transparent 22%
+        transparent 24%
       ),
-      var(--gradient-preview-text);
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 97%, var(--background) 3%),
+        color-mix(in oklch, var(--secondary) 12%, var(--card) 88%)
+      );
     background-repeat: no-repeat;
     background-size: 52% 52%, 100% 100%;
   }
@@ -630,13 +736,52 @@
   .app-detail-grid-shell {
     position: relative;
     isolation: isolate;
-    border: 0.5px solid color-mix(in oklch, var(--border) 88%, transparent);
+    border: 0.5px solid color-mix(in oklch, var(--border) 92%, transparent);
     border-top: 0;
-    background-color: color-mix(in oklch, var(--sidebar) 62%, transparent);
-    background-image: var(--gradient-shell-sidebar);
+    background-color: color-mix(in oklch, var(--card) 93%, var(--background) 7%);
+    background-image:
+      radial-gradient(
+        circle at 8% 10%,
+        color-mix(in oklch, var(--accent) 14%, transparent) 0,
+        transparent 34%
+      ),
+      radial-gradient(
+        circle at 86% 92%,
+        color-mix(in oklch, var(--primary) 8%, transparent) 0,
+        transparent 40%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, white 20%, transparent),
+        transparent 40%
+      );
     box-shadow:
-      0 12px 24px color-mix(in oklch, var(--foreground) 4%, transparent),
-      inset 0 1px 0 color-mix(in oklch, white 28%, transparent);
+      0 12px 28px color-mix(in oklch, var(--foreground) 6%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 26%, transparent);
+  }
+
+  .dark .app-detail-grid-shell {
+    border-color: color-mix(in oklch, var(--border) 72%, transparent);
+    background-color: color-mix(in oklch, var(--card) 86%, var(--background) 14%);
+    background-image:
+      radial-gradient(
+        circle at 8% 10%,
+        color-mix(in oklch, var(--accent) 10%, transparent) 0,
+        transparent 34%
+      ),
+      radial-gradient(
+        circle at 86% 92%,
+        color-mix(in oklch, var(--primary) 8%, transparent) 0,
+        transparent 40%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, white 10%, transparent),
+        transparent 40%
+      );
+    box-shadow:
+      0 12px 24px color-mix(in oklch, black 18%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
   }
 
   .app-detail-grid-shell::before {
@@ -645,18 +790,12 @@
     inset: 0;
     z-index: 0;
     border-radius: inherit;
-    background:
-      linear-gradient(
-        180deg,
-        color-mix(in oklch, white 20%, transparent),
-        transparent 28%
-      ),
-      radial-gradient(
-        circle at top center,
-        color-mix(in oklch, var(--primary) 10%, transparent) 0,
-        transparent 48%
-      );
-    opacity: 0.9;
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklch, white 12%, transparent),
+      transparent 32%
+    );
+    opacity: 0.6;
     pointer-events: none;
   }
 
@@ -673,8 +812,8 @@
 
   .app-detail-grid-cell {
     min-width: 0;
-    border-right: 0.5px solid color-mix(in oklch, var(--border) 88%, transparent);
-    border-bottom: 0.5px solid color-mix(in oklch, var(--border) 88%, transparent);
+    border-right: 0.5px solid color-mix(in oklch, var(--border) 82%, transparent);
+    border-bottom: 0.5px solid color-mix(in oklch, var(--border) 82%, transparent);
   }
 
   .app-detail-grid-cell:nth-child(3n) {
