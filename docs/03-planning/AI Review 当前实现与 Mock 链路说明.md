@@ -16,6 +16,7 @@
 额外边界：
 
 - 当前 `/ai` 页更接近开发校准与隐藏干预界面，不是普通用户主路径
+- MVP 用户心智仍然是 `inbox-first`；当前写入的 `topics/` 是系统后台生成的知识输出，不是要求用户预先管理的结构
 
 ## 2. 当前 `/ai` 页的真实边界
 
@@ -61,7 +62,7 @@
 - 校验 `sourceIds` 不会跨 cluster 重复引用
 - 校验 `editedClusterIds` 是否引用了存在的 cluster
 - 将 review 与 feedback 写入 `_system/reviews/*.json`
-- 按程序控制写入 `topics/*.md` 或 `_inbox/YYYY-MM-DD.md`
+- 按程序控制写入系统生成的 `topics/*.md` 或 `_inbox/YYYY-MM-DD.md`
 - 将 batch 状态更新为 `persisted`
 
 当前它明确不负责：
@@ -196,6 +197,7 @@ pnpm mock:ai-review status --knowledge-root /tmp/tino-ai-review-mock
 
 > Tino 已具备 live batch 的读取、展示、manual live candidate run、审阅提交、review 留痕以及手动受控持久化能力；
 > live `generateObject` 当前仍发生在 renderer 侧，`topics/` / `_inbox/` 写入仍必须经过 Rust command；
+> 这些 `topics/` 写入是当前知识输出层实现，不代表普通用户需要先创建或管理 topic；
 > `/ai` 当前主要服务校准、抽检与异常干预，而不是普通用户的日常使用主路径；
 > 真正尚未接通的是“静默后台自动编译并自动交付”。
 

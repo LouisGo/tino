@@ -1,6 +1,7 @@
 # 个人信息流软件 MVP 开发任务拆解
 
 > 基线文档：`docs/02-product/个人信息流软件需求原型文档.md`
+> MVP 心智：`inbox-first`。用户先丢内容，系统后台再长出议题。
 
 ## 1. 当前开发顺序判断
 
@@ -28,7 +29,7 @@
   -> 归档 daily/*.md
   -> 进入缓冲区
   -> 批量触发 AI
-  -> 结构化输出
+  -> 聚类 / 归并 / 议题建议
   -> 写入 topics/*.md 或 _inbox/*.md
 ```
 
@@ -53,7 +54,7 @@
 - Tray 和系统集成走 Tauri 原生能力
 - 剪贴板轮询放 Rust 侧
 - 文件写入放 Rust 侧
-- AI 调用先走前端可接受，但更推荐统一走 Rust command，便于收口
+- AI 调用先走前端 `Renderer`
 - `_system/` 先用 JSON 文件，不上数据库
 
 完成标准：
@@ -159,7 +160,8 @@ AI 输出至少包含：
 
 - `source_ids`
 - `decision`
-- `topic`
+- `topic_slug_suggestion`
+- `topic_name_suggestion`
 - `title`
 - `summary`
 - `key_points`
@@ -178,7 +180,7 @@ AI 输出至少包含：
 
 任务：
 
-- 设计 `topics/` 文件命名规则
+- 设计系统生成 `topics/` 的文件命名规则
 - 设计 `_inbox/` 兜底规则
 - 生成 front matter
 - 决定追加写入还是新建文件
