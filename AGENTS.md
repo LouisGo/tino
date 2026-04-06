@@ -8,6 +8,8 @@ Shared repo-local skills live under `.agents/skills/`.
 
 - Read `.agents/skills/tino-task-router/SKILL.md` when the task is mainly about deciding what context to load or which planning doc to trust.
 - Read `.agents/skills/tino-ai-review-phase1/SKILL.md` before working on `/ai`, `applyBatchDecision`, live batch behavior, or the mock review chain.
+- Treat `/ai` and batch review surfaces as hidden intervention and calibration flows, not as the primary end-user product path.
+- If repo-local skill wording conflicts with current planning docs, `docs/03-planning/HANDOFF.md` and `docs/03-planning/技术冻结记录.md` win.
 - Keep these skills short and pointer-based. Do not duplicate their content into README or handoff docs.
 
 ## Required IPC Flow

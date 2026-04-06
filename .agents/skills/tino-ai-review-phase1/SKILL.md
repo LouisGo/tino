@@ -1,6 +1,6 @@
 ---
 name: tino-ai-review-phase1
-description: "Use this skill for Tino /ai work in the current M5 Phase 1 state: review page semantics, live batch debugging, applyBatchDecision behavior, queue-to-batch promotion, or running the near-real mock chain without calling a real model."
+description: "Use this skill for Tino /ai work in the current M5 Phase 1 state: hidden intervention semantics, live batch debugging, applyBatchDecision behavior, queue-to-batch promotion, or running the near-real mock chain without calling a real model."
 ---
 
 # Tino AI Review Phase 1
@@ -13,12 +13,14 @@ description: "Use this skill for Tino /ai work in the current M5 Phase 1 state: 
 
 ## Current Truths
 
+- `/ai` is currently a hidden intervention, calibration, and debug surface, not the primary end-user product path.
 - `/ai` can display a real live batch from the filesystem.
 - The current sorting result is renderer-side `trial sorting pass`, not real model output.
 - `applyBatchDecision` applies review, validates references, writes `_system/reviews/*.json`, and marks the batch `reviewed`.
 - `applyBatchDecision` does not generate batches, call a model, write `topics/`, write `_inbox/`, or refresh a formal topic index.
 - Batch generation happens earlier: `capture -> queue -> promote -> _system/batches/*.json`.
 - If `apiKey` is empty, capture stays in `daily` and does not enter the AI queue.
+- High-confidence results are intended to go silently to `topics/` later; `/ai` exists for exceptions, calibration, and developer visibility.
 
 ## Debug Order For Empty `/ai`
 
@@ -57,5 +59,7 @@ Browser fixture files are preview-only and do not write a knowledge root.
 ## Guardrails
 
 - Do not describe the current system as "real model connected" or "AI finished".
+- Do not frame `/ai` review as the product centerpiece or as the normal daily workflow for ordinary users.
+- Do not claim users should build trust by manually reviewing every batch.
 - Do not repurpose `applyBatchDecision` into task generation without updating docs and phase framing.
 - If `/ai` semantics change, update both `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md` and `docs/03-planning/HANDOFF.md`.

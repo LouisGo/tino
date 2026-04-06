@@ -1,8 +1,8 @@
 # Tino Handoff
 
-> 最后更新：2026-04-05  
-> 当前基线提交：`60d430e`  
-> 角色：短版 current-state 控制文档  
+> 最后更新：2026-04-06
+> 当前基线提交：`cfa983e`
+> 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
 
 ## 1. 先读什么
@@ -54,13 +54,13 @@
 - Runtime Provider 表单校验与模型下拉
 - settings 页 live provider smoke test
 - Renderer 侧 OpenAI-compatible provider access layer
-- `/ai` 页读取 live batch
+- `/ai` 页读取 live batch（当前主要作为隐藏干预 / 校准面）
 - review 提交写入 `_system/reviews/*.json`
 
 当前仍未真实存在：
 
 - `/ai` 主链路中的真实模型调用
-- `/ai` review session 的 live `generateObject`
+- `/ai` 隐藏干预链路中的 live `generateObject`
 - `topics/` 写入
 - `_inbox/` 写入
 - 正式 topic index
@@ -72,6 +72,7 @@
 - 当前排序结果仍是 renderer 侧 `trial sorting pass`
 - settings 页的 live provider test 已接真实模型，但 `/ai` 主链路仍未接 live `generateObject`
 - `applyBatchDecision` 当前只做审阅应用与留痕，不生成任务
+- `/ai` 当前更接近隐藏干预 / 校准界面，不是普通用户的主产品路径
 - 若 `apiKey` 为空，capture 只进 `daily`，不进 AI queue
 
 细节说明看：
@@ -107,6 +108,8 @@ AI 策略：
 - 触发条件：`20 条`或`10 分钟`
 - 允许批次内拆分多个 topic
 - 低置信度进入 `_inbox`
+- 用户主路径是 `静默输入 -> 后台编译 -> 结果呈现`
+- review / 调试只作为异常兜底与开发校准层
 
 ## 6. 默认开发顺序
 
@@ -116,8 +119,9 @@ AI 策略：
 
 如果做 AI：
 
-- `Contract -> Provider Access -> Review -> Persistence`
+- `Contract -> Provider Access -> Runtime -> Persistence -> Hidden Intervention`
 - 不要把“接模型”和“写知识层”混成一步
+- 不要把 `/ai review` 误当成普通用户主体验
 
 ## 7. 常用命令
 
@@ -154,4 +158,4 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 当前仓库的正确理解不是“AI 已接完”，而是：
 
-> 无 AI 原始归档链路已真实跑通；AI provider config 与 live smoke test 已接真实模型；AI review 已有 live batch、审阅页和 review 留痕；`/ai` 主链路的真实模型调用与知识层持久化仍未接入。
+> 无 AI 原始归档链路已真实跑通；AI provider config 与 live smoke test 已接真实模型；`/ai` 当前主要承担隐藏干预与校准；普通用户主路径仍应理解为静默输入、后台编译与知识结果交付；真实模型主链路与知识层持久化仍未接入。

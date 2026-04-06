@@ -1,6 +1,6 @@
 # AI Review 当前实现与 Mock 链路说明
 
-> 日期：2026-04-05  
+> 日期：2026-04-06
 > 适用阶段：`M5 AI Pipeline / Phase 1 Contract First`
 
 ## 1. 这份文档解决什么问题
@@ -12,6 +12,10 @@
 - 当前 `/ai` 页到底真实到哪一步
 - `applyBatchDecision` 在当前阶段到底做什么，不做什么
 - 如何用一条接近真实数据面的 mock 链路，把 live batch 打进当前 AI review 页面
+
+额外边界：
+
+- 当前 `/ai` 页更接近开发校准与隐藏干预界面，不是普通用户主路径
 
 ## 2. 当前 `/ai` 页的真实边界
 
@@ -40,6 +44,10 @@
 而不是：
 
 > live batch + real model output
+
+同时它应被理解为：
+
+> 当前阶段的隐藏干预 / 调试入口
 
 ## 3. `applyBatchDecision` 的当前语义
 
@@ -184,7 +192,8 @@ pnpm mock:ai-review status --knowledge-root /tmp/tino-ai-review-mock
 
 截至这份文档，当前 AI review 的正确描述应当是：
 
-> Tino 已具备 live batch 的读取、展示、审阅提交和 review 留痕能力；  
+> Tino 已具备 live batch 的读取、展示、审阅提交和 review 留痕能力；
 > 但当前排序结果仍是 renderer 侧的 trial sorting pass，尚未接入真实模型与知识层持久化。
+> `/ai` 当前主要服务校准、抽检与异常干预，而不是普通用户的日常使用主路径。
 
 如果后续有人说“AI 已经做完了”或者“`applyBatchDecision` 没有生成任务”，都属于对当前实现阶段的误读。

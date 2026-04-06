@@ -1,6 +1,6 @@
 # Tino
 
-Desktop app for personal information flow capture, review, and markdown-first knowledge output.
+Desktop app for personal information flow capture, background compile, and markdown-first knowledge output.
 
 ## Start Here
 
@@ -12,7 +12,7 @@ Required:
 
 Read more only by task:
 
-- AI review / mock chain: `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md`
+- AI intervention / mock chain: `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md`
 - AI runtime architecture: `docs/03-planning/Tino AI Runtime 与 Agent 工程方案 v0.1.md`
 - Task breakdown: `docs/03-planning/MVP开发任务拆解.md`
 - Packaging / signing: `docs/03-planning/环境与打包流程.md`
