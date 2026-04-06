@@ -11,8 +11,8 @@ const badgeVariants = cva(
         default: "border-transparent bg-primary/12 text-primary",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         outline: "text-foreground",
-        success: "border-transparent bg-emerald-100 text-emerald-700",
-        warning: "border-transparent bg-amber-100 text-amber-700",
+        success: "app-tone-success app-tone-badge border",
+        warning: "app-tone-warning app-tone-badge border",
       },
     },
     defaultVariants: {

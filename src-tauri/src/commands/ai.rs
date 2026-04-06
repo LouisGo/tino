@@ -330,7 +330,10 @@ pub fn apply_batch_decision(
         }
 
         if cluster.summary.trim().is_empty() {
-            return Err(format!("cluster {} summary is required", cluster.cluster_id));
+            return Err(format!(
+                "cluster {} summary is required",
+                cluster.cluster_id
+            ));
         }
 
         if cluster.key_points.is_empty()
@@ -538,7 +541,9 @@ fn review_file_path(knowledge_root: &Path, review_id: &str) -> PathBuf {
 }
 
 fn topic_file_path(knowledge_root: &Path, topic_slug: &str) -> PathBuf {
-    knowledge_root.join("topics").join(format!("{topic_slug}.md"))
+    knowledge_root
+        .join("topics")
+        .join(format!("{topic_slug}.md"))
 }
 
 fn inbox_file_path(knowledge_root: &Path, submitted_at: &str) -> Result<PathBuf, String> {
@@ -575,8 +580,8 @@ fn load_topic_index_entries(knowledge_root: &Path) -> Result<Vec<TopicIndexEntry
         };
         let content = fs::read_to_string(&path).map_err(|error| error.to_string())?;
         let topic_name = parse_topic_name(&content).unwrap_or_else(|| topic_slug.replace('-', " "));
-        let topic_summary = parse_topic_summary(&content)
-            .unwrap_or_else(|| "Topic summary unavailable.".into());
+        let topic_summary =
+            parse_topic_summary(&content).unwrap_or_else(|| "Topic summary unavailable.".into());
         let metadata = path.metadata().map_err(|error| error.to_string())?;
         let last_updated_at = metadata
             .modified()
@@ -626,7 +631,8 @@ fn persist_review_outputs(
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let effective_decision = resolve_effective_decision(cluster.decision.clone(), &feedback.action);
+        let effective_decision =
+            resolve_effective_decision(cluster.decision.clone(), &feedback.action);
 
         match effective_decision {
             AiDecision::ArchiveToTopic => {
@@ -911,7 +917,10 @@ fn render_persisted_cluster_section(
     ));
     section.push_str(&format!("- Batch: `{}`\n", stored_batch.id));
     section.push_str(&format!("- Review: `{}`\n", review.review_id));
-    section.push_str(&format!("- Applied as: `{}`\n", review_action_label(&feedback.action)));
+    section.push_str(&format!(
+        "- Applied as: `{}`\n",
+        review_action_label(&feedback.action)
+    ));
     section.push_str(&format!(
         "- Destination: `{}`\n",
         persisted_destination_label(&destination)
@@ -1098,7 +1107,10 @@ fn parse_topic_name(content: &str) -> Option<String> {
     content
         .lines()
         .map(str::trim)
-        .find_map(|line| line.strip_prefix("# ").map(|value| value.trim().to_string()))
+        .find_map(|line| {
+            line.strip_prefix("# ")
+                .map(|value| value.trim().to_string())
+        })
         .filter(|value| !value.is_empty())
 }
 

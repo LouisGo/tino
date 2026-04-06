@@ -86,8 +86,8 @@ export function WorkspaceSettingsSection({
           </SettingField>
 
           <SettingField
-            label="Clipboard retention"
-            description="Keep recent captures available."
+            label="Clipboard cache retention"
+            description="Keep recent clipboard captures available in the board without touching long-lived daily records."
           >
             <div className="flex flex-wrap gap-2">
               {clipboardRetentionOptions.map((option) => {

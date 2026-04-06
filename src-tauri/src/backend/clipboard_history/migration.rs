@@ -6,34 +6,32 @@ use crate::{
 };
 
 pub(crate) fn reconcile_capture_history_store(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
 ) -> Result<(), String> {
-    let captures = load_capture_history_entries_legacy(knowledge_root, history_days)?;
+    let captures = load_capture_history_entries_legacy(clipboard_cache_root, history_days)?;
     let upserts = captures
         .into_iter()
         .map(capture_preview_to_history_upsert)
         .collect::<Vec<_>>();
-    CaptureHistoryStore::new(knowledge_root)?.replace_retained_history(&upserts)
+    CaptureHistoryStore::new(clipboard_cache_root)?.replace_retained_history(&upserts)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::{fs, path::PathBuf};
+    use uuid::Uuid;
 
     use crate::{
         app_state::{append_clipboard_history_entry, ensure_knowledge_root_layout, CapturePreview},
         storage::capture_history_store::CaptureHistoryQuery,
     };
-    use std::time::{SystemTime, UNIX_EPOCH};
-
     fn unique_root() -> PathBuf {
-        let suffix = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system time should be after unix epoch")
-            .as_nanos();
-        std::env::temp_dir().join(format!("tino-history-migration-tests-{suffix}"))
+        std::env::temp_dir().join(format!(
+            "tino-history-migration-tests-{}",
+            Uuid::now_v7().simple()
+        ))
     }
 
     fn sample_preview(id: &str, captured_at: &str) -> CapturePreview {

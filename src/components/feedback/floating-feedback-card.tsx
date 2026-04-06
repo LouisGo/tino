@@ -134,8 +134,15 @@ export function FloatingFeedbackCard({
 
   return createPortal(
     <div className="pointer-events-none fixed right-4 bottom-4 z-[180] w-[min(26rem,calc(100vw-1rem))] max-h-[calc(100vh-1rem)]">
-      <div className="pointer-events-auto flex max-h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-[28px] border border-border/80 bg-surface-panel/96 shadow-[0_24px_90px_-34px_rgba(15,23,42,0.55)] backdrop-blur-xl">
-        <div className={cn("h-1.5", status?.tone === "success" ? statusTheme.topBarClass : "bg-[linear-gradient(90deg,rgba(16,185,129,0.9),rgba(59,130,246,0.85),rgba(245,158,11,0.85))]")} />
+      <div className="pointer-events-auto flex max-h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-[28px] border border-border/80 bg-surface-panel/96 shadow-[var(--shadow-overlay-floating)] backdrop-blur-xl">
+        <div
+          className={cn(
+            "h-1.5",
+            status?.tone === "success"
+              ? statusTheme.topBarClass
+              : "app-tone-success app-tone-bar",
+          )}
+        />
 
         <div className="flex min-h-0 flex-1 flex-col">
           {status?.tone === "success" ? (
@@ -370,7 +377,7 @@ export function FloatingFeedbackCard({
                       className={cn(
                         "rounded-[18px] border px-4 py-3 text-sm",
                         status.tone === "error"
-                          ? "border-rose-500/25 bg-rose-500/10 text-rose-800 dark:text-rose-200"
+                          ? "app-tone-danger app-tone-inline-panel"
                           : "border-border/80 bg-background/80 text-foreground",
                       )}
                     >
@@ -439,84 +446,81 @@ function getFeedbackTheme(sentiment: "positive" | "neutral" | "negative") {
   switch (sentiment) {
     case "positive":
       return {
-        topBarClass:
-          "bg-[linear-gradient(90deg,rgba(16,185,129,0.95),rgba(45,212,191,0.85),rgba(110,231,183,0.9))]",
+        topBarClass: "app-tone-success app-tone-bar",
         outerPulseClass:
-          "bg-emerald-500/18 animate-[ping_1.15s_cubic-bezier(0,0,0.2,1)_3]",
-        innerPulseClass: "bg-emerald-500/14",
+          "app-tone-success app-tone-orb-primary animate-[ping_1.15s_cubic-bezier(0,0,0.2,1)_3]",
+        innerPulseClass: "app-tone-success app-tone-orb-secondary",
         iconShellClass:
-          "bg-emerald-500/16 text-emerald-700 shadow-[0_18px_40px_-24px_rgba(16,185,129,0.85)] dark:text-emerald-300",
+          "app-tone-success app-tone-icon-shell",
         iconMotionClass: "animate-[bounce_0.9s_ease-in-out_2]",
-        messageClass: "text-emerald-950/72 dark:text-emerald-100/78",
+        messageClass: "app-tone-success app-tone-message",
         optionIconShellClass:
-          "border-emerald-500/20 bg-emerald-500/12 text-emerald-700 dark:text-emerald-200",
+          "app-tone-success app-tone-option-icon",
         selectedLabelClass:
-          "bg-emerald-500/12 px-2.5 py-1 text-emerald-800 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.2)] dark:text-emerald-100",
+          "app-tone-success app-tone-label px-2.5 py-1",
         idleOptionClass:
-          "border-border/80 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.09),transparent_40%)] bg-background/85 hover:border-emerald-400/45 hover:bg-emerald-500/6 hover:shadow-[0_20px_42px_-32px_rgba(16,185,129,0.72)]",
+          "app-tone-success app-tone-option-idle",
         selectedOptionClass:
-          "border-emerald-500/55 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.16),transparent_40%),linear-gradient(180deg,rgba(16,185,129,0.18),rgba(16,185,129,0.08))] text-emerald-950 shadow-[0_20px_42px_-30px_rgba(16,185,129,0.78)] dark:text-emerald-100",
-        checkClass: "text-emerald-600 dark:text-emerald-300",
+          "app-tone-success app-tone-option-selected",
+        checkClass: "app-tone-success app-tone-check",
         successPanelClass:
-          "border-emerald-500/16 bg-[linear-gradient(180deg,rgba(16,185,129,0.09),rgba(255,255,255,0.02))]",
-        successOrbPrimaryClass: "bg-emerald-500/18",
-        successOrbSecondaryClass: "bg-teal-400/16",
+          "app-tone-success app-tone-celebration",
+        successOrbPrimaryClass: "app-tone-success app-tone-orb-primary",
+        successOrbSecondaryClass: "app-tone-success app-tone-orb-secondary",
         successKickerClass:
-          "border-emerald-500/20 bg-emerald-500/12 text-emerald-700 dark:text-emerald-200",
+          "app-tone-success app-tone-badge",
       }
     case "neutral":
       return {
-        topBarClass:
-          "bg-[linear-gradient(90deg,rgba(245,158,11,0.95),rgba(251,191,36,0.9),rgba(249,168,37,0.88))]",
+        topBarClass: "app-tone-warning app-tone-bar",
         outerPulseClass:
-          "bg-amber-500/18 animate-[ping_1.45s_cubic-bezier(0,0,0.2,1)_2]",
-        innerPulseClass: "bg-amber-500/14",
+          "app-tone-warning app-tone-orb-primary animate-[ping_1.45s_cubic-bezier(0,0,0.2,1)_2]",
+        innerPulseClass: "app-tone-warning app-tone-orb-secondary",
         iconShellClass:
-          "bg-amber-500/16 text-amber-700 shadow-[0_18px_40px_-24px_rgba(245,158,11,0.8)] dark:text-amber-300",
+          "app-tone-warning app-tone-icon-shell",
         iconMotionClass: "animate-[pulse_1.1s_ease-in-out_2]",
-        messageClass: "text-amber-950/72 dark:text-amber-100/78",
+        messageClass: "app-tone-warning app-tone-message",
         optionIconShellClass:
-          "border-amber-500/20 bg-amber-500/12 text-amber-700 dark:text-amber-200",
+          "app-tone-warning app-tone-option-icon",
         selectedLabelClass:
-          "bg-amber-500/12 px-2.5 py-1 text-amber-800 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.2)] dark:text-amber-100",
+          "app-tone-warning app-tone-label px-2.5 py-1",
         idleOptionClass:
-          "border-border/80 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.09),transparent_40%)] bg-background/85 hover:border-amber-400/45 hover:bg-amber-500/6 hover:shadow-[0_20px_42px_-32px_rgba(245,158,11,0.72)]",
+          "app-tone-warning app-tone-option-idle",
         selectedOptionClass:
-          "border-amber-500/55 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.16),transparent_40%),linear-gradient(180deg,rgba(245,158,11,0.18),rgba(245,158,11,0.08))] text-amber-950 shadow-[0_20px_42px_-30px_rgba(245,158,11,0.78)] dark:text-amber-100",
-        checkClass: "text-amber-600 dark:text-amber-300",
+          "app-tone-warning app-tone-option-selected",
+        checkClass: "app-tone-warning app-tone-check",
         successPanelClass:
-          "border-amber-500/16 bg-[linear-gradient(180deg,rgba(245,158,11,0.09),rgba(255,255,255,0.02))]",
-        successOrbPrimaryClass: "bg-amber-500/18",
-        successOrbSecondaryClass: "bg-yellow-300/14",
+          "app-tone-warning app-tone-celebration",
+        successOrbPrimaryClass: "app-tone-warning app-tone-orb-primary",
+        successOrbSecondaryClass: "app-tone-warning app-tone-orb-secondary",
         successKickerClass:
-          "border-amber-500/20 bg-amber-500/12 text-amber-700 dark:text-amber-200",
+          "app-tone-warning app-tone-badge",
       }
     case "negative":
       return {
-        topBarClass:
-          "bg-[linear-gradient(90deg,rgba(244,63,94,0.95),rgba(251,113,133,0.9),rgba(248,113,113,0.88))]",
+        topBarClass: "app-tone-danger app-tone-bar",
         outerPulseClass:
-          "bg-rose-500/16 animate-[ping_1.65s_cubic-bezier(0,0,0.2,1)_2]",
-        innerPulseClass: "bg-rose-500/12",
+          "app-tone-danger app-tone-orb-primary animate-[ping_1.65s_cubic-bezier(0,0,0.2,1)_2]",
+        innerPulseClass: "app-tone-danger app-tone-orb-secondary",
         iconShellClass:
-          "bg-rose-500/14 text-rose-700 shadow-[0_18px_40px_-24px_rgba(244,63,94,0.8)] dark:text-rose-300",
+          "app-tone-danger app-tone-icon-shell",
         iconMotionClass: "animate-[pulse_1.35s_ease-in-out_2]",
-        messageClass: "text-rose-950/72 dark:text-rose-100/78",
+        messageClass: "app-tone-danger app-tone-message",
         optionIconShellClass:
-          "border-rose-500/20 bg-rose-500/12 text-rose-700 dark:text-rose-200",
+          "app-tone-danger app-tone-option-icon",
         selectedLabelClass:
-          "bg-rose-500/12 px-2.5 py-1 text-rose-800 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.2)] dark:text-rose-100",
+          "app-tone-danger app-tone-label px-2.5 py-1",
         idleOptionClass:
-          "border-border/80 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.08),transparent_40%)] bg-background/85 hover:border-rose-400/45 hover:bg-rose-500/6 hover:shadow-[0_20px_42px_-32px_rgba(244,63,94,0.72)]",
+          "app-tone-danger app-tone-option-idle",
         selectedOptionClass:
-          "border-rose-500/55 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.15),transparent_40%),linear-gradient(180deg,rgba(244,63,94,0.17),rgba(244,63,94,0.08))] text-rose-950 shadow-[0_20px_42px_-30px_rgba(244,63,94,0.78)] dark:text-rose-100",
-        checkClass: "text-rose-600 dark:text-rose-300",
+          "app-tone-danger app-tone-option-selected",
+        checkClass: "app-tone-danger app-tone-check",
         successPanelClass:
-          "border-rose-500/16 bg-[linear-gradient(180deg,rgba(244,63,94,0.09),rgba(255,255,255,0.02))]",
-        successOrbPrimaryClass: "bg-rose-500/16",
-        successOrbSecondaryClass: "bg-orange-300/10",
+          "app-tone-danger app-tone-celebration",
+        successOrbPrimaryClass: "app-tone-danger app-tone-orb-primary",
+        successOrbSecondaryClass: "app-tone-danger app-tone-orb-secondary",
         successKickerClass:
-          "border-rose-500/20 bg-rose-500/12 text-rose-700 dark:text-rose-200",
+          "app-tone-danger app-tone-badge",
       }
   }
 }

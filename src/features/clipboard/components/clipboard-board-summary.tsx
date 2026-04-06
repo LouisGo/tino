@@ -67,7 +67,7 @@ export function ClipboardBoardSummary({
           </p>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 min-[900px]:grid-cols-4">
           {summaryTiles.map((tile) => (
             <SummaryTile
               key={tile.label}

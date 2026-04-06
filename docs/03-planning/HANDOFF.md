@@ -1,7 +1,7 @@
 # Tino Handoff
 
 > 最后更新：2026-04-06
-> 当前基线提交：`395ef47`
+> 当前基线提交：`395ef47` + workspace multi-provider runtime changes
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
 
@@ -47,12 +47,14 @@
 - Rust 剪贴板轮询
 - `CaptureRecord`
 - `daily/*.md` 原始归档
+- clipboard panel 最近历史保留窗口（当前缓存已落到 app data；`clipboard-cache/clipboard/*.jsonl` + `clipboard-cache/tino.db` + `clipboard-cache/app-icons/` 不裁剪 `daily` / `topics` / `_inbox` / 持久化附件）
 - `_system/runtime.json`
 - `_system/queue.json`
 - `_system/batches/*.json`
 - settings / dashboard 的真实 Rust 持久化与读取
-- Runtime Provider 表单校验与模型下拉
+- Runtime Provider 多配置 CRUD 与当前启用项切换；provider profile 已拆分为 `vendor + baseURL + apiKey + default model override`
 - settings 页 live provider smoke test
+- 首页右侧单个模型 selector，按 provider 分组；首页切换只影响当前会话，不改 settings 中的默认 provider
 - Renderer 侧 OpenAI Responses provider access layer（支持自定义 `baseURL`）
 - `/ai` 页读取 live batch（当前主要作为隐藏干预 / 校准面）
 - `/ai` 页支持单批次 manual live candidate run（renderer 侧 live `generateObject`）
@@ -75,7 +77,7 @@
 - live candidate 在提交前只保留在 renderer 内存中
 - `applyBatchDecision` 当前负责审阅应用、review 留痕与受控知识落盘，但仍不生成 batch、不调用模型
 - `/ai` 当前更接近隐藏干预 / 校准界面，不是普通用户的主产品路径
-- 若 `apiKey` 为空，capture 只进 `daily`，不进 AI queue
+- 若当前启用 provider 的 `apiKey` 为空，capture 只进 `daily`，不进 AI queue
 
 细节说明看：
 
@@ -100,7 +102,11 @@
 
 数据边界：
 
+- clipboard history 是输入插件缓存，不是长期知识真相源
+- clipboard retention 只作用于 app data 下的 clipboard panel / history query 缓存层
+- 来源应用图标缓存也属于 clipboard 插件 UI 缓存，放 app data，不写入长期 Markdown 资产
 - `daily/` 只做原始归档
+- `daily/` / `topics/` / `_inbox/` / 已持久化附件应视为长期知识资产，不应被 clipboard retention 误删
 - `topics/` / `_inbox/` 是 AI 知识层输出
 - `topic` 是系统后台生成的结果，不是用户前置输入
 - AI 不能直接控制真实文件路径
@@ -163,4 +169,4 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 当前仓库的正确理解不是“AI 已接完”，而是：
 
-> 无 AI 原始归档链路已真实跑通；AI provider config 与 live smoke test 已接真实模型；`/ai` 当前主要承担隐藏干预与校准，并已支持单批次 manual live candidate run + manual persistence apply；普通用户主路径仍应理解为静默输入、后台编译与知识结果交付；自动静默落盘仍未接入。
+> 无 AI 原始归档链路已真实跑通；AI provider config 已升级为多 profile 管理，并按 `vendor + baseURL + apiKey + default model override` 建模，支持 live smoke test、首页按 provider 分组的单个模型 selector，以及 `/ai` 与后台自动链路共用 settings 中的默认 provider；`/ai` 当前主要承担隐藏干预与校准，并已支持单批次 manual live candidate run + manual persistence apply；普通用户主路径仍应理解为静默输入、后台编译与知识结果交付；自动静默落盘仍未接入。

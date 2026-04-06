@@ -96,8 +96,10 @@ export function AppFrame({ children }: AppFrameProps) {
   return (
     <div
       className={cn(
-        "relative h-screen min-w-[700px] overflow-hidden px-3 pb-3 md:px-4 md:pb-4",
-        hasOverlayTitleBar ? "pt-[32px]" : "pt-3 md:pt-4",
+        "relative h-screen min-w-0 overflow-hidden px-[var(--app-shell-gutter)] pb-[var(--app-shell-gutter)]",
+        hasOverlayTitleBar
+          ? "pt-[var(--app-shell-titlebar-height)]"
+          : "pt-[var(--app-shell-gutter)]",
       )}
     >
       {hasOverlayTitleBar ? (
@@ -106,20 +108,17 @@ export function AppFrame({ children }: AppFrameProps) {
           onMouseDown={handleTitleBarMouseDown}
           onDoubleClick={handleTitleBarDoubleClick}
           className={cn(
-            "fixed right-3 z-30 bg-transparent",
-            "top-0 h-[32px]",
-            "left-[92px] md:left-[100px]",
+            "fixed top-0 left-[calc(var(--app-shell-gutter)+var(--app-shell-sidebar-width)+var(--app-shell-sidebar-gap))] right-[var(--app-shell-gutter)] z-30 h-[var(--app-shell-titlebar-height)] bg-transparent",
           )}
         />
       ) : null}
 
       <aside
         className={cn(
-          "app-shell-surface fixed z-20 flex w-[58px] flex-col items-center px-1.5 py-2",
-          "left-[max(0.75rem,calc((100vw-1600px)/2+0.75rem))] md:left-[max(1rem,calc((100vw-1600px)/2+1rem))]",
+          "app-shell-surface fixed left-[var(--app-shell-gutter)] z-20 flex w-[var(--app-shell-sidebar-width)] flex-col items-center px-1.5 py-2",
           hasOverlayTitleBar
-            ? "top-[32px] h-[calc(100vh-44px)] md:h-[calc(100vh-48px)]"
-            : "top-3 h-[calc(100vh-1.5rem)] md:top-4 md:h-[calc(100vh-2rem)]",
+            ? "top-[var(--app-shell-titlebar-height)] h-[calc(100vh-var(--app-shell-titlebar-height)-var(--app-shell-gutter))]"
+            : "top-[var(--app-shell-gutter)] h-[calc(100vh-var(--app-shell-gutter)-var(--app-shell-gutter))]",
         )}
       >
         <Tooltip
@@ -236,7 +235,7 @@ export function AppFrame({ children }: AppFrameProps) {
         </div>
       </aside>
 
-      <div className="mx-auto flex h-full max-w-[1600px] min-h-0 pl-[68px]">
+      <div className="flex h-full w-full min-h-0 pl-[calc(var(--app-shell-sidebar-width)+var(--app-shell-sidebar-gap))]">
         <main className="app-main-surface relative z-0 flex min-h-0 min-w-0 flex-1 flex-col">
           {children}
         </main>

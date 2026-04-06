@@ -179,7 +179,12 @@ export function useSettingsScrollSpy(
   }, [clearPendingScrollTarget]);
 
   const scrollToSection = useCallback(
-    (sectionId: SettingsSectionId) => {
+    (
+      sectionId: SettingsSectionId,
+      options?: {
+        behavior?: ScrollBehavior;
+      },
+    ) => {
       if (typeof window === "undefined" || !scrollViewport) {
         return;
       }
@@ -209,7 +214,7 @@ export function useSettingsScrollSpy(
       schedulePendingScrollFinalization();
       scrollViewport.scrollTo({
         top: nextTop,
-        behavior: "smooth",
+        behavior: options?.behavior ?? "smooth",
       });
     },
     [

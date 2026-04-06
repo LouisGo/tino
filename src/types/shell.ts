@@ -20,6 +20,8 @@ import type {
   DeleteClipboardCaptureResult as RustDeleteClipboardCaptureResult,
   ReviewAction as RustReviewAction,
   ReviewFeedbackRecord as RustReviewFeedbackRecord,
+  RuntimeProviderProfile as RustRuntimeProviderProfile,
+  RuntimeProviderVendor as RustRuntimeProviderVendor,
   TopicIndexEntry as RustTopicIndexEntry,
 } from "@/bindings/tauri";
 
@@ -48,18 +50,29 @@ export type AppLocale = RustAppLocale;
 export type AppLocaleMode = RustAppLocaleMode;
 export type AppLocalePreference = RustAppLocalePreference;
 export type AppShortcutOverride = RustAppShortcutOverride;
+export type RuntimeProviderVendor = RustRuntimeProviderVendor;
+export type RuntimeProviderProfile = RequireKeys<
+  RustRuntimeProviderProfile,
+  "id" | "name" | "vendor" | "baseUrl" | "apiKey" | "model"
+>;
 export type ShortcutOverrideRecord = NonNullable<RustAppSettings["shortcutOverrides"]>;
 
-export type SettingsDraft = RequireKeys<
+export type SettingsDraft = Omit<
   RustAppSettings,
-  "knowledgeRoot"
-  | "baseUrl"
-  | "apiKey"
-  | "model"
+  | "knowledgeRoot"
+  | "runtimeProviderProfiles"
+  | "activeRuntimeProviderId"
   | "localePreference"
   | "clipboardHistoryDays"
   | "shortcutOverrides"
->;
+> & {
+  knowledgeRoot: string;
+  runtimeProviderProfiles: RuntimeProviderProfile[];
+  activeRuntimeProviderId: string;
+  localePreference: AppLocalePreference;
+  clipboardHistoryDays: number;
+  shortcutOverrides: ShortcutOverrideRecord;
+};
 
 export type ClipboardHistoryFilter = "all" | "text" | "link" | "image";
 

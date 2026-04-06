@@ -14,6 +14,7 @@ import {
   runLiveBatchReview,
   type LiveBatchReviewProgress,
 } from "@/features/ai/runtime/live-batch-review"
+import { resolveActiveRuntimeProvider } from "@/features/settings/lib/runtime-provider"
 import { createRendererLogger } from "@/lib/logger"
 import { getAppSettings } from "@/lib/tauri"
 import { applyBatchDecision } from "@/lib/tauri-ai"
@@ -75,8 +76,12 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
     placeholderData: (previousData) => previousData,
   })
 
-  const providerAccess = settingsQuery.data
-    ? resolveProviderAccessConfig(settingsQuery.data)
+  const activeProvider = settingsQuery.data
+    ? resolveActiveRuntimeProvider(settingsQuery.data)
+    : null
+
+  const providerAccess = activeProvider
+    ? resolveProviderAccessConfig(activeProvider)
     : null
 
   useEffect(() => {
@@ -121,13 +126,13 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
         throw new Error("Provider settings are still loading.")
       }
 
-      if (!providerAccess?.isConfigured) {
+      if (!activeProvider || !providerAccess?.isConfigured) {
         throw new Error(
-          "Complete Base URL, model, and API key before running a live candidate.",
+          "Complete Base URL and API key before running a live candidate.",
         )
       }
 
-      const result = await runLiveBatchReview(payload, settingsQuery.data, {
+      const result = await runLiveBatchReview(payload, activeProvider, {
         onProgress: (progress) => {
           startTransition(() => {
             setLiveRunProgress(progress)

@@ -18,6 +18,7 @@ import type {
   CapturePreview as RustCapturePreview,
   ClipboardPage as RustClipboardPage,
   DashboardSnapshot as RustDashboardSnapshot,
+  RuntimeProviderProfile as RustRuntimeProviderProfile,
 } from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
@@ -26,6 +27,7 @@ import type {
   DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
+  RuntimeProviderProfile,
   SettingsDraft,
 } from "@/types/shell";
 
@@ -54,9 +56,17 @@ const mockImageAsset = `data:image/svg+xml;utf8,${encodeURIComponent(
 
 const mockSettings: SettingsDraft = {
   knowledgeRoot: isProductionDataChannel ? "~/tino-inbox-production" : "~/tino-inbox-preview",
-  baseUrl: "https://api.openai.com/v1",
-  apiKey: "",
-  model: "gpt-5.4-mini",
+  runtimeProviderProfiles: [
+    {
+      id: "provider_mock_primary",
+      name: "Provider 1",
+      vendor: "openai",
+      baseUrl: "https://api.openai.com/v1",
+      apiKey: "",
+      model: "",
+    },
+  ],
+  activeRuntimeProviderId: "provider_mock_primary",
   localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: 3,
   shortcutOverrides: {},
@@ -164,12 +174,25 @@ function normalizeClipboardCapture(capture: RustCapturePreview): ClipboardCaptur
   };
 }
 
+function normalizeRuntimeProviderProfile(
+  profile: RustRuntimeProviderProfile,
+): RuntimeProviderProfile {
+  return {
+    id: profile.id,
+    name: profile.name,
+    vendor: profile.vendor,
+    baseUrl: profile.baseUrl,
+    apiKey: profile.apiKey,
+    model: profile.model ?? "",
+  };
+}
+
 function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
   return {
     knowledgeRoot: settings.knowledgeRoot,
-    baseUrl: settings.baseUrl,
-    apiKey: settings.apiKey,
-    model: settings.model,
+    runtimeProviderProfiles:
+      settings.runtimeProviderProfiles.map(normalizeRuntimeProviderProfile),
+    activeRuntimeProviderId: settings.activeRuntimeProviderId,
     localePreference: normalizeAppLocalePreference(settings.localePreference),
     clipboardHistoryDays: settings.clipboardHistoryDays ?? 3,
     shortcutOverrides: settings.shortcutOverrides ?? {},

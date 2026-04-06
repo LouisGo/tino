@@ -42,7 +42,7 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
         className={cn(
-          "app-lightbox-surface fixed top-1/2 left-1/2 z-[141] grid w-full max-w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-[24px] border border-white/10 p-5 shadow-[0_24px_72px_rgba(0,0,0,0.24)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:p-6",
+          "app-lightbox-surface fixed top-1/2 left-1/2 z-[141] grid w-full max-w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-[24px] border border-white/10 p-5 shadow-[var(--shadow-overlay-elevated)] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:p-6",
           className,
         )}
         {...props}

@@ -13,9 +13,8 @@ type AppShellState = {
 
 const initialSettingsDraft: SettingsDraft = {
   knowledgeRoot: "",
-  baseUrl: "",
-  apiKey: "",
-  model: "",
+  runtimeProviderProfiles: [],
+  activeRuntimeProviderId: "",
   localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: 3,
   shortcutOverrides: {},

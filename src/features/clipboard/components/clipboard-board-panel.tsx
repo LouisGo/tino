@@ -360,17 +360,17 @@ function ClipboardAccessibilityBanner() {
       className={cn(
         "border-b px-3 py-3 sm:px-4",
         restartRequired
-          ? "border-emerald-500/18 bg-emerald-500/8"
-          : "border-amber-500/18 bg-amber-500/8",
+          ? "app-tone-success app-tone-panel"
+          : "app-tone-warning app-tone-panel",
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1.5">
           <div className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
             {restartRequired ? (
-              <RotateCcw className="size-4 text-emerald-600" />
+              <RotateCcw className="size-4 text-success-foreground" />
             ) : (
-              <ShieldAlert className="size-4 text-amber-600" />
+              <ShieldAlert className="size-4 text-warning-foreground" />
             )}
             <span>
               {restartRequired

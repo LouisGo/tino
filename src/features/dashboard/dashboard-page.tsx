@@ -1,11 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
 
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowUp, FolderRoot, LoaderCircle, Sparkles } from "lucide-react";
@@ -16,9 +18,10 @@ import { AiWorkInProgressBadge } from "@/features/ai/components/ai-work-in-progr
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { useCommand } from "@/core/commands";
 import {
@@ -35,13 +38,20 @@ import {
   HOME_ATTACHMENT_WARNING_THRESHOLD,
 } from "@/features/dashboard/lib/home-attachments";
 import {
-  defaultRuntimeProviderModel,
-  normalizeRuntimeProviderModel,
-  runtimeProviderModels,
+  getRuntimeProviderModelLabel,
+  getRuntimeProviderModelOptions,
+  isRuntimeProviderModelAvailableForVendor,
+  resolveActiveRuntimeProvider,
+  resolveRuntimeProviderEffectiveModel,
 } from "@/features/settings/lib/runtime-provider";
 import { useScopedT } from "@/i18n";
-import { getAppSettings, getDashboardSnapshot } from "@/lib/tauri";
+import {
+  getAppSettings,
+  getDashboardSnapshot,
+  isTauriRuntime,
+} from "@/lib/tauri";
 import { cn } from "@/lib/utils";
+import type { RuntimeProviderProfile } from "@/types/shell";
 
 type HomeAssistantTurn = {
   prompt: string;
@@ -49,6 +59,7 @@ type HomeAssistantTurn = {
   text: string;
 };
 
+const emptyRuntimeProviderProfiles: RuntimeProviderProfile[] = [];
 const MIN_PROMPT_ROWS = 2;
 const MAX_PROMPT_ROWS = 8;
 const EXPAND_PROMPT_ROWS = 3;
@@ -81,19 +92,29 @@ export function DashboardPage() {
     onAttachments: appendAttachments,
   });
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [lastTurn, setLastTurn] = useState<HomeAssistantTurn | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(false);
+  const [selectedHomeProviderId, setSelectedHomeProviderId] = useState<string | null>(null);
+  const [homeModelSelections, setHomeModelSelections] = useState<Record<string, string>>({});
   const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const activeModel = selectedModel ??
-    normalizeRuntimeProviderModel(settingsQuery.data?.model ?? defaultRuntimeProviderModel);
-  const providerConfig = {
-    apiKey: settingsQuery.data?.apiKey ?? "",
-    baseUrl: settingsQuery.data?.baseUrl ?? "",
-    model: activeModel,
-  };
+  const providerProfiles = settingsQuery.data?.runtimeProviderProfiles ?? emptyRuntimeProviderProfiles;
+  const defaultProvider = settingsQuery.data
+    ? resolveActiveRuntimeProvider(settingsQuery.data)
+    : null;
+  const selectedHomeProvider =
+    resolveSelectedHomeProvider(providerProfiles, defaultProvider, selectedHomeProviderId);
+  const selectedHomeModel = selectedHomeProvider
+    ? resolveHomeSelectedModel(selectedHomeProvider, homeModelSelections)
+    : "";
+  const selectedHomeModelLabel = selectedHomeProvider
+    ? getRuntimeProviderModelLabel(selectedHomeModel, selectedHomeProvider.vendor)
+    : "";
+  const providerConfig = resolveHomeProviderConfig(selectedHomeProvider, selectedHomeModel);
   const providerAccess = resolveProviderAccessConfig(providerConfig);
+  const selectedHomeRuntimeOptionValue = selectedHomeProvider
+    ? buildHomeRuntimeOptionValue(selectedHomeProvider.id, selectedHomeModel)
+    : undefined;
   const knowledgeRoot =
     snapshotQuery.data?.defaultKnowledgeRoot ??
     tDashboard("cards.knowledgeRoot.fallbackValue");
@@ -105,7 +126,6 @@ export function DashboardPage() {
     tDashboard("chat.suggestion3"),
     tDashboard("chat.suggestion4"),
   ];
-
   const chatMutation = useMutation({
     mutationFn: async (nextPrompt: string) => {
       if (!providerAccess.isConfigured) {
@@ -140,6 +160,21 @@ export function DashboardPage() {
     : null;
   const attachmentCountTone = attachments.length >= HOME_ATTACHMENT_LIMIT ? "limit" : "default";
 
+  const focusPromptInput = useEffectEvent(() => {
+    const scheduleFocus = () => {
+      const textarea = promptTextareaRef.current;
+      if (!textarea) {
+        return;
+      }
+
+      textarea.focus({ preventScroll: true });
+      const caretPosition = textarea.value.length;
+      textarea.setSelectionRange(caretPosition, caretPosition);
+    };
+
+    window.requestAnimationFrame(scheduleFocus);
+  });
+
   const syncPromptMetrics = useCallback((target?: HTMLTextAreaElement | null) => {
     const textarea = target ?? promptTextareaRef.current;
     if (!textarea) {
@@ -154,13 +189,13 @@ export function DashboardPage() {
     const maxAutoGrowHeight = lineHeight * MAX_PROMPT_ROWS + paddingTop + paddingBottom;
 
     if (textarea.value.length === 0) {
-      textarea.style.height = `${minHeight}px`;
-      textarea.scrollTop = 0;
+      textarea.style.setProperty("height", `${minHeight}px`);
+      textarea.scrollTo({ top: 0 });
       setIsPromptExpanded(false);
       return;
     }
 
-    textarea.style.height = "auto";
+    textarea.style.setProperty("height", "auto");
     const contentHeight = Math.max(textarea.scrollHeight, minHeight);
     const nextHeight = Math.min(contentHeight, maxAutoGrowHeight);
     const contentBoxHeight = Math.max(
@@ -179,7 +214,7 @@ export function DashboardPage() {
       textarea.selectionStart === textarea.selectionEnd &&
       textarea.selectionEnd === textarea.value.length;
 
-    textarea.style.height = `${nextExpanded ? nextHeight : minHeight}px`;
+    textarea.style.setProperty("height", `${nextExpanded ? nextHeight : minHeight}px`);
 
     if (isPromptExpanded !== nextExpanded) {
       setIsPromptExpanded(nextExpanded);
@@ -188,7 +223,7 @@ export function DashboardPage() {
     if (shouldKeepCaretVisible) {
       requestAnimationFrame(() => {
         if (document.activeElement === textarea) {
-          textarea.scrollTop = textarea.scrollHeight;
+          textarea.scrollTo({ top: textarea.scrollHeight });
         }
       });
     }
@@ -226,6 +261,41 @@ export function DashboardPage() {
     };
   }, [showLandingMock, syncPromptMetrics]);
 
+  useEffect(() => {
+    focusPromptInput();
+  }, []);
+
+  useEffect(() => {
+    let unlistenWindowFocus = () => {};
+    const handleWindowFocus = () => {
+      focusPromptInput();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        focusPromptInput();
+      }
+    };
+
+    window.addEventListener("focus", handleWindowFocus, true);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    if (isTauriRuntime()) {
+      void getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+        if (focused) {
+          focusPromptInput();
+        }
+      }).then((dispose) => {
+        unlistenWindowFocus = dispose;
+      });
+    }
+
+    return () => {
+      window.removeEventListener("focus", handleWindowFocus, true);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      unlistenWindowFocus();
+    };
+  }, []);
+
   function handleSubmit() {
     if (!canSend) {
       return;
@@ -243,16 +313,29 @@ export function DashboardPage() {
     });
   }
 
+  function handleHomeRuntimeChange(nextValue: string) {
+    const nextSelection = parseHomeRuntimeOptionValue(nextValue);
+    if (!nextSelection) {
+      return;
+    }
+
+    setHomeModelSelections((currentSelections) => ({
+      ...currentSelections,
+      [nextSelection.providerId]: nextSelection.model,
+    }));
+    setSelectedHomeProviderId(nextSelection.providerId);
+  }
+
   return (
     <div
-      className="app-home-shell relative mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col overflow-hidden px-5 py-5 md:px-7 md:py-6"
+      className="app-home-shell app-page-shell relative flex h-full w-full min-h-0 flex-col overflow-hidden"
       {...dragHandlers}
     >
       <div className="pointer-events-none fixed top-4.5 right-[100px] z-40 md:top-4.5 md:right-[100px]">
         <AiWorkInProgressBadge compact />
       </div>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="app-page-rail flex items-start justify-between gap-4 [--app-page-rail-base:42rem] [--app-page-rail-growth:22vw]">
         <KnowledgeRootMeta
           knowledgeRoot={knowledgeRoot}
           knowledgeRootLabel={tDashboard("cards.knowledgeRoot.label")}
@@ -275,7 +358,7 @@ export function DashboardPage() {
           hasConversationFeedback ? "justify-start pt-6 md:pt-8" : "justify-center pb-6",
         )}
       >
-        <div className="w-full max-w-[820px] min-h-0">
+        <div className="app-page-rail min-h-0 [--app-page-rail-base:38rem] [--app-page-rail-growth:18vw]">
           <div className="app-home-stack text-left">
             <div className="app-home-copy">
               <p className="app-home-eyebrow">{tDashboard("chat.eyebrow")}</p>
@@ -353,20 +436,62 @@ export function DashboardPage() {
                   onPickFiles={() => addAttachments("file")}
                 />
 
-                <div className="ml-auto flex shrink-0 items-center gap-2">
-                  <Select value={activeModel} onValueChange={setSelectedModel}>
+                <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+                  <Select
+                    value={selectedHomeRuntimeOptionValue}
+                    onValueChange={handleHomeRuntimeChange}
+                    disabled={
+                      !providerProfiles.length
+                      || settingsQuery.isLoading
+                    }
+                  >
                     <SelectTrigger
                       aria-label={tDashboard("chat.modelLabel")}
-                      className="app-home-model-trigger h-10 w-[146px] rounded-full md:w-[160px]"
+                      className="app-home-model-trigger min-h-[3.25rem] w-[220px] rounded-full py-2 md:w-[260px]"
                     >
-                      <SelectValue placeholder={tDashboard("chat.modelLabel")} />
+                      {selectedHomeProvider ? (
+                        <div className="flex min-w-0 flex-1 flex-col items-start leading-none">
+                          <span className="w-full truncate text-[0.95rem] font-medium text-foreground">
+                            {selectedHomeModelLabel}
+                          </span>
+                          <span className="mt-1 w-full truncate text-[0.72rem] font-medium text-foreground/50">
+                            {selectedHomeProvider.name}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="truncate text-sm text-muted-foreground">
+                          {tDashboard("chat.modelLabel")}
+                        </span>
+                      )}
                     </SelectTrigger>
                     <SelectContent>
-                      {runtimeProviderModels.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                      {providerProfiles.map((profile) => {
+                        const selectedModelForProfile = resolveHomeSelectedModel(
+                          profile,
+                          homeModelSelections,
+                        );
+                        const modelOptions = getRuntimeProviderModelOptions(
+                          profile.vendor,
+                          selectedModelForProfile,
+                        );
+
+                        return (
+                          <SelectGroup key={profile.id}>
+                            <SelectLabel className="px-4 pb-2 pt-3 text-[0.72rem] font-semibold tracking-[0.08em] text-foreground/42 uppercase first:pt-1">
+                              {profile.name}
+                            </SelectLabel>
+                            {modelOptions.map((option) => (
+                              <SelectItem
+                                key={buildHomeRuntimeOptionValue(profile.id, option.value)}
+                                value={buildHomeRuntimeOptionValue(profile.id, option.value)}
+                                textValue={`${profile.name} ${option.label}`}
+                              >
+                                <span>{option.label}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
 
@@ -406,7 +531,7 @@ export function DashboardPage() {
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                 <span>{tDashboard("chat.setupHint")}</span>
                 <Button asChild variant="link" size="sm" className="h-auto px-0">
-                  <Link to="/settings">{tCommon("navigation.settings")}</Link>
+                  <Link to="/settings" hash="ai">{tCommon("navigation.settings")}</Link>
                 </Button>
               </div>
             ) : null}
@@ -445,6 +570,78 @@ export function DashboardPage() {
   );
 }
 
+function resolveHomeProviderConfig(
+  provider: RuntimeProviderProfile | null,
+  selectedModel: string,
+) {
+  if (provider) {
+    return {
+      ...provider,
+      model: selectedModel,
+    };
+  }
+
+  return {
+    vendor: "openai" as const,
+    apiKey: "",
+    baseUrl: "",
+    model: "",
+  };
+}
+
+function resolveSelectedHomeProvider(
+  providerProfiles: RuntimeProviderProfile[],
+  defaultProvider: RuntimeProviderProfile | null,
+  selectedProviderId: string | null,
+) {
+  if (selectedProviderId) {
+    const selectedProvider = providerProfiles.find((profile) => profile.id === selectedProviderId);
+    if (selectedProvider) {
+      return selectedProvider;
+    }
+  }
+
+  if (defaultProvider) {
+    return defaultProvider;
+  }
+
+  return providerProfiles[0] ?? null;
+}
+
+function resolveHomeSelectedModel(
+  provider: RuntimeProviderProfile,
+  selections: Record<string, string>,
+) {
+  const selectedModel = selections[provider.id]?.trim() ?? "";
+  if (selectedModel && isRuntimeProviderModelAvailableForVendor(provider.vendor, selectedModel)) {
+    return selectedModel;
+  }
+
+  return resolveRuntimeProviderEffectiveModel(provider);
+}
+
+function buildHomeRuntimeOptionValue(providerId: string, model: string) {
+  return `${providerId}::${model}`;
+}
+
+function parseHomeRuntimeOptionValue(value: string) {
+  const separatorIndex = value.indexOf("::");
+  if (separatorIndex < 0) {
+    return null;
+  }
+
+  const providerId = value.slice(0, separatorIndex);
+  const model = value.slice(separatorIndex + 2);
+  if (!providerId || !model) {
+    return null;
+  }
+
+  return {
+    providerId,
+    model,
+  };
+}
+
 function KnowledgeRootMeta({
   knowledgeRoot,
   knowledgeRootLabel,
@@ -466,7 +663,7 @@ function KnowledgeRootMeta({
   if (!onReveal) {
     return (
       <div
-        className="app-home-meta-link max-w-[min(48rem,72vw)]"
+        className="app-home-meta-link max-w-full min-w-0 flex-1"
         title={`${knowledgeRootLabel}: ${knowledgeRoot}`}
       >
         {content}
@@ -478,7 +675,7 @@ function KnowledgeRootMeta({
     <button
       type="button"
       onClick={onReveal}
-      className="app-home-meta-link max-w-[min(48rem,72vw)] text-left"
+      className="app-home-meta-link max-w-full min-w-0 flex-1 text-left"
       aria-label={knowledgeRootLabel}
       title={`${knowledgeRootLabel}: ${knowledgeRoot}`}
     >
@@ -509,7 +706,7 @@ function HomeAssistantResult({
   thinkingLabel: string;
 }) {
   return (
-    <div className="app-home-response mx-auto w-full max-w-[760px] overflow-hidden rounded-[24px]">
+    <div className="app-page-rail app-home-response w-full overflow-hidden rounded-[24px] [--app-page-rail-base:32rem] [--app-page-rail-growth:10vw]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/65 px-4 py-3">
         <div className="inline-flex items-center gap-2 text-[13px] font-medium text-foreground">
           <Sparkles className="size-4 text-primary" />

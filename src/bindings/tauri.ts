@@ -73,9 +73,8 @@ export type AppLocalePreference = {
 
 export type AppSettings = {
 	knowledgeRoot: string,
-	baseUrl: string,
-	apiKey: string,
-	model: string,
+	runtimeProviderProfiles: RuntimeProviderProfile[],
+	activeRuntimeProviderId: string,
 	localePreference?: AppLocalePreference,
 	clipboardHistoryDays?: number,
 	shortcutOverrides?: { [key in string]: AppShortcutOverride },
@@ -237,6 +236,17 @@ export type ReviewFeedbackRecord = {
 	note: string | null,
 	submittedAt: string,
 };
+
+export type RuntimeProviderProfile = {
+	id: string,
+	name: string,
+	vendor: RuntimeProviderVendor,
+	baseUrl: string,
+	apiKey: string,
+	model?: string,
+};
+
+export type RuntimeProviderVendor = "openai" | "deepseek";
 
 export type TopicIndexEntry = {
 	topicSlug: string,

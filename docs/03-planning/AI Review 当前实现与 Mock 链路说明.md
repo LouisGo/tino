@@ -93,8 +93,11 @@
 
 注意：
 
-- 当前 Rust 侧 `ai_enabled()` 仍只看 `apiKey` 是否为空
-- 如果 `apiKey` 为空，新 capture 只会归档到 `daily`，不会进入 AI queue
+- 当前 provider profile 已拆成 `vendor + baseURL + apiKey + default model override`
+- 若 `default model override` 留空，live run 会自动回落到该 `vendor` 的默认模型
+- 首页聊天可以临时切换 provider 和 model，但不会改动这里用于 `/ai` live run 的默认 provider
+- 当前 Rust 侧 `ai_enabled()` 只看“当前启用 provider”的 `apiKey` 是否为空
+- 如果当前启用 provider 的 `apiKey` 为空，新 capture 只会归档到 `daily`，不会进入 AI queue
 - 因此 `/ai` 页面不会自动出现 live batch
 
 ## 5. Mock 链路的目标

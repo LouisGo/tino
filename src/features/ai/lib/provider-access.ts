@@ -11,9 +11,14 @@ import {
 import { createOpenAI } from "@ai-sdk/openai";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
+import {
+  getRuntimeProviderModelLabel,
+  getRuntimeProviderVendorLabel,
+  resolveRuntimeProviderEffectiveModel,
+} from "@/features/settings/lib/runtime-provider";
 import { createRendererLogger } from "@/lib/logger";
 import { isTauriRuntime } from "@/lib/tauri";
-import type { SettingsDraft } from "@/types/shell";
+import type { RuntimeProviderProfile } from "@/types/shell";
 
 const logger = createRendererLogger("agent.provider");
 const defaultRequestTimeoutMs = 30_000;
@@ -23,7 +28,10 @@ const defaultStreamPreviewCharLimit = 12_000;
 const defaultTextPreviewCharLimit = 320;
 const testPromptDefault = "Say hello from Tino in one short sentence.";
 
-export type ProviderAccessConfig = Pick<SettingsDraft, "baseUrl" | "apiKey" | "model">;
+export type ProviderAccessConfig = Pick<
+  RuntimeProviderProfile,
+  "vendor" | "baseUrl" | "apiKey" | "model"
+>;
 
 export type StructuredObjectRequest<SCHEMA extends FlexibleSchema<unknown>> = {
   systemPrompt?: string;
@@ -83,17 +91,22 @@ export interface AiObjectGenerator {
 export function resolveProviderAccessConfig(settings: ProviderAccessConfig) {
   const baseUrl = normalizeBaseUrl(settings.baseUrl);
   const apiKey = settings.apiKey.trim();
-  const model = settings.model.trim();
+  const model = resolveRuntimeProviderEffectiveModel(settings);
   const providerHost = getProviderHost(baseUrl);
+  const vendor = settings.vendor;
+  const modelLabel = getRuntimeProviderModelLabel(model, vendor);
+  const vendorLabel = getRuntimeProviderVendorLabel(vendor);
 
   return {
     apiKey,
-    apiMode: resolveRuntimeProviderApiMode({ apiKey, baseUrl, model }),
+    apiMode: resolveRuntimeProviderApiMode({ vendor, apiKey, baseUrl, model }),
     baseUrl,
-    isConfigured: baseUrl.length > 0 && apiKey.length > 0 && model.length > 0,
+    isConfigured: baseUrl.length > 0 && apiKey.length > 0,
     model,
     providerHost,
-    providerLabel: providerHost ? `${providerHost} · ${model}` : model || "Provider pending",
+    vendor,
+    vendorLabel,
+    providerLabel: `${vendorLabel} · ${modelLabel}`,
   };
 }
 
@@ -400,10 +413,6 @@ function assertProviderConfigured(settings: ProviderAccessConfig) {
     throw new Error("Base URL is required.");
   }
 
-  if (!access.model) {
-    throw new Error("Model is required.");
-  }
-
   if (!access.apiKey) {
     throw new Error("API key is required.");
   }
@@ -451,6 +460,10 @@ function normalizeBaseUrl(value: string) {
 }
 
 export function resolveRuntimeProviderApiMode(settings: ProviderAccessConfig): RuntimeProviderApiMode {
+  if (settings.vendor === "deepseek") {
+    return "chat";
+  }
+
   const normalizedBaseUrl = normalizeBaseUrl(settings.baseUrl);
   const normalizedModel = settings.model.trim().toLowerCase();
 
@@ -838,7 +851,11 @@ function isDeepSeekReasoningBridgeTarget(access: ReturnType<typeof assertProvide
   const normalizedModel = access.model.trim().toLowerCase();
   const normalizedHost = access.providerHost?.toLowerCase();
 
-  return normalizedModel.startsWith("deepseek-") || normalizedHost === "api.deepseek.com";
+  return (
+    access.vendor === "deepseek"
+    || normalizedModel.startsWith("deepseek-")
+    || normalizedHost === "api.deepseek.com"
+  );
 }
 
 function extractReasoningContentFromOpenAiCompatibleChunk(rawValue: unknown) {

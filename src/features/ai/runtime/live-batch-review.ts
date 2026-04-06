@@ -346,7 +346,6 @@ function validateDecisionAgainstBatch(payload: AiBatchPayload, decision: ModelBa
 function assertProviderReady(settings: ProviderAccessConfig) {
   const missingFields = [
     settings.baseUrl.trim() ? null : "Base URL",
-    settings.model.trim() ? null : "model",
     settings.apiKey.trim() ? null : "API key",
   ].filter(Boolean)
 

@@ -13,15 +13,16 @@ use crate::{
 };
 
 pub(crate) fn persist_capture_preview(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     preview: &CapturePreview,
     history_upsert: &CaptureHistoryUpsert,
 ) -> Result<(), String> {
-    append_clipboard_history_entry(knowledge_root, preview)?;
-    if let Err(error) = upsert_capture_history_store(knowledge_root, history_upsert) {
+    append_clipboard_history_entry(clipboard_cache_root, preview)?;
+    if let Err(error) = upsert_capture_history_store(clipboard_cache_root, history_upsert) {
         warn!("failed to persist capture preview into sqlite store: {error}");
-        if let Err(sync_error) = reconcile_capture_history_store(knowledge_root, history_days) {
+        if let Err(sync_error) = reconcile_capture_history_store(clipboard_cache_root, history_days)
+        {
             warn!("failed to repair sqlite capture history store from jsonl: {sync_error}");
         }
     }
@@ -30,20 +31,22 @@ pub(crate) fn persist_capture_preview(
 }
 
 pub(crate) fn delete_capture_with_fallback(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     capture_id: &str,
 ) -> Result<DeleteClipboardCaptureResult, String> {
     let removed_from_history =
-        delete_clipboard_history_entry(knowledge_root, history_days, capture_id)?;
+        delete_clipboard_history_entry(clipboard_cache_root, history_days, capture_id)?;
 
-    let removed_from_store = match CaptureHistoryStore::new(knowledge_root)
+    let removed_from_store = match CaptureHistoryStore::new(clipboard_cache_root)
         .and_then(|store| store.delete_capture(capture_id))
     {
         Ok(removed) => removed,
         Err(error) => {
             warn!("failed to delete capture from sqlite store: {error}");
-            if let Err(sync_error) = reconcile_capture_history_store(knowledge_root, history_days) {
+            if let Err(sync_error) =
+                reconcile_capture_history_store(clipboard_cache_root, history_days)
+            {
                 warn!("failed to repair sqlite capture history store after delete: {sync_error}");
             }
             false
@@ -59,15 +62,19 @@ pub(crate) fn delete_capture_with_fallback(
 }
 
 pub(crate) fn promote_capture_reuse_with_fallback(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     capture_id: &str,
     capture_hash: &str,
     captured_at: &str,
 ) -> Result<bool, String> {
-    let promoted_legacy =
-        promote_clipboard_history_entry(knowledge_root, history_days, capture_id, captured_at)?;
-    let promoted_store = match CaptureHistoryStore::new(knowledge_root)
+    let promoted_legacy = promote_clipboard_history_entry(
+        clipboard_cache_root,
+        history_days,
+        capture_id,
+        captured_at,
+    )?;
+    let promoted_store = match CaptureHistoryStore::new(clipboard_cache_root)
         .and_then(|store| store.promote_capture_reuse(capture_id, capture_hash, captured_at))
     {
         Ok(promoted) => promoted,
@@ -78,7 +85,8 @@ pub(crate) fn promote_capture_reuse_with_fallback(
     };
 
     if !promoted_store && promoted_legacy {
-        if let Err(sync_error) = reconcile_capture_history_store(knowledge_root, history_days) {
+        if let Err(sync_error) = reconcile_capture_history_store(clipboard_cache_root, history_days)
+        {
             warn!("failed to repair sqlite capture history store after replay: {sync_error}");
         }
     }

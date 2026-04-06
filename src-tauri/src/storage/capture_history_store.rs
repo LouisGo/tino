@@ -88,9 +88,9 @@ pub struct CaptureHistoryStore {
 }
 
 impl CaptureHistoryStore {
-    pub fn new(knowledge_root: &Path) -> Result<Self, String> {
+    pub fn new(storage_root: &Path) -> Result<Self, String> {
         let store = Self {
-            db_path: knowledge_root.join("_system").join(SQLITE_FILE_NAME),
+            db_path: storage_root.join(SQLITE_FILE_NAME),
         };
         store.ensure_schema()?;
         Ok(store)
@@ -774,14 +774,13 @@ fn now_rfc3339() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use uuid::Uuid;
 
     fn unique_root() -> PathBuf {
-        let suffix = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system time should be after unix epoch")
-            .as_nanos();
-        std::env::temp_dir().join(format!("tino-capture-history-store-{suffix}"))
+        std::env::temp_dir().join(format!(
+            "tino-capture-history-store-{}",
+            Uuid::now_v7().simple()
+        ))
     }
 
     fn sample_upsert(id: &str, kind: &str, status: &str, raw_text: &str) -> CaptureHistoryUpsert {

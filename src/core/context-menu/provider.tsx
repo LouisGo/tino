@@ -131,7 +131,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
             <div
               ref={menuRef}
               data-slot="context-menu-content"
-              className="fixed z-[140] min-w-[220px] rounded-[20px] border border-border/80 bg-card/96 p-1.5 shadow-[0_24px_80px_rgba(15,23,42,0.22)] backdrop-blur-xl"
+              className="fixed z-[140] min-w-[220px] rounded-[20px] border border-border/80 bg-card/96 p-1.5 shadow-[var(--shadow-overlay-elevated)] backdrop-blur-xl"
               style={{
                 left: position.left,
                 top: position.top,

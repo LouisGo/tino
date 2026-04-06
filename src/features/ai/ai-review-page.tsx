@@ -107,131 +107,133 @@ export function AiReviewPage() {
   const currentPayload = payloadQuery.data
 
   return (
-    <div className="app-scroll-area relative h-full overflow-y-auto pr-2">
-      <div className="pointer-events-none fixed top-5 right-5 z-40 md:top-6 md:right-7">
-        <AiWorkInProgressBadge />
-      </div>
+    <div className="app-scroll-area h-full overflow-y-auto">
+      <div className="app-page-shell relative pb-[calc(var(--app-page-padding-block)+1rem)]">
+        <div className="pointer-events-none fixed top-5 right-[var(--app-page-padding-inline)] z-40 md:top-6">
+          <AiWorkInProgressBadge />
+        </div>
 
-      <div className="space-y-6 pb-8">
-        <div className="app-hero-surface">
-          <div className="app-hero-control px-6 py-6">
-            <div className="space-y-3">
-              <p className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">
-                AI Organizer
-              </p>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight">
-                  See the result first, then decide whether it looks right.
-                </h2>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                  Open one batch to see where the content landed, what already looks
-                  stable, and where you may still want to step in.
+        <div className="app-page-rail space-y-6 [--app-page-rail-base:60rem] [--app-page-rail-growth:24vw]">
+          <div className="app-hero-surface">
+            <div className="app-hero-control px-6 py-6">
+              <div className="space-y-3">
+                <p className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">
+                  AI Organizer
                 </p>
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-semibold tracking-tight">
+                    See the result first, then decide whether it looks right.
+                  </h2>
+                  <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
+                    Open one batch to see where the content landed, what already looks
+                    stable, and where you may still want to step in.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <Card className="overflow-hidden border-border/80 bg-surface-panel">
-            <CardHeader className="border-b border-border/70">
-              <div className="flex items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <CardTitle>Ready Batches</CardTitle>
-                  <CardDescription>
-                    Pick a live batch to review. Example data stays in browser-only
-                    preview mode instead of mixing into the app runtime.
-                  </CardDescription>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  onClick={() => {
-                    void batchesQuery.refetch()
-                    void payloadQuery.refetch()
-                  }}
-                  disabled={batchesQuery.isFetching || payloadQuery.isFetching}
-                >
-                  <RefreshCcw
-                    className={
-                      batchesQuery.isFetching || payloadQuery.isFetching
-                        ? "animate-spin"
-                        : ""
-                    }
-                  />
-                  Refresh
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 p-4">
-              {batches.length ? (
-                batches.map((batch) => (
-                  <button
-                    key={batch.id}
-                    type="button"
-                    onClick={() => setRequestedBatchId(batch.id)}
-                    className={cn(
-                      "w-full rounded-[22px] border px-4 py-4 text-left transition",
-                      selectedBatchId === batch.id
-                        ? "border-primary/70 bg-primary/8"
-                        : "border-border/80 bg-surface-elevated hover:border-primary/35",
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold">
-                          {formatBatchPrimaryLabel(batch.captureCount)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatTriggerReasonLabel(batch.triggerReason)} ·{" "}
-                          {formatBatchWindowLabel(
-                            batch.firstCapturedAt,
-                            batch.lastCapturedAt,
-                          )}
-                        </p>
-                      </div>
-                      <Badge variant="secondary">
-                        {formatBatchRuntimeStateLabel(batch.runtimeState)}
-                      </Badge>
-                    </div>
-                    <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                      Ready {formatRelativeTimestamp(batch.createdAt)}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      <Badge variant="secondary">
-                        {isMockAiBatchId(batch.id) ? "Preview" : "Live batch"}
-                      </Badge>
-                      <Badge variant="secondary">{batch.id}</Badge>
-                      {batch.sourceIds.slice(0, 1).map((sourceId) => (
-                        <Badge key={sourceId} variant="secondary">
-                          {sourceId}
-                        </Badge>
-                      ))}
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <div className="rounded-[22px] border border-dashed border-border/80 bg-surface-soft px-5 py-6 text-sm leading-6 text-muted-foreground">
-                  No live batches are ready yet. Once the queue promotes a batch, it
-                  will appear here for review.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {currentPayload ? (
-            <AiOrganizerWorkspace key={currentPayload.batch.id} payload={currentPayload} />
-          ) : (
+          <section className="grid gap-4 xl:grid-cols-[clamp(20rem,23vw,26rem)_minmax(0,1fr)] 2xl:grid-cols-[clamp(22rem,24vw,28rem)_minmax(0,1fr)]">
             <Card className="overflow-hidden border-border/80 bg-surface-panel">
-              <CardContent className="flex min-h-[420px] items-center justify-center p-8 text-center text-sm leading-7 text-muted-foreground">
-                Choose a batch from the left to see what entered the analysis and what
-                the AI turned it into.
+              <CardHeader className="border-b border-border/70">
+                <div className="flex flex-col items-start gap-3">
+                  <div className="space-y-1">
+                    <CardTitle>Ready Batches</CardTitle>
+                    <CardDescription>
+                      Pick a live batch to review. Example data stays in browser-only
+                      preview mode instead of mixing into the app runtime.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => {
+                      void batchesQuery.refetch()
+                      void payloadQuery.refetch()
+                    }}
+                    disabled={batchesQuery.isFetching || payloadQuery.isFetching}
+                  >
+                    <RefreshCcw
+                      className={
+                        batchesQuery.isFetching || payloadQuery.isFetching
+                          ? "animate-spin"
+                          : ""
+                      }
+                    />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                {batches.length ? (
+                  batches.map((batch) => (
+                    <button
+                      key={batch.id}
+                      type="button"
+                      onClick={() => setRequestedBatchId(batch.id)}
+                      className={cn(
+                        "w-full rounded-[22px] border px-4 py-4 text-left transition",
+                        selectedBatchId === batch.id
+                          ? "border-primary/70 bg-primary/8"
+                          : "border-border/80 bg-surface-elevated hover:border-primary/35",
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold">
+                            {formatBatchPrimaryLabel(batch.captureCount)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatTriggerReasonLabel(batch.triggerReason)} ·{" "}
+                            {formatBatchWindowLabel(
+                              batch.firstCapturedAt,
+                              batch.lastCapturedAt,
+                            )}
+                          </p>
+                        </div>
+                        <Badge variant="secondary">
+                          {formatBatchRuntimeStateLabel(batch.runtimeState)}
+                        </Badge>
+                      </div>
+                      <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                        Ready {formatRelativeTimestamp(batch.createdAt)}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <Badge variant="secondary">
+                          {isMockAiBatchId(batch.id) ? "Preview" : "Live batch"}
+                        </Badge>
+                        <Badge variant="secondary">{batch.id}</Badge>
+                        {batch.sourceIds.slice(0, 1).map((sourceId) => (
+                          <Badge key={sourceId} variant="secondary">
+                            {sourceId}
+                          </Badge>
+                        ))}
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-border/80 bg-surface-soft px-5 py-6 text-sm leading-6 text-muted-foreground">
+                    No live batches are ready yet. Once the queue promotes a batch, it
+                    will appear here for review.
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
-        </section>
+
+            {currentPayload ? (
+              <AiOrganizerWorkspace key={currentPayload.batch.id} payload={currentPayload} />
+            ) : (
+              <Card className="overflow-hidden border-border/80 bg-surface-panel">
+                <CardContent className="flex min-h-[420px] items-center justify-center p-8 text-center text-sm leading-7 text-muted-foreground">
+                  Choose a batch from the left to see what entered the analysis and what
+                  the AI turned it into.
+                </CardContent>
+              </Card>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   )
@@ -289,7 +291,7 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
           </div>
 
           <p className="text-sm leading-6 text-muted-foreground">
-            Tino will call the configured model, validate the structured result, and
+            Tino will call the active provider, validate the structured result, and
             turn it into a candidate review. Applying that result now writes to
             controlled topic or inbox files through the Rust boundary.
           </p>
@@ -306,14 +308,18 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
             <Button
               type="button"
               onClick={() => runLiveReviewMutation.mutate()}
-              disabled={!providerAccess?.isConfigured || settingsQuery.isLoading || runLiveReviewMutation.isPending}
+              disabled={
+                !providerAccess?.isConfigured
+                || settingsQuery.isLoading
+                || runLiveReviewMutation.isPending
+              }
             >
               <RefreshCcw className={runLiveReviewMutation.isPending ? "animate-spin" : ""} />
               {runLiveReviewMutation.isPending ? "Running live candidate" : "Run live candidate"}
             </Button>
 
             <Button type="button" variant="outline" asChild>
-              <Link to="/settings">
+              <Link to="/settings" hash="ai">
                 Open settings
                 <ArrowUpRight className="size-3.5" />
               </Link>
@@ -325,7 +331,7 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
               ? "Loading provider settings..."
               : providerAccess?.isConfigured
                 ? "Provider looks ready. This run is manual on purpose."
-                : "Base URL, model, and API key must be configured before this batch can run live."}
+                : "Base URL and API key must be configured before this batch can run live."}
           </p>
         </CardContent>
       </Card>
@@ -769,9 +775,10 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
               ) : null}
             </div>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Need provider or model changes?{" "}
+              Need a different provider or model override?{" "}
               <Link
                 to="/settings"
+                hash="ai"
                 className="font-medium text-foreground underline decoration-border underline-offset-4"
               >
                 Open settings
@@ -1324,30 +1331,27 @@ function getDecisionMeta(decision: BatchDecisionCluster["decision"]) {
         icon: FolderTree,
         label: "Topic",
         tileLabel: "To Topics",
-        badgeClass:
-          "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-        cardClass: "border-emerald-500/20 bg-emerald-500/6",
-        panelClass: "border-emerald-500/20 bg-background/85",
+        badgeClass: "app-tone-success app-tone-badge",
+        cardClass: "app-tone-success app-tone-card",
+        panelClass: "app-tone-success app-tone-panel",
       }
     case "send_to_inbox":
       return {
         icon: Inbox,
         label: "Inbox",
         tileLabel: "Kept In Inbox",
-        badgeClass:
-          "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-        cardClass: "border-sky-500/20 bg-sky-500/6",
-        panelClass: "border-sky-500/20 bg-background/85",
+        badgeClass: "app-tone-info app-tone-badge",
+        cardClass: "app-tone-info app-tone-card",
+        panelClass: "app-tone-info app-tone-panel",
       }
     case "discard":
       return {
         icon: Trash2,
         label: "Skipped",
         tileLabel: "Skipped",
-        badgeClass:
-          "border-zinc-500/30 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300",
-        cardClass: "border-zinc-500/20 bg-zinc-500/6",
-        panelClass: "border-zinc-500/20 bg-background/85",
+        badgeClass: "app-tone-neutral app-tone-badge",
+        cardClass: "app-tone-neutral app-tone-card",
+        panelClass: "app-tone-neutral app-tone-panel",
       }
   }
 

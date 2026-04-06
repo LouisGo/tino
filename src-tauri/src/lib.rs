@@ -7,6 +7,7 @@ mod locale;
 mod native_window_macos;
 mod panel_layout;
 mod runtime_profile;
+mod runtime_provider;
 mod storage;
 mod window_state;
 

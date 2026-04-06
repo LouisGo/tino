@@ -25,6 +25,11 @@ use crate::backend::clipboard_history::write::{
 };
 use crate::locale::AppLocalePreference;
 use crate::runtime_profile;
+use crate::runtime_provider::{
+    default_runtime_provider_profile, infer_runtime_provider_vendor,
+    normalize_runtime_provider_profiles, resolve_active_runtime_provider_id,
+    RuntimeProviderProfile,
+};
 use crate::storage::capture_history_store::{
     CaptureHistoryEntry, CaptureHistoryQuery, CaptureHistoryStore, CaptureHistorySummary,
     CaptureHistoryUpsert,
@@ -41,8 +46,6 @@ const APP_ICONS_DIR_NAME: &str = "app-icons";
 const IMAGE_THUMBNAIL_MAX_EDGE: u32 = 240;
 const BATCH_TRIGGER_SIZE: usize = 20;
 const BATCH_TRIGGER_MAX_WAIT_MINUTES: i64 = 10;
-const DEFAULT_PROVIDER_BASE_URL: &str = "https://api.openai.com/v1";
-const DEFAULT_MODEL: &str = "gpt-5.4-mini";
 const DEFAULT_CLIPBOARD_HISTORY_DAYS: u16 = 3;
 const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
 const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 14;
@@ -90,9 +93,8 @@ pub struct AppShortcutOverride {
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub knowledge_root: String,
-    pub base_url: String,
-    pub api_key: String,
-    pub model: String,
+    pub runtime_provider_profiles: Vec<RuntimeProviderProfile>,
+    pub active_runtime_provider_id: String,
     #[serde(default)]
     pub locale_preference: AppLocalePreference,
     #[serde(default = "default_clipboard_history_days")]
@@ -103,11 +105,13 @@ pub struct AppSettings {
 
 impl AppSettings {
     fn defaults(default_knowledge_root: &Path) -> Self {
+        let runtime_provider_profiles = vec![default_runtime_provider_profile(1)];
+        let active_runtime_provider_id = runtime_provider_profiles[0].id.clone();
+
         Self {
             knowledge_root: default_knowledge_root.display().to_string(),
-            base_url: DEFAULT_PROVIDER_BASE_URL.into(),
-            api_key: String::new(),
-            model: DEFAULT_MODEL.into(),
+            runtime_provider_profiles,
+            active_runtime_provider_id,
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: DEFAULT_CLIPBOARD_HISTORY_DAYS,
             shortcut_overrides: BTreeMap::new(),
@@ -123,13 +127,12 @@ impl AppSettings {
 
         self.knowledge_root = knowledge_root.display().to_string();
 
-        if self.base_url.trim().is_empty() {
-            self.base_url = DEFAULT_PROVIDER_BASE_URL.into();
-        }
-
-        if self.model.trim().is_empty() {
-            self.model = DEFAULT_MODEL.into();
-        }
+        self.runtime_provider_profiles =
+            normalize_runtime_provider_profiles(self.runtime_provider_profiles);
+        self.active_runtime_provider_id = resolve_active_runtime_provider_id(
+            &self.runtime_provider_profiles,
+            &self.active_runtime_provider_id,
+        );
 
         self.locale_preference = self.locale_preference.normalized();
 
@@ -162,9 +165,121 @@ impl AppSettings {
         PathBuf::from(&self.knowledge_root)
     }
 
-    fn ai_enabled(&self) -> bool {
-        !self.api_key.trim().is_empty()
+    pub fn active_runtime_provider(&self) -> &RuntimeProviderProfile {
+        let default_provider = self
+            .runtime_provider_profiles
+            .first()
+            .expect("runtime provider profiles should never be empty after normalization");
+
+        self.runtime_provider_profiles
+            .iter()
+            .find(|profile| profile.id == self.active_runtime_provider_id)
+            .unwrap_or(default_provider)
     }
+
+    fn ai_enabled(&self) -> bool {
+        self.active_runtime_provider().is_configured()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LegacyAppSettings {
+    pub knowledge_root: String,
+    #[serde(default)]
+    pub base_url: String,
+    #[serde(default)]
+    pub api_key: String,
+    #[serde(default)]
+    pub model: String,
+    #[serde(default)]
+    pub locale_preference: AppLocalePreference,
+    #[serde(default = "default_clipboard_history_days")]
+    pub clipboard_history_days: u16,
+    #[serde(default)]
+    pub shortcut_overrides: BTreeMap<String, AppShortcutOverride>,
+}
+
+impl LegacyAppSettings {
+    fn into_current(self, default_knowledge_root: &Path) -> AppSettings {
+        let mut settings = AppSettings::defaults(default_knowledge_root);
+        let mut runtime_provider = default_runtime_provider_profile(1);
+        runtime_provider.vendor = infer_runtime_provider_vendor(&self.base_url, &self.model);
+        runtime_provider.base_url = self.base_url;
+        runtime_provider.api_key = self.api_key;
+        runtime_provider.model = self.model;
+
+        settings.knowledge_root = self.knowledge_root;
+        settings.runtime_provider_profiles = vec![runtime_provider];
+        settings.active_runtime_provider_id = settings.runtime_provider_profiles[0].id.clone();
+        settings.locale_preference = self.locale_preference;
+        settings.clipboard_history_days = self.clipboard_history_days;
+        settings.shortcut_overrides = self.shortcut_overrides;
+        settings
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LegacyManagedRuntimeProviderProfile {
+    pub id: String,
+    pub name: String,
+    pub base_url: String,
+    pub api_key: String,
+    #[serde(default)]
+    pub model: String,
+}
+
+impl LegacyManagedRuntimeProviderProfile {
+    fn into_current(self) -> RuntimeProviderProfile {
+        RuntimeProviderProfile {
+            id: self.id,
+            name: self.name,
+            vendor: infer_runtime_provider_vendor(&self.base_url, &self.model),
+            base_url: self.base_url,
+            api_key: self.api_key,
+            model: self.model,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LegacyManagedAppSettings {
+    pub knowledge_root: String,
+    pub runtime_provider_profiles: Vec<LegacyManagedRuntimeProviderProfile>,
+    pub active_runtime_provider_id: String,
+    #[serde(default)]
+    pub locale_preference: AppLocalePreference,
+    #[serde(default = "default_clipboard_history_days")]
+    pub clipboard_history_days: u16,
+    #[serde(default)]
+    pub shortcut_overrides: BTreeMap<String, AppShortcutOverride>,
+}
+
+impl LegacyManagedAppSettings {
+    fn into_current(self) -> AppSettings {
+        AppSettings {
+            knowledge_root: self.knowledge_root,
+            runtime_provider_profiles: self
+                .runtime_provider_profiles
+                .into_iter()
+                .map(LegacyManagedRuntimeProviderProfile::into_current)
+                .collect(),
+            active_runtime_provider_id: self.active_runtime_provider_id,
+            locale_preference: self.locale_preference,
+            clipboard_history_days: self.clipboard_history_days,
+            shortcut_overrides: self.shortcut_overrides,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum PersistedAppSettings {
+    Current(AppSettings),
+    LegacyManaged(LegacyManagedAppSettings),
+    LegacySingle(LegacyAppSettings),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -520,6 +635,7 @@ struct SharedState {
     app_handle: AppHandle,
     default_knowledge_root: PathBuf,
     app_data_dir: PathBuf,
+    clipboard_cache_dir: PathBuf,
     app_log_dir: PathBuf,
     settings_path: PathBuf,
     inner: Mutex<StateData>,
@@ -546,17 +662,23 @@ impl AppState {
         fs::create_dir_all(&app_log_dir).map_err(|error| error.to_string())?;
 
         let default_knowledge_root = runtime_profile::default_knowledge_root(&home_dir);
+        let clipboard_cache_dir = clipboard_cache_root_path(&app_data_dir);
+        fs::create_dir_all(&clipboard_cache_dir).map_err(|error| error.to_string())?;
         let settings_path = app_data_dir.join(SETTINGS_FILE_NAME);
         let settings = load_settings(&settings_path, &default_knowledge_root)?;
         let knowledge_root = settings.knowledge_root_path();
         ensure_knowledge_root_layout(&knowledge_root)?;
-        enforce_clipboard_retention(&knowledge_root, settings.clipboard_history_days)?;
+        enforce_clipboard_retention(&clipboard_cache_dir, settings.clipboard_history_days)?;
 
         let queue_state = ensure_queue_state(&knowledge_root)?;
         let mut runtime = load_runtime_state(&knowledge_root)?;
-        reconcile_clipboard_history(&knowledge_root, settings.clipboard_history_days, &runtime)?;
+        reconcile_clipboard_history(
+            &clipboard_cache_dir,
+            settings.clipboard_history_days,
+            &runtime,
+        )?;
         if let Err(error) =
-            reconcile_capture_history_store(&knowledge_root, settings.clipboard_history_days)
+            reconcile_capture_history_store(&clipboard_cache_dir, settings.clipboard_history_days)
         {
             warn!("failed to reconcile sqlite capture history store on startup: {error}");
         }
@@ -573,6 +695,7 @@ impl AppState {
                 app_handle: app.clone(),
                 default_knowledge_root,
                 app_data_dir,
+                clipboard_cache_dir,
                 app_log_dir,
                 settings_path,
                 inner: Mutex::new(StateData {
@@ -605,13 +728,21 @@ impl AppState {
         write_json_file(&self.shared.settings_path, &normalized)?;
 
         let knowledge_root = normalized.knowledge_root_path();
-        enforce_clipboard_retention(&knowledge_root, normalized.clipboard_history_days)?;
+        enforce_clipboard_retention(
+            &self.shared.clipboard_cache_dir,
+            normalized.clipboard_history_days,
+        )?;
         let queue_state = ensure_queue_state(&knowledge_root)?;
         let mut runtime = load_runtime_state(&knowledge_root)?;
-        reconcile_clipboard_history(&knowledge_root, normalized.clipboard_history_days, &runtime)?;
-        if let Err(error) =
-            reconcile_capture_history_store(&knowledge_root, normalized.clipboard_history_days)
-        {
+        reconcile_clipboard_history(
+            &self.shared.clipboard_cache_dir,
+            normalized.clipboard_history_days,
+            &runtime,
+        )?;
+        if let Err(error) = reconcile_capture_history_store(
+            &self.shared.clipboard_cache_dir,
+            normalized.clipboard_history_days,
+        ) {
             warn!(
                 "failed to reconcile sqlite capture history store after settings change: {error}"
             );
@@ -711,6 +842,7 @@ impl AppState {
         };
         let recent_captures = load_recent_clipboard_captures(
             &settings.knowledge_root_path(),
+            &self.shared.clipboard_cache_dir,
             settings.clipboard_history_days,
             3,
         )?;
@@ -752,6 +884,7 @@ impl AppState {
         let settings = self.current_settings()?;
         query_clipboard_history_page(
             &settings.knowledge_root_path(),
+            &self.shared.clipboard_cache_dir,
             settings.clipboard_history_days,
             &request,
         )
@@ -767,9 +900,8 @@ impl AppState {
         }
 
         let settings = self.current_settings()?;
-        let knowledge_root = settings.knowledge_root_path();
         let result = delete_capture_with_fallback(
-            &knowledge_root,
+            &self.shared.clipboard_cache_dir,
             settings.clipboard_history_days,
             normalized_id,
         )?;
@@ -851,7 +983,7 @@ impl AppState {
         }
 
         if let Some(source_app_icon_path) =
-            persist_source_app_icon(&knowledge_root, &stored_capture)?
+            persist_source_app_icon(&self.shared.clipboard_cache_dir, &stored_capture)?
         {
             stored_capture.source_app_icon_path = Some(source_app_icon_path);
         }
@@ -898,11 +1030,14 @@ impl AppState {
 
     pub fn run_periodic_maintenance(&self) -> Result<(), String> {
         let settings = self.current_settings()?;
-        let knowledge_root = settings.knowledge_root_path();
         let previous_runtime = self.lock_state()?.runtime.clone();
 
-        enforce_clipboard_retention(&knowledge_root, settings.clipboard_history_days)?;
+        enforce_clipboard_retention(
+            &self.shared.clipboard_cache_dir,
+            settings.clipboard_history_days,
+        )?;
 
+        let knowledge_root = settings.knowledge_root_path();
         let queue_depth = queue_depth_for_root(&knowledge_root)?;
         let ready_batch_count = count_ready_batches(&knowledge_root)?;
         let maintenance_changed = previous_runtime.queue_depth != queue_depth
@@ -1098,7 +1233,7 @@ impl AppState {
         let settings = self.current_settings()?;
         let knowledge_root = settings.knowledge_root_path();
         let promoted = promote_capture_reuse_with_fallback(
-            &knowledge_root,
+            &self.shared.clipboard_cache_dir,
             settings.clipboard_history_days,
             capture_id,
             &capture.hash,
@@ -1142,9 +1277,8 @@ impl AppState {
         queue_depth: usize,
         captured_at: &DateTime<FixedOffset>,
     ) -> Result<(), String> {
-        let (knowledge_root, preview, history_upsert, history_days) = {
+        let (preview, history_upsert, history_days) = {
             let mut state = self.lock_state()?;
-            let knowledge_root = state.settings.knowledge_root_path();
             let history_days = state.settings.clipboard_history_days;
             prune_recent_hashes(&mut state.runtime.recent_hashes, captured_at);
 
@@ -1161,11 +1295,16 @@ impl AppState {
             state.runtime.recent_captures.clear();
             let preview = build_capture_preview(capture, status);
             let history_upsert = build_capture_history_upsert(capture, &preview);
-            (knowledge_root, preview, history_upsert, history_days)
+            (preview, history_upsert, history_days)
         };
 
         if should_persist_capture_history(status) {
-            persist_capture_preview(&knowledge_root, history_days, &preview, &history_upsert)?;
+            persist_capture_preview(
+                &self.shared.clipboard_cache_dir,
+                history_days,
+                &preview,
+                &history_upsert,
+            )?;
         }
         self.persist_runtime_snapshot()?;
         self.emit_clipboard_updated();
@@ -1447,18 +1586,19 @@ fn capture_history_summary_to_page_summary(summary: CaptureHistorySummary) -> Cl
 }
 
 pub(crate) fn upsert_capture_history_store(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     capture: &CaptureHistoryUpsert,
 ) -> Result<(), String> {
-    CaptureHistoryStore::new(knowledge_root)?.upsert_capture(capture)
+    CaptureHistoryStore::new(clipboard_cache_root)?.upsert_capture(capture)
 }
 
 pub(crate) fn query_capture_history_page_from_store(
     knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     request: &ClipboardPageRequest,
 ) -> Result<ClipboardPage, String> {
-    let store = CaptureHistoryStore::new(knowledge_root)?;
+    let store = CaptureHistoryStore::new(clipboard_cache_root)?;
     let page_size = request.page_size.clamp(1, 100);
     let query = CaptureHistoryQuery {
         history_days,
@@ -1498,10 +1638,11 @@ pub(crate) fn query_capture_history_page_from_store(
 
 pub(crate) fn load_recent_clipboard_captures_from_store(
     knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     limit: usize,
 ) -> Result<Vec<CapturePreview>, String> {
-    let store = CaptureHistoryStore::new(knowledge_root)?;
+    let store = CaptureHistoryStore::new(clipboard_cache_root)?;
     let entries = store.list_recent_captures(history_days, limit)?;
     let mut captures = Vec::with_capacity(entries.len());
 
@@ -1515,10 +1656,10 @@ pub(crate) fn load_recent_clipboard_captures_from_store(
 }
 
 pub(crate) fn append_clipboard_history_entry(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     preview: &CapturePreview,
 ) -> Result<(), String> {
-    let path = clipboard_history_file_path(knowledge_root, &preview.captured_at)?;
+    let path = clipboard_history_file_path(clipboard_cache_root, &preview.captured_at)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
@@ -1535,12 +1676,13 @@ pub(crate) fn append_clipboard_history_entry(
 }
 
 pub(crate) fn promote_clipboard_history_entry(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     capture_id: &str,
     replayed_at: &str,
 ) -> Result<bool, String> {
-    let mut entries_by_day = load_clipboard_history_entries_by_day(knowledge_root, history_days)?;
+    let mut entries_by_day =
+        load_clipboard_history_entries_by_day(clipboard_cache_root, history_days)?;
     let mut promoted_capture = None;
 
     for captures_by_id in entries_by_day.values_mut() {
@@ -1557,17 +1699,17 @@ pub(crate) fn promote_clipboard_history_entry(
     capture.captured_at = replayed_at.to_string();
     let _ = upsert_clipboard_history_entry(&mut entries_by_day, capture)?;
     entries_by_day.retain(|_, captures_by_id| !captures_by_id.is_empty());
-    persist_clipboard_history_entries(knowledge_root, history_days, &entries_by_day)?;
+    persist_clipboard_history_entries(clipboard_cache_root, history_days, &entries_by_day)?;
     Ok(true)
 }
 
 pub(crate) fn load_capture_history_entries_legacy(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
 ) -> Result<Vec<CapturePreview>, String> {
     let mut captures = Vec::new();
 
-    visit_clipboard_history_entries(knowledge_root, history_days, |capture| {
+    visit_clipboard_history_entries(clipboard_cache_root, history_days, |capture| {
         captures.push(capture.clone());
         Ok(())
     })?;
@@ -1576,11 +1718,12 @@ pub(crate) fn load_capture_history_entries_legacy(
 }
 
 fn reconcile_clipboard_history(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     runtime: &RuntimeState,
 ) -> Result<(), String> {
-    let mut entries_by_day = load_clipboard_history_entries_by_day(knowledge_root, history_days)?;
+    let mut entries_by_day =
+        load_clipboard_history_entries_by_day(clipboard_cache_root, history_days)?;
     let mut changed = false;
 
     for capture in runtime.recent_captures.iter().cloned() {
@@ -1588,21 +1731,21 @@ fn reconcile_clipboard_history(
     }
 
     if changed {
-        persist_clipboard_history_entries(knowledge_root, history_days, &entries_by_day)?;
+        persist_clipboard_history_entries(clipboard_cache_root, history_days, &entries_by_day)?;
     }
 
     Ok(())
 }
 
 fn visit_clipboard_history_entries<F>(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     mut visit: F,
 ) -> Result<(), String>
 where
     F: FnMut(&CapturePreview) -> Result<(), String>,
 {
-    for history_path in clipboard_history_paths_desc(knowledge_root, history_days)? {
+    for history_path in clipboard_history_paths_desc(clipboard_cache_root, history_days)? {
         let content = fs::read_to_string(&history_path).map_err(|error| error.to_string())?;
         let mut lines = content.lines().collect::<Vec<&str>>();
         lines.reverse();
@@ -1628,12 +1771,12 @@ where
 }
 
 fn load_clipboard_history_entries_by_day(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
 ) -> Result<BTreeMap<NaiveDate, BTreeMap<String, CapturePreview>>, String> {
     let mut entries_by_day: BTreeMap<NaiveDate, BTreeMap<String, CapturePreview>> = BTreeMap::new();
 
-    for history_path in clipboard_history_paths_desc(knowledge_root, history_days)? {
+    for history_path in clipboard_history_paths_desc(clipboard_cache_root, history_days)? {
         let Some(date) = path_date(&history_path) else {
             continue;
         };
@@ -1664,11 +1807,11 @@ fn load_clipboard_history_entries_by_day(
 }
 
 fn persist_clipboard_history_entries(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     entries_by_day: &BTreeMap<NaiveDate, BTreeMap<String, CapturePreview>>,
 ) -> Result<(), String> {
-    let history_dir = clipboard_history_dir_path(knowledge_root);
+    let history_dir = clipboard_history_dir_path(clipboard_cache_root);
     fs::create_dir_all(&history_dir).map_err(|error| error.to_string())?;
 
     let retained_days = entries_by_day
@@ -1676,7 +1819,7 @@ fn persist_clipboard_history_entries(
         .copied()
         .collect::<std::collections::BTreeSet<_>>();
 
-    for history_path in clipboard_history_paths_desc(knowledge_root, history_days)? {
+    for history_path in clipboard_history_paths_desc(clipboard_cache_root, history_days)? {
         let Some(date) = path_date(&history_path) else {
             continue;
         };
@@ -1708,11 +1851,12 @@ fn persist_clipboard_history_entries(
 }
 
 pub(crate) fn delete_clipboard_history_entry(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
     capture_id: &str,
 ) -> Result<bool, String> {
-    let mut entries_by_day = load_clipboard_history_entries_by_day(knowledge_root, history_days)?;
+    let mut entries_by_day =
+        load_clipboard_history_entries_by_day(clipboard_cache_root, history_days)?;
     let mut changed = false;
 
     for captures_by_id in entries_by_day.values_mut() {
@@ -1726,7 +1870,7 @@ pub(crate) fn delete_clipboard_history_entry(
     }
 
     entries_by_day.retain(|_, captures_by_id| !captures_by_id.is_empty());
-    persist_clipboard_history_entries(knowledge_root, history_days, &entries_by_day)?;
+    persist_clipboard_history_entries(clipboard_cache_root, history_days, &entries_by_day)?;
     Ok(true)
 }
 
@@ -1844,10 +1988,10 @@ fn path_date(path: &Path) -> Option<NaiveDate> {
 }
 
 fn clipboard_history_paths_desc(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     history_days: u16,
 ) -> Result<Vec<PathBuf>, String> {
-    let dir = clipboard_history_dir_path(knowledge_root);
+    let dir = clipboard_history_dir_path(clipboard_cache_root);
     if !dir.exists() {
         return Ok(Vec::new());
     }
@@ -1883,23 +2027,24 @@ struct ClipboardDayUsage {
     total_bytes: u64,
 }
 
-fn enforce_clipboard_retention(knowledge_root: &Path, history_days: u16) -> Result<(), String> {
+fn enforce_clipboard_retention(
+    clipboard_cache_root: &Path,
+    history_days: u16,
+) -> Result<(), String> {
     let cutoff = retention_cutoff_date(history_days);
     let cutoff_day = cutoff.format("%Y-%m-%d").to_string();
 
-    prune_dated_children(&knowledge_root.join("daily"), "md", cutoff)?;
-    prune_dated_children(&assets_dir_path(knowledge_root), "", cutoff)?;
-    prune_dated_children(&clipboard_history_dir_path(knowledge_root), "jsonl", cutoff)?;
-    if let Err(error) = CaptureHistoryStore::new(knowledge_root)
+    prune_dated_children(
+        &clipboard_history_dir_path(clipboard_cache_root),
+        "jsonl",
+        cutoff,
+    )?;
+    if let Err(error) = CaptureHistoryStore::new(clipboard_cache_root)
         .and_then(|store| store.delete_before_day(&cutoff_day))
     {
         warn!("failed to prune sqlite capture history retention window: {error}");
     }
-    prune_queue_retention(knowledge_root, cutoff)?;
-    prune_runtime_retention(knowledge_root, history_days)?;
-    prune_batch_retention(knowledge_root, cutoff)?;
-    prune_filter_log_retention(knowledge_root, cutoff)?;
-    enforce_clipboard_storage_budget(knowledge_root)?;
+    enforce_clipboard_storage_budget(clipboard_cache_root)?;
 
     Ok(())
 }
@@ -1907,39 +2052,6 @@ fn enforce_clipboard_retention(knowledge_root: &Path, history_days: u16) -> Resu
 fn retention_cutoff_date(history_days: u16) -> NaiveDate {
     let keep_days = history_days.max(1) as i64;
     Local::now().date_naive() - Duration::days(keep_days - 1)
-}
-
-fn prune_queue_retention(knowledge_root: &Path, cutoff: NaiveDate) -> Result<(), String> {
-    let mut queue_state = load_queue_state(knowledge_root)?;
-    let original_len = queue_state.pending.len();
-    queue_state
-        .pending
-        .retain(|capture| capture_date(&capture.captured_at).is_some_and(|date| date >= cutoff));
-
-    if queue_state.pending.len() != original_len {
-        queue_state.updated_at = now_rfc3339();
-        persist_queue_state(knowledge_root, &queue_state)?;
-    }
-
-    Ok(())
-}
-
-fn prune_runtime_retention(knowledge_root: &Path, _history_days: u16) -> Result<(), String> {
-    let runtime_path = runtime_file_path(knowledge_root);
-    if !runtime_path.exists() {
-        return Ok(());
-    }
-
-    let mut runtime = load_runtime_state(knowledge_root)?;
-    let original_len = runtime.recent_captures.len();
-    runtime.recent_captures.clear();
-
-    if runtime.recent_captures.len() != original_len {
-        runtime.updated_at = now_rfc3339();
-        write_json_file(&runtime_path, &runtime)?;
-    }
-
-    Ok(())
 }
 
 fn prune_dated_children(
@@ -1982,69 +2094,8 @@ fn prune_dated_children(
     Ok(())
 }
 
-fn prune_batch_retention(knowledge_root: &Path, cutoff: NaiveDate) -> Result<(), String> {
-    let batches_dir = batches_dir_path(knowledge_root);
-    if !batches_dir.exists() {
-        return Ok(());
-    }
-
-    for entry in fs::read_dir(&batches_dir).map_err(|error| error.to_string())? {
-        let entry = entry.map_err(|error| error.to_string())?;
-        let path = entry.path();
-        if path.extension().and_then(|value| value.to_str()) != Some("json") {
-            continue;
-        }
-
-        let bytes = fs::read(&path).map_err(|error| error.to_string())?;
-        let batch =
-            serde_json::from_slice::<BatchFile>(&bytes).map_err(|error| error.to_string())?;
-        let keep = capture_date(&batch.last_captured_at).is_some_and(|date| date >= cutoff);
-
-        if !keep {
-            fs::remove_file(path).map_err(|error| error.to_string())?;
-        }
-    }
-
-    Ok(())
-}
-
-fn prune_filter_log_retention(knowledge_root: &Path, cutoff: NaiveDate) -> Result<(), String> {
-    let path = filters_log_file_path(knowledge_root);
-    if !path.exists() {
-        return Ok(());
-    }
-
-    let content = fs::read_to_string(&path).map_err(|error| error.to_string())?;
-    let mut kept_entries = Vec::new();
-
-    for line in content.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-
-        let entry =
-            serde_json::from_str::<FilterLogEntry>(line).map_err(|error| error.to_string())?;
-        if capture_date(&entry.captured_at).is_some_and(|date| date >= cutoff) {
-            kept_entries.push(entry);
-        }
-    }
-
-    let serialized = if kept_entries.is_empty() {
-        String::new()
-    } else {
-        let mut lines = kept_entries
-            .into_iter()
-            .map(|entry| serde_json::to_string(&entry).map_err(|error| error.to_string()))
-            .collect::<Result<Vec<String>, String>>()?;
-        lines.push(String::new());
-        lines.join("\n")
-    };
-
-    fs::write(path, serialized).map_err(|error| error.to_string())
-}
-
-fn enforce_clipboard_storage_budget(knowledge_root: &Path) -> Result<(), String> {
-    let mut usage_by_day = collect_clipboard_day_usage(knowledge_root)?;
+fn enforce_clipboard_storage_budget(clipboard_cache_root: &Path) -> Result<(), String> {
+    let mut usage_by_day = collect_clipboard_day_usage(clipboard_cache_root)?;
     let mut total_bytes = usage_by_day
         .values()
         .map(|usage| usage.total_bytes)
@@ -2060,7 +2111,7 @@ fn enforce_clipboard_storage_budget(knowledge_root: &Path) -> Result<(), String>
             break;
         }
 
-        remove_clipboard_day_data(knowledge_root, *date)?;
+        remove_clipboard_day_data(clipboard_cache_root, *date)?;
         total_bytes = total_bytes.saturating_sub(usage.total_bytes);
         removed_dates.push(*date);
     }
@@ -2069,31 +2120,25 @@ fn enforce_clipboard_storage_budget(knowledge_root: &Path) -> Result<(), String>
         return Ok(());
     }
 
-    if let Err(error) = prune_capture_history_store_days(knowledge_root, &removed_dates) {
+    if let Err(error) = prune_capture_history_store_days(clipboard_cache_root, &removed_dates) {
         warn!("failed to prune sqlite capture history for removed dates: {error}");
     }
-    prune_queue_dates(knowledge_root, &removed_dates)?;
-    prune_batch_dates(knowledge_root, &removed_dates)?;
-    prune_filter_log_dates(knowledge_root, &removed_dates)?;
-    prune_runtime_retention(knowledge_root, 0)?;
     usage_by_day.clear();
 
     Ok(())
 }
 
 fn collect_clipboard_day_usage(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
 ) -> Result<BTreeMap<NaiveDate, ClipboardDayUsage>, String> {
     let mut usage_by_day = BTreeMap::new();
 
-    collect_dated_file_usage(&knowledge_root.join("daily"), "md", &mut usage_by_day)?;
     collect_dated_file_usage(
-        &clipboard_history_dir_path(knowledge_root),
+        &clipboard_history_dir_path(clipboard_cache_root),
         "jsonl",
         &mut usage_by_day,
     )?;
-    collect_dated_dir_usage(&assets_dir_path(knowledge_root), &mut usage_by_day)?;
-    if let Err(error) = merge_capture_history_store_usage(knowledge_root, &mut usage_by_day) {
+    if let Err(error) = merge_capture_history_store_usage(clipboard_cache_root, &mut usage_by_day) {
         warn!("failed to estimate sqlite capture history usage by day: {error}");
     }
 
@@ -2130,39 +2175,11 @@ fn collect_dated_file_usage(
     Ok(())
 }
 
-fn collect_dated_dir_usage(
-    dir: &Path,
-    usage_by_day: &mut BTreeMap<NaiveDate, ClipboardDayUsage>,
-) -> Result<(), String> {
-    if !dir.exists() {
-        return Ok(());
-    }
-
-    for entry in fs::read_dir(dir).map_err(|error| error.to_string())? {
-        let entry = entry.map_err(|error| error.to_string())?;
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-
-        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
-            continue;
-        };
-        let Ok(date) = NaiveDate::parse_from_str(name, "%Y-%m-%d") else {
-            continue;
-        };
-
-        usage_by_day.entry(date).or_default().total_bytes += dir_size_bytes(&path)?;
-    }
-
-    Ok(())
-}
-
 fn merge_capture_history_store_usage(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     usage_by_day: &mut BTreeMap<NaiveDate, ClipboardDayUsage>,
 ) -> Result<(), String> {
-    let usage = CaptureHistoryStore::new(knowledge_root)?.estimate_usage_by_day()?;
+    let usage = CaptureHistoryStore::new(clipboard_cache_root)?.estimate_usage_by_day()?;
 
     for (day, bytes) in usage {
         let Ok(date) = NaiveDate::parse_from_str(&day, "%Y-%m-%d") else {
@@ -2174,45 +2191,19 @@ fn merge_capture_history_store_usage(
     Ok(())
 }
 
-fn dir_size_bytes(dir: &Path) -> Result<u64, String> {
-    let mut total = 0;
-
-    for entry in fs::read_dir(dir).map_err(|error| error.to_string())? {
-        let entry = entry.map_err(|error| error.to_string())?;
-        let path = entry.path();
-        let metadata = path.metadata().map_err(|error| error.to_string())?;
-        if metadata.is_dir() {
-            total += dir_size_bytes(&path)?;
-        } else {
-            total += metadata.len();
-        }
-    }
-
-    Ok(total)
-}
-
-fn remove_clipboard_day_data(knowledge_root: &Path, date: NaiveDate) -> Result<(), String> {
+fn remove_clipboard_day_data(clipboard_cache_root: &Path, date: NaiveDate) -> Result<(), String> {
     let day = date.format("%Y-%m-%d").to_string();
-    let daily_path = knowledge_root.join("daily").join(format!("{day}.md"));
-    if daily_path.exists() {
-        fs::remove_file(daily_path).map_err(|error| error.to_string())?;
-    }
-
-    let history_path = clipboard_history_dir_path(knowledge_root).join(format!("{day}.jsonl"));
+    let history_path =
+        clipboard_history_dir_path(clipboard_cache_root).join(format!("{day}.jsonl"));
     if history_path.exists() {
         fs::remove_file(history_path).map_err(|error| error.to_string())?;
-    }
-
-    let asset_dir = assets_dir_path(knowledge_root).join(day);
-    if asset_dir.exists() {
-        fs::remove_dir_all(asset_dir).map_err(|error| error.to_string())?;
     }
 
     Ok(())
 }
 
 fn prune_capture_history_store_days(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     removed_dates: &[NaiveDate],
 ) -> Result<(), String> {
     if removed_dates.is_empty() {
@@ -2223,93 +2214,7 @@ fn prune_capture_history_store_days(
         .iter()
         .map(|date| date.format("%Y-%m-%d").to_string())
         .collect::<Vec<_>>();
-    CaptureHistoryStore::new(knowledge_root)?.delete_days(&days)
-}
-
-fn prune_queue_dates(knowledge_root: &Path, removed_dates: &[NaiveDate]) -> Result<(), String> {
-    let mut queue_state = load_queue_state(knowledge_root)?;
-    let original_len = queue_state.pending.len();
-    queue_state.pending.retain(|capture| {
-        !capture_date(&capture.captured_at)
-            .is_some_and(|date| removed_dates.iter().any(|removed| *removed == date))
-    });
-
-    if queue_state.pending.len() != original_len {
-        queue_state.updated_at = now_rfc3339();
-        persist_queue_state(knowledge_root, &queue_state)?;
-    }
-
-    Ok(())
-}
-
-fn prune_batch_dates(knowledge_root: &Path, removed_dates: &[NaiveDate]) -> Result<(), String> {
-    let batches_dir = batches_dir_path(knowledge_root);
-    if !batches_dir.exists() {
-        return Ok(());
-    }
-
-    for entry in fs::read_dir(&batches_dir).map_err(|error| error.to_string())? {
-        let entry = entry.map_err(|error| error.to_string())?;
-        let path = entry.path();
-        if path.extension().and_then(|value| value.to_str()) != Some("json") {
-            continue;
-        }
-
-        let bytes = fs::read(&path).map_err(|error| error.to_string())?;
-        let batch =
-            serde_json::from_slice::<BatchFile>(&bytes).map_err(|error| error.to_string())?;
-        let should_remove = batch.captures.iter().any(|capture| {
-            capture_date(&capture.captured_at)
-                .is_some_and(|date| removed_dates.iter().any(|removed| *removed == date))
-        });
-
-        if should_remove {
-            fs::remove_file(path).map_err(|error| error.to_string())?;
-        }
-    }
-
-    Ok(())
-}
-
-fn prune_filter_log_dates(
-    knowledge_root: &Path,
-    removed_dates: &[NaiveDate],
-) -> Result<(), String> {
-    let path = filters_log_file_path(knowledge_root);
-    if !path.exists() {
-        return Ok(());
-    }
-
-    let content = fs::read_to_string(&path).map_err(|error| error.to_string())?;
-    let mut kept_entries = Vec::new();
-
-    for line in content.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-
-        let entry =
-            serde_json::from_str::<FilterLogEntry>(line).map_err(|error| error.to_string())?;
-        let should_remove = capture_date(&entry.captured_at)
-            .is_some_and(|date| removed_dates.iter().any(|removed| *removed == date));
-
-        if !should_remove {
-            kept_entries.push(entry);
-        }
-    }
-
-    let serialized = if kept_entries.is_empty() {
-        String::new()
-    } else {
-        let mut lines = kept_entries
-            .into_iter()
-            .map(|entry| serde_json::to_string(&entry).map_err(|error| error.to_string()))
-            .collect::<Result<Vec<String>, String>>()?;
-        lines.push(String::new());
-        lines.join("\n")
-    };
-
-    fs::write(path, serialized).map_err(|error| error.to_string())
+    CaptureHistoryStore::new(clipboard_cache_root)?.delete_days(&days)
 }
 
 fn capture_date(captured_at: &str) -> Option<NaiveDate> {
@@ -2324,7 +2229,15 @@ fn load_settings(
 ) -> Result<AppSettings, String> {
     let settings = if settings_path.exists() {
         let bytes = fs::read(settings_path).map_err(|error| error.to_string())?;
-        serde_json::from_slice::<AppSettings>(&bytes).map_err(|error| error.to_string())?
+        match serde_json::from_slice::<PersistedAppSettings>(&bytes)
+            .map_err(|error| error.to_string())?
+        {
+            PersistedAppSettings::Current(settings) => settings,
+            PersistedAppSettings::LegacyManaged(settings) => settings.into_current(),
+            PersistedAppSettings::LegacySingle(settings) => {
+                settings.into_current(default_knowledge_root)
+            }
+        }
     } else {
         AppSettings::defaults(default_knowledge_root)
     }
@@ -2472,13 +2385,13 @@ fn batch_file_path(knowledge_root: &Path, batch_id: &str) -> PathBuf {
 }
 
 fn clipboard_history_file_path(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     captured_at: &str,
 ) -> Result<PathBuf, String> {
     let captured_at = parse_captured_at(captured_at)?;
     let date = captured_at.format("%Y-%m-%d").to_string();
 
-    Ok(clipboard_history_dir_path(knowledge_root).join(format!("{date}.jsonl")))
+    Ok(clipboard_history_dir_path(clipboard_cache_root).join(format!("{date}.jsonl")))
 }
 
 fn append_capture_to_daily_file(
@@ -2518,12 +2431,6 @@ fn render_capture_entry(capture: &CaptureRecord, knowledge_root: &Path) -> Strin
     }
     if let Some(source_app_bundle_id) = &capture.source_app_bundle_id {
         entry.push_str(&format!("- Source Bundle ID: {}\n", source_app_bundle_id));
-    }
-    if let Some(source_app_icon_path) = &capture.source_app_icon_path {
-        entry.push_str(&format!(
-            "- Source App Icon Path: {}\n",
-            source_app_icon_path
-        ));
     }
     entry.push_str(&format!("- Kind: {}\n", capture.content_kind));
     entry.push_str(&format!("- Hash: {}\n\n", capture.hash));
@@ -2638,7 +2545,7 @@ fn thumbnail_path_for_asset(asset_path: &Path) -> PathBuf {
 }
 
 fn persist_source_app_icon(
-    knowledge_root: &Path,
+    clipboard_cache_root: &Path,
     capture: &CaptureRecord,
 ) -> Result<Option<String>, String> {
     if let Some(existing_path) = &capture.source_app_icon_path {
@@ -2655,10 +2562,11 @@ fn persist_source_app_icon(
         capture.source_app_bundle_id.as_deref(),
         capture.source_app_name.as_deref(),
     );
-    let icon_path = app_icons_dir_path(knowledge_root).join(format!("{cache_key}.png"));
+    let icon_path =
+        clipboard_app_icons_dir_path(clipboard_cache_root).join(format!("{cache_key}.png"));
 
     if !icon_path.exists() {
-        fs::create_dir_all(app_icons_dir_path(knowledge_root))
+        fs::create_dir_all(clipboard_app_icons_dir_path(clipboard_cache_root))
             .map_err(|error| error.to_string())?;
         if let Err(error) = write_app_icon_png(icon_bytes, &icon_path) {
             log::warn!(
@@ -2852,8 +2760,8 @@ fn markdown_asset_path(knowledge_root: &Path, asset_path: &str) -> Option<String
     Some(format!("../{}", relative_asset_path.display()))
 }
 
-fn app_icons_dir_path(knowledge_root: &Path) -> PathBuf {
-    knowledge_root.join("_system").join(APP_ICONS_DIR_NAME)
+fn clipboard_app_icons_dir_path(clipboard_cache_root: &Path) -> PathBuf {
+    clipboard_cache_root.join(APP_ICONS_DIR_NAME)
 }
 
 fn format_bytes(byte_size: u64) -> String {
@@ -2933,10 +2841,12 @@ fn assets_dir_path(knowledge_root: &Path) -> PathBuf {
     knowledge_root.join(ASSETS_DIR_NAME)
 }
 
-fn clipboard_history_dir_path(knowledge_root: &Path) -> PathBuf {
-    knowledge_root
-        .join("_system")
-        .join(CLIPBOARD_HISTORY_DIR_NAME)
+fn clipboard_cache_root_path(app_data_dir: &Path) -> PathBuf {
+    app_data_dir.join("clipboard-cache")
+}
+
+fn clipboard_history_dir_path(clipboard_cache_root: &Path) -> PathBuf {
+    clipboard_cache_root.join(CLIPBOARD_HISTORY_DIR_NAME)
 }
 
 fn batches_dir_path(knowledge_root: &Path) -> PathBuf {
@@ -2947,9 +2857,6 @@ pub(crate) fn ensure_knowledge_root_layout(knowledge_root: &Path) -> Result<(), 
     fs::create_dir_all(knowledge_root.join("daily")).map_err(|error| error.to_string())?;
     fs::create_dir_all(knowledge_root.join("_system")).map_err(|error| error.to_string())?;
     fs::create_dir_all(assets_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
-    fs::create_dir_all(clipboard_history_dir_path(knowledge_root))
-        .map_err(|error| error.to_string())?;
-    fs::create_dir_all(app_icons_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
     fs::create_dir_all(batches_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
     Ok(())
 }
@@ -2992,14 +2899,9 @@ fn now_rfc3339() -> String {
 mod tests {
     use super::*;
     use std::collections::BTreeMap;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn unique_root() -> PathBuf {
-        let suffix = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system time should be after unix epoch")
-            .as_nanos();
-        std::env::temp_dir().join(format!("tino-app-state-tests-{suffix}"))
+        std::env::temp_dir().join(format!("tino-app-state-tests-{}", Uuid::now_v7().simple()))
     }
 
     fn sample_preview(id: &str, captured_at: &str) -> CapturePreview {
@@ -3125,6 +3027,91 @@ mod tests {
             .expect("history delete should succeed");
         assert!(deleted);
         assert!(!history_path.exists());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn clipboard_retention_keeps_daily_and_assets_while_pruning_history_cache() {
+        let root = unique_root();
+        ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
+
+        let retained_day = (Local::now().date_naive() - Duration::days(30)).format("%Y-%m-%d");
+        let captured_at = format!("{retained_day}T12:00:00+08:00");
+        let preview = sample_preview("cap_legacy", &captured_at);
+        let history_path =
+            clipboard_history_file_path(&root, &captured_at).expect("history path should build");
+        append_clipboard_history_entry(&root, &preview).expect("preview should append");
+
+        let daily_path = daily_file_path(&root, &captured_at).expect("daily path should build");
+        fs::write(&daily_path, "# keep daily").expect("daily should persist");
+
+        let asset_dir = assets_dir_path(&root).join(retained_day.to_string());
+        fs::create_dir_all(&asset_dir).expect("asset dir should initialize");
+        let asset_path = asset_dir.join("cap_legacy.png");
+        fs::write(&asset_path, b"png").expect("asset should persist");
+
+        enforce_clipboard_retention(&root, 1).expect("retention should succeed");
+
+        assert!(
+            !history_path.exists(),
+            "clipboard history cache should still respect retention"
+        );
+        assert!(
+            daily_path.exists(),
+            "daily archive should remain a long-lived knowledge asset"
+        );
+        assert!(
+            asset_path.exists(),
+            "persisted assets referenced by daily should not be pruned by clipboard retention"
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn render_capture_entry_omits_clipboard_ui_icon_cache_path() {
+        let root = unique_root();
+        ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
+
+        let capture = CaptureRecord {
+            id: "cap_icon".into(),
+            source: "clipboard".into(),
+            source_app_name: Some("Safari".into()),
+            source_app_bundle_id: Some("com.apple.Safari".into()),
+            source_app_icon_path: Some(
+                root.join("clipboard-cache")
+                    .join("app-icons")
+                    .join("com-apple-safari.png")
+                    .display()
+                    .to_string(),
+            ),
+            source_app_icon_bytes: None,
+            captured_at: "2026-04-06T12:00:00+08:00".into(),
+            content_kind: "plain_text".into(),
+            raw_text: "storage layering".into(),
+            raw_rich: None,
+            raw_rich_format: None,
+            image_bytes: None,
+            image_width: None,
+            image_height: None,
+            byte_size: None,
+            hash: "hash_icon".into(),
+            link_url: None,
+            asset_path: None,
+            thumbnail_path: None,
+        };
+
+        let rendered = render_capture_entry(&capture, &root);
+
+        assert!(
+            !rendered.contains("Source App Icon Path"),
+            "daily markdown should not persist clipboard UI icon cache paths"
+        );
+        assert!(
+            rendered.contains("- Source App: Safari"),
+            "daily markdown should still retain useful source metadata"
+        );
 
         let _ = fs::remove_dir_all(root);
     }
