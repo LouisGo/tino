@@ -74,6 +74,7 @@ export function ClipboardBoardPanel({
   const selectedCaptureId = useClipboardBoardStore((state) => state.selectedCaptureId);
   const previewingImageId = useClipboardBoardStore((state) => state.previewingImageId);
   const pendingDeleteCapture = useClipboardBoardStore((state) => state.pendingDeleteCapture);
+  const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const setPreviewingImageId = useClipboardBoardStore((state) => state.setPreviewingImageId);
   const setPendingDeleteCapture = useClipboardBoardStore((state) => state.setPendingDeleteCapture);
   const openImageLightbox = useCommand<{ captureId: string }>("clipboard.showImageLightbox");
@@ -95,6 +96,7 @@ export function ClipboardBoardPanel({
     Boolean(selectedCapture) &&
     !previewingImageId &&
     !pendingDeleteCapture;
+  const highlightQuery = searchValue.trim();
 
   function clearWindowSelectionTipTimeout() {
     if (hideWindowSelectionTipTimeoutRef.current !== null) {
@@ -285,6 +287,7 @@ export function ClipboardBoardPanel({
             <div className="flex h-full min-h-0 min-w-0 flex-col self-stretch bg-card/92">
               <ClipboardCaptureDetail
                 capture={selectedCapture}
+                highlightQuery={highlightQuery}
                 onOpenImage={() => {
                   if (selectedCapture) {
                     void openImageLightbox.execute({ captureId: selectedCapture.id });

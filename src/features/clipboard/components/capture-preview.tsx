@@ -27,6 +27,12 @@ import { Button } from "@/components/ui/button";
 import { useCommand } from "@/core/commands";
 import { useShortcutScope } from "@/core/shortcuts";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
+import {
+  createRehypeHighlightPlugin,
+  highlightSanitizedHtmlContent,
+  highlightTextContent,
+  normalizeHighlightQuery,
+} from "@/features/clipboard/lib/clipboard-preview-highlight";
 import { capturePreviewSurfaceClassName } from "@/features/clipboard/lib/clipboard-board";
 import {
   getExternalLinkTargetFromEventTarget,
@@ -47,12 +53,14 @@ type Point = {
 
 export function CaptureDetailPreview({
   capture,
+  highlightQuery,
   onOpenImage,
   sharedSurface = false,
   toolbarMeta,
   toolbarActions,
 }: {
   capture: ClipboardCapture;
+  highlightQuery: string;
   onOpenImage: () => void;
   sharedSurface?: boolean;
   toolbarMeta?: ReactNode;
@@ -136,6 +144,7 @@ export function CaptureDetailPreview({
     <TextCapturePreview
       key={capture.id}
       capture={capture}
+      highlightQuery={highlightQuery}
       sharedSurface={sharedSurface}
       toolbarMeta={toolbarMeta}
       toolbarActions={toolbarActions}
@@ -145,17 +154,20 @@ export function CaptureDetailPreview({
 
 function TextCapturePreview({
   capture,
+  highlightQuery,
   sharedSurface = false,
   toolbarMeta,
   toolbarActions,
 }: {
   capture: ClipboardCapture;
+  highlightQuery: string;
   sharedSurface?: boolean;
   toolbarMeta?: ReactNode;
   toolbarActions?: ReactNode;
 }) {
   const [mode, setMode] = useState<TextPreviewMode>(() => preferredTextPreviewMode(capture));
   const normalizedMarkdownSource = normalizeMarkdownSource(capture.rawText);
+  const normalizedHighlightQuery = normalizeHighlightQuery(highlightQuery);
 
   const htmlPreview = canRenderHtmlPreview(capture);
   const markdownPreview = canRenderMarkdownPreview(capture);
@@ -192,23 +204,27 @@ function TextCapturePreview({
 
       <div className="app-scroll-area min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-4 pt-3">
         {mode === "preview" && previewKind === "html" ? (
-          <HtmlRichPreview html={capture.rawRich ?? ""} />
+          <HtmlRichPreview html={capture.rawRich ?? ""} highlightQuery={normalizedHighlightQuery} />
         ) : null}
         {mode === "preview" && previewKind === "markdown" ? (
-          <MarkdownTextPreview markdown={normalizedMarkdownSource} />
+          <MarkdownTextPreview markdown={normalizedMarkdownSource} highlightQuery={normalizedHighlightQuery} />
         ) : null}
         {mode === "preview" && previewKind === "text" ? (
           <RawTextPreview
             content={capture.rawText}
+            highlightQuery={normalizedHighlightQuery}
           />
         ) : null}
         {mode === "raw_text" ? (
           <RawTextPreview
             content={capture.rawText}
+            highlightQuery={normalizedHighlightQuery}
             tone={previewKind === "text" ? "reading" : "raw"}
           />
         ) : null}
-        {mode === "raw_rich" ? <RawTextPreview content={capture.rawRich ?? ""} /> : null}
+        {mode === "raw_rich" ? (
+          <RawTextPreview content={capture.rawRich ?? ""} highlightQuery={normalizedHighlightQuery} />
+        ) : null}
       </div>
     </section>
   );
@@ -262,11 +278,18 @@ function PreviewModeButton({
   );
 }
 
-function HtmlRichPreview({ html }: { html: string }) {
+function HtmlRichPreview({
+  html,
+  highlightQuery,
+}: {
+  html: string;
+  highlightQuery: string;
+}) {
   const sanitizedHtml = DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
     FORBID_ATTR: ["style", "class"],
   });
+  const highlightedHtml = highlightSanitizedHtmlContent(sanitizedHtml, highlightQuery);
 
   const handleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     const target = getExternalLinkTargetFromEventTarget(event.target);
@@ -282,17 +305,23 @@ function HtmlRichPreview({ html }: { html: string }) {
     <div
       className="app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] text-[13px] leading-[1.7]"
       onClick={handleClick}
-      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+      dangerouslySetInnerHTML={{ __html: highlightedHtml }}
     />
   );
 }
 
-function MarkdownTextPreview({ markdown }: { markdown: string }) {
+function MarkdownTextPreview({
+  markdown,
+  highlightQuery,
+}: {
+  markdown: string;
+  highlightQuery: string;
+}) {
   return (
     <div className="app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] text-[13px] leading-[1.7]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize]}
+        rehypePlugins={[rehypeSanitize, createRehypeHighlightPlugin(highlightQuery)]}
         components={{
           a: ({ href, children, ...props }) => {
             const target = resolveExternalLinkTarget(href ?? "");
@@ -330,9 +359,11 @@ function MarkdownTextPreview({ markdown }: { markdown: string }) {
 
 function RawTextPreview({
   content,
+  highlightQuery,
   tone = "raw",
 }: {
   content: string;
+  highlightQuery: string;
   tone?: "raw" | "reading";
 }) {
   return (
@@ -344,7 +375,7 @@ function RawTextPreview({
           : "w-0 min-w-full max-w-full font-mono text-[13px] leading-7 break-all",
       )}
     >
-      {content || "No raw source available."}
+      {highlightTextContent(content, highlightQuery, "No raw source available.")}
     </div>
   );
 }

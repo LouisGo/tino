@@ -3066,6 +3066,20 @@
     @apply my-5 border-border/70;
   }
 
+  .app-search-highlight {
+    background-color: color-mix(in oklch, var(--warning) 30%, transparent);
+    color: color-mix(in oklch, var(--foreground) 92%, var(--warning-foreground) 8%);
+    border-radius: 0.4rem;
+    padding-inline: 0.12rem;
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--warning) 24%, transparent);
+  }
+
+  .dark .app-search-highlight {
+    background-color: color-mix(in oklch, var(--warning) 38%, transparent);
+    color: color-mix(in oklch, white 92%, var(--warning-foreground) 8%);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--warning) 34%, transparent);
+  }
+
   @keyframes app-route-enter {
     from {
       opacity: 0;

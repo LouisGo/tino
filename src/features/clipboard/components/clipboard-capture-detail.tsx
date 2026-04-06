@@ -29,9 +29,11 @@ const CaptureDetailPreview = lazy(async () => {
 
 export function ClipboardCaptureDetail({
   capture,
+  highlightQuery,
   onOpenImage,
 }: {
   capture: ClipboardCapture | null;
+  highlightQuery: string;
   onOpenImage: () => void;
 }) {
   const copyCapture = useCommand<{ capture: ClipboardCapture }>("clipboard.copyCapture");
@@ -100,6 +102,7 @@ export function ClipboardCaptureDetail({
           <Suspense fallback={<div className="h-full w-full" />}>
             <CaptureDetailPreview
               capture={capture}
+              highlightQuery={highlightQuery}
               onOpenImage={onOpenImage}
               sharedSurface
               toolbarMeta={toolbarMeta}
