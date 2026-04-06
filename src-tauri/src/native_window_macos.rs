@@ -6,10 +6,8 @@ use objc2_app_kit::{
     NSWindowAnimationBehavior, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 #[cfg(target_os = "macos")]
-use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
-#[cfg(target_os = "macos")]
-use objc2_foundation::{NSObject, NSObjectProtocol, NSPoint, NSSize};
-use tauri::{AppHandle, Manager, WebviewWindow};
+use objc2_foundation::{NSObject, NSObjectProtocol};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewWindow};
 
 use crate::panel_layout::PanelWindowLayout;
 
@@ -41,21 +39,6 @@ objc2::define_class!(
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
     fn object_setClass(obj: *mut NSObject, cls: *const AnyClass) -> *const AnyClass;
-}
-
-#[cfg(target_os = "macos")]
-pub(crate) fn macos_y_for_tauri_top_with_display_height(y: f64, display_height: f64) -> f64 {
-    display_height - y
-}
-
-#[cfg(target_os = "macos")]
-fn macos_y_for_tauri_top(y: f64) -> f64 {
-    macos_y_for_tauri_top_with_display_height(y, CGDisplayPixelsHigh(CGMainDisplayID()) as f64)
-}
-
-#[cfg(target_os = "macos")]
-fn macos_window_position_for_layout(layout: &PanelWindowLayout) -> NSPoint {
-    NSPoint::new(layout.x, macos_y_for_tauri_top(layout.y))
 }
 
 #[cfg(target_os = "macos")]
@@ -167,8 +150,10 @@ pub(crate) fn present_native_window(
                 ns_window.orderOut(None);
             }
 
-            ns_window.setContentSize(NSSize::new(layout.width, layout.height));
-            ns_window.setFrameTopLeftPoint(macos_window_position_for_layout(&layout));
+            // Let Tauri own global logical positioning so panel placement stays correct on
+            // non-primary displays instead of re-deriving AppKit screen coordinates here.
+            let _ = window.set_size(LogicalSize::new(layout.width, layout.height));
+            let _ = window.set_position(LogicalPosition::new(layout.x, layout.y));
         }
 
         if ns_window.isMiniaturized() {

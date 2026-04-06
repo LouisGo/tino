@@ -1112,12 +1112,21 @@ mod tests {
         assert_eq!(layout.y, 290.0);
     }
 
-    #[cfg(target_os = "macos")]
     #[test]
-    fn macos_window_position_converts_from_tauri_top_left_space() {
-        assert_eq!(
-            native_window_macos::macos_y_for_tauri_top_with_display_height(290.0, 1080.0),
-            790.0
-        );
+    fn panel_layout_preserves_target_display_origin() {
+        let spec = PANEL_WINDOW_SPECS[0];
+        let display = LogicalDisplayFrame {
+            x: 1728.0,
+            y: 64.0,
+            width: 1512.0,
+            height: 982.0,
+        };
+
+        let layout = resolve_panel_window_layout(&spec, &display, None);
+
+        assert_eq!(layout.width, 800.0);
+        assert_eq!(layout.height, 500.0);
+        assert_eq!(layout.x, 2084.0);
+        assert_eq!(layout.y, 305.0);
     }
 }

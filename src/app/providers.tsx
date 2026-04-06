@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { emit, listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useQuery } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, type AnyRouter } from "@tanstack/react-router";
@@ -101,6 +102,10 @@ function AppShellRuntime({ router }: AppProvidersProps) {
 
   useEffect(() => {
     if (typeof window === "undefined") {
+      return;
+    }
+
+    if (isTauriRuntime() && getCurrentWindow().label !== "main") {
       return;
     }
 
