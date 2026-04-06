@@ -255,6 +255,20 @@ pub fn toggle_clipboard_window_visibility(app: AppHandle) -> Result<bool, String
 
 #[tauri::command]
 #[specta::specta]
+pub fn get_clipboard_window_target_app_name(
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    Ok(state.clipboard_window_target()?.and_then(|target| {
+        target
+            .app_name
+            .or(target.bundle_id)
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+    }))
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn get_log_directory(app: AppHandle) -> Result<String, String> {
     app.path()
         .app_log_dir()

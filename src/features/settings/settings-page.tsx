@@ -36,12 +36,9 @@ export function SettingsPage() {
     toggleAutostartMutation,
   } = useSettingsController();
   const {
-    contentInsetTop,
     scrollOffset,
     scrollViewport,
     setScrollViewport,
-    stickyShellRef,
-    tabsRef,
   } = useSettingsLayout();
   const runtimeProviderForm = useRuntimeProviderForm({
     patchSettingsDraft,
@@ -80,31 +77,26 @@ export function SettingsPage() {
 
   return (
     <div
-      className="relative mx-auto h-full max-w-[1120px] min-h-0 overflow-hidden"
+      className="relative mx-auto flex h-full max-w-[1120px] min-h-0 flex-col overflow-hidden"
       style={{ "--settings-nav-offset": `${scrollOffset}px` } as CSSProperties}
     >
       <div
-        ref={setScrollViewport}
-        className="app-scroll-area relative h-full overflow-y-auto pr-2"
+        className="relative z-20 shrink-0 pb-1"
       >
-        <div
-          ref={stickyShellRef}
-          className="sticky top-0 z-20 pb-4"
-        >
-          <div className="relative">
-            <SettingsStickyTabs
-              ref={tabsRef}
-              activeSectionId={activeSectionId}
-              onSelectSection={scrollToSection}
-              sections={settingsSections}
-            />
-          </div>
+        <div className="relative">
+          <SettingsStickyTabs
+            activeSectionId={activeSectionId}
+            onSelectSection={scrollToSection}
+            sections={settingsSections}
+          />
         </div>
+      </div>
 
-        <div
-          className="space-y-10 pb-8"
-          style={{ paddingTop: `${contentInsetTop}px` }}
-        >
+      <div
+        ref={setScrollViewport}
+        className="app-scroll-area min-h-0 flex-1 overflow-y-auto pr-2 pt-3"
+      >
+        <div className="space-y-10 pb-8">
           <WorkspaceSettingsSection
             settingsDraft={settingsDraft}
             patchSettingsDraft={patchSettingsDraft}

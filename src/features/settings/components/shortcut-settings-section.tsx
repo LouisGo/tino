@@ -329,7 +329,19 @@ function ShortcutGroup({
                       </SettingsIconButton>
                       {isCustomized ? (
                         <SettingsIconButton
-                          label="Restore default shortcut"
+                          label="Restore Default"
+                          tooltipContent={
+                            defaultKeys.length > 0 ? (
+                              <span className="inline-flex items-center gap-2">
+                                <span>Restore Default</span>
+                                <span className="inline-flex align-middle">
+                                  <Kbd keys={defaultKeys} />
+                                </span>
+                              </span>
+                            ) : (
+                              "Restore Default"
+                            )
+                          }
                           onClick={() => onRestore(shortcut.id)}
                         >
                           <RotateCcw className="size-4" />
@@ -339,16 +351,6 @@ function ShortcutGroup({
                   ) : null}
                 </div>
               </div>
-
-              {editable && isCustomized && defaultKeys.length > 0 ? (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Default:{" "}
-                  <span className="inline-flex align-middle">
-                    <Kbd keys={defaultKeys} />
-                  </span>
-                </p>
-              ) : null}
-
               {editable && feedback?.shortcutId === shortcut.id ? (
                 <p
                   className={`mt-2 text-sm ${

@@ -9,6 +9,7 @@ export function SettingsIconButton({
   disabled,
   label,
   onClick,
+  tooltipContent,
   variant = "outline",
 }: {
   buttonProps?: Omit<ComponentProps<"button">, "aria-label" | "children" | "disabled" | "onClick" | "type"> & Partial<Record<`data-${string}`, string>>;
@@ -16,10 +17,11 @@ export function SettingsIconButton({
   disabled?: boolean;
   label: string;
   onClick: () => void;
+  tooltipContent?: ReactNode;
   variant?: "ghost" | "outline" | "secondary";
 }) {
   return (
-    <Tooltip content={label} placement="bottom">
+    <Tooltip content={tooltipContent ?? label} placement="bottom">
       <div className="shrink-0">
         <Button
           type="button"

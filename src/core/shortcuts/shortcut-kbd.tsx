@@ -4,9 +4,11 @@ import { useAppShortcut, useShortcutManager } from "@/core/shortcuts/hooks";
 import { formatShortcutAccelerator } from "@/core/shortcuts/utils";
 
 export function ShortcutKbd({
+  className,
   shortcutId,
   whenDisabled = "hidden",
 }: {
+  className?: string;
   shortcutId: string;
   whenDisabled?: "hidden" | "placeholder";
 }) {
@@ -22,5 +24,10 @@ export function ShortcutKbd({
     return null;
   }
 
-  return <Kbd keys={formatShortcutAccelerator(shortcut.accelerator, platform)} />;
+  return (
+    <Kbd
+      className={className}
+      keys={formatShortcutAccelerator(shortcut.accelerator, platform)}
+    />
+  );
 }

@@ -18,6 +18,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         shell::save_app_settings,
         shell::toggle_main_window_visibility,
         shell::toggle_clipboard_window_visibility,
+        shell::get_clipboard_window_target_app_name,
         shell::get_log_directory,
         shell::open_in_preview,
         shell::copy_capture_to_clipboard,

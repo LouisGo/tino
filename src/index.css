@@ -39,6 +39,19 @@
   --scrollbar-thumb-hover: color-mix(in oklch, var(--foreground) 26%, transparent);
   --scrollbar-thumb-active: color-mix(in oklch, var(--foreground) 34%, transparent);
   --scrollbar-thumb-border: color-mix(in oklch, var(--background) 78%, transparent);
+  --home-hero-from: oklch(0.62 0.13 244);
+  --home-hero-to: oklch(0.57 0.14 171);
+  --home-hero-tail: color-mix(
+    in oklch,
+    var(--home-hero-to) 82%,
+    var(--background) 18%
+  );
+  --home-hero-glow: color-mix(in oklch, var(--home-hero-to) 12%, transparent);
+  --home-hero-glow-soft: color-mix(
+    in oklch,
+    var(--home-hero-from) 10%,
+    transparent
+  );
 }
 
 .dark {
@@ -74,6 +87,19 @@
   --scrollbar-thumb-hover: color-mix(in oklch, var(--foreground) 24%, transparent);
   --scrollbar-thumb-active: color-mix(in oklch, var(--foreground) 32%, transparent);
   --scrollbar-thumb-border: color-mix(in oklch, var(--background) 64%, transparent);
+  --home-hero-from: oklch(0.73 0.12 244);
+  --home-hero-to: oklch(0.73 0.13 171);
+  --home-hero-tail: color-mix(
+    in oklch,
+    var(--home-hero-to) 78%,
+    var(--background) 22%
+  );
+  --home-hero-glow: color-mix(in oklch, var(--home-hero-to) 16%, transparent);
+  --home-hero-glow-soft: color-mix(
+    in oklch,
+    var(--home-hero-from) 12%,
+    transparent
+  );
   --clipboard-kind-text: oklch(0.72 0.01 255);
   --clipboard-kind-text-soft: oklch(0.3 0.01 255);
   --clipboard-kind-link: oklch(0.77 0.09 255);
@@ -139,6 +165,13 @@
   --sidebar-accent: oklch(0.92 0.04 225);
   --sidebar-accent-foreground: oklch(0.31 0.03 238);
   --sidebar-ring: oklch(0.58 0.14 241);
+  --home-hero-from: oklch(0.58 0.14 171);
+  --home-hero-to: oklch(0.58 0.14 241);
+  --home-hero-tail: color-mix(
+    in oklch,
+    var(--home-hero-to) 82%,
+    var(--background) 18%
+  );
 }
 
 :root.dark[data-theme="ocean"] {
@@ -151,6 +184,13 @@
   --sidebar-accent: oklch(0.28 0.04 231);
   --sidebar-accent-foreground: oklch(0.97 0.01 244);
   --sidebar-ring: oklch(0.73 0.13 240);
+  --home-hero-from: oklch(0.72 0.12 171);
+  --home-hero-to: oklch(0.74 0.13 240);
+  --home-hero-tail: color-mix(
+    in oklch,
+    var(--home-hero-to) 78%,
+    var(--background) 22%
+  );
 }
 
 :root {
@@ -509,6 +549,1555 @@
     background-color: color-mix(in oklch, var(--card) 92%, var(--background) 8%);
   }
 
+  .app-home-shell {
+    isolation: isolate;
+    background:
+      radial-gradient(
+        circle at 14% 18%,
+        color-mix(in oklch, var(--accent) 18%, transparent) 0,
+        transparent 28%
+      ),
+      radial-gradient(
+        circle at 86% 12%,
+        color-mix(in oklch, var(--primary) 5%, transparent) 0,
+        transparent 14%
+      ),
+      radial-gradient(
+        circle at 50% 82%,
+        color-mix(in oklch, var(--primary) 8%, transparent) 0,
+        transparent 34%
+      );
+  }
+
+  .app-home-shell::before {
+    content: "";
+    position: absolute;
+    inset: 18% 22% auto;
+    height: 15rem;
+    z-index: -1;
+    border-radius: 999px;
+    background: radial-gradient(
+      circle,
+      color-mix(in oklch, var(--primary) 10%, transparent) 0,
+      transparent 72%
+    );
+    filter: blur(44px);
+    pointer-events: none;
+  }
+
+  .app-home-stage {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-home-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.7rem;
+  }
+
+  .app-home-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .app-home-meta-link {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.22rem 0.08rem;
+    color: color-mix(in oklch, var(--foreground) 64%, var(--primary) 36%);
+    font-size: 0.78rem;
+    line-height: 1.35;
+    opacity: 0.9;
+    transition:
+      color 180ms ease,
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  button.app-home-meta-link:hover {
+    color: color-mix(in oklch, var(--foreground) 58%, var(--primary) 42%);
+    transform: translateY(-1px);
+  }
+
+  .app-home-meta-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--primary) 12%, var(--border));
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 18%, transparent) 0,
+        transparent 42%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 94%, var(--background) 6%),
+        color-mix(in oklch, var(--primary) 8%, var(--card) 92%)
+      );
+    box-shadow:
+      0 8px 18px -14px color-mix(in oklch, var(--primary) 24%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 28%, transparent);
+  }
+
+  .app-home-version-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.75rem;
+    padding: 0 0.72rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+    background-color: color-mix(in oklch, var(--card) 62%, transparent);
+    color: color-mix(in oklch, var(--foreground) 52%, var(--primary) 48%);
+    font-size: 0.73rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    box-shadow: inset 0 1px 0 color-mix(in oklch, white 18%, transparent);
+  }
+
+  .app-home-eyebrow {
+    display: inline-block;
+    font-size: clamp(0.94rem, 1.25vw, 1.08rem);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+    background-image: linear-gradient(
+      140deg,
+      color-mix(in oklch, white 12%, var(--home-hero-from)) 0%,
+      color-mix(in oklch, white 6%, var(--home-hero-to)) 58%,
+      color-mix(in oklch, var(--home-hero-to) 88%, var(--background) 12%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 12px var(--home-hero-glow-soft);
+  }
+
+  .app-home-heading {
+    font-family: var(--font-sans);
+    font-size: clamp(2.55rem, 5vw, 4.8rem);
+    font-weight: 600;
+    line-height: 0.95;
+    letter-spacing: -0.075em;
+    background-image: linear-gradient(
+      140deg,
+      color-mix(in oklch, white 10%, var(--home-hero-from)) 0%,
+      color-mix(in oklch, white 4%, var(--home-hero-to)) 42%,
+      var(--home-hero-to) 68%,
+      var(--home-hero-tail) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow:
+      0 0 18px var(--home-hero-glow-soft),
+      0 12px 28px color-mix(in oklch, var(--home-hero-glow) 54%, transparent);
+    text-wrap: balance;
+  }
+
+  .app-home-composer {
+    position: relative;
+    isolation: isolate;
+    overflow: visible;
+    border: 1px solid color-mix(in oklch, var(--border) 74%, transparent);
+    border-radius: 2.2rem;
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+        color-mix(in oklch, var(--card) 90%, var(--secondary) 10%)
+      );
+    box-shadow:
+      0 20px 44px -30px color-mix(in oklch, var(--primary) 18%, transparent),
+      0 12px 28px color-mix(in oklch, var(--foreground) 5%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 34%, transparent);
+    transition:
+      border-color 220ms ease,
+      box-shadow 220ms ease,
+      transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .app-home-composer-drop-active {
+    border-color: color-mix(in oklch, var(--primary) 34%, var(--border));
+    box-shadow:
+      0 26px 52px -34px color-mix(in oklch, var(--primary) 24%, transparent),
+      0 14px 30px color-mix(in oklch, var(--foreground) 8%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 36%, transparent);
+  }
+
+  .app-home-composer::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklch, white 14%, transparent),
+      transparent 48%
+    );
+    opacity: 0.58;
+    pointer-events: none;
+  }
+
+  .app-home-composer-drop-overlay {
+    position: absolute;
+    inset: 0.72rem;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1.7rem;
+    border: 1px dashed color-mix(in oklch, var(--primary) 34%, transparent);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 14%, transparent) 0,
+        transparent 40%
+      ),
+      color-mix(in oklch, var(--card) 88%, var(--background) 12%);
+    box-shadow:
+      0 16px 30px -26px color-mix(in oklch, var(--primary) 24%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 26%, transparent);
+    pointer-events: none;
+  }
+
+  .app-home-composer-drop-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    text-align: center;
+  }
+
+  .app-home-composer-drop-title {
+    color: color-mix(in oklch, var(--foreground) 82%, var(--primary) 18%);
+    font-size: 0.98rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+
+  .app-home-composer-drop-hint {
+    max-width: 20rem;
+    color: color-mix(in oklch, var(--foreground) 62%, var(--primary) 38%);
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .app-home-composer:focus-within {
+    border-color: color-mix(in oklch, var(--primary) 26%, var(--border));
+    box-shadow:
+      0 24px 52px -30px color-mix(in oklch, var(--primary) 28%, transparent),
+      0 18px 36px color-mix(in oklch, var(--foreground) 7%, transparent),
+      0 0 0 4px color-mix(in oklch, var(--primary) 10%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 34%, transparent);
+  }
+
+  .app-home-composer-body {
+    min-height: 0;
+    padding: 1rem 1rem 0 1rem;
+    transition: padding 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .app-home-composer-empty .app-home-composer-body {
+    min-height: 0;
+  }
+
+  .app-home-composer-compact .app-home-composer-body {
+    min-height: 0;
+  }
+
+  .app-home-composer-expanded .app-home-composer-body {
+    min-height: 0;
+    padding-bottom: 0.14rem;
+  }
+
+  .app-home-composer-track {
+    position: relative;
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.42rem;
+  }
+
+  .app-home-composer-expanded .app-home-composer-track {
+    gap: 0.6rem;
+  }
+
+  .app-home-composer-track::after {
+    display: none;
+  }
+
+  .app-home-attachment-region {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-home-attachment-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    overflow: hidden;
+    padding-top: 0;
+  }
+
+  .app-home-attachment-count {
+    display: inline-flex;
+    height: 2.1rem;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    flex-shrink: 0;
+    min-width: 3.35rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--border) 76%, transparent);
+    padding: 0 0.72rem;
+    font-size: 0.84rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: color-mix(in oklch, var(--foreground) 72%, var(--primary) 28%);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 94%, var(--background) 6%),
+        color-mix(in oklch, var(--card) 88%, var(--background) 12%)
+      );
+    box-shadow:
+      0 10px 18px -16px color-mix(in oklch, var(--foreground) 18%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 24%, transparent);
+    white-space: nowrap;
+  }
+
+  .app-home-attachment-count.is-limit {
+    border-color: color-mix(in oklch, var(--destructive) 28%, transparent);
+    color: color-mix(in oklch, var(--destructive) 68%, var(--foreground) 32%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--destructive) 10%, transparent) 0,
+        transparent 46%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 94%, var(--background) 6%),
+        color-mix(in oklch, var(--card) 88%, var(--background) 12%)
+      );
+  }
+
+  .app-home-attachment-card {
+    position: relative;
+    display: inline-flex;
+    width: 2.45rem;
+    height: 2.45rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 0.98rem;
+    border: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 10%, transparent) 0,
+        transparent 42%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 92%, var(--background) 8%),
+        color-mix(in oklch, var(--card) 82%, var(--background) 18%)
+      );
+    box-shadow:
+      0 14px 22px -20px color-mix(in oklch, var(--foreground) 24%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 20%, transparent);
+  }
+
+  .app-home-attachment-card::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 34%;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      color-mix(in oklch, black 8%, transparent)
+    );
+    opacity: 0.24;
+    pointer-events: none;
+  }
+
+  .app-home-attachment-card.is-file {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 96%, var(--background) 4%),
+        color-mix(in oklch, var(--card) 84%, var(--background) 16%)
+      );
+  }
+
+  .app-home-attachment-card.is-image {
+    background:
+      radial-gradient(
+        circle at 28% 22%,
+        color-mix(in oklch, var(--accent) 22%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--primary) 18%, var(--card) 82%),
+        color-mix(in oklch, var(--accent) 18%, var(--card) 82%)
+      );
+  }
+
+  .app-home-attachment-remove {
+    position: absolute;
+    top: 0.22rem;
+    right: 0.22rem;
+    z-index: 2;
+    display: inline-flex;
+    width: 1.05rem;
+    height: 1.05rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, white 28%, transparent);
+    background-color: color-mix(in oklch, var(--card) 86%, transparent);
+    color: color-mix(in oklch, var(--foreground) 68%, var(--primary) 32%);
+    opacity: 0;
+    transform: translateY(-2px) scale(0.92);
+    box-shadow:
+      0 8px 14px -10px color-mix(in oklch, var(--foreground) 22%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 28%, transparent);
+    transition:
+      opacity 160ms ease,
+      transform 160ms ease,
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .app-home-attachment-card:hover .app-home-attachment-remove,
+  .app-home-attachment-card:focus-within .app-home-attachment-remove {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .app-home-attachment-remove:hover {
+    background-color: color-mix(in oklch, var(--card) 90%, var(--primary) 10%);
+    color: color-mix(in oklch, var(--foreground) 54%, var(--primary) 46%);
+  }
+
+  .app-home-attachment-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .app-home-attachment-image-fallback {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: color-mix(in oklch, var(--foreground) 48%, var(--primary) 52%);
+  }
+
+  .app-home-attachment-file-preview {
+    position: relative;
+    z-index: 1;
+    width: 1.24rem;
+    height: 1.5rem;
+    border-radius: 0.44rem;
+    border: 1px solid color-mix(in oklch, var(--border) 62%, transparent);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, white 12%, transparent),
+        color-mix(in oklch, var(--background) 12%, transparent)
+      ),
+      color-mix(in oklch, var(--card) 92%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in oklch, white 18%, transparent);
+  }
+
+  .app-home-attachment-file-preview::after {
+    content: "";
+    position: absolute;
+    left: 0.24rem;
+    right: 0.24rem;
+    bottom: 0.28rem;
+    height: 0.14rem;
+    border-radius: 999px;
+    background-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+  }
+
+  .app-home-attachment-file-fold {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 0.5rem;
+    height: 0.5rem;
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+    border-top-right-radius: 0.38rem;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, white 36%, transparent),
+      color-mix(in oklch, var(--background) 16%, transparent)
+    );
+    border-top: 1px solid color-mix(in oklch, var(--border) 68%, transparent);
+    border-right: 1px solid color-mix(in oklch, var(--border) 68%, transparent);
+  }
+
+  .app-home-attachment-file-extension {
+    position: absolute;
+    left: 50%;
+    bottom: 0.48rem;
+    transform: translateX(-50%);
+    font-size: 0.46rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: color-mix(in oklch, var(--foreground) 50%, var(--primary) 50%);
+    text-transform: uppercase;
+  }
+
+  .app-home-attachment-tooltip {
+    max-width: min(18rem, calc(100vw - 2rem));
+    border-radius: 1rem;
+    padding: 0.58rem 0.72rem;
+    border-color: color-mix(in oklch, var(--border) 78%, transparent);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 10%, transparent) 0,
+        transparent 40%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 96%, var(--background) 4%),
+        color-mix(in oklch, var(--card) 90%, var(--secondary) 10%)
+      );
+    text-align: left;
+    line-height: 1.35;
+    box-shadow:
+      0 18px 34px -24px color-mix(in oklch, var(--foreground) 18%, transparent),
+      0 8px 20px color-mix(in oklch, var(--foreground) 8%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 24%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .app-home-attachment-tooltip-content {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 0.52rem;
+    min-width: 0;
+  }
+
+  .app-home-attachment-tooltip-badge {
+    display: inline-flex;
+    min-width: 2.35rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--border) 74%, transparent);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, white 22%, transparent),
+        color-mix(in oklch, var(--card) 88%, transparent)
+      );
+    padding: 0.22rem 0.42rem;
+    font-size: 0.58rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    color: color-mix(in oklch, var(--foreground) 56%, var(--primary) 44%);
+    text-transform: uppercase;
+    box-shadow: inset 0 1px 0 color-mix(in oklch, white 24%, transparent);
+  }
+
+  .app-home-attachment-tooltip-title {
+    display: block;
+    color: color-mix(in oklch, var(--foreground) 92%, var(--primary) 8%);
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.3;
+  }
+
+  .app-home-mock-strip {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    overflow: hidden;
+    padding-top: 0.1rem;
+  }
+
+  .app-home-mock-tile {
+    position: relative;
+    display: inline-flex;
+    width: 2.3rem;
+    height: 2.3rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 1.15rem;
+    border: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 10%, transparent) 0,
+        transparent 42%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 92%, var(--background) 8%),
+        color-mix(in oklch, var(--card) 82%, var(--background) 18%)
+      );
+    box-shadow:
+      0 14px 22px -20px color-mix(in oklch, var(--foreground) 24%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 20%, transparent);
+  }
+
+  .app-home-mock-tile::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 30%;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      color-mix(in oklch, black 6%, transparent)
+    );
+    opacity: 0.28;
+  }
+
+  .app-home-mock-tile.is-text {
+    justify-content: flex-start;
+    padding: 0.48rem 0.38rem;
+  }
+
+  .app-home-mock-tile.is-file {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 96%, var(--background) 4%),
+        color-mix(in oklch, var(--card) 84%, var(--background) 16%)
+      );
+  }
+
+  .app-home-mock-tile.is-image {
+    background:
+      radial-gradient(
+        circle at 28% 22%,
+        color-mix(in oklch, var(--accent) 22%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--primary) 18%, var(--card) 82%),
+        color-mix(in oklch, var(--accent) 18%, var(--card) 82%)
+      );
+  }
+
+  .app-home-mock-text-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+    width: 100%;
+  }
+
+  .app-home-mock-text-preview > span {
+    display: block;
+    height: 0.16rem;
+    border-radius: 999px;
+    background-color: color-mix(in oklch, var(--foreground) 22%, transparent);
+  }
+
+  .app-home-mock-text-preview > span:nth-child(1) {
+    width: 86%;
+  }
+
+  .app-home-mock-text-preview > span:nth-child(2) {
+    width: 64%;
+  }
+
+  .app-home-mock-text-preview > span:nth-child(3) {
+    width: 74%;
+  }
+
+  .app-home-mock-file-preview {
+    position: relative;
+    width: 1.22rem;
+    height: 1.46rem;
+    border-radius: 0.44rem;
+    border: 1px solid color-mix(in oklch, var(--border) 62%, transparent);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, white 10%, transparent),
+        color-mix(in oklch, var(--background) 12%, transparent)
+      ),
+      color-mix(in oklch, var(--card) 92%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in oklch, white 18%, transparent);
+  }
+
+  .app-home-mock-file-preview::after {
+    content: "";
+    position: absolute;
+    left: 0.26rem;
+    right: 0.26rem;
+    bottom: 0.32rem;
+    height: 0.14rem;
+    border-radius: 999px;
+    background-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+  }
+
+  .app-home-mock-file-fold {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-top-right-radius: 0.44rem;
+    border-bottom-left-radius: 0.28rem;
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in oklch, white 46%, transparent),
+        color-mix(in oklch, var(--background) 16%, transparent)
+      );
+    box-shadow: -1px 1px 0 color-mix(in oklch, var(--border) 54%, transparent);
+  }
+
+  .app-home-mock-image-preview {
+    position: relative;
+    width: 1.3rem;
+    height: 1.46rem;
+    border-radius: 0.48rem;
+    background:
+      linear-gradient(
+        160deg,
+        color-mix(in oklch, white 16%, transparent),
+        transparent 42%
+      ),
+      linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--accent) 34%, transparent),
+        color-mix(in oklch, var(--primary) 30%, transparent)
+      );
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklch, white 24%, transparent),
+      0 10px 20px -16px color-mix(in oklch, var(--primary) 36%, transparent);
+  }
+
+  .app-home-mock-image-preview::after {
+    content: "";
+    position: absolute;
+    left: 0.14rem;
+    right: 0.14rem;
+    bottom: 0.18rem;
+    height: 0.46rem;
+    border-radius: 999px 999px 0.38rem 0.38rem;
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklch, white 10%, transparent),
+      color-mix(in oklch, black 10%, transparent)
+    );
+  }
+
+  .app-home-mock-image-dot {
+    position: absolute;
+    top: 0.22rem;
+    right: 0.22rem;
+    width: 0.24rem;
+    height: 0.24rem;
+    border-radius: 999px;
+    background-color: color-mix(in oklch, white 72%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, white 12%, transparent);
+  }
+
+  .app-home-mock-tooltip {
+    max-width: 12rem;
+    border-radius: 999px;
+    padding: 0.45rem 0.7rem;
+    white-space: nowrap;
+    text-align: left;
+    line-height: 1.2;
+  }
+
+  .app-home-mock-tooltip-title {
+    color: color-mix(in oklch, var(--foreground) 92%, var(--primary) 8%);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .app-home-input {
+    display: block;
+    width: 100%;
+    color: color-mix(in oklch, var(--foreground) 92%, var(--primary) 8%);
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    appearance: none;
+    resize: none;
+    overflow-y: auto;
+    padding: 0.2rem 0 0.34rem;
+    font-size: 16px;
+    font-weight: 560;
+    line-height: 1.48;
+    letter-spacing: -0.024em;
+    caret-color: var(--primary);
+    transition:
+      height 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      color 180ms ease;
+  }
+
+  .app-home-input:focus {
+    outline: none;
+  }
+
+  .app-home-input::placeholder {
+    color: color-mix(in oklch, var(--foreground) 70%, transparent);
+    font-weight: 480;
+  }
+
+  .app-home-composer-toolbar {
+    position: relative;
+    z-index: 1;
+  }
+
+  .app-home-composer-expanded .app-home-composer-toolbar {
+    padding-top: 0.45rem;
+  }
+
+  .app-home-utility-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+    background-color: color-mix(in oklch, var(--card) 78%, transparent);
+    color: color-mix(in oklch, var(--foreground) 58%, var(--primary) 42%);
+    box-shadow: inset 0 1px 0 color-mix(in oklch, white 22%, transparent);
+  }
+
+  .app-home-utility-button:hover {
+    background-color: color-mix(in oklch, var(--primary) 8%, var(--card));
+    color: color-mix(in oklch, var(--foreground) 50%, var(--primary) 50%);
+  }
+
+  .app-home-model-trigger {
+    border-color: color-mix(in oklch, var(--border) 84%, transparent);
+    background-color: color-mix(in oklch, var(--card) 88%, var(--background) 12%);
+    color: color-mix(in oklch, var(--foreground) 88%, var(--primary) 12%);
+    box-shadow:
+      0 10px 20px -18px color-mix(in oklch, var(--foreground) 18%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 18%, transparent);
+  }
+
+  .app-home-send-button {
+    width: 2.45rem;
+    height: 2.45rem;
+    border-radius: 999px;
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, white 18%, transparent) 0,
+        transparent 38%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--primary) 82%, white 18%),
+        color-mix(in oklch, var(--primary) 68%, var(--accent) 32%)
+      );
+    color: var(--primary-foreground);
+    box-shadow:
+      0 18px 34px -18px color-mix(in oklch, var(--primary) 46%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 34%, transparent);
+  }
+
+  .app-home-send-button:hover {
+    filter: brightness(1.02);
+  }
+
+  .app-home-send-button:disabled {
+    background: color-mix(in oklch, var(--primary) 24%, var(--secondary));
+    color: color-mix(in oklch, var(--foreground) 48%, transparent);
+    box-shadow: none;
+  }
+
+  .app-home-suggestion-list {
+    justify-content: flex-start;
+  }
+
+  .app-home-suggestion-chip {
+    border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+    border-radius: 999px;
+    background-color: color-mix(in oklch, var(--card) 72%, transparent);
+    color: color-mix(in oklch, var(--foreground) 64%, var(--primary) 36%);
+    padding: 0.5rem 0.88rem;
+    font-size: 0.82rem;
+    line-height: 1.15;
+    transition:
+      border-color 180ms ease,
+      background-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .app-home-suggestion-chip:hover {
+    border-color: color-mix(in oklch, var(--primary) 22%, var(--border));
+    background-color: color-mix(in oklch, var(--card) 88%, var(--primary) 12%);
+    color: color-mix(in oklch, var(--foreground) 48%, var(--primary) 52%);
+    transform: translateY(-1px);
+  }
+
+  .app-home-attachment-menu {
+    border: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 18%, transparent) 0,
+        transparent 36%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+        color-mix(in oklch, var(--card) 88%, var(--secondary) 12%)
+      );
+    box-shadow:
+      0 18px 40px -24px color-mix(in oklch, var(--primary) 28%, transparent),
+      0 14px 30px color-mix(in oklch, var(--foreground) 8%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 30%, transparent);
+  }
+
+  .app-home-attachment-item {
+    color: color-mix(in oklch, var(--foreground) 80%, var(--primary) 20%);
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .app-home-attachment-item:hover {
+    background-color: color-mix(in oklch, var(--primary) 10%, var(--card));
+    color: color-mix(in oklch, var(--foreground) 58%, var(--primary) 42%);
+    transform: translateX(1px);
+  }
+
+  .app-home-response {
+    border: 1px solid color-mix(in oklch, var(--border) 72%, transparent);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 10%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 92%, var(--background) 8%),
+        color-mix(in oklch, var(--card) 86%, var(--secondary) 14%)
+      );
+    box-shadow:
+      0 16px 38px -28px color-mix(in oklch, var(--primary) 20%, transparent),
+      0 8px 20px color-mix(in oklch, var(--foreground) 5%, transparent);
+  }
+
+  .dark .app-home-shell {
+    background:
+      radial-gradient(
+        circle at 12% 16%,
+        color-mix(in oklch, var(--accent) 14%, transparent) 0,
+        transparent 26%
+      ),
+      radial-gradient(
+        circle at 85% 12%,
+        color-mix(in oklch, var(--primary) 6%, transparent) 0,
+        transparent 13%
+      ),
+      radial-gradient(
+        circle at 50% 84%,
+        color-mix(in oklch, var(--primary) 10%, transparent) 0,
+        transparent 32%
+      );
+  }
+
+  .dark .app-home-shell::before {
+    background: radial-gradient(
+      circle,
+      color-mix(in oklch, var(--primary) 18%, transparent) 0,
+      transparent 72%
+    );
+  }
+
+  .dark .app-home-meta-link {
+    color: color-mix(in oklch, var(--foreground) 76%, var(--primary) 24%);
+  }
+
+  .dark button.app-home-meta-link:hover {
+    color: color-mix(in oklch, var(--foreground) 64%, var(--primary) 36%);
+  }
+
+  .dark .app-home-meta-icon {
+    border-color: color-mix(in oklch, white 14%, var(--border) 86%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 14%, transparent) 0,
+        transparent 40%
+      ),
+      var(--gradient-animated-tab-active);
+    box-shadow:
+      0 12px 24px -20px color-mix(in oklch, var(--primary) 26%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 14%, transparent);
+  }
+
+  .dark .app-home-version-chip {
+    border-color: color-mix(in oklch, white 16%, var(--border) 84%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 42%
+      ),
+      var(--gradient-animated-tab-active);
+    color: color-mix(in oklch, var(--foreground) 84%, var(--primary) 16%);
+  }
+
+  .dark .app-home-eyebrow {
+    background-image: linear-gradient(
+      140deg,
+      color-mix(in oklch, white 10%, var(--home-hero-from)) 0%,
+      color-mix(in oklch, white 5%, var(--home-hero-to)) 60%,
+      color-mix(in oklch, var(--home-hero-to) 86%, var(--background) 14%) 100%
+    );
+    text-shadow: 0 0 14px var(--home-hero-glow-soft);
+  }
+
+  .dark .app-home-heading {
+    background-image: linear-gradient(
+      140deg,
+      color-mix(in oklch, white 8%, var(--home-hero-from)) 0%,
+      color-mix(in oklch, white 4%, var(--home-hero-to)) 42%,
+      var(--home-hero-to) 68%,
+      var(--home-hero-tail) 100%
+    );
+    text-shadow:
+      0 0 20px var(--home-hero-glow-soft),
+      0 14px 32px color-mix(in oklch, var(--home-hero-glow) 62%, transparent);
+  }
+
+  .dark .app-home-composer {
+    border-color: color-mix(in oklch, white 16%, var(--border) 84%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 16%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 90%, var(--background) 10%),
+        color-mix(in oklch, var(--card) 84%, var(--background) 16%)
+      );
+    box-shadow:
+      0 24px 52px -32px color-mix(in oklch, var(--primary) 24%, transparent),
+      0 16px 34px color-mix(in oklch, black 18%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 12%, transparent);
+  }
+
+  .dark .app-home-composer-drop-active {
+    border-color: color-mix(in oklch, var(--primary) 38%, var(--border));
+    box-shadow:
+      0 26px 54px -34px color-mix(in oklch, var(--primary) 28%, transparent),
+      0 18px 38px color-mix(in oklch, black 22%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 14%, transparent);
+  }
+
+  .dark .app-home-composer:focus-within {
+    border-color: color-mix(in oklch, var(--primary) 34%, white 8%);
+    box-shadow:
+      0 28px 58px -34px color-mix(in oklch, var(--primary) 30%, transparent),
+      0 18px 34px color-mix(in oklch, black 22%, transparent),
+      0 0 0 4px color-mix(in oklch, var(--primary) 14%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 12%, transparent);
+  }
+
+  .dark .app-home-composer-drop-overlay {
+    border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 18%, transparent) 0,
+        transparent 38%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+        color-mix(in oklch, var(--card) 82%, var(--background) 18%)
+      );
+    box-shadow:
+      0 20px 40px -28px color-mix(in oklch, var(--primary) 28%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 12%, transparent);
+  }
+
+  .dark .app-home-composer-drop-title {
+    color: color-mix(in oklch, var(--foreground) 88%, var(--primary) 12%);
+  }
+
+  .dark .app-home-composer-drop-hint {
+    color: color-mix(in oklch, var(--foreground) 70%, var(--primary) 30%);
+  }
+
+  .dark .app-home-mock-tile {
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    box-shadow:
+      0 18px 34px -24px color-mix(in oklch, black 26%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+  }
+
+  .dark .app-home-mock-tile {
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 42%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 82%, var(--background) 18%),
+        color-mix(in oklch, var(--card) 90%, var(--background) 10%)
+      );
+  }
+
+  .dark .app-home-mock-tile.is-file {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 76%, var(--background) 24%),
+        color-mix(in oklch, var(--card) 88%, var(--background) 12%)
+      );
+  }
+
+  .dark .app-home-mock-tile.is-image {
+    background:
+      radial-gradient(
+        circle at 28% 22%,
+        color-mix(in oklch, var(--accent) 24%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--primary) 24%, var(--card) 76%),
+        color-mix(in oklch, var(--accent) 18%, var(--card) 82%)
+      );
+  }
+
+  .dark .app-home-mock-text-preview > span {
+    background-color: color-mix(in oklch, var(--foreground) 26%, transparent);
+  }
+
+  .dark .app-home-mock-file-preview::after {
+    background-color: color-mix(in oklch, var(--foreground) 24%, transparent);
+  }
+
+  .dark .app-home-attachment-card {
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    box-shadow:
+      0 18px 34px -24px color-mix(in oklch, black 26%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+  }
+
+  .dark .app-home-attachment-count {
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    color: color-mix(in oklch, var(--foreground) 84%, var(--primary) 16%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 44%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 80%, var(--background) 20%),
+        color-mix(in oklch, var(--card) 88%, var(--background) 12%)
+      );
+    box-shadow:
+      0 16px 28px -24px color-mix(in oklch, black 24%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+  }
+
+  .dark .app-home-attachment-count.is-limit {
+    border-color: color-mix(in oklch, var(--destructive) 34%, transparent);
+    color: color-mix(in oklch, var(--destructive) 72%, var(--foreground) 28%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--destructive) 14%, transparent) 0,
+        transparent 48%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 78%, var(--background) 22%),
+        color-mix(in oklch, var(--card) 86%, var(--background) 14%)
+      );
+  }
+
+  .dark .app-home-attachment-card {
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 42%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 82%, var(--background) 18%),
+        color-mix(in oklch, var(--card) 90%, var(--background) 10%)
+      );
+  }
+
+  .dark .app-home-attachment-card.is-file {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 76%, var(--background) 24%),
+        color-mix(in oklch, var(--card) 88%, var(--background) 12%)
+      );
+  }
+
+  .dark .app-home-attachment-card.is-image {
+    background:
+      radial-gradient(
+        circle at 28% 22%,
+        color-mix(in oklch, var(--accent) 24%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--primary) 24%, var(--card) 76%),
+        color-mix(in oklch, var(--accent) 18%, var(--card) 82%)
+      );
+  }
+
+  .dark .app-home-attachment-remove {
+    border-color: color-mix(in oklch, white 12%, var(--border) 88%);
+    background-color: color-mix(in oklch, var(--card) 82%, var(--background) 18%);
+    color: color-mix(in oklch, var(--foreground) 82%, var(--primary) 18%);
+    box-shadow:
+      0 10px 18px -12px color-mix(in oklch, black 24%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+  }
+
+  .dark .app-home-attachment-remove:hover {
+    background-color: color-mix(in oklch, var(--card) 74%, var(--primary) 26%);
+    color: color-mix(in oklch, var(--foreground) 90%, var(--primary) 10%);
+  }
+
+  .dark .app-home-attachment-image-fallback {
+    color: color-mix(in oklch, var(--foreground) 70%, var(--primary) 30%);
+  }
+
+  .dark .app-home-attachment-file-preview {
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 42%
+      ),
+      color-mix(in oklch, var(--card) 82%, var(--background) 18%);
+  }
+
+  .dark .app-home-attachment-file-preview::after {
+    background-color: color-mix(in oklch, var(--foreground) 24%, transparent);
+  }
+
+  .dark .app-home-attachment-file-extension {
+    color: color-mix(in oklch, var(--foreground) 74%, var(--primary) 26%);
+  }
+
+  .dark .app-home-attachment-tooltip {
+    border-color: color-mix(in oklch, white 12%, var(--border) 88%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 14%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 90%, var(--background) 10%),
+        color-mix(in oklch, var(--card) 84%, var(--background) 16%)
+      );
+    box-shadow:
+      0 18px 34px -24px color-mix(in oklch, black 32%, transparent),
+      0 10px 24px color-mix(in oklch, black 22%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+  }
+
+  .dark .app-home-attachment-tooltip-badge {
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 44%
+      ),
+      color-mix(in oklch, var(--card) 78%, var(--background) 22%);
+    color: color-mix(in oklch, var(--foreground) 74%, var(--primary) 26%);
+    box-shadow: inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+  }
+
+  .dark .app-home-attachment-tooltip-title {
+    color: color-mix(in oklch, var(--foreground) 88%, var(--primary) 12%);
+  }
+
+  .dark .app-home-mock-file-preview,
+  .dark .app-home-mock-image-preview {
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 42%
+      ),
+      color-mix(in oklch, var(--card) 82%, var(--background) 18%);
+  }
+
+  .dark .app-home-mock-tooltip-title {
+    color: color-mix(in oklch, var(--foreground) 88%, var(--primary) 12%);
+  }
+
+  .dark .app-home-composer::before {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklch, white 10%, transparent),
+      transparent 50%
+    );
+    opacity: 0.52;
+  }
+
+  .dark .app-home-input {
+    color: color-mix(in oklch, var(--foreground) 92%, var(--primary) 8%);
+  }
+
+  .dark .app-home-input::placeholder {
+    color: color-mix(in oklch, var(--foreground) 74%, transparent);
+  }
+
+  .dark .app-home-utility-button {
+    color: color-mix(in oklch, var(--foreground) 74%, var(--primary) 26%);
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 10%, transparent) 0,
+        transparent 44%
+      ),
+      color-mix(in oklch, var(--card) 80%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+  }
+
+  .dark .app-home-utility-button:hover {
+    background-color: color-mix(in oklch, var(--primary) 12%, var(--card));
+    color: color-mix(in oklch, var(--foreground) 66%, var(--primary) 34%);
+  }
+
+  .dark .app-home-model-trigger {
+    border-color: color-mix(in oklch, white 12%, var(--border) 88%);
+    background-color: color-mix(in oklch, var(--card) 82%, var(--background) 18%);
+    color: color-mix(in oklch, var(--foreground) 84%, var(--primary) 16%);
+    box-shadow:
+      0 12px 22px -18px color-mix(in oklch, black 24%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 10%, transparent);
+  }
+
+  .dark .app-home-send-button {
+    box-shadow:
+      0 22px 40px -20px color-mix(in oklch, var(--primary) 42%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 22%, transparent);
+  }
+
+  .dark .app-home-suggestion-chip {
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    background-color: color-mix(in oklch, var(--card) 72%, transparent);
+    color: color-mix(in oklch, var(--foreground) 70%, var(--primary) 30%);
+  }
+
+  .dark .app-home-suggestion-chip:hover {
+    border-color: color-mix(in oklch, var(--primary) 24%, var(--border));
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 40%
+      ),
+      var(--gradient-animated-tab-active);
+    color: color-mix(in oklch, var(--foreground) 84%, var(--primary) 16%);
+  }
+
+  .dark .app-home-attachment-menu {
+    border-color: color-mix(in oklch, white 12%, var(--border) 88%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 14%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 90%, var(--background) 10%),
+        color-mix(in oklch, var(--card) 84%, var(--background) 16%)
+      );
+    box-shadow:
+      0 22px 48px -28px color-mix(in oklch, var(--primary) 22%, transparent),
+      0 16px 34px color-mix(in oklch, black 22%, transparent);
+  }
+
+  .dark .app-home-attachment-item {
+    color: color-mix(in oklch, var(--foreground) 80%, var(--primary) 20%);
+  }
+
+  .dark .app-home-attachment-item:hover {
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 10%, transparent) 0,
+        transparent 40%
+      ),
+      var(--gradient-animated-tab-active);
+    color: color-mix(in oklch, var(--foreground) 88%, var(--primary) 12%);
+  }
+
+  .dark .app-home-response {
+    border-color: color-mix(in oklch, white 10%, var(--border) 90%);
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 12%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+        color-mix(in oklch, var(--card) 82%, var(--background) 18%)
+      );
+    box-shadow:
+      0 22px 46px -32px color-mix(in oklch, var(--primary) 22%, transparent),
+      0 14px 30px color-mix(in oklch, black 18%, transparent);
+  }
+
+  @media (max-height: 820px) {
+    .app-home-shell {
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+
+    .app-home-stack {
+      gap: 1.2rem;
+    }
+
+    .app-home-copy {
+      gap: 0.45rem;
+    }
+
+    .app-home-heading {
+      font-size: clamp(2rem, 4.1vw, 3.45rem);
+    }
+
+    .app-home-composer-empty .app-home-composer-body {
+      min-height: 0;
+    }
+
+    .app-home-input {
+      min-height: 0;
+      font-size: 16px;
+    }
+  }
+
+  @media (max-height: 720px) {
+    .app-home-stack {
+      gap: 0.95rem;
+    }
+
+    .app-home-eyebrow {
+      font-size: 0.88rem;
+    }
+
+    .app-home-heading {
+      font-size: clamp(1.72rem, 3vw, 2.6rem);
+    }
+
+    .app-home-composer-body,
+    .app-home-composer-empty .app-home-composer-body,
+    .app-home-composer-compact .app-home-composer-body {
+      min-height: 0;
+    }
+
+    .app-home-input {
+      min-height: 0;
+      font-size: 16px;
+      line-height: 1.42;
+    }
+
+    .app-home-mock-strip {
+      gap: 0.45rem;
+    }
+
+    .app-home-suggestion-list {
+      display: none;
+    }
+
+    .app-home-shell::before {
+      height: 10rem;
+      filter: blur(34px);
+    }
+
+    .app-home-suggestion-chip {
+      padding: 0.44rem 0.78rem;
+      font-size: 0.78rem;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .app-home-composer-track {
+      width: 100%;
+    }
+
+    .app-home-attachment-card {
+      width: 2.3rem;
+      height: 2.3rem;
+    }
+
+    .app-home-mock-tile {
+      width: 2.1rem;
+      height: 2.1rem;
+    }
+  }
+
   .app-board-surface {
     @apply border border-border/80 bg-surface-panel shadow-sm;
     border-radius: var(--panel-radius);
@@ -583,6 +2172,78 @@
   .app-preview-inline-action:hover {
     border-color: color-mix(in oklch, var(--primary) 24%, var(--border));
     background-color: color-mix(in oklch, var(--secondary) 62%, var(--card) 38%);
+  }
+
+  .app-kbd-separator {
+    color: color-mix(in oklch, var(--foreground) 56%, var(--primary) 44%);
+  }
+
+  .app-kbd {
+    border: 1px solid color-mix(in oklch, var(--primary) 14%, var(--border));
+    background-color: color-mix(in oklch, var(--primary) 5%, var(--card) 95%);
+    background-image:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, white 34%, transparent),
+        transparent 58%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--primary) 5%, var(--card) 95%),
+        color-mix(in oklch, var(--accent) 4%, var(--card) 96%)
+      );
+    color: color-mix(in oklch, var(--foreground) 78%, var(--primary) 22%);
+    box-shadow:
+      0 1px 2px color-mix(in oklch, var(--foreground) 6%, transparent),
+      0 0 0 1px color-mix(in oklch, var(--primary) 4%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 42%, transparent);
+  }
+
+  .dark .app-kbd-separator {
+    color: color-mix(in oklch, var(--foreground) 68%, var(--primary) 32%);
+  }
+
+  .dark .app-kbd {
+    border-color: color-mix(in oklch, white 18%, var(--border) 82%);
+    background-color: color-mix(in oklch, var(--card) 88%, var(--background) 12%);
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--accent) 18%, transparent) 0,
+        transparent 34%
+      ),
+      var(--gradient-animated-tab-active);
+    color: color-mix(in oklch, var(--foreground) 92%, var(--primary) 8%);
+    box-shadow:
+      0 10px 20px -12px color-mix(in oklch, var(--primary) 18%, transparent),
+      0 0 0 1px color-mix(in oklch, var(--primary) 8%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 18%, transparent);
+  }
+
+  .app-clipboard-window-tip {
+    border: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+    background-color: color-mix(in oklch, var(--card) 88%, var(--background) 12%);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in oklch, white 10%, transparent),
+      color-mix(in oklch, var(--card) 82%, var(--background) 18%)
+    );
+    box-shadow:
+      0 8px 18px color-mix(in oklch, var(--foreground) 8%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 16%, transparent);
+  }
+
+  .dark .app-clipboard-window-tip {
+    border-color: color-mix(in oklch, var(--border) 54%, transparent);
+    background-color: color-mix(in oklch, var(--card) 84%, var(--background) 16%);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in oklch, white 6%, transparent),
+      color-mix(in oklch, var(--card) 80%, var(--background) 20%)
+    );
+    box-shadow:
+      0 10px 22px color-mix(in oklch, black 18%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 8%, transparent);
   }
 
   .app-summary-tile {

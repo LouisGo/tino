@@ -1,275 +1,553 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import {
-  ArrowUpRight,
-  Bot,
-  Clock3,
-  FolderRoot,
-  FolderSearch,
-  Images,
-  RefreshCcw,
-} from "lucide-react";
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { ArrowUp, FolderRoot, LoaderCircle, Sparkles } from "lucide-react";
 
 import { queryKeys } from "@/app/query-keys";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AiWorkInProgressBadge } from "@/features/ai/components/ai-work-in-progress-badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCommand } from "@/core/commands";
-import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events";
+import {
+  createAiObjectGenerator,
+  resolveProviderAccessConfig,
+} from "@/features/ai/lib/provider-access";
+import { HomeComposerDropOverlay } from "@/features/dashboard/components/home-composer-drop-overlay";
+import { HomeAttachmentPicker } from "@/features/dashboard/components/home-attachment-picker";
+import { HomeAttachmentStrip } from "@/features/dashboard/components/home-attachment-strip";
+import { useHomeAttachmentTransfer } from "@/features/dashboard/hooks/use-home-attachment-transfer";
+import { useHomeAttachments } from "@/features/dashboard/hooks/use-home-attachments";
+import {
+  HOME_ATTACHMENT_LIMIT,
+  HOME_ATTACHMENT_WARNING_THRESHOLD,
+} from "@/features/dashboard/lib/home-attachments";
+import {
+  defaultRuntimeProviderModel,
+  normalizeRuntimeProviderModel,
+  runtimeProviderModels,
+} from "@/features/settings/lib/runtime-provider";
 import { useScopedT } from "@/i18n";
-import { formatRelativeTimestamp } from "@/lib/time";
-import { getDashboardSnapshot } from "@/lib/tauri";
+import { getAppSettings, getDashboardSnapshot } from "@/lib/tauri";
+import { cn } from "@/lib/utils";
+
+type HomeAssistantTurn = {
+  prompt: string;
+  responseModel: string;
+  text: string;
+};
+
+const MIN_PROMPT_ROWS = 2;
+const MAX_PROMPT_ROWS = 8;
+const EXPAND_PROMPT_ROWS = 3;
+const COLLAPSE_PROMPT_ROWS = 2;
 
 export function DashboardPage() {
   const tCommon = useScopedT("common");
   const tDashboard = useScopedT("dashboard");
-  const queryClient = useQueryClient();
   const revealPath = useCommand<{ path: string }>("system.revealPath");
-  const { data, isFetching, refetch } = useQuery({
+  const snapshotQuery = useQuery({
     queryKey: queryKeys.dashboardSnapshot(),
     queryFn: getDashboardSnapshot,
     staleTime: 2 * 60 * 1_000,
     placeholderData: (previousData) => previousData,
   });
-
-  useClipboardCaptureEvents(() => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() });
+  const settingsQuery = useQuery({
+    queryKey: queryKeys.appSettings(),
+    queryFn: getAppSettings,
+    staleTime: 2 * 60 * 1_000,
+    placeholderData: (previousData) => previousData,
   });
+  const {
+    attachments,
+    canAddAttachments,
+    addAttachments,
+    appendAttachments,
+    removeAttachment,
+  } = useHomeAttachments();
+  const { isDropTargetActive, dragHandlers, onPasteCapture } = useHomeAttachmentTransfer({
+    onAttachments: appendAttachments,
+  });
+  const [prompt, setPrompt] = useState("");
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [lastTurn, setLastTurn] = useState<HomeAssistantTurn | null>(null);
+  const [isPromptExpanded, setIsPromptExpanded] = useState(false);
+  const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const recentCaptures = data?.recentCaptures.slice(0, 3) ?? [];
-  const cards = [
-    {
-      label: tDashboard("cards.knowledgeRoot.label"),
-      value:
-        data?.defaultKnowledgeRoot ?? tDashboard("cards.knowledgeRoot.fallbackValue"),
-      description: tDashboard("cards.knowledgeRoot.description"),
-      icon: FolderRoot,
-      action: data?.defaultKnowledgeRoot
-        ? () =>
-            void revealPath.execute({
-              path: data.defaultKnowledgeRoot,
-            })
-        : undefined,
-      actionLabel: tDashboard("cards.knowledgeRoot.actionLabel"),
-    },
-    {
-      label: tDashboard("cards.queuePolicy.label"),
-      value: data?.queuePolicy ?? tDashboard("cards.queuePolicy.fallbackValue"),
-      description: tDashboard("cards.queuePolicy.description"),
-      icon: Clock3,
-      action: undefined,
-      actionLabel: undefined,
-    },
-    {
-      label: tDashboard("cards.runtime.label"),
-      value: `${data?.appName ?? tCommon("appName")} ${data?.appVersion ?? "0.1.0"}`,
-      description: tDashboard("cards.runtime.description", {
-        values: {
-          os: data?.os ?? tDashboard("cards.runtime.fallbackOs"),
-          captureMode:
-            data?.captureMode ?? tDashboard("cards.runtime.fallbackCaptureMode"),
-        },
-      }),
-      icon: ArrowUpRight,
-      action: undefined,
-      actionLabel: undefined,
-    },
-  ] as const;
-
-  const aiItems = [
-    tDashboard("sections.ai.item1"),
-    tDashboard("sections.ai.item2"),
-    tDashboard("sections.ai.item3"),
+  const activeModel = selectedModel ??
+    normalizeRuntimeProviderModel(settingsQuery.data?.model ?? defaultRuntimeProviderModel);
+  const providerConfig = {
+    apiKey: settingsQuery.data?.apiKey ?? "",
+    baseUrl: settingsQuery.data?.baseUrl ?? "",
+    model: activeModel,
+  };
+  const providerAccess = resolveProviderAccessConfig(providerConfig);
+  const knowledgeRoot =
+    snapshotQuery.data?.defaultKnowledgeRoot ??
+    tDashboard("cards.knowledgeRoot.fallbackValue");
+  const appVersion = snapshotQuery.data?.appVersion ?? "0.1.0";
+  const trimmedPrompt = prompt.trim();
+  const suggestionPrompts = [
+    tDashboard("chat.suggestion1"),
+    tDashboard("chat.suggestion2"),
+    tDashboard("chat.suggestion3"),
+    tDashboard("chat.suggestion4"),
   ];
 
+  const chatMutation = useMutation({
+    mutationFn: async (nextPrompt: string) => {
+      if (!providerAccess.isConfigured) {
+        throw new Error(tDashboard("chat.setupHint"));
+      }
+
+      return createAiObjectGenerator(providerConfig).generateText({
+        systemPrompt:
+          "You are Tino, a concise AI assistant inside a personal knowledge workspace. Respond clearly, directly, and with practical next steps when useful.",
+        userPrompt: nextPrompt,
+        timeoutMs: 30_000,
+      });
+    },
+  });
+
+  const canSend =
+    providerAccess.isConfigured &&
+    trimmedPrompt.length > 0 &&
+    !chatMutation.isPending;
+  const hasConversationFeedback =
+    chatMutation.isPending || chatMutation.isError || Boolean(lastTurn);
+  const showLandingComposer = !hasConversationFeedback;
+  const showLandingMock = showLandingComposer && trimmedPrompt.length === 0;
+  const showSuggestionPrompts = !hasConversationFeedback;
+  const attachmentCountText = attachments.length >= HOME_ATTACHMENT_WARNING_THRESHOLD
+    ? tDashboard("chat.attachmentsUsage", {
+        values: {
+          count: attachments.length,
+          limit: HOME_ATTACHMENT_LIMIT,
+        },
+      })
+    : null;
+  const attachmentCountTone = attachments.length >= HOME_ATTACHMENT_LIMIT ? "limit" : "default";
+
+  const syncPromptMetrics = useCallback((target?: HTMLTextAreaElement | null) => {
+    const textarea = target ?? promptTextareaRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    const computedStyle = window.getComputedStyle(textarea);
+    const lineHeight = Number.parseFloat(computedStyle.lineHeight) || 30;
+    const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(computedStyle.paddingBottom) || 0;
+    const minHeight = lineHeight * MIN_PROMPT_ROWS + paddingTop + paddingBottom;
+    const maxAutoGrowHeight = lineHeight * MAX_PROMPT_ROWS + paddingTop + paddingBottom;
+
+    if (textarea.value.length === 0) {
+      textarea.style.height = `${minHeight}px`;
+      textarea.scrollTop = 0;
+      setIsPromptExpanded(false);
+      return;
+    }
+
+    textarea.style.height = "auto";
+    const contentHeight = Math.max(textarea.scrollHeight, minHeight);
+    const nextHeight = Math.min(contentHeight, maxAutoGrowHeight);
+    const contentBoxHeight = Math.max(
+      contentHeight - paddingTop - paddingBottom,
+      lineHeight * MIN_PROMPT_ROWS,
+    );
+    const nextRowCount = Math.max(
+      MIN_PROMPT_ROWS,
+      Math.ceil(contentBoxHeight / lineHeight - 0.04),
+    );
+    const nextExpanded = isPromptExpanded
+      ? nextRowCount > COLLAPSE_PROMPT_ROWS
+      : nextRowCount >= EXPAND_PROMPT_ROWS;
+    const shouldKeepCaretVisible =
+      document.activeElement === textarea &&
+      textarea.selectionStart === textarea.selectionEnd &&
+      textarea.selectionEnd === textarea.value.length;
+
+    textarea.style.height = `${nextExpanded ? nextHeight : minHeight}px`;
+
+    if (isPromptExpanded !== nextExpanded) {
+      setIsPromptExpanded(nextExpanded);
+    }
+
+    if (shouldKeepCaretVisible) {
+      requestAnimationFrame(() => {
+        if (document.activeElement === textarea) {
+          textarea.scrollTop = textarea.scrollHeight;
+        }
+      });
+    }
+  }, [isPromptExpanded]);
+
+  useLayoutEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      syncPromptMetrics();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [prompt, showLandingMock, syncPromptMetrics]);
+
+  useEffect(() => {
+    const textarea = promptTextareaRef.current;
+    if (!textarea || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      syncPromptMetrics();
+    });
+
+    resizeObserver.observe(textarea);
+
+    const composer = textarea.closest(".app-home-composer");
+    if (composer instanceof Element) {
+      resizeObserver.observe(composer);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [showLandingMock, syncPromptMetrics]);
+
+  function handleSubmit() {
+    if (!canSend) {
+      return;
+    }
+
+    chatMutation.mutate(trimmedPrompt, {
+      onSuccess: (result, submittedPrompt) => {
+        setLastTurn({
+          prompt: submittedPrompt,
+          responseModel: result.responseModel,
+          text: result.text,
+        });
+        setPrompt("");
+      },
+    });
+  }
+
   return (
-    <div className="app-scroll-area h-full overflow-y-auto pr-2">
-      <div className="space-y-6 pb-8">
-        <div className="app-hero-surface">
-          <div className="app-hero-control px-6 py-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="space-y-3">
-                <p className="text-sm font-semibold tracking-[0.14em] text-primary uppercase">
-                  {tDashboard("hero.eyebrow")}
-                </p>
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-semibold tracking-tight">
-                    {tDashboard("hero.title")}
-                  </h2>
-                  <p className="max-w-3xl text-sm leading-7 text-muted-foreground">
-                    {tDashboard("hero.description")}
-                  </p>
+    <div
+      className="app-home-shell relative mx-auto flex h-full w-full max-w-[1280px] min-h-0 flex-col overflow-hidden px-5 py-5 md:px-7 md:py-6"
+      {...dragHandlers}
+    >
+      <div className="pointer-events-none fixed top-4.5 right-[100px] z-40 md:top-4.5 md:right-[100px]">
+        <AiWorkInProgressBadge compact />
+      </div>
+
+      <div className="flex items-start justify-between gap-4">
+        <KnowledgeRootMeta
+          knowledgeRoot={knowledgeRoot}
+          knowledgeRootLabel={tDashboard("cards.knowledgeRoot.label")}
+          onReveal={
+            snapshotQuery.data?.defaultKnowledgeRoot
+              ? () =>
+                  void revealPath.execute({
+                    path: snapshotQuery.data.defaultKnowledgeRoot,
+                  })
+              : undefined
+          }
+        />
+
+        <VersionMeta version={appVersion} />
+      </div>
+
+      <div
+        className={cn(
+          "app-home-stage flex flex-1 min-h-0 flex-col items-center overflow-hidden",
+          hasConversationFeedback ? "justify-start pt-6 md:pt-8" : "justify-center pb-6",
+        )}
+      >
+        <div className="w-full max-w-[820px] min-h-0">
+          <div className="app-home-stack text-left">
+            <div className="app-home-copy">
+              <p className="app-home-eyebrow">{tDashboard("chat.eyebrow")}</p>
+              <h1 className="app-home-heading max-w-[10ch]">
+                {tDashboard("chat.title")}
+              </h1>
+            </div>
+
+            <form
+              className={cn(
+                "app-home-composer w-full",
+                showLandingMock ? "app-home-composer-empty" : "app-home-composer-compact",
+                isPromptExpanded && "app-home-composer-expanded",
+                isDropTargetActive && "app-home-composer-drop-active",
+              )}
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleSubmit();
+              }}
+              onPasteCapture={onPasteCapture}
+            >
+              {isDropTargetActive ? (
+                <HomeComposerDropOverlay
+                  title={tDashboard("chat.dropTitle")}
+                  hint={tDashboard("chat.dropHint")}
+                />
+              ) : null}
+
+              <div className="app-home-composer-body">
+                <div className="app-home-composer-track">
+                  <HomeAttachmentStrip
+                    attachments={attachments}
+                    attachmentsLabel={tDashboard("chat.attachmentsLabel")}
+                    removeLabel={tDashboard("chat.removeAttachment")}
+                    countText={attachmentCountText}
+                    countTone={attachmentCountTone}
+                    onRemove={removeAttachment}
+                  />
+
+                  <textarea
+                    ref={promptTextareaRef}
+                    value={prompt}
+                    onChange={(event) => {
+                      setPrompt(event.target.value);
+                      syncPromptMetrics(event.currentTarget);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.nativeEvent.isComposing) {
+                        return;
+                      }
+
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        handleSubmit();
+                      }
+                    }}
+                    rows={MIN_PROMPT_ROWS}
+                    placeholder={
+                      showLandingMock
+                        ? `${tDashboard("chat.mockTextLine1")}\n${tDashboard("chat.mockTextLine2")}`
+                        : tDashboard("chat.placeholder")
+                    }
+                    className="app-home-input"
+                  />
                 </div>
               </div>
-              <Button
-                variant="outline"
-                className="rounded-full"
-                onClick={() => void refetch()}
-                disabled={isFetching}
-              >
-                <RefreshCcw className={isFetching ? "animate-spin" : ""} />
-                {tDashboard("hero.refresh")}
-              </Button>
-            </div>
+
+              <div className="app-home-composer-toolbar flex flex-wrap items-center justify-between gap-2.5 px-4 pb-3 pt-2.5 md:px-5">
+                <HomeAttachmentPicker
+                  attachmentsLabel={tDashboard("chat.attachmentsLabel")}
+                  imageLabel={tDashboard("chat.attachmentImage")}
+                  fileLabel={tDashboard("chat.attachmentFile")}
+                  disabled={!canAddAttachments}
+                  onPickImages={() => addAttachments("image")}
+                  onPickFiles={() => addAttachments("file")}
+                />
+
+                <div className="ml-auto flex shrink-0 items-center gap-2">
+                  <Select value={activeModel} onValueChange={setSelectedModel}>
+                    <SelectTrigger
+                      aria-label={tDashboard("chat.modelLabel")}
+                      className="app-home-model-trigger h-10 w-[146px] rounded-full md:w-[160px]"
+                    >
+                      <SelectValue placeholder={tDashboard("chat.modelLabel")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {runtimeProviderModels.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    type="submit"
+                    size="icon"
+                    className="app-home-send-button"
+                    disabled={!canSend}
+                    aria-label={tDashboard("chat.send")}
+                  >
+                    {chatMutation.isPending ? (
+                      <LoaderCircle className="animate-spin" />
+                    ) : (
+                      <ArrowUp className="size-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </form>
+
+            {showSuggestionPrompts ? (
+              <div className="app-home-suggestion-list flex flex-wrap items-center gap-2.5">
+                {suggestionPrompts.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setPrompt(item)}
+                    className="app-home-suggestion-chip"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {!providerAccess.isConfigured ? (
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                <span>{tDashboard("chat.setupHint")}</span>
+                <Button asChild variant="link" size="sm" className="h-auto px-0">
+                  <Link to="/settings">{tCommon("navigation.settings")}</Link>
+                </Button>
+              </div>
+            ) : null}
+
+            {hasConversationFeedback ? (
+              <HomeAssistantResult
+                answer={
+                  chatMutation.isPending
+                    ? null
+                    : chatMutation.isError
+                      ? null
+                      : lastTurn?.text ?? null
+                }
+                error={
+                  chatMutation.isError
+                    ? chatMutation.error instanceof Error
+                      ? chatMutation.error.message
+                      : tDashboard("chat.errorFallback")
+                    : null
+                }
+                pending={chatMutation.isPending}
+                prompt={
+                  chatMutation.isPending
+                    ? chatMutation.variables ?? trimmedPrompt
+                    : lastTurn?.prompt ?? null
+                }
+                responseModel={lastTurn?.responseModel ?? null}
+                resultLabel={tDashboard("chat.resultLabel")}
+                thinkingLabel={tDashboard("chat.thinking")}
+              />
+            ) : null}
           </div>
         </div>
-
-        <section className="grid gap-4 xl:grid-cols-3">
-          {cards.map((card) => (
-            <Card key={card.label} className="bg-surface-panel">
-              <CardHeader className="space-y-4">
-                <div className="flex items-center justify-between gap-3">
-                  <CardDescription>{card.label}</CardDescription>
-                  {card.action ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="app-icon-chip"
-                      onClick={card.action}
-                      aria-label={card.actionLabel}
-                      title={card.actionLabel}
-                    >
-                      <FolderSearch className="size-4" />
-                    </Button>
-                  ) : (
-                    <div className="app-icon-chip">
-                      <card.icon className="size-4" />
-                    </div>
-                  )}
-                </div>
-                <CardTitle className="text-xl leading-7">{card.value}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {card.description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
-
-        <Card className="overflow-hidden border-border/80 bg-surface-panel">
-          <CardHeader className="border-b border-border/70">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="app-icon-chip">
-                    <Bot className="size-4" />
-                  </div>
-                  <CardTitle>{tDashboard("sections.ai.title")}</CardTitle>
-                </div>
-                <CardDescription className="max-w-2xl text-sm leading-6">
-                  {tDashboard("sections.ai.description")}
-                </CardDescription>
-              </div>
-
-              <Button asChild>
-                <Link to="/ai">
-                  {tDashboard("sections.ai.actionLabel")}
-                  <ArrowUpRight />
-                </Link>
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="grid gap-3 p-4 md:grid-cols-3">
-            {aiItems.map((item) => (
-              <div
-                key={item}
-                className="rounded-[24px] border border-border/80 bg-surface-elevated p-4 shadow-sm"
-              >
-                <p className="text-sm leading-6 text-muted-foreground">{item}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden border-border/80 bg-surface-panel">
-          <CardHeader className="border-b border-border/70">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="app-icon-chip">
-                    <Images className="size-4" />
-                  </div>
-                  <CardTitle>{tDashboard("sections.clipboard.title")}</CardTitle>
-                </div>
-                <CardDescription className="max-w-2xl text-sm leading-6">
-                  {tDashboard("sections.clipboard.description")}
-                </CardDescription>
-              </div>
-
-              <Button asChild>
-                <Link to="/clipboard">
-                  {tDashboard("sections.clipboard.actionLabel")}
-                  <ArrowUpRight />
-                </Link>
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="grid gap-3 p-4 md:grid-cols-3">
-            {recentCaptures.length ? (
-              recentCaptures.map((capture) => (
-                <div
-                  key={capture.id}
-                  className="rounded-[24px] border border-border/80 bg-surface-elevated p-4 shadow-sm"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <Badge variant="secondary">
-                      {formatKindLabel(capture.contentKind, tDashboard)}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatRelativeTimestamp(capture.capturedAt)}
-                    </span>
-                  </div>
-                  <p className="mt-4 line-clamp-2 text-sm font-semibold leading-6 text-foreground">
-                    {capture.preview}
-                  </p>
-                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                    {capture.secondaryPreview ?? capture.rawText}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full flex min-h-40 items-center justify-center rounded-[24px] border border-dashed border-border/80 bg-surface-soft px-6 text-sm text-muted-foreground">
-                {tDashboard("sections.clipboard.empty")}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
 }
 
-function formatKindLabel(
-  contentKind: string,
-  tDashboard: (
-    key:
-      | "kindLabels.plainText"
-      | "kindLabels.richText"
-      | "kindLabels.link"
-      | "kindLabels.image",
-  ) => string,
-) {
-  switch (contentKind) {
-    case "plain_text":
-      return tDashboard("kindLabels.plainText");
-    case "rich_text":
-      return tDashboard("kindLabels.richText");
-    case "link":
-      return tDashboard("kindLabels.link");
-    case "image":
-      return tDashboard("kindLabels.image");
-    default:
-      return contentKind;
+function KnowledgeRootMeta({
+  knowledgeRoot,
+  knowledgeRootLabel,
+  onReveal,
+}: {
+  knowledgeRoot: string;
+  knowledgeRootLabel: string;
+  onReveal?: () => void;
+}) {
+  const content = (
+    <>
+      <span className="app-home-meta-icon">
+        <FolderRoot className="size-4" />
+      </span>
+      <span className="truncate">{knowledgeRoot}</span>
+    </>
+  );
+
+  if (!onReveal) {
+    return (
+      <div
+        className="app-home-meta-link max-w-[min(48rem,72vw)]"
+        title={`${knowledgeRootLabel}: ${knowledgeRoot}`}
+      >
+        {content}
+      </div>
+    );
   }
+
+  return (
+    <button
+      type="button"
+      onClick={onReveal}
+      className="app-home-meta-link max-w-[min(48rem,72vw)] text-left"
+      aria-label={knowledgeRootLabel}
+      title={`${knowledgeRootLabel}: ${knowledgeRoot}`}
+    >
+      {content}
+    </button>
+  );
+}
+
+function VersionMeta({ version }: { version: string }) {
+  return <div className="app-home-version-chip">v{version}</div>;
+}
+
+function HomeAssistantResult({
+  answer,
+  error,
+  pending,
+  prompt,
+  responseModel,
+  resultLabel,
+  thinkingLabel,
+}: {
+  answer: string | null;
+  error: string | null;
+  pending: boolean;
+  prompt: string | null;
+  responseModel: string | null;
+  resultLabel: string;
+  thinkingLabel: string;
+}) {
+  return (
+    <div className="app-home-response mx-auto w-full max-w-[760px] overflow-hidden rounded-[24px]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/65 px-4 py-3">
+        <div className="inline-flex items-center gap-2 text-[13px] font-medium text-foreground">
+          <Sparkles className="size-4 text-primary" />
+          <span>{resultLabel}</span>
+        </div>
+        {responseModel ? (
+          <span className="text-[11px] text-muted-foreground">{responseModel}</span>
+        ) : null}
+      </div>
+
+      <div className="space-y-3 px-4 py-4">
+        {prompt ? (
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+              You
+            </p>
+            <p className="line-clamp-2 text-[13px] leading-5 text-foreground/92">{prompt}</p>
+          </div>
+        ) : null}
+
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+            Tino
+          </p>
+          {pending ? (
+            <div className="inline-flex items-center gap-2 text-[13px] text-muted-foreground">
+              <LoaderCircle className="size-4 animate-spin" />
+              <span>{thinkingLabel}</span>
+            </div>
+          ) : error ? (
+            <p className="line-clamp-4 text-[13px] leading-6 text-destructive">{error}</p>
+          ) : (
+            <p className="line-clamp-5 whitespace-pre-wrap text-[13px] leading-6 text-foreground">
+              {answer}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

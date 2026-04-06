@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { AiWorkInProgressBadge } from "@/features/ai/components/ai-work-in-progress-badge"
 import {
   useAiReviewWorkspace,
   type ValueFeedback,
@@ -106,7 +107,11 @@ export function AiReviewPage() {
   const currentPayload = payloadQuery.data
 
   return (
-    <div className="app-scroll-area h-full overflow-y-auto pr-2">
+    <div className="app-scroll-area relative h-full overflow-y-auto pr-2">
+      <div className="pointer-events-none fixed top-5 right-5 z-40 md:top-6 md:right-7">
+        <AiWorkInProgressBadge />
+      </div>
+
       <div className="space-y-6 pb-8">
         <div className="app-hero-surface">
           <div className="app-hero-control px-6 py-6">

@@ -1,4 +1,9 @@
-import { type MouseEvent, useState } from "react";
+import {
+  type MouseEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
   AlertDialog,
@@ -14,6 +19,7 @@ import { LoaderCircle, Search, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { useCommand } from "@/core/commands";
+import { ShortcutKbd } from "@/core/shortcuts";
 import {
   Select,
   SelectContent,
@@ -27,8 +33,11 @@ import {
 import { ClipboardCaptureDetail } from "@/features/clipboard/components/clipboard-capture-detail";
 import { clipboardFilterOptions, getClipboardFilterOption, groupCapturesByDay } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
+import { getClipboardWindowTargetAppName } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
+
+const WINDOW_SELECTION_TIP_IDLE_MS = 2000;
 
 export function ClipboardBoardPanel({
   captures,
@@ -63,6 +72,10 @@ export function ClipboardBoardPanel({
   const openImageLightbox = useCommand<{ captureId: string }>("clipboard.showImageLightbox");
   const confirmDeleteCapture = useCommand<{ capture: ClipboardCapture }>("clipboard.deleteCapture");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showWindowSelectionTip, setShowWindowSelectionTip] = useState(false);
+  const [windowTargetAppName, setWindowTargetAppName] = useState<string | null>(null);
+  const hideWindowSelectionTipTimeoutRef = useRef<number | null>(null);
+  const lastActiveTipCaptureIdRef = useRef<string | null>(null);
   const captureGroups = groupCapturesByDay(captures);
   const selectedCapture =
     captures.find((capture) => capture.id === selectedCaptureId) ??
@@ -70,6 +83,122 @@ export function ClipboardBoardPanel({
     null;
   const previewingImage =
     captures.find((capture) => capture.id === previewingImageId) ?? null;
+  const canShowWindowSelectionTip =
+    windowMode &&
+    Boolean(selectedCapture) &&
+    !previewingImageId &&
+    !pendingDeleteCapture;
+
+  function clearWindowSelectionTipTimeout() {
+    if (hideWindowSelectionTipTimeoutRef.current !== null) {
+      window.clearTimeout(hideWindowSelectionTipTimeoutRef.current);
+      hideWindowSelectionTipTimeoutRef.current = null;
+    }
+  }
+
+  function resolveActiveCaptureId(
+    state = useClipboardBoardStore.getState(),
+  ) {
+    return (
+      state.visibleCaptures.find((capture) => capture.id === state.selectedCaptureId)?.id ??
+      state.visibleCaptures[0]?.id ??
+      null
+    );
+  }
+
+  useEffect(() => {
+    if (!windowMode) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void getClipboardWindowTargetAppName()
+      .then((appName) => {
+        if (cancelled) {
+          return;
+        }
+
+        const normalizedAppName = appName?.trim();
+        setWindowTargetAppName(
+          normalizedAppName && normalizedAppName.length > 0 ? normalizedAppName : null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWindowTargetAppName(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [windowMode]);
+
+  useEffect(() => {
+    if (!windowMode) {
+      return;
+    }
+
+    const syncWindowSelectionTip = (state = useClipboardBoardStore.getState()) => {
+      const activeCaptureId = resolveActiveCaptureId(state);
+      const canShowTip =
+        Boolean(activeCaptureId) &&
+        !state.previewingImageId &&
+        !state.pendingDeleteCapture;
+      const previousActiveCaptureId = lastActiveTipCaptureIdRef.current;
+
+      lastActiveTipCaptureIdRef.current = activeCaptureId;
+
+      if (!canShowTip) {
+        setShowWindowSelectionTip(false);
+        clearWindowSelectionTipTimeout();
+        return;
+      }
+
+      if (activeCaptureId !== previousActiveCaptureId) {
+        setShowWindowSelectionTip(true);
+        clearWindowSelectionTipTimeout();
+        hideWindowSelectionTipTimeoutRef.current = window.setTimeout(() => {
+          hideWindowSelectionTipTimeoutRef.current = null;
+          setShowWindowSelectionTip(false);
+        }, WINDOW_SELECTION_TIP_IDLE_MS);
+      }
+    };
+
+    const initialSyncTimeout = window.setTimeout(() => {
+      syncWindowSelectionTip();
+    }, 0);
+
+    const unsubscribe = useClipboardBoardStore.subscribe((state, previousState) => {
+      const activeCaptureId = resolveActiveCaptureId(state);
+      const previousActiveCaptureId = resolveActiveCaptureId(previousState);
+      const previewingImageChanged =
+        state.previewingImageId !== previousState.previewingImageId;
+      const pendingDeleteCaptureChanged =
+        state.pendingDeleteCapture?.id !== previousState.pendingDeleteCapture?.id;
+
+      if (
+        activeCaptureId === previousActiveCaptureId &&
+        !previewingImageChanged &&
+        !pendingDeleteCaptureChanged
+      ) {
+        return;
+      }
+
+      syncWindowSelectionTip(state);
+    });
+
+    return () => {
+      window.clearTimeout(initialSyncTimeout);
+      unsubscribe();
+      lastActiveTipCaptureIdRef.current = null;
+      if (hideWindowSelectionTipTimeoutRef.current !== null) {
+        window.clearTimeout(hideWindowSelectionTipTimeoutRef.current);
+        hideWindowSelectionTipTimeoutRef.current = null;
+      }
+    };
+  }, [windowMode]);
 
   function closeDeleteDialog() {
     setPendingDeleteCapture(null);
@@ -116,7 +245,7 @@ export function ClipboardBoardPanel({
     <>
       <section
         className={cn(
-          "app-board-surface overflow-hidden",
+          "app-board-surface relative overflow-hidden",
           windowMode && "flex h-screen flex-col",
         )}
       >
@@ -157,6 +286,13 @@ export function ClipboardBoardPanel({
             </div>
           </div>
         </div>
+
+        {windowMode ? (
+          <ClipboardWindowSelectionTip
+            targetLabel={windowTargetAppName}
+            visible={showWindowSelectionTip && canShowWindowSelectionTip}
+          />
+        ) : null}
       </section>
 
       <CaptureImageLightbox
@@ -198,6 +334,38 @@ export function ClipboardBoardPanel({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function ClipboardWindowSelectionTip({
+  targetLabel,
+  visible,
+}: {
+  targetLabel: string | null;
+  visible: boolean;
+}) {
+  const title = targetLabel ? `Paste to ${targetLabel}` : "Paste to previous app";
+
+  return (
+    <div
+      aria-hidden={!visible}
+      className={cn(
+        "pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4 transition-all duration-200 ease-out",
+        visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
+      )}
+    >
+      <div
+        className="app-clipboard-window-tip inline-flex items-center gap-3 rounded-[18px] px-3.5 py-2"
+        role="status"
+        aria-live="polite"
+      >
+        <span className="text-[11px] font-medium text-foreground/72">{title}</span>
+        <ShortcutKbd
+          shortcutId="clipboard.confirmWindowSelection"
+          className="shrink-0 [&_kbd]:min-h-5 [&_kbd]:min-w-5 [&_kbd]:rounded-[7px] [&_kbd]:px-1.5 [&_kbd]:text-[9px]"
+        />
+      </div>
+    </div>
   );
 }
 

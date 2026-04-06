@@ -15,6 +15,7 @@ export const commands = {
 	saveAppSettings: (settings: AppSettings) => typedError<AppSettings, string>(__TAURI_INVOKE("save_app_settings", { settings })),
 	toggleMainWindowVisibility: () => typedError<boolean, string>(__TAURI_INVOKE("toggle_main_window_visibility")),
 	toggleClipboardWindowVisibility: () => typedError<boolean, string>(__TAURI_INVOKE("toggle_clipboard_window_visibility")),
+	getClipboardWindowTargetAppName: () => typedError<string | null, string>(__TAURI_INVOKE("get_clipboard_window_target_app_name")),
 	getLogDirectory: () => typedError<string, string>(__TAURI_INVOKE("get_log_directory")),
 	openInPreview: (path: string) => typedError<null, string>(__TAURI_INVOKE("open_in_preview", { path })),
 	copyCaptureToClipboard: (capture: ClipboardReplayRequest) => typedError<null, string>(__TAURI_INVOKE("copy_capture_to_clipboard", { capture })),

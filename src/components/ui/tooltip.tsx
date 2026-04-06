@@ -15,11 +15,13 @@ export function Tooltip({
   placement = "bottom",
   children,
   className,
+  multiline = false,
 }: {
   content: ReactNode;
   placement?: TooltipPlacement;
   children: ReactNode;
   className?: string;
+  multiline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0 });
@@ -98,7 +100,10 @@ export function Tooltip({
               ref={tooltipRef}
               role="tooltip"
               className={cn(
-                "pointer-events-none fixed z-[200] rounded-full border border-border/80 bg-surface-panel px-3 py-1.5 text-xs font-medium whitespace-nowrap text-foreground shadow-sm",
+                "pointer-events-none fixed z-[200] border border-border/80 bg-surface-panel px-3 py-1.5 text-xs font-medium text-foreground shadow-sm",
+                multiline
+                  ? "rounded-2xl whitespace-normal"
+                  : "rounded-full whitespace-nowrap",
                 className,
               )}
               style={{

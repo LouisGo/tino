@@ -462,6 +462,14 @@ export async function returnCaptureToPreviousApp(capture: ClipboardCapture) {
   return result.pasted;
 }
 
+export async function getClipboardWindowTargetAppName(): Promise<string | null> {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  return unwrapTauriResult(tauriCommands.getClipboardWindowTargetAppName());
+}
+
 export function resolveAssetUrl(assetPath?: string | null) {
   if (!assetPath) {
     return null;
