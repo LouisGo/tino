@@ -87,28 +87,3 @@ pub fn localized_shell_strings(locale: AppLocale) -> LocalizedShellStrings {
         },
     }
 }
-
-pub fn detect_system_locale() -> AppLocale {
-    let locale = std::env::var("LC_ALL")
-        .ok()
-        .filter(|value| !value.is_empty())
-        .or_else(|| {
-            std::env::var("LC_MESSAGES")
-                .ok()
-                .filter(|value| !value.is_empty())
-        })
-        .or_else(|| std::env::var("LANG").ok().filter(|value| !value.is_empty()));
-
-    let Some(locale) = locale else {
-        return DEFAULT_APP_LOCALE;
-    };
-
-    if locale.eq_ignore_ascii_case("zh-CN")
-        || locale.starts_with("zh-")
-        || locale.starts_with("zh_")
-    {
-        AppLocale::ZhCn
-    } else {
-        AppLocale::EnUs
-    }
-}
