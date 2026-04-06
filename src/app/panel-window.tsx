@@ -14,10 +14,6 @@ const panelWindowDefinitions: PanelWindowDefinition[] = [
   },
 ]
 
-export function isPanelWindowLabel(label: string) {
-  return panelWindowDefinitions.some((definition) => definition.label === label)
-}
-
 export function PanelWindowContent({ label }: { label: string }) {
   const definition = panelWindowDefinitions.find((candidate) => candidate.label === label)
   return definition ? definition.render() : null

@@ -1,0 +1,108 @@
+import { useCallback } from "react"
+
+import { filterConfigurableShortcutOverrides } from "@/app/shortcuts"
+import { syncLocalePreference } from "@/i18n"
+import { createRendererLogger } from "@/lib/logger"
+import {
+  getLogDirectory,
+  pickDirectory,
+  revealPath,
+} from "@/lib/tauri"
+import type { AppLocalePreference, SettingsDraft, ShortcutOverrideRecord } from "@/types/shell"
+
+const logger = createRendererLogger("settings.actions")
+
+type UseSettingsSectionActionsOptions = {
+  autostartEnabled: boolean
+  captureEnabled: boolean
+  getCurrentDraft: () => SettingsDraft
+  patchSettingsDraft: (value: Partial<SettingsDraft>) => void
+  saveSettingsDraft: (draft: SettingsDraft) => Promise<void>
+  setCaptureEnabled: (value: boolean) => void
+  settingsDraft: SettingsDraft
+  toggleAutostart: (enabled: boolean) => Promise<unknown>
+}
+
+export function useSettingsSectionActions({
+  autostartEnabled,
+  captureEnabled,
+  getCurrentDraft,
+  patchSettingsDraft,
+  saveSettingsDraft,
+  setCaptureEnabled,
+  settingsDraft,
+  toggleAutostart,
+}: UseSettingsSectionActionsOptions) {
+  const handlePickKnowledgeRoot = useCallback(async () => {
+    const value = await pickDirectory(settingsDraft.knowledgeRoot)
+    if (!value) {
+      return
+    }
+
+    patchSettingsDraft({ knowledgeRoot: value })
+  }, [patchSettingsDraft, settingsDraft.knowledgeRoot])
+
+  const handleRevealKnowledgeRoot = useCallback(async () => {
+    if (!settingsDraft.knowledgeRoot) {
+      return
+    }
+
+    await revealPath(settingsDraft.knowledgeRoot)
+  }, [settingsDraft.knowledgeRoot])
+
+  const handleLocalePreferenceChange = useCallback(
+    async (localePreference: AppLocalePreference) => {
+      const nextDraft = {
+        ...getCurrentDraft(),
+        localePreference,
+      }
+
+      patchSettingsDraft({ localePreference })
+      await syncLocalePreference(localePreference)
+      await saveSettingsDraft(nextDraft)
+    },
+    [getCurrentDraft, patchSettingsDraft, saveSettingsDraft],
+  )
+
+  const handleToggleCapture = useCallback(() => {
+    setCaptureEnabled(!captureEnabled)
+  }, [captureEnabled, setCaptureEnabled])
+
+  const handleToggleAutostart = useCallback(async () => {
+    await toggleAutostart(!autostartEnabled)
+  }, [autostartEnabled, toggleAutostart])
+
+  const handleOpenLogs = useCallback(async () => {
+    const path = await getLogDirectory()
+    await revealPath(path)
+  }, [])
+
+  const handleShortcutOverridesChange = useCallback(
+    (nextOverrides: ShortcutOverrideRecord) => {
+      const shortcutOverrides = filterConfigurableShortcutOverrides(nextOverrides)
+      const nextDraft = {
+        ...getCurrentDraft(),
+        shortcutOverrides,
+      }
+
+      patchSettingsDraft({
+        shortcutOverrides,
+      })
+
+      void saveSettingsDraft(nextDraft).catch((error) => {
+        logger.error("Failed to persist shortcut overrides", error)
+      })
+    },
+    [getCurrentDraft, patchSettingsDraft, saveSettingsDraft],
+  )
+
+  return {
+    handleLocalePreferenceChange,
+    handleOpenLogs,
+    handlePickKnowledgeRoot,
+    handleRevealKnowledgeRoot,
+    handleShortcutOverridesChange,
+    handleToggleAutostart,
+    handleToggleCapture,
+  }
+}

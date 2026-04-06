@@ -1,14 +1,5 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
-
 import type { CSSProperties } from "react";
 
-import { filterConfigurableShortcutOverrides } from "@/app/shortcuts";
-import { syncLocalePreference } from "@/i18n";
-import {
-  getLogDirectory,
-  pickDirectory,
-  revealPath,
-} from "@/lib/tauri";
 import { AiSettingsSection } from "@/features/settings/components/ai-settings-section";
 import { AppearanceSettingsSection } from "@/features/settings/components/appearance-settings-section";
 import { AutomationSettingsSection } from "@/features/settings/components/automation-settings-section";
@@ -17,13 +8,14 @@ import { SettingsStickyTabs } from "@/features/settings/components/settings-stic
 import { WorkspaceSettingsSection } from "@/features/settings/components/workspace-settings-section";
 import { useSettingsController } from "@/features/settings/hooks/use-settings-controller";
 import { useRuntimeProviderForm } from "@/features/settings/hooks/use-runtime-provider-form";
+import { useSettingsLayout } from "@/features/settings/hooks/use-settings-layout";
+import { usePendingSettingsPersistence } from "@/features/settings/hooks/use-pending-settings-persistence";
+import { useSettingsSectionActions } from "@/features/settings/hooks/use-settings-section-actions";
 import { useSettingsScrollSpy } from "@/features/settings/hooks/use-settings-scroll-spy";
 import {
   settingsSectionIds,
   settingsSections,
 } from "@/features/settings/settings-sections";
-
-const SECTION_GAP_OFFSET = 24;
 
 export function SettingsPage() {
   const {
@@ -43,11 +35,14 @@ export function SettingsPage() {
     themeName,
     toggleAutostartMutation,
   } = useSettingsController();
-  const [scrollViewport, setScrollViewport] = useState<HTMLDivElement | null>(null);
-  const stickyShellRef = useRef<HTMLDivElement | null>(null);
-  const tabsRef = useRef<HTMLDivElement | null>(null);
-  const [contentInsetTop, setContentInsetTop] = useState(10);
-  const [scrollOffset, setScrollOffset] = useState(120);
+  const {
+    contentInsetTop,
+    scrollOffset,
+    scrollViewport,
+    setScrollViewport,
+    stickyShellRef,
+    tabsRef,
+  } = useSettingsLayout();
   const runtimeProviderForm = useRuntimeProviderForm({
     patchSettingsDraft,
     settingsDraft,
@@ -56,67 +51,32 @@ export function SettingsPage() {
     scrollViewport,
     scrollOffset,
   });
-  const flushPendingSettings = useEffectEvent(() => {
-    if (!hasPendingChanges || isSavingSettings) {
-      return;
-    }
-
-    void saveSettingsDraft(settingsDraftRef.current).catch((error) => {
-      console.error("[settings] failed to persist pending changes", error);
-    });
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !stickyShellRef.current || !tabsRef.current) {
-      return;
-    }
-
-    const stickyShell = stickyShellRef.current;
-    const tabs = tabsRef.current;
-    const updateOffset = () => {
-      setContentInsetTop(
-        Math.max(0, stickyShell.offsetHeight - tabs.offsetHeight + 4),
-      );
-      setScrollOffset(tabs.offsetHeight + SECTION_GAP_OFFSET - 4);
-    };
-
-    updateOffset();
-
-    const observer = new ResizeObserver(updateOffset);
-    observer.observe(stickyShell);
-    observer.observe(tabs);
-    window.addEventListener("resize", updateOffset);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", updateOffset);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!persistedSettings || !hasPendingChanges || isSavingSettings) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      flushPendingSettings();
-    }, 700);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [
+  usePendingSettingsPersistence({
+    getCurrentDraft: () => settingsDraftRef.current,
     hasPendingChanges,
     isSavingSettings,
     persistedSettings,
+    saveSettingsDraft,
     settingsDraft,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      flushPendingSettings();
-    };
-  }, []);
+  });
+  const {
+    handleLocalePreferenceChange,
+    handleOpenLogs,
+    handlePickKnowledgeRoot,
+    handleRevealKnowledgeRoot,
+    handleShortcutOverridesChange,
+    handleToggleAutostart,
+    handleToggleCapture,
+  } = useSettingsSectionActions({
+    autostartEnabled,
+    captureEnabled,
+    getCurrentDraft: () => settingsDraftRef.current,
+    patchSettingsDraft,
+    saveSettingsDraft,
+    setCaptureEnabled,
+    settingsDraft,
+    toggleAutostart: (enabled) => toggleAutostartMutation.mutateAsync(enabled),
+  });
 
   return (
     <div
@@ -148,21 +108,8 @@ export function SettingsPage() {
           <WorkspaceSettingsSection
             settingsDraft={settingsDraft}
             patchSettingsDraft={patchSettingsDraft}
-            onPickKnowledgeRoot={async () => {
-              const value = await pickDirectory(settingsDraft.knowledgeRoot);
-              if (!value) {
-                return;
-              }
-
-              patchSettingsDraft({ knowledgeRoot: value });
-            }}
-            onRevealKnowledgeRoot={async () => {
-              if (!settingsDraft.knowledgeRoot) {
-                return;
-              }
-
-              await revealPath(settingsDraft.knowledgeRoot);
-            }}
+            onPickKnowledgeRoot={handlePickKnowledgeRoot}
+            onRevealKnowledgeRoot={handleRevealKnowledgeRoot}
           />
 
           <AiSettingsSection
@@ -173,16 +120,7 @@ export function SettingsPage() {
           <AppearanceSettingsSection
             localePreference={settingsDraft.localePreference}
             mode={mode}
-            onLocalePreferenceChange={async (localePreference) => {
-              const nextDraft = {
-                ...settingsDraftRef.current,
-                localePreference,
-              };
-
-              patchSettingsDraft({ localePreference });
-              await syncLocalePreference(localePreference);
-              await saveSettingsDraft(nextDraft);
-            }}
+            onLocalePreferenceChange={handleLocalePreferenceChange}
             themeName={themeName}
             setMode={setMode}
             setThemeName={setThemeName}
@@ -192,34 +130,14 @@ export function SettingsPage() {
             autostartEnabled={autostartEnabled}
             captureEnabled={captureEnabled}
             toggleAutostartPending={toggleAutostartMutation.isPending}
-            onToggleCapture={() => setCaptureEnabled(!captureEnabled)}
-            onToggleAutostart={async () => {
-              await toggleAutostartMutation.mutateAsync(!autostartEnabled);
-            }}
-            onOpenLogs={async () => {
-              const path = await getLogDirectory();
-              await revealPath(path);
-            }}
+            onToggleCapture={handleToggleCapture}
+            onToggleAutostart={handleToggleAutostart}
+            onOpenLogs={handleOpenLogs}
           />
 
           <ShortcutSettingsSection
             overrides={settingsDraft.shortcutOverrides}
-            onChange={(nextOverrides) => {
-              const shortcutOverrides =
-                filterConfigurableShortcutOverrides(nextOverrides);
-              const nextDraft = {
-                ...settingsDraftRef.current,
-                shortcutOverrides,
-              };
-
-              patchSettingsDraft({
-                shortcutOverrides,
-              });
-
-              void saveSettingsDraft(nextDraft).catch((error) => {
-                console.error("[settings] failed to persist shortcut overrides", error);
-              });
-            }}
+            onChange={handleShortcutOverridesChange}
           />
         </div>
       </div>

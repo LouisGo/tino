@@ -1,16 +1,7 @@
-import { useDeferredValue, useEffect, useMemo } from "react";
-
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-
-import { queryKeys } from "@/app/query-keys";
 import { useShortcutScope } from "@/core/shortcuts";
 import { ClipboardBoardPanel } from "@/features/clipboard/components/clipboard-board-panel";
 import { ClipboardBoardSummary } from "@/features/clipboard/components/clipboard-board-summary";
-import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events";
-import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
-import { getClipboardPage } from "@/lib/tauri";
-
-const CLIPBOARD_PAGE_SIZE = 40;
+import { useClipboardBoardView } from "@/features/clipboard/hooks/use-clipboard-board-view";
 
 export function ClipboardBoardFeature({
   showSummary = true,
@@ -24,97 +15,18 @@ export function ClipboardBoardFeature({
   autoFocusSearch?: boolean;
 }) {
   useShortcutScope("clipboard.panel");
-
-  const searchValue = useClipboardBoardStore((state) => state.searchValue);
-  const filter = useClipboardBoardStore((state) => state.filter);
-  const deferredSearch = useDeferredValue(searchValue);
-  const queryClient = useQueryClient();
-  const listQueryKey = useMemo(
-    () => queryKeys.clipboardPage(filter, deferredSearch),
-    [filter, deferredSearch],
-  );
-  const summaryQueryKey = queryKeys.clipboardPageSummary();
-
-  const { data: summaryPage } = useQuery({
-    queryKey: summaryQueryKey,
-    queryFn: () =>
-      getClipboardPage({
-        page: 0,
-        pageSize: 1,
-        filter: "all",
-      }),
-    staleTime: 2 * 60 * 1_000,
-    placeholderData: (previousData) => previousData,
-  });
-
   const {
-    data,
-    error,
-    fetchNextPage,
+    captures,
+    errorMessage,
     hasNextPage,
-    isError,
-    isFetching,
+    historyDays,
     isFetchingNextPage,
-    isPending,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: listQueryKey,
-    queryFn: ({ pageParam }) =>
-      getClipboardPage({
-        page: pageParam,
-        pageSize: CLIPBOARD_PAGE_SIZE,
-        filter,
-        search: deferredSearch,
-      }),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
-    staleTime: 2 * 60 * 1_000,
-    placeholderData: (previousData) => previousData,
-  });
-
-  useClipboardCaptureEvents(() => {
-    void queryClient.invalidateQueries({ queryKey: listQueryKey, exact: true });
-    void queryClient.invalidateQueries({ queryKey: summaryQueryKey, exact: true });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() });
-  });
-
-  const pages = data?.pages ?? [];
-  const captures = pages.flatMap((page) => page.captures);
-  const firstPage = pages[0];
-  const summary = summaryPage?.summary ?? {
-    total: 0,
-    text: 0,
-    links: 0,
-    images: 0,
-  };
-  const historyDays = summaryPage?.historyDays ?? firstPage?.historyDays ?? 3;
-  const status =
-    !firstPage && isPending ? "loading" : !firstPage && isError ? "error" : "ready";
-  const errorMessage =
-    error instanceof Error ? error.message : "Clipboard history could not be loaded.";
-
-  useEffect(() => {
-    const store = useClipboardBoardStore.getState();
-    store.setVisibleCaptures(captures);
-
-    if (captures.length === 0) {
-      if (store.selectedCaptureId !== null) {
-        store.setSelectedCaptureId(null);
-      }
-      return;
-    }
-
-    if (!store.selectedCaptureId || !captures.some((capture) => capture.id === store.selectedCaptureId)) {
-      store.setSelectedCaptureId(captures[0].id);
-    }
-  }, [captures]);
-
-  useEffect(
-    () => () => {
-      useClipboardBoardStore.getState().setVisibleCaptures([]);
-    },
-    [],
-  );
+    isRefreshingList,
+    onLoadMore,
+    onRetry,
+    status,
+    summary,
+  } = useClipboardBoardView();
 
   return (
     <div className={showSummary ? "space-y-3" : ""}>
@@ -128,12 +40,12 @@ export function ClipboardBoardFeature({
       <ClipboardBoardPanel
         captures={captures}
         hasNextPage={hasNextPage}
-        isRefreshingList={isFetching && !isFetchingNextPage}
-        isFetchingNextPage={isFetchingNextPage}
+         isRefreshingList={isRefreshingList}
+         isFetchingNextPage={isFetchingNextPage}
         fillHeight={fillHeight}
         windowMode={windowMode}
         autoFocusSearch={autoFocusSearch}
-        onLoadMore={() => void fetchNextPage({ cancelRefetch: false })}
+         onLoadMore={onLoadMore}
         emptyStateTitle={
           status === "loading"
             ? "Loading clipboard history"
@@ -148,8 +60,8 @@ export function ClipboardBoardFeature({
               ? errorMessage
               : "Try clearing the search term or switching the type filter back to all entries."
         }
-        onRetry={status === "error" ? () => void refetch() : undefined}
-      />
+         onRetry={onRetry}
+       />
     </div>
   );
 }

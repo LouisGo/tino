@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/app/query-keys";
 import { filterConfigurableShortcutOverrides } from "@/app/shortcuts";
 import {
   getAppSettings,
-  getAutostartEnabled,
   saveAppSettings,
-  setAutostartEnabled,
 } from "@/lib/tauri";
+import { useAutostartSetting } from "@/features/settings/hooks/use-autostart-setting";
 import { useAppShellStore } from "@/stores/app-shell-store";
 import { useThemeStore } from "@/stores/theme-store";
 import type { SettingsDraft, ShortcutOverrideRecord } from "@/types/shell";
@@ -50,6 +49,7 @@ export function useSettingsController() {
   const setThemeName = useThemeStore((state) => state.setThemeName);
   const themeName = useThemeStore((state) => state.themeName);
   const toggleDarkLight = useThemeStore((state) => state.toggleDarkLight);
+  const { autostartEnabled, toggleAutostartMutation } = useAutostartSetting();
   const hydrated = useRef(false);
   const settingsDraftRef = useRef(settingsDraft);
   const queuedSettingsSaveRef = useRef<SettingsDraft | null>(null);
@@ -63,13 +63,6 @@ export function useSettingsController() {
   const { data: settings } = useQuery({
     queryKey: queryKeys.appSettings(),
     queryFn: getAppSettings,
-    staleTime: Number.POSITIVE_INFINITY,
-    placeholderData: (previousData) => previousData,
-  });
-
-  const { data: autostartEnabled } = useQuery({
-    queryKey: queryKeys.autostartEnabled(),
-    queryFn: getAutostartEnabled,
     staleTime: Number.POSITIVE_INFINITY,
     placeholderData: (previousData) => previousData,
   });
@@ -142,31 +135,6 @@ export function useSettingsController() {
     [persistSavedSettings],
   );
 
-  const toggleAutostartMutation = useMutation({
-    mutationFn: async (enabled: boolean) => {
-      await setAutostartEnabled(enabled);
-      return enabled;
-    },
-    onMutate: async (nextEnabled) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.autostartEnabled() });
-      const previousEnabled = queryClient.getQueryData<boolean>(
-        queryKeys.autostartEnabled(),
-      );
-
-      queryClient.setQueryData(queryKeys.autostartEnabled(), nextEnabled);
-      return { previousEnabled };
-    },
-    onError: (_error, _nextEnabled, context) => {
-      queryClient.setQueryData(
-        queryKeys.autostartEnabled(),
-        context?.previousEnabled,
-      );
-    },
-    onSuccess: (enabled) => {
-      queryClient.setQueryData(queryKeys.autostartEnabled(), enabled);
-    },
-  });
-
   const hasPendingChanges = useMemo(() => {
     if (!persistedSettings) {
       return false;
@@ -176,7 +144,7 @@ export function useSettingsController() {
   }, [persistedSettings, settingsDraft]);
 
   return {
-    autostartEnabled: autostartEnabled ?? false,
+    autostartEnabled,
     captureEnabled,
     hasPendingChanges,
     isSavingSettings,

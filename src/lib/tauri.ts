@@ -12,8 +12,6 @@ import {
   syncLocalePreference,
 } from "@/i18n";
 import { appEnv, dataChannel, isProductionDataChannel } from "@/lib/runtime-profile";
-import {
-} from "@/lib/tauri-ai";
 import { isTauriRuntime, unwrapTauriResult } from "@/lib/tauri-core";
 import type {
   AppSettings as RustAppSettings,
@@ -33,7 +31,6 @@ import type {
 
 export const clipboardCapturesUpdatedEvent = "clipboard-captures-updated";
 
-export { applyBatchDecision, getAiBatchPayload, getReadyAiBatches, getTopicIndexEntries } from "@/lib/tauri-ai";
 export { isMacOsTauriRuntime, isTauriRuntime } from "@/lib/tauri-core";
 
 const mockImageAsset = `data:image/svg+xml;utf8,${encodeURIComponent(
