@@ -7,6 +7,7 @@ import {
   promptForAccessibilityRestart,
   showAccessibilityPermissionDialog,
 } from "@/features/clipboard/lib/accessibility-permission-flow";
+import { getDefaultVisibleClipboardSelection } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import {
@@ -101,14 +102,17 @@ async function closeClipboardWindowForConfirmation() {
 }
 
 function getSelectedVisibleCapture() {
-  const { selectedCaptureId, visibleCaptures } = useClipboardBoardStore.getState();
+  const { pinnedCaptures, selectedCaptureId, visibleCaptures } = useClipboardBoardStore.getState();
   if (visibleCaptures.length === 0) {
     return null;
   }
 
   return (
     visibleCaptures.find((capture) => capture.id === selectedCaptureId)
-    ?? visibleCaptures[0]
+    ?? getDefaultVisibleClipboardSelection(
+      visibleCaptures,
+      pinnedCaptures.map((entry) => entry.capture.id),
+    )
   );
 }
 

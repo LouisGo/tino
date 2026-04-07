@@ -1,10 +1,14 @@
-import { useDeferredValue, useEffect, useMemo } from "react"
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo } from "react"
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { queryKeys } from "@/app/query-keys"
 import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events"
-import { matchesFilter, matchesSearch } from "@/features/clipboard/lib/clipboard-board"
+import {
+  getDefaultClipboardSelection,
+  matchesFilter,
+  matchesSearch,
+} from "@/features/clipboard/lib/clipboard-board"
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store"
 import { getClipboardPage, getPinnedClipboardCaptures } from "@/lib/tauri"
 
@@ -100,12 +104,13 @@ export function useClipboardBoardView() {
   const errorMessage =
     error instanceof Error ? error.message : "Clipboard history could not be loaded."
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const store = useClipboardBoardStore.getState()
     store.setPinnedCaptures(pinnedCaptures)
     store.setVisibleCaptures(visibleCaptures)
     const preferredSelectedCaptureId = store.preferredSelectedCaptureId
-    const defaultCaptureId = captures[0]?.id ?? visibleCaptures[0]?.id ?? null
+    const defaultCaptureId =
+      getDefaultClipboardSelection(captures, visiblePinnedCaptures)?.id ?? null
 
     if (visibleCaptures.length === 0) {
       if (
@@ -139,7 +144,7 @@ export function useClipboardBoardView() {
     ) {
       store.setSelectedCaptureId(defaultCaptureId)
     }
-  }, [captures, pinnedCaptures, visibleCaptures])
+  }, [captures, pinnedCaptures, visibleCaptures, visiblePinnedCaptures])
 
   useEffect(
     () => () => {

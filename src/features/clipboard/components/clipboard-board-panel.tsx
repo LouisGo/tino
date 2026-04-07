@@ -33,10 +33,17 @@ import {
 } from "@/features/clipboard/components/clipboard-capture-list";
 import { ClipboardCaptureDetail } from "@/features/clipboard/components/clipboard-capture-detail";
 import {
+  ClipboardEmptyState,
+  type ClipboardEmptyStateTone,
+} from "@/features/clipboard/components/clipboard-empty-state";
+import {
   buildClipboardCaptureGroups,
   captureTitle,
   clipboardFilterOptions,
+  getDefaultClipboardSelection,
+  getDefaultVisibleClipboardSelection,
   getClipboardFilterOption,
+  type ClipboardCaptureGroup,
 } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
@@ -60,6 +67,7 @@ export function ClipboardBoardPanel({
   onLoadMore,
   emptyStateTitle,
   emptyStateDescription,
+  emptyStateTone,
   onRetry,
   fillHeight = false,
   windowMode = false,
@@ -73,6 +81,7 @@ export function ClipboardBoardPanel({
   onLoadMore: () => void;
   emptyStateTitle?: string;
   emptyStateDescription?: string;
+  emptyStateTone?: ClipboardEmptyStateTone;
   onRetry?: () => void;
   fillHeight?: boolean;
   windowMode?: boolean;
@@ -83,6 +92,7 @@ export function ClipboardBoardPanel({
   const pendingDeleteCapture = useClipboardBoardStore((state) => state.pendingDeleteCapture);
   const pendingPinCapture = useClipboardBoardStore((state) => state.pendingPinCapture);
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
+  const filter = useClipboardBoardStore((state) => state.filter);
   const listScrollRequest = useClipboardBoardStore((state) => state.listScrollRequest);
   const setPreviewingImageId = useClipboardBoardStore((state) => state.setPreviewingImageId);
   const setPendingDeleteCapture = useClipboardBoardStore((state) => state.setPendingDeleteCapture);
@@ -107,9 +117,10 @@ export function ClipboardBoardPanel({
   const oldestPinnedLabel = pinnedCaptures[0]
     ? captureTitle(pinnedCaptures[0])
     : "the oldest pinned capture";
+  const defaultSelectedCapture = getDefaultClipboardSelection(captures, pinnedCaptures);
   const selectedCapture =
     visibleCaptures.find((capture) => capture.id === selectedCaptureId) ??
-    visibleCaptures[0] ??
+    defaultSelectedCapture ??
     null;
   const previewingImage =
     visibleCaptures.find((capture) => capture.id === previewingImageId) ?? null;
@@ -120,6 +131,33 @@ export function ClipboardBoardPanel({
     !pendingDeleteCapture &&
     !pendingPinCapture;
   const highlightQuery = searchValue.trim();
+  const hasVisibleCaptures = visibleCaptures.length > 0;
+  const isFilteringResults = filter !== "all" || highlightQuery.length > 0;
+  const showEmptyOverlay = !hasVisibleCaptures;
+  const lastRenderableGroupsRef = useRef<ClipboardCaptureGroup[]>([]);
+  const lastRenderableCaptureRef = useRef<ClipboardCapture | null>(null);
+
+  if (hasVisibleCaptures) {
+    lastRenderableGroupsRef.current = captureGroups;
+    lastRenderableCaptureRef.current = selectedCapture;
+  }
+
+  const renderedCaptureGroups =
+    showEmptyOverlay && lastRenderableGroupsRef.current.length > 0
+      ? lastRenderableGroupsRef.current
+      : captureGroups;
+  const renderedSelectedCapture =
+    showEmptyOverlay && lastRenderableCaptureRef.current
+      ? lastRenderableCaptureRef.current
+      : selectedCapture;
+  const resolvedEmptyStateTitle =
+    emptyStateTitle ??
+    (isFilteringResults ? "No matching captures" : "Clipboard board is empty");
+  const resolvedEmptyStateDescription =
+    emptyStateDescription ??
+    (isFilteringResults
+      ? "Try clearing the search term or switching the type filter back to all entries."
+      : "Copy text, links, or images on macOS and the recent capture board will populate here.");
 
   function clearWindowSelectionTipTimeout() {
     if (hideWindowSelectionTipTimeoutRef.current !== null) {
@@ -133,7 +171,10 @@ export function ClipboardBoardPanel({
   ) {
     return (
       state.visibleCaptures.find((capture) => capture.id === state.selectedCaptureId)?.id ??
-      state.visibleCaptures[0]?.id ??
+      getDefaultVisibleClipboardSelection(
+        state.visibleCaptures,
+        state.pinnedCaptures.map((entry) => entry.capture.id),
+      )?.id ??
       null
     );
   }
@@ -321,40 +362,53 @@ export function ClipboardBoardPanel({
         <ClipboardAccessibilityBanner />
 
         <div className={cn("overflow-hidden", windowMode && "min-h-0 flex-1")}>
-          <div
-            className={cn(
-              "grid min-h-0 grid-cols-[clamp(14rem,24vw,24rem)_minmax(0,1fr)] items-stretch gap-0",
-              windowMode
-                ? "h-full"
-                : fillHeight
-                  ? "h-[calc(100vh-3.75rem)]"
-                  : "h-[clamp(34rem,68vh,46rem)] xl:h-[calc(100vh-18rem)]",
-            )}
-          >
-            <ClipboardCaptureList
-              groups={captureGroups}
-              selectedCaptureId={selectedCapture?.id ?? null}
-              hasNextPage={hasNextPage}
-              isRefreshingList={isRefreshingList}
-              isFetchingNextPage={isFetchingNextPage}
-              onLoadMore={onLoadMore}
-              emptyStateTitle={emptyStateTitle}
-              emptyStateDescription={emptyStateDescription}
-              onRetry={onRetry}
-              scrollToTopRequest={listScrollRequest}
-            />
-
-            <div className="flex h-full min-h-0 min-w-0 flex-col self-stretch bg-card/92">
-              <ClipboardCaptureDetail
-                capture={selectedCapture}
-                highlightQuery={highlightQuery}
-                onOpenImage={() => {
-                  if (selectedCapture) {
-                    void openImageLightbox.execute({ captureId: selectedCapture.id });
-                  }
-                }}
+          <div className="relative min-h-0 h-full">
+            <div
+              className={cn(
+                "grid min-h-0 grid-cols-[clamp(14rem,24vw,24rem)_minmax(0,1fr)] items-stretch gap-0",
+                windowMode
+                  ? "h-full"
+                  : fillHeight
+                    ? "h-[calc(100vh-3.75rem)]"
+                    : "h-[clamp(34rem,68vh,46rem)] xl:h-[calc(100vh-18rem)]",
+              )}
+              aria-hidden={showEmptyOverlay}
+              inert={showEmptyOverlay}
+            >
+              <ClipboardCaptureList
+                groups={renderedCaptureGroups}
+                selectedCaptureId={renderedSelectedCapture?.id ?? null}
+                hasNextPage={hasNextPage}
+                isRefreshingList={isRefreshingList}
+                isFetchingNextPage={isFetchingNextPage}
+                onLoadMore={onLoadMore}
+                scrollToTopRequest={listScrollRequest}
               />
+
+              <div className="flex h-full min-h-0 min-w-0 flex-col self-stretch bg-card/92">
+                <ClipboardCaptureDetail
+                  capture={renderedSelectedCapture}
+                  highlightQuery={highlightQuery}
+                  onOpenImage={() => {
+                    if (renderedSelectedCapture) {
+                      void openImageLightbox.execute({ captureId: renderedSelectedCapture.id });
+                    }
+                  }}
+                />
+              </div>
             </div>
+
+            {showEmptyOverlay ? (
+              <div className="absolute inset-0 z-10">
+                <ClipboardEmptyState
+                  title={resolvedEmptyStateTitle}
+                  description={resolvedEmptyStateDescription}
+                  onRetry={onRetry}
+                  tone={emptyStateTone}
+                  className="h-full min-h-0 w-full rounded-none border-0 shadow-none"
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 

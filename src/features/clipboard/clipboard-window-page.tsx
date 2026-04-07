@@ -110,12 +110,17 @@ export function ClipboardWindowPage() {
   }, []);
 
   return (
-    <ClipboardBoardFeature
-      key={sessionKey}
-      showSummary={false}
-      fillHeight
-      windowMode
-      autoFocusSearch
-    />
+    <div
+      data-panel-window-root="true"
+      className="app-panel-window-root h-full"
+    >
+      <ClipboardBoardFeature
+        key={sessionKey}
+        showSummary={false}
+        fillHeight
+        windowMode
+        autoFocusSearch
+      />
+    </div>
   );
 }

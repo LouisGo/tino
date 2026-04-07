@@ -13,8 +13,6 @@ import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-a
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture, ContentKind } from "@/types/shell";
 
-import { ClipboardEmptyState } from "./clipboard-empty-state";
-
 export function ClipboardCaptureList({
   groups,
   selectedCaptureId,
@@ -22,9 +20,6 @@ export function ClipboardCaptureList({
   isRefreshingList,
   isFetchingNextPage,
   onLoadMore,
-  emptyStateTitle,
-  emptyStateDescription,
-  onRetry,
   scrollToTopRequest,
 }: {
   groups: ClipboardCaptureGroup[];
@@ -33,9 +28,6 @@ export function ClipboardCaptureList({
   isRefreshingList?: boolean;
   isFetchingNextPage?: boolean;
   onLoadMore: () => void;
-  emptyStateTitle?: string;
-  emptyStateDescription?: string;
-  onRetry?: () => void;
   scrollToTopRequest: number;
 }) {
   const [scrollViewport, setScrollViewport] = useState<HTMLDivElement | null>(null);
@@ -51,7 +43,6 @@ export function ClipboardCaptureList({
       void selectCapture.execute({ captureId: capture.id });
     },
   });
-  const hasCaptures = groups.length > 0;
   const tryLoadMore = useEffectEvent(() => {
     if (
       !isLoadTriggerVisibleRef.current ||
@@ -141,61 +132,50 @@ export function ClipboardCaptureList({
         className="app-scroll-area min-h-0 flex-1 overflow-y-auto p-2"
       >
         <div className="space-y-2.5">
-          {hasCaptures ? (
-            groups.map((group) => (
-              <section key={group.key} className="space-y-1.5">
-                <p
-                  className={cn(
-                    "px-1 text-[9px] font-semibold tracking-[0.18em] uppercase",
-                    group.kind === "pinned"
-                      ? "inline-flex items-center gap-1.5 text-foreground/72"
-                      : "text-muted-foreground/78",
-                  )}
-                >
-                  {group.kind === "pinned" ? <Pin className="size-3" /> : null}
-                  <span>{group.label}</span>
-                </p>
-                <div className="space-y-0.5">
-                  {group.captures.map((capture) => (
-                    <button
-                      key={capture.id}
-                      type="button"
-                      data-capture-id={capture.id}
-                      data-group-first={group.captures[0]?.id === capture.id ? "true" : "false"}
-                      data-group-kind={group.kind}
-                      onClick={() => void selectCapture.execute({ captureId: capture.id })}
-                      onDoubleClick={() =>
-                        void confirmCapture.execute({ captureId: capture.id })}
-                      onContextMenu={(event) => onContextMenu(event, capture)}
-                      className={cn(
-                        "flex h-[44px] w-full scroll-mt-7 items-center gap-2.5 rounded-[14px] border px-2.5 text-left transition",
-                        selectedCaptureId === capture.id
-                          ? "border-primary/18 bg-primary/[0.08] shadow-none"
-                          : "border-transparent bg-transparent hover:border-border/55 hover:bg-secondary/34",
-                      )}
-                    >
-                      <CaptureThumb capture={capture} />
+          {groups.map((group) => (
+            <section key={group.key} className="space-y-1.5">
+              <p
+                className={cn(
+                  "px-1 text-[9px] font-semibold tracking-[0.18em] uppercase",
+                  group.kind === "pinned"
+                    ? "inline-flex items-center gap-1.5 text-foreground/72"
+                    : "text-muted-foreground/78",
+                )}
+              >
+                {group.kind === "pinned" ? <Pin className="size-3" /> : null}
+                <span>{group.label}</span>
+              </p>
+              <div className="space-y-0.5">
+                {group.captures.map((capture) => (
+                  <button
+                    key={capture.id}
+                    type="button"
+                    data-capture-id={capture.id}
+                    data-group-first={group.captures[0]?.id === capture.id ? "true" : "false"}
+                    data-group-kind={group.kind}
+                    onClick={() => void selectCapture.execute({ captureId: capture.id })}
+                    onDoubleClick={() =>
+                      void confirmCapture.execute({ captureId: capture.id })}
+                    onContextMenu={(event) => onContextMenu(event, capture)}
+                    className={cn(
+                      "flex h-[44px] w-full scroll-mt-7 items-center gap-2.5 rounded-[14px] border px-2.5 text-left transition",
+                      selectedCaptureId === capture.id
+                        ? "border-primary/18 bg-primary/[0.08] shadow-none"
+                        : "border-transparent bg-transparent hover:border-border/55 hover:bg-secondary/34",
+                    )}
+                  >
+                    <CaptureThumb capture={capture} />
 
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-medium text-foreground/92">
-                          {captureListSummary(capture)}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))
-          ) : (
-            <ClipboardEmptyState
-              title={emptyStateTitle ?? "No matching captures"}
-              description={
-                emptyStateDescription ??
-                "Try clearing the search term or switching the type filter back to all entries."
-              }
-              onRetry={onRetry}
-            />
-          )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-foreground/92">
+                        {captureListSummary(capture)}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
 
           {hasNextPage ? <div ref={setLoadTrigger} aria-hidden className="h-px w-full" /> : null}
 

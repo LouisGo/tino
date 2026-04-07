@@ -11,6 +11,7 @@ import { ChevronRight } from "lucide-react";
 
 import { ContextMenuSurfaceContext } from "@/core/context-menu/context";
 import type { ContextMenuResolvedItem } from "@/core/context-menu/types";
+import { resolvePortalContainer } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
 type ContextMenuState = {
@@ -29,6 +30,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
   });
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [position, setPosition] = useState({ left: 0, top: 0 });
+  const portalContainer = resolvePortalContainer();
 
   const closeMenu = () => {
     setMenu((current) => (current.isOpen ? { ...current, isOpen: false, items: [] } : current));
@@ -126,7 +128,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      {menu.isOpen && typeof document !== "undefined"
+      {menu.isOpen && portalContainer
         ? createPortal(
             <div
               ref={menuRef}
@@ -178,7 +180,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
                 )}
               </div>
             </div>,
-            document.body,
+            portalContainer,
           )
         : null}
     </ContextMenuSurfaceContext.Provider>

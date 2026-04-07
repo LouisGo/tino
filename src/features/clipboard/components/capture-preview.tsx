@@ -42,6 +42,7 @@ import {
   openExternalLink,
   resolveExternalLinkTarget,
 } from "@/lib/external-links";
+import { resolvePortalContainer } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
 
@@ -492,8 +493,9 @@ export function CaptureImageLightbox({
 }) {
   const assetSrc = useClipboardAssetSrc(capture?.assetPath);
   useShortcutScope("clipboard.imagePreview", { active: Boolean(capture) });
+  const portalContainer = resolvePortalContainer();
 
-  if (!capture || capture.contentKind !== "image" || typeof document === "undefined") {
+  if (!capture || capture.contentKind !== "image" || !portalContainer) {
     return null;
   }
 
@@ -525,7 +527,7 @@ export function CaptureImageLightbox({
         />
       </div>
     </div>,
-    document.body,
+    portalContainer,
   );
 }
 

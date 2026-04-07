@@ -6,6 +6,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { resolvePortalContainer } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
 type TooltipPlacement = "bottom" | "right";
@@ -27,6 +28,7 @@ export function Tooltip({
   const [position, setPosition] = useState({ left: 0, top: 0 });
   const anchorRef = useRef<HTMLSpanElement | null>(null);
   const tooltipRef = useRef<HTMLSpanElement | null>(null);
+  const portalContainer = resolvePortalContainer();
 
   useLayoutEffect(() => {
     if (!open || !anchorRef.current || !tooltipRef.current) {
@@ -94,7 +96,7 @@ export function Tooltip({
       onBlur={() => setOpen(false)}
     >
       {children}
-      {open && typeof document !== "undefined"
+      {open && portalContainer
         ? createPortal(
             <span
               ref={tooltipRef}
@@ -113,7 +115,7 @@ export function Tooltip({
             >
               {content}
             </span>,
-            document.body,
+            portalContainer,
           )
         : null}
     </span>

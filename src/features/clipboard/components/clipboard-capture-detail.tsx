@@ -18,8 +18,6 @@ import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-a
 import { formatRelativeTimestamp } from "@/lib/time";
 import type { ClipboardCapture } from "@/types/shell";
 
-import { ClipboardEmptyState } from "./clipboard-empty-state";
-
 const CaptureDetailPreview = lazy(async () => {
   const module = await import("@/features/clipboard/components/capture-preview");
   return {
@@ -41,14 +39,7 @@ export function ClipboardCaptureDetail({
   const { onContextMenu } = useContextMenu(clipboardCaptureContextMenu);
 
   if (!capture) {
-    return (
-      <div className="p-4">
-        <ClipboardEmptyState
-          title="Clipboard board is empty"
-          description="Copy text, links, or images on macOS and the recent capture board will populate here."
-        />
-      </div>
-    );
+    return <div className="min-h-0 flex-1" aria-hidden="true" />;
   }
 
   const toolbarMeta = (

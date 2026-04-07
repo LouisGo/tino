@@ -212,6 +212,26 @@ export function buildClipboardCaptureGroups({
   ];
 }
 
+export function getDefaultClipboardSelection(
+  captures: ClipboardCapture[],
+  pinnedCaptures: ClipboardCapture[],
+) {
+  return captures[0] ?? pinnedCaptures[0] ?? null;
+}
+
+export function getDefaultVisibleClipboardSelection(
+  visibleCaptures: ClipboardCapture[],
+  pinnedCaptureIds: Iterable<string>,
+) {
+  const pinnedIdSet = new Set(pinnedCaptureIds);
+
+  return (
+    visibleCaptures.find((capture) => !pinnedIdSet.has(capture.id))
+    ?? visibleCaptures[0]
+    ?? null
+  );
+}
+
 export function formatKindLabel(contentKind: ContentKind) {
   switch (contentKind) {
     case "plain_text":

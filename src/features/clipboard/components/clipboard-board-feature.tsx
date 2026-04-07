@@ -1,6 +1,7 @@
 import { useShortcutScope } from "@/core/shortcuts";
 import { ClipboardBoardPanel } from "@/features/clipboard/components/clipboard-board-panel";
 import { ClipboardBoardSummary } from "@/features/clipboard/components/clipboard-board-summary";
+import type { ClipboardEmptyStateTone } from "@/features/clipboard/components/clipboard-empty-state";
 import { useClipboardBoardView } from "@/features/clipboard/hooks/use-clipboard-board-view";
 
 export function ClipboardBoardFeature({
@@ -28,6 +29,8 @@ export function ClipboardBoardFeature({
     status,
     summary,
   } = useClipboardBoardView();
+  const emptyStateTone: ClipboardEmptyStateTone | undefined =
+    status === "loading" ? "loading" : status === "error" ? "error" : undefined;
 
   return (
     <div className={showSummary ? "space-y-3" : ""}>
@@ -53,15 +56,16 @@ export function ClipboardBoardFeature({
             ? "Loading clipboard history"
             : status === "error"
               ? "Clipboard history failed to load"
-              : "No matching captures"
+              : undefined
         }
         emptyStateDescription={
           status === "loading"
             ? "The clipboard archive is being read from local storage."
             : status === "error"
               ? errorMessage
-              : "Try clearing the search term or switching the type filter back to all entries."
+              : undefined
         }
+        emptyStateTone={emptyStateTone}
         onRetry={onRetry}
       />
     </div>

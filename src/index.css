@@ -536,6 +536,16 @@
       inset 0 1px 0 color-mix(in oklch, white 48%, transparent);
   }
 
+  .app-panel-window-root {
+    position: relative;
+    isolation: isolate;
+    height: 100%;
+    overflow: hidden;
+    border-radius: var(--panel-radius);
+    contain: paint;
+    transform: translateZ(0);
+  }
+
   .app-shell-surface::before {
     content: "";
     position: absolute;
