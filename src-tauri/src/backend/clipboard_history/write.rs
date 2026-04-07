@@ -5,8 +5,8 @@ use log::warn;
 use crate::{
     app_state::{
         append_clipboard_history_entry, delete_clipboard_history_entry,
-        promote_clipboard_history_entry, upsert_capture_history_store, CapturePreview,
-        DeleteClipboardCaptureResult,
+        promote_clipboard_history_entry, update_clipboard_history_ocr_text,
+        upsert_capture_history_store, CapturePreview, DeleteClipboardCaptureResult,
     },
     backend::clipboard_history::migration::reconcile_capture_history_store,
     storage::capture_history_store::{CaptureHistoryStore, CaptureHistoryUpsert},
@@ -92,4 +92,43 @@ pub(crate) fn promote_capture_reuse_with_fallback(
     }
 
     Ok(promoted_legacy || promoted_store)
+}
+
+pub(crate) fn update_capture_ocr_text_with_fallback(
+    clipboard_cache_root: &Path,
+    history_days: u16,
+    capture_id: &str,
+    ocr_text: &str,
+) -> Result<bool, String> {
+    let updated_history = match update_clipboard_history_ocr_text(
+        clipboard_cache_root,
+        history_days,
+        capture_id,
+        ocr_text,
+    ) {
+        Ok(updated) => updated,
+        Err(error) => {
+            warn!("failed to update capture OCR text in jsonl history: {error}");
+            false
+        }
+    };
+
+    let updated_store = match CaptureHistoryStore::new(clipboard_cache_root)
+        .and_then(|store| store.update_capture_ocr_text(capture_id, ocr_text))
+    {
+        Ok(updated) => updated,
+        Err(error) => {
+            warn!("failed to update capture OCR text in sqlite store: {error}");
+            if let Err(sync_error) =
+                reconcile_capture_history_store(clipboard_cache_root, history_days)
+            {
+                warn!(
+                    "failed to repair sqlite capture history store after OCR update: {sync_error}"
+                );
+            }
+            false
+        }
+    };
+
+    Ok(updated_history || updated_store)
 }

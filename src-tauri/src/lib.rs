@@ -9,6 +9,7 @@ mod panel_layout;
 mod runtime_profile;
 mod runtime_provider;
 mod storage;
+mod vision_ocr;
 mod window_state;
 
 use app_state::{AppState, ClipboardWindowTarget};

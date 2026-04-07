@@ -1,6 +1,6 @@
 use chrono::{DateTime, Duration, FixedOffset, Local, NaiveDate};
 use image::ImageFormat;
-use log::warn;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::{
@@ -12,6 +12,16 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
+#[cfg(target_os = "macos")]
+use std::{
+    collections::HashSet,
+    panic::AssertUnwindSafe,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc,
+    },
+    time::Instant,
+};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use uuid::Uuid;
@@ -22,6 +32,7 @@ use crate::backend::clipboard_history::read::{
 };
 use crate::backend::clipboard_history::write::{
     delete_capture_with_fallback, persist_capture_preview, promote_capture_reuse_with_fallback,
+    update_capture_ocr_text_with_fallback,
 };
 use crate::locale::AppLocalePreference;
 use crate::runtime_profile;
@@ -34,6 +45,7 @@ use crate::storage::capture_history_store::{
     CaptureHistoryEntry, CaptureHistoryQuery, CaptureHistoryStore, CaptureHistorySummary,
     CaptureHistoryUpsert,
 };
+use crate::vision_ocr::recognize_text_from_image_path;
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const RUNTIME_FILE_NAME: &str = "runtime.json";
@@ -51,6 +63,10 @@ const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
 const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 14;
 const MAX_CLIPBOARD_STORAGE_BYTES: u64 = 256 * 1024 * 1024;
 const CLIPBOARD_CAPTURES_UPDATED_EVENT: &str = "clipboard-captures-updated";
+#[cfg(target_os = "macos")]
+const IMAGE_OCR_MAX_ATTEMPTS: usize = 2;
+#[cfg(target_os = "macos")]
+const IMAGE_OCR_RETRY_DELAY_MS: u64 = 150;
 const RUNNING_WATCH_STATUS: &str = "Rust clipboard poller active";
 const STARTING_WATCH_STATUS: &str = "Rust clipboard poller starting";
 const DEDUP_WINDOW_MINUTES: i64 = 5;
@@ -400,6 +416,7 @@ pub struct CapturePreview {
     pub captured_at: String,
     pub status: String,
     pub raw_text: String,
+    pub ocr_text: Option<String>,
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
     pub link_url: Option<String>,
@@ -630,6 +647,24 @@ struct StateData {
     clipboard_window_target: Option<ClipboardWindowTarget>,
 }
 
+#[cfg(target_os = "macos")]
+#[derive(Debug)]
+enum ImageOcrMessage {
+    Recognize {
+        capture_id: String,
+        asset_path: PathBuf,
+    },
+    Backfill,
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Debug)]
+struct ImageOcrRuntime {
+    sender: mpsc::Sender<ImageOcrMessage>,
+    queued_capture_ids: Mutex<HashSet<String>>,
+    backfill_queued: AtomicBool,
+}
+
 #[derive(Debug)]
 struct SharedState {
     app_handle: AppHandle,
@@ -638,6 +673,8 @@ struct SharedState {
     clipboard_cache_dir: PathBuf,
     app_log_dir: PathBuf,
     settings_path: PathBuf,
+    #[cfg(target_os = "macos")]
+    image_ocr: ImageOcrRuntime,
     inner: Mutex<StateData>,
 }
 
@@ -690,6 +727,9 @@ impl AppState {
         runtime.ready_batch_count = count_ready_batches(&knowledge_root)?;
         runtime.updated_at = now_rfc3339();
 
+        #[cfg(target_os = "macos")]
+        let (image_ocr, image_ocr_receiver) = Self::create_image_ocr_runtime();
+
         let state = Self {
             shared: Arc::new(SharedState {
                 app_handle: app.clone(),
@@ -698,6 +738,8 @@ impl AppState {
                 clipboard_cache_dir,
                 app_log_dir,
                 settings_path,
+                #[cfg(target_os = "macos")]
+                image_ocr,
                 inner: Mutex::new(StateData {
                     settings,
                     runtime,
@@ -707,7 +749,11 @@ impl AppState {
             }),
         };
 
+        #[cfg(target_os = "macos")]
+        state.spawn_image_ocr_worker(image_ocr_receiver);
+
         state.persist_runtime_snapshot()?;
+        state.spawn_image_ocr_backfill();
 
         Ok(state)
     }
@@ -770,6 +816,11 @@ impl AppState {
         }
 
         self.persist_runtime_snapshot()?;
+        if previous_settings.clipboard_history_days != normalized.clipboard_history_days
+            || previous_settings.knowledge_root != normalized.knowledge_root
+        {
+            self.spawn_image_ocr_backfill();
+        }
 
         Ok(normalized)
     }
@@ -1017,6 +1068,8 @@ impl AppState {
             queue_depth,
             &captured_at,
         )?;
+
+        self.spawn_image_ocr_for_capture(&stored_capture.id, stored_capture.asset_path.as_deref());
 
         Ok(if settings.ai_enabled() {
             CaptureProcessingResult::Queued {
@@ -1364,6 +1417,310 @@ impl AppState {
             .emit(CLIPBOARD_CAPTURES_UPDATED_EVENT, ());
     }
 
+    #[cfg(target_os = "macos")]
+    fn create_image_ocr_runtime() -> (ImageOcrRuntime, mpsc::Receiver<ImageOcrMessage>) {
+        let (sender, receiver) = mpsc::channel();
+        (
+            ImageOcrRuntime {
+                sender,
+                queued_capture_ids: Mutex::new(HashSet::new()),
+                backfill_queued: AtomicBool::new(false),
+            },
+            receiver,
+        )
+    }
+
+    #[cfg(target_os = "macos")]
+    fn spawn_image_ocr_worker(&self, receiver: mpsc::Receiver<ImageOcrMessage>) {
+        let state = self.clone();
+
+        std::thread::spawn(move || {
+            while let Ok(message) = receiver.recv() {
+                match message {
+                    ImageOcrMessage::Recognize {
+                        capture_id,
+                        asset_path,
+                    } => {
+                        let cleanup_capture_id = capture_id.clone();
+                        let started_at = Instant::now();
+                        let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                            state.process_image_ocr_job(capture_id, asset_path);
+                        }));
+                        if let Err(payload) = result {
+                            state.release_image_ocr_capture(&cleanup_capture_id);
+                            warn!(
+                                "image OCR worker panicked for capture {} after {} ms: {}",
+                                cleanup_capture_id,
+                                started_at.elapsed().as_millis(),
+                                panic_payload_message(&payload)
+                            );
+                        }
+                    }
+                    ImageOcrMessage::Backfill => {
+                        let started_at = Instant::now();
+                        let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                            state.process_image_ocr_backfill();
+                        }));
+                        state.clear_image_ocr_backfill_flag();
+                        if let Err(payload) = result {
+                            warn!(
+                                "image OCR backfill worker panicked after {} ms: {}",
+                                started_at.elapsed().as_millis(),
+                                panic_payload_message(&payload)
+                            );
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    #[cfg(target_os = "macos")]
+    fn process_image_ocr_job(&self, capture_id: String, asset_path: PathBuf) {
+        let started_at = Instant::now();
+        info!(
+            "starting OCR for capture {} from {}",
+            capture_id,
+            asset_path.display()
+        );
+
+        for attempt in 1..=IMAGE_OCR_MAX_ATTEMPTS {
+            match recognize_text_from_image_path(&asset_path) {
+                Ok(Some(ocr_text)) => {
+                    if let Err(error) = self.store_capture_ocr_text(&capture_id, &ocr_text) {
+                        warn!("failed to persist OCR text for capture {capture_id}: {error}");
+                    } else {
+                        let summary = summarize_ocr_log_text(&ocr_text);
+                        info!(
+                            "OCR recognized text for capture {} in {} ms on attempt {}: {}",
+                            capture_id,
+                            started_at.elapsed().as_millis(),
+                            attempt,
+                            summary
+                        );
+                    }
+                    self.release_image_ocr_capture(&capture_id);
+                    return;
+                }
+                Ok(None) => {
+                    info!(
+                        "OCR found no text for capture {} in {} ms on attempt {}",
+                        capture_id,
+                        started_at.elapsed().as_millis(),
+                        attempt
+                    );
+                    self.release_image_ocr_capture(&capture_id);
+                    return;
+                }
+                Err(error) if attempt < IMAGE_OCR_MAX_ATTEMPTS => {
+                    warn!(
+                        "OCR attempt {} failed for capture {} after {} ms: {}; retrying once",
+                        attempt,
+                        capture_id,
+                        started_at.elapsed().as_millis(),
+                        error
+                    );
+                    std::thread::sleep(std::time::Duration::from_millis(IMAGE_OCR_RETRY_DELAY_MS));
+                }
+                Err(error) => {
+                    warn!(
+                        "OCR failed for capture {} after {} ms across {} attempt(s): {}",
+                        capture_id,
+                        started_at.elapsed().as_millis(),
+                        attempt,
+                        error
+                    );
+                    self.release_image_ocr_capture(&capture_id);
+                    return;
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn process_image_ocr_backfill(&self) {
+        let started_at = Instant::now();
+        let candidates = match self.pending_image_ocr_backfill_candidates(24) {
+            Ok(candidates) => candidates,
+            Err(error) => {
+                warn!("failed to load image OCR backfill candidates: {error}");
+                return;
+            }
+        };
+
+        info!(
+            "queued OCR backfill scan with {} pending image capture(s)",
+            candidates.len()
+        );
+
+        for (capture_id, asset_path) in candidates {
+            self.enqueue_image_ocr_capture(&capture_id, asset_path);
+        }
+
+        info!(
+            "finished OCR backfill scan in {} ms",
+            started_at.elapsed().as_millis()
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    fn release_image_ocr_capture(&self, capture_id: &str) {
+        if let Ok(mut queued_capture_ids) = self.shared.image_ocr.queued_capture_ids.lock() {
+            queued_capture_ids.remove(capture_id);
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn clear_image_ocr_backfill_flag(&self) {
+        self.shared
+            .image_ocr
+            .backfill_queued
+            .store(false, Ordering::Release);
+    }
+
+    #[cfg(target_os = "macos")]
+    fn enqueue_image_ocr_capture(&self, capture_id: &str, asset_path: PathBuf) {
+        let normalized_capture_id = capture_id.trim();
+        if normalized_capture_id.is_empty() {
+            return;
+        }
+
+        let mut queued_capture_ids = match self.shared.image_ocr.queued_capture_ids.lock() {
+            Ok(queued_capture_ids) => queued_capture_ids,
+            Err(_) => {
+                warn!("failed to enqueue image OCR for capture {normalized_capture_id}: queue lock poisoned");
+                return;
+            }
+        };
+
+        if !queued_capture_ids.insert(normalized_capture_id.to_string()) {
+            info!(
+                "skipped OCR enqueue for capture {} because it is already queued",
+                normalized_capture_id
+            );
+            return;
+        }
+        drop(queued_capture_ids);
+
+        info!(
+            "queued OCR for capture {} from {}",
+            normalized_capture_id,
+            asset_path.display()
+        );
+
+        if let Err(error) = self
+            .shared
+            .image_ocr
+            .sender
+            .send(ImageOcrMessage::Recognize {
+                capture_id: normalized_capture_id.to_string(),
+                asset_path,
+            })
+        {
+            if let Ok(mut queued_capture_ids) = self.shared.image_ocr.queued_capture_ids.lock() {
+                queued_capture_ids.remove(normalized_capture_id);
+            }
+            warn!("failed to enqueue image OCR for capture {normalized_capture_id}: {error}");
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn spawn_image_ocr_for_capture(&self, capture_id: &str, asset_path: Option<&str>) {
+        let normalized_capture_id = capture_id.trim();
+        let normalized_asset_path = asset_path.unwrap_or("").trim();
+
+        if normalized_capture_id.is_empty() || normalized_asset_path.is_empty() {
+            return;
+        }
+
+        self.enqueue_image_ocr_capture(normalized_capture_id, PathBuf::from(normalized_asset_path));
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn spawn_image_ocr_for_capture(&self, _capture_id: &str, _asset_path: Option<&str>) {}
+
+    #[cfg(target_os = "macos")]
+    fn spawn_image_ocr_backfill(&self) {
+        if self
+            .shared
+            .image_ocr
+            .backfill_queued
+            .swap(true, Ordering::AcqRel)
+        {
+            return;
+        }
+
+        if let Err(error) = self.shared.image_ocr.sender.send(ImageOcrMessage::Backfill) {
+            self.clear_image_ocr_backfill_flag();
+            warn!("failed to enqueue image OCR backfill: {error}");
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn spawn_image_ocr_backfill(&self) {}
+
+    #[cfg(target_os = "macos")]
+    fn pending_image_ocr_backfill_candidates(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<(String, PathBuf)>, String> {
+        let settings = self.current_settings()?;
+        let store = CaptureHistoryStore::new(&self.shared.clipboard_cache_dir)?;
+        let page = store.query_page(&CaptureHistoryQuery {
+            history_days: settings.clipboard_history_days,
+            search: String::new(),
+            filter: "image".into(),
+            page: 0,
+            page_size: limit.clamp(1, 100),
+        })?;
+
+        Ok(page
+            .captures
+            .into_iter()
+            .filter(|capture| capture.ocr_text.as_deref().unwrap_or("").trim().is_empty())
+            .filter_map(|capture| {
+                let asset_path = capture.asset_path?;
+                let normalized = asset_path.trim();
+                if normalized.is_empty() {
+                    return None;
+                }
+
+                Some((capture.id, PathBuf::from(normalized)))
+            })
+            .collect())
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn pending_image_ocr_backfill_candidates(
+        &self,
+        _limit: usize,
+    ) -> Result<Vec<(String, PathBuf)>, String> {
+        Ok(Vec::new())
+    }
+
+    fn store_capture_ocr_text(&self, capture_id: &str, ocr_text: &str) -> Result<bool, String> {
+        let normalized_capture_id = capture_id.trim();
+        let normalized_ocr_text = normalize_ocr_text(ocr_text);
+
+        if normalized_capture_id.is_empty() || normalized_ocr_text.is_empty() {
+            return Ok(false);
+        }
+
+        let history_days = self.current_settings()?.clipboard_history_days;
+        let changed = update_capture_ocr_text_with_fallback(
+            &self.shared.clipboard_cache_dir,
+            history_days,
+            normalized_capture_id,
+            &normalized_ocr_text,
+        )?;
+
+        if changed {
+            self.emit_clipboard_updated();
+        }
+
+        Ok(changed)
+    }
+
     fn lock_state(&self) -> Result<std::sync::MutexGuard<'_, StateData>, String> {
         self.shared
             .inner
@@ -1394,6 +1751,7 @@ fn matches_clipboard_search(capture: &CapturePreview, search: &str) -> bool {
         capture.preview.as_str(),
         capture.secondary_preview.as_deref().unwrap_or_default(),
         capture.raw_text.as_str(),
+        capture.ocr_text.as_deref().unwrap_or_default(),
         capture.link_url.as_deref().unwrap_or_default(),
     ]
     .join(" ")
@@ -1514,6 +1872,7 @@ fn build_capture_history_upsert(
         secondary_preview: preview.secondary_preview.clone(),
         status: preview.status.clone(),
         raw_text: preview.raw_text.clone(),
+        ocr_text: preview.ocr_text.clone(),
         raw_rich: preview.raw_rich.clone(),
         raw_rich_format: preview.raw_rich_format.clone(),
         link_url: preview.link_url.clone(),
@@ -1539,6 +1898,7 @@ pub(crate) fn capture_preview_to_history_upsert(preview: CapturePreview) -> Capt
         secondary_preview: preview.secondary_preview,
         status: preview.status,
         raw_text: preview.raw_text,
+        ocr_text: preview.ocr_text,
         raw_rich: preview.raw_rich,
         raw_rich_format: preview.raw_rich_format,
         link_url: preview.link_url,
@@ -1565,6 +1925,7 @@ fn capture_history_entry_to_preview(entry: CaptureHistoryEntry) -> CapturePrevie
         captured_at: entry.captured_at,
         status: entry.status,
         raw_text: entry.raw_text,
+        ocr_text: entry.ocr_text,
         raw_rich: entry.raw_rich,
         raw_rich_format: entry.raw_rich_format,
         link_url: entry.link_url,
@@ -1590,6 +1951,43 @@ pub(crate) fn upsert_capture_history_store(
     capture: &CaptureHistoryUpsert,
 ) -> Result<(), String> {
     CaptureHistoryStore::new(clipboard_cache_root)?.upsert_capture(capture)
+}
+
+pub(crate) fn update_clipboard_history_ocr_text(
+    clipboard_cache_root: &Path,
+    history_days: u16,
+    capture_id: &str,
+    ocr_text: &str,
+) -> Result<bool, String> {
+    let normalized = normalize_ocr_text(ocr_text);
+    if normalized.is_empty() {
+        return Ok(false);
+    }
+
+    let mut entries_by_day =
+        load_clipboard_history_entries_by_day(clipboard_cache_root, history_days)?;
+    let mut changed = false;
+
+    for captures_by_id in entries_by_day.values_mut() {
+        let Some(capture) = captures_by_id.get_mut(capture_id) else {
+            continue;
+        };
+
+        if capture.ocr_text.as_deref() == Some(normalized.as_str()) {
+            return Ok(false);
+        }
+
+        capture.ocr_text = Some(normalized.clone());
+        changed = true;
+        break;
+    }
+
+    if !changed {
+        return Ok(false);
+    }
+
+    persist_clipboard_history_entries(clipboard_cache_root, history_days, &entries_by_day)?;
+    Ok(true)
 }
 
 pub(crate) fn query_capture_history_page_from_store(
@@ -1936,6 +2334,11 @@ fn merge_capture_preview(existing: &mut CapturePreview, incoming: &CapturePrevie
 
     if existing.raw_text.is_empty() && !incoming.raw_text.is_empty() {
         existing.raw_text = incoming.raw_text.clone();
+        changed = true;
+    }
+
+    if existing.ocr_text != incoming.ocr_text && incoming.ocr_text.is_some() {
+        existing.ocr_text = incoming.ocr_text.clone();
         changed = true;
     }
 
@@ -2675,6 +3078,7 @@ fn build_capture_preview(capture: &CaptureRecord, status: &str) -> CapturePrevie
         captured_at: capture.captured_at.clone(),
         status: status.into(),
         raw_text: capture.raw_text.clone(),
+        ocr_text: None,
         raw_rich: capture.raw_rich.clone(),
         raw_rich_format: capture.raw_rich_format.clone(),
         link_url: capture.link_url.clone(),
@@ -2881,6 +3285,37 @@ fn build_preview(raw_text: &str) -> String {
     preview
 }
 
+fn normalize_ocr_text(input: &str) -> String {
+    input
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn summarize_ocr_log_text(input: &str) -> String {
+    let normalized = normalize_ocr_text(input);
+    if normalized.is_empty() {
+        return "empty result".into();
+    }
+
+    let char_count = normalized.chars().count();
+    let preview = build_preview(&normalized).replace('\n', " ");
+    format!("{char_count} chars, preview=\"{preview}\"")
+}
+
+#[cfg(target_os = "macos")]
+fn panic_payload_message(payload: &Box<dyn std::any::Any + Send>) -> String {
+    if let Some(message) = payload.downcast_ref::<String>() {
+        return message.clone();
+    }
+    if let Some(message) = payload.downcast_ref::<&'static str>() {
+        return (*message).to_string();
+    }
+    "unknown panic payload".into()
+}
+
 fn expand_home_path(input: &str, default_knowledge_root: &Path) -> PathBuf {
     if let Some(stripped) = input.strip_prefix("~/") {
         if let Some(home_dir) = default_knowledge_root.parent() {
@@ -2917,6 +3352,7 @@ mod tests {
             captured_at: captured_at.into(),
             status: "archived".into(),
             raw_text: format!("raw-{id}"),
+            ocr_text: None,
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,

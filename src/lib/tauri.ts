@@ -132,6 +132,7 @@ const mockSnapshot: DashboardSnapshot = {
       capturedAt: minutesAgoIsoString(15),
       status: "archived",
       rawText: "Clipboard image · 1280x800",
+      ocrText: "Quarterly roadmap launch checklist",
       assetPath: mockImageAsset,
       thumbnailPath: mockImageAsset,
       imageWidth: 1280,
@@ -163,6 +164,7 @@ function normalizeClipboardCapture(capture: RustCapturePreview): ClipboardCaptur
     capturedAt: capture.capturedAt ?? "",
     status: capture.status ?? "archived",
     rawText: capture.rawText ?? "",
+    ocrText: capture.ocrText ?? null,
     rawRich: capture.rawRich ?? null,
     rawRichFormat: capture.rawRichFormat ?? null,
     linkUrl: capture.linkUrl ?? null,
@@ -244,6 +246,7 @@ export async function getClipboardPage(
         capture.preview,
         capture.secondaryPreview ?? "",
         capture.rawText,
+        capture.ocrText ?? "",
         capture.linkUrl ?? "",
       ]
         .join(" ")

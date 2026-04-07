@@ -26,7 +26,7 @@ log = "0.4"
 objc2-app-kit = { version = "0.3", features = ["NSPasteboard", "NSWorkspace", "NSRunningApplication", "NSImage", "NSBitmapImageRep", "NSImageRep", "libc"] }
 objc2-core-graphics = { version = "0.3", features = ["CGDirectDisplay", "CGEvent", "CGEventSource", "CGEventTypes", "CGRemoteOperation", "libc"] }
 objc2-foundation = { version = "0.3", features = ["block2"] }
-objc2 = "0.6"
+objc2 = { version = "0.6", features = ["exception"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

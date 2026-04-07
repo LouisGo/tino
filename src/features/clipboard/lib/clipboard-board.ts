@@ -96,6 +96,7 @@ export function matchesSearch(capture: ClipboardCapture, searchValue: string) {
     captureTitle(capture),
     captureSubtitle(capture),
     capture.rawText,
+    capture.ocrText ?? "",
     capture.linkUrl ?? "",
   ]
     .join(" ")

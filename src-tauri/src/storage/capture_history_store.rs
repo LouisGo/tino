@@ -9,7 +9,7 @@ use chrono::{DateTime, Duration, FixedOffset, Local};
 use rusqlite::{params, params_from_iter, types::Value, Connection, OptionalExtension, Row};
 
 const SQLITE_FILE_NAME: &str = "tino.db";
-const CAPTURE_HISTORY_SCHEMA_VERSION: i32 = 2;
+const CAPTURE_HISTORY_SCHEMA_VERSION: i32 = 3;
 
 #[derive(Debug, Clone)]
 pub struct CaptureHistoryUpsert {
@@ -24,6 +24,7 @@ pub struct CaptureHistoryUpsert {
     pub secondary_preview: Option<String>,
     pub status: String,
     pub raw_text: String,
+    pub ocr_text: Option<String>,
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
     pub link_url: Option<String>,
@@ -48,6 +49,7 @@ pub struct CaptureHistoryEntry {
     pub secondary_preview: Option<String>,
     pub status: String,
     pub raw_text: String,
+    pub ocr_text: Option<String>,
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
     pub link_url: Option<String>,
@@ -117,6 +119,7 @@ impl CaptureHistoryStore {
                     secondary_preview,
                     status,
                     raw_text,
+                    ocr_text,
                     raw_rich,
                     raw_rich_format,
                     link_url,
@@ -130,7 +133,7 @@ impl CaptureHistoryStore {
                     updated_at
                 )
                 VALUES (
-                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23
+                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24
                 )
                 ON CONFLICT(id) DO UPDATE SET
                     captured_at = excluded.captured_at,
@@ -144,6 +147,7 @@ impl CaptureHistoryStore {
                     secondary_preview = excluded.secondary_preview,
                     status = excluded.status,
                     raw_text = excluded.raw_text,
+                    ocr_text = COALESCE(excluded.ocr_text, capture_history.ocr_text),
                     raw_rich = excluded.raw_rich,
                     raw_rich_format = excluded.raw_rich_format,
                     link_url = excluded.link_url,
@@ -168,6 +172,7 @@ impl CaptureHistoryStore {
                     capture.secondary_preview.as_deref(),
                     &capture.status,
                     &capture.raw_text,
+                    capture.ocr_text.as_deref(),
                     capture.raw_rich.as_deref(),
                     capture.raw_rich_format.as_deref(),
                     capture.link_url.as_deref(),
@@ -252,6 +257,7 @@ impl CaptureHistoryStore {
                     secondary_preview,
                     status,
                     raw_text,
+                    ocr_text,
                     raw_rich,
                     raw_rich_format,
                     link_url,
@@ -325,6 +331,7 @@ impl CaptureHistoryStore {
                         secondary_preview,
                         status,
                         raw_text,
+                        ocr_text,
                         raw_rich,
                         raw_rich_format,
                         link_url,
@@ -337,7 +344,7 @@ impl CaptureHistoryStore {
                         created_at,
                         updated_at
                     ) VALUES (
-                        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23
+                        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24
                     )
                     "#,
                 )
@@ -360,6 +367,7 @@ impl CaptureHistoryStore {
                         capture.secondary_preview.as_deref(),
                         &capture.status,
                         &capture.raw_text,
+                        capture.ocr_text.as_deref(),
                         capture.raw_rich.as_deref(),
                         capture.raw_rich_format.as_deref(),
                         capture.link_url.as_deref(),
@@ -384,6 +392,34 @@ impl CaptureHistoryStore {
         let connection = self.open_connection()?;
         let changed = connection
             .execute("DELETE FROM capture_history WHERE id = ?1", [capture_id])
+            .map_err(|error| error.to_string())?;
+
+        Ok(changed > 0)
+    }
+
+    pub fn update_capture_ocr_text(
+        &self,
+        capture_id: &str,
+        ocr_text: &str,
+    ) -> Result<bool, String> {
+        let normalized = ocr_text.trim();
+        if normalized.is_empty() {
+            return Ok(false);
+        }
+
+        let connection = self.open_connection()?;
+        let changed = connection
+            .execute(
+                r#"
+                UPDATE capture_history
+                SET
+                    ocr_text = ?1,
+                    updated_at = ?2
+                WHERE id = ?3
+                  AND (ocr_text IS NULL OR ocr_text <> ?1)
+                "#,
+                params![normalized, now_rfc3339(), capture_id],
+            )
             .map_err(|error| error.to_string())?;
 
         Ok(changed > 0)
@@ -444,6 +480,7 @@ impl CaptureHistoryStore {
                         COALESCE(length(secondary_preview), 0) +
                         length(status) +
                         length(raw_text) +
+                        COALESCE(length(ocr_text), 0) +
                         COALESCE(length(raw_rich), 0) +
                         COALESCE(length(raw_rich_format), 0) +
                         COALESCE(length(link_url), 0) +
@@ -518,6 +555,7 @@ fn run_migrations(connection: &Connection) -> Result<(), String> {
                 secondary_preview TEXT,
                 status TEXT NOT NULL,
                 raw_text TEXT NOT NULL,
+                ocr_text TEXT,
                 raw_rich TEXT,
                 raw_rich_format TEXT,
                 link_url TEXT,
@@ -537,6 +575,12 @@ fn run_migrations(connection: &Connection) -> Result<(), String> {
     if !column_exists(connection, "capture_history", "hash")? {
         connection
             .execute("ALTER TABLE capture_history ADD COLUMN hash TEXT", [])
+            .map_err(|error| error.to_string())?;
+    }
+
+    if !column_exists(connection, "capture_history", "ocr_text")? {
+        connection
+            .execute("ALTER TABLE capture_history ADD COLUMN ocr_text TEXT", [])
             .map_err(|error| error.to_string())?;
     }
 
@@ -663,6 +707,7 @@ fn query_filtered_captures(
             secondary_preview,
             status,
             raw_text,
+            ocr_text,
             raw_rich,
             raw_rich_format,
             link_url,
@@ -707,7 +752,7 @@ fn build_where_clause(history_days: u16, search: &str, filter: &str) -> (String,
     let normalized_search = search.trim().to_ascii_lowercase();
     if !normalized_search.is_empty() {
         clauses.push(
-            "LOWER(source || ' ' || COALESCE(source_app_name, '') || ' ' || COALESCE(source_app_bundle_id, '') || ' ' || preview || ' ' || COALESCE(secondary_preview, '') || ' ' || raw_text || ' ' || COALESCE(link_url, '')) LIKE ?".into(),
+            "LOWER(source || ' ' || COALESCE(source_app_name, '') || ' ' || COALESCE(source_app_bundle_id, '') || ' ' || preview || ' ' || COALESCE(secondary_preview, '') || ' ' || raw_text || ' ' || COALESCE(ocr_text, '') || ' ' || COALESCE(link_url, '')) LIKE ?".into(),
         );
         params.push(Value::Text(format!("%{normalized_search}%")));
     }
@@ -741,17 +786,18 @@ fn map_capture_history_entry_row(row: &Row<'_>) -> rusqlite::Result<CaptureHisto
         secondary_preview: row.get(8)?,
         status: row.get(9)?,
         raw_text: row.get(10)?,
-        raw_rich: row.get(11)?,
-        raw_rich_format: row.get(12)?,
-        link_url: row.get(13)?,
-        asset_path: row.get(14)?,
-        thumbnail_path: row.get(15)?,
-        image_width: row.get(16)?,
-        image_height: row.get(17)?,
-        byte_size: row.get(18)?,
-        hash: row.get(19)?,
-        created_at: row.get(20)?,
-        updated_at: row.get(21)?,
+        ocr_text: row.get(11)?,
+        raw_rich: row.get(12)?,
+        raw_rich_format: row.get(13)?,
+        link_url: row.get(14)?,
+        asset_path: row.get(15)?,
+        thumbnail_path: row.get(16)?,
+        image_width: row.get(17)?,
+        image_height: row.get(18)?,
+        byte_size: row.get(19)?,
+        hash: row.get(20)?,
+        created_at: row.get(21)?,
+        updated_at: row.get(22)?,
     })
 }
 
@@ -796,6 +842,7 @@ mod tests {
             secondary_preview: None,
             status: status.into(),
             raw_text: raw_text.into(),
+            ocr_text: None,
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,
@@ -948,6 +995,42 @@ mod tests {
         assert_eq!(result.summary.total, 1);
         assert_eq!(result.captures.len(), 1);
         assert_eq!(result.captures[0].id, "cap_link");
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn query_page_matches_ocr_text_for_image_captures() {
+        let root = unique_root();
+        let store = CaptureHistoryStore::new(&root).expect("store should initialize");
+        let mut image = sample_upsert(
+            "cap_image",
+            "image",
+            "archived",
+            "Clipboard image · 1200x800",
+        );
+        image.ocr_text = Some("Launch checklist".into());
+
+        store
+            .upsert_capture(&image)
+            .expect("image capture should insert");
+
+        let result = store
+            .query_page(&CaptureHistoryQuery {
+                history_days: 1,
+                search: "launch".into(),
+                filter: "image".into(),
+                page: 0,
+                page_size: 20,
+            })
+            .expect("query should succeed");
+
+        assert_eq!(result.total, 1);
+        assert_eq!(result.captures.len(), 1);
+        assert_eq!(
+            result.captures[0].ocr_text.as_deref(),
+            Some("Launch checklist")
+        );
 
         let _ = fs::remove_dir_all(root);
     }

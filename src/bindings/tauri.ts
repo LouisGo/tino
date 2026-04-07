@@ -136,6 +136,7 @@ export type CapturePreview = {
 	capturedAt?: string,
 	status?: string,
 	rawText?: string,
+	ocrText?: string | null,
 	rawRich?: string | null,
 	rawRichFormat?: string | null,
 	linkUrl?: string | null,
