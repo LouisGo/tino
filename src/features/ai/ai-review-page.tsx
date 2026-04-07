@@ -1299,6 +1299,10 @@ function formatCaptureKindLabel(contentKind: string) {
       return "Link"
     case "image":
       return "Image"
+    case "video":
+      return "Video"
+    case "file":
+      return "File"
     default:
       return contentKind.replace(/_/g, " ")
   }

@@ -1,6 +1,7 @@
 import {
   useDeferredValue,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -17,17 +18,23 @@ import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
 import {
+  Check,
+  Copy,
   Expand,
   ExternalLink,
   Minus,
   Plus,
   RotateCcw,
+  ScanText,
   X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useCommand } from "@/core/commands";
 import { useShortcutScope } from "@/core/shortcuts";
+import { FileReferencePreview } from "@/features/clipboard/components/file-reference-preview";
+import { PreviewToolbar } from "@/features/clipboard/components/preview-toolbar";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import {
   PREVIEW_HIGHLIGHT_SELECTOR,
@@ -36,12 +43,17 @@ import {
   highlightTextContent,
   normalizeHighlightQuery,
 } from "@/features/clipboard/lib/clipboard-preview-highlight";
-import { capturePreviewSurfaceClassName } from "@/features/clipboard/lib/clipboard-board";
+import {
+  captureSurfaceClassName,
+  isFileReferenceKind,
+} from "@/features/clipboard/lib/clipboard-board";
+import { resolveFileReferencePreviewModel } from "@/features/clipboard/lib/file-reference-preview";
 import {
   getExternalLinkTargetFromEventTarget,
   openExternalLink,
   resolveExternalLinkTarget,
 } from "@/lib/external-links";
+import { useScopedT } from "@/i18n";
 import { resolvePortalContainer } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
@@ -59,6 +71,7 @@ export function CaptureDetailPreview({
   capture,
   highlightQuery,
   onOpenImage,
+  onOpenImageOcr,
   sharedSurface = false,
   toolbarMeta,
   toolbarActions,
@@ -66,35 +79,54 @@ export function CaptureDetailPreview({
   capture: ClipboardCapture;
   highlightQuery: string;
   onOpenImage: () => void;
+  onOpenImageOcr: () => void;
   sharedSurface?: boolean;
   toolbarMeta?: ReactNode;
   toolbarActions?: ReactNode;
 }) {
+  const tCommon = useScopedT("common");
   const openTarget = useCommand<{ target: string }>("system.openExternalTarget");
   const assetSrc = useClipboardAssetSrc(
     capture.contentKind === "image" ? capture.assetPath : null,
   );
-  const surfaceClassName = sharedSurface ? "" : capturePreviewSurfaceClassName(capture.contentKind);
+  const surfaceClassName = sharedSurface ? "" : captureSurfaceClassName(capture);
+  const normalizedOcrText = capture.contentKind === "image"
+    ? normalizeOcrText(capture.ocrText)
+    : "";
 
   if (capture.contentKind === "image") {
     return (
       <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden")}>
         <PreviewToolbar meta={toolbarMeta} actions={toolbarActions} />
-        <button
-          type="button"
-          onClick={onOpenImage}
-          className="group flex min-h-0 flex-1 items-center justify-center overflow-hidden px-3 pb-3 pt-2 transition"
-        >
+        <div className="group flex min-h-0 flex-1 items-center justify-center overflow-hidden px-3 pb-3 pt-2 transition">
           {assetSrc ? (
             <div className="relative flex h-full min-h-0 w-full items-center justify-center">
-              <img
-                src={assetSrc}
-                alt={capturePreviewTitle(capture)}
-                className="max-h-full w-full rounded-[18px] object-contain"
-              />
-              <div className="app-overlay-chip pointer-events-none absolute right-3 bottom-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium opacity-0 transition group-hover:opacity-100">
-                <Expand className="size-3.5" />
-                Click to enlarge
+              <button
+                type="button"
+                onClick={onOpenImage}
+                className="flex h-full w-full items-center justify-center overflow-hidden rounded-[18px]"
+              >
+                <img
+                  src={assetSrc}
+                  alt={capturePreviewTitle(capture)}
+                  className="max-h-full w-full rounded-[18px] object-contain"
+                />
+              </button>
+              <div className="pointer-events-none absolute right-3 bottom-3 z-10 flex items-center gap-2">
+                <ImageOverlayActionButton
+                  label={tCommon("clipboardPreview.enlarge")}
+                  onClick={onOpenImage}
+                >
+                  <Expand className="size-4" />
+                </ImageOverlayActionButton>
+                {normalizedOcrText ? (
+                  <ImageOverlayActionButton
+                    label={tCommon("clipboardPreview.ocrResult")}
+                    onClick={onOpenImageOcr}
+                  >
+                    <ScanText className="size-4" />
+                  </ImageOverlayActionButton>
+                ) : null}
               </div>
             </div>
           ) : (
@@ -103,7 +135,7 @@ export function CaptureDetailPreview({
               description="The capture exists, but the local preview asset could not be loaded into the board."
             />
           )}
-        </button>
+        </div>
       </section>
     );
   }
@@ -141,6 +173,17 @@ export function CaptureDetailPreview({
           </div>
         </div>
       </section>
+    );
+  }
+
+  if (isFileReferenceKind(capture.contentKind)) {
+    return (
+      <FileReferencePreview
+        capture={capture}
+        sharedSurface={sharedSurface}
+        toolbarMeta={toolbarMeta}
+        toolbarActions={toolbarActions}
+      />
     );
   }
 
@@ -241,7 +284,7 @@ function TextCapturePreview({
   return (
     <section
       className={cn(
-        sharedSurface ? "" : capturePreviewSurfaceClassName(capture.contentKind),
+        sharedSurface ? "" : captureSurfaceClassName(capture),
         "flex h-full min-h-0 min-w-0 flex-col overflow-hidden",
       )}
     >
@@ -296,30 +339,6 @@ function TextCapturePreview({
   );
 }
 
-function PreviewToolbar({
-  meta,
-  controls,
-  actions,
-}: {
-  meta?: ReactNode;
-  controls?: ReactNode;
-  actions?: ReactNode;
-}) {
-  return (
-    <div className="app-preview-toolbar sticky top-0 z-10 shrink-0">
-      <div className="flex min-h-[42px] min-w-0 items-center justify-between gap-2.5 px-3 py-1.5">
-        <div className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
-          {meta}
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-          {controls ? <div className="shrink-0">{controls}</div> : null}
-          {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function PreviewModeButton({
   active,
   onClick,
@@ -341,6 +360,38 @@ function PreviewModeButton({
     >
       {children}
     </button>
+  );
+}
+
+function ImageOverlayActionButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip
+      content={label}
+      placement="bottom"
+      className="app-preview-action-tooltip rounded-full px-3 py-1.5 text-[11px] font-medium"
+    >
+      <div className="shrink-0">
+        <button
+          type="button"
+          aria-label={label}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClick();
+          }}
+          className="app-overlay-chip pointer-events-auto inline-flex size-8 items-center justify-center rounded-full opacity-0 transition duration-150 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+        >
+          {children}
+        </button>
+      </div>
+    </Tooltip>
   );
 }
 
@@ -442,10 +493,12 @@ function RawTextPreview({
   content,
   highlightQuery,
   tone = "raw",
+  className,
 }: {
   content: string;
   highlightQuery: string;
   tone?: "raw" | "reading";
+  className?: string;
 }) {
   const highlightedContent = useMemo(
     () => highlightTextContent(content, highlightQuery, "No raw source available."),
@@ -459,6 +512,7 @@ function RawTextPreview({
         tone === "reading"
           ? "w-full max-w-[72ch] font-sans text-[13px] leading-[1.7] text-foreground/90 break-words"
           : "w-0 min-w-full max-w-full font-mono text-[13px] leading-7 break-all",
+        className,
       )}
     >
       {highlightedContent}
@@ -525,6 +579,120 @@ export function CaptureImageLightbox({
           width={capture.imageWidth ?? undefined}
           height={capture.imageHeight ?? undefined}
         />
+      </div>
+    </div>,
+    portalContainer,
+  );
+}
+
+export function CaptureOcrLightbox({
+  capture,
+  onClose,
+}: {
+  capture: ClipboardCapture | null;
+  onClose: () => void;
+}) {
+  const tCommon = useScopedT("common");
+  const portalContainer = resolvePortalContainer();
+  const titleId = useId();
+  const normalizedOcrText = capture?.contentKind === "image"
+    ? normalizeOcrText(capture.ocrText)
+    : "";
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+  const copyResetTimeoutRef = useRef<number | null>(null);
+  const [didCopy, setDidCopy] = useState(false);
+
+  useShortcutScope("clipboard.imagePreview", {
+    active: Boolean(capture) && Boolean(normalizedOcrText),
+  });
+
+  useEffect(() => {
+    scrollViewportRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  useEffect(() => () => {
+    if (copyResetTimeoutRef.current !== null) {
+      window.clearTimeout(copyResetTimeoutRef.current);
+    }
+  }, []);
+
+  if (!capture || capture.contentKind !== "image" || !normalizedOcrText || !portalContainer) {
+    return null;
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(normalizedOcrText);
+      setDidCopy(true);
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        setDidCopy(false);
+        copyResetTimeoutRef.current = null;
+      }, 1600);
+    } catch (error) {
+      console.error("[clipboard] failed to copy OCR text", error);
+    }
+  }
+
+  return createPortal(
+    <div
+      className="app-overlay-backdrop fixed inset-0 z-[140]"
+      onClick={onClose}
+    >
+      <div className="flex h-full w-full items-center justify-center p-3 sm:p-5">
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          className="app-lightbox-surface app-ocr-sheet relative flex min-h-[12rem] w-[min(32rem,calc(100vw-1.5rem))] max-h-[min(28rem,calc(100vh-1.5rem))] flex-col overflow-hidden rounded-[28px] border border-white/10"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <header className="app-ocr-sheet-header shrink-0 border-b border-border/60 px-4 py-3 sm:px-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2
+                id={titleId}
+                className="min-w-0 flex-1 truncate text-left text-[13px] font-semibold tracking-[0.02em] text-foreground/92"
+              >
+                {tCommon("clipboardPreview.ocrDialogTitle")}
+              </h2>
+              <Tooltip
+                content={didCopy
+                  ? tCommon("clipboardPreview.copiedToClipboard")
+                  : tCommon("clipboardPreview.copyOcrResult")}
+                placement="bottom"
+                className="app-preview-action-tooltip rounded-full px-3 py-1.5 text-[11px] font-medium"
+              >
+                <div className="shrink-0">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 rounded-full border-border/60 bg-background/76 text-muted-foreground/80 shadow-none hover:bg-secondary/72 hover:text-foreground"
+                    aria-label={tCommon("clipboardPreview.copyOcrResult")}
+                    onClick={() => void handleCopy()}
+                  >
+                    {didCopy ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                  </Button>
+                </div>
+              </Tooltip>
+            </div>
+          </header>
+
+          <div
+            ref={scrollViewportRef}
+            className="app-scroll-area min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4 sm:px-5"
+          >
+            <div className="flex min-h-full items-center justify-center">
+              <RawTextPreview
+                content={normalizedOcrText}
+                highlightQuery=""
+                tone="reading"
+                className="w-full max-w-full text-center text-[11px] leading-[1.72] text-foreground/84 sm:text-[11.5px]"
+              />
+            </div>
+          </div>
+        </section>
       </div>
     </div>,
     portalContainer,
@@ -974,7 +1142,7 @@ function canRenderHtmlPreview(capture: ClipboardCapture) {
 }
 
 function canRenderMarkdownPreview(capture: ClipboardCapture) {
-  if (capture.contentKind === "link" || capture.contentKind === "image") {
+  if (capture.contentKind === "link" || capture.contentKind === "image" || isFileReferenceKind(capture.contentKind)) {
     return false;
   }
 
@@ -1039,6 +1207,10 @@ function normalizeMarkdownSource(input: string) {
   return input.replace(/[\u200B-\u200D\uFEFF]/g, "");
 }
 
+function normalizeOcrText(input: string | null | undefined) {
+  return input?.trim() ?? "";
+}
+
 function capturePreviewTitle(capture: ClipboardCapture) {
   if (capture.contentKind === "image") {
     return capture.imageWidth && capture.imageHeight
@@ -1048,6 +1220,11 @@ function capturePreviewTitle(capture: ClipboardCapture) {
 
   if (capture.contentKind === "link") {
     return capture.preview || capture.linkUrl || "Link capture";
+  }
+
+  if (isFileReferenceKind(capture.contentKind)) {
+    const model = resolveFileReferencePreviewModel(capture);
+    return capture.preview || model.fileName || model.contentTypeLabel;
   }
 
   const normalized = (capture.preview || capture.rawText).trim();

@@ -8,7 +8,7 @@ import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-bo
 import { isTauriRuntime } from "@/lib/tauri";
 
 export function ClipboardWindowPage() {
-  const [sessionKey, setSessionKey] = useState(0);
+  const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   useShortcutScope("clipboard.window");
 
   useEffect(() => {
@@ -86,7 +86,7 @@ export function ClipboardWindowPage() {
       }
 
       useClipboardBoardStore.getState().resetState();
-      setSessionKey((current) => current + 1);
+      setSearchFocusRequest((current) => current + 1);
     }).then((dispose) => {
       unlistenFocus = dispose;
     });
@@ -115,11 +115,11 @@ export function ClipboardWindowPage() {
       className="app-panel-window-root h-full"
     >
       <ClipboardBoardFeature
-        key={sessionKey}
         showSummary={false}
         fillHeight
         windowMode
         autoFocusSearch
+        searchFocusRequest={searchFocusRequest}
       />
     </div>
   );

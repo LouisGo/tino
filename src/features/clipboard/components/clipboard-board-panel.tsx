@@ -27,7 +27,10 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { CaptureImageLightbox } from "@/features/clipboard/components/capture-preview";
+import {
+  CaptureImageLightbox,
+  CaptureOcrLightbox,
+} from "@/features/clipboard/components/capture-preview";
 import {
   ClipboardCaptureList,
 } from "@/features/clipboard/components/clipboard-capture-list";
@@ -43,7 +46,6 @@ import {
   getDefaultClipboardSelection,
   getDefaultVisibleClipboardSelection,
   getClipboardFilterOption,
-  type ClipboardCaptureGroup,
 } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
@@ -72,6 +74,7 @@ export function ClipboardBoardPanel({
   fillHeight = false,
   windowMode = false,
   autoFocusSearch = false,
+  searchFocusRequest = 0,
 }: {
   captures: ClipboardCapture[];
   pinnedCaptures: ClipboardCapture[];
@@ -86,15 +89,18 @@ export function ClipboardBoardPanel({
   fillHeight?: boolean;
   windowMode?: boolean;
   autoFocusSearch?: boolean;
+  searchFocusRequest?: number;
 }) {
   const selectedCaptureId = useClipboardBoardStore((state) => state.selectedCaptureId);
   const previewingImageId = useClipboardBoardStore((state) => state.previewingImageId);
+  const previewingOcrCaptureId = useClipboardBoardStore((state) => state.previewingOcrCaptureId);
   const pendingDeleteCapture = useClipboardBoardStore((state) => state.pendingDeleteCapture);
   const pendingPinCapture = useClipboardBoardStore((state) => state.pendingPinCapture);
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
   const listScrollRequest = useClipboardBoardStore((state) => state.listScrollRequest);
   const setPreviewingImageId = useClipboardBoardStore((state) => state.setPreviewingImageId);
+  const setPreviewingOcrCaptureId = useClipboardBoardStore((state) => state.setPreviewingOcrCaptureId);
   const setPendingDeleteCapture = useClipboardBoardStore((state) => state.setPendingDeleteCapture);
   const setPendingPinCapture = useClipboardBoardStore((state) => state.setPendingPinCapture);
   const openImageLightbox = useCommand<{ captureId: string }>("clipboard.showImageLightbox");
@@ -124,32 +130,21 @@ export function ClipboardBoardPanel({
     null;
   const previewingImage =
     visibleCaptures.find((capture) => capture.id === previewingImageId) ?? null;
+  const previewingOcrCapture =
+    visibleCaptures.find((capture) => capture.id === previewingOcrCaptureId) ?? null;
   const canShowWindowSelectionTip =
     windowMode &&
     Boolean(selectedCapture) &&
     !previewingImageId &&
+    !previewingOcrCaptureId &&
     !pendingDeleteCapture &&
     !pendingPinCapture;
   const highlightQuery = searchValue.trim();
   const hasVisibleCaptures = visibleCaptures.length > 0;
   const isFilteringResults = filter !== "all" || highlightQuery.length > 0;
   const showEmptyOverlay = !hasVisibleCaptures;
-  const lastRenderableGroupsRef = useRef<ClipboardCaptureGroup[]>([]);
-  const lastRenderableCaptureRef = useRef<ClipboardCapture | null>(null);
-
-  if (hasVisibleCaptures) {
-    lastRenderableGroupsRef.current = captureGroups;
-    lastRenderableCaptureRef.current = selectedCapture;
-  }
-
-  const renderedCaptureGroups =
-    showEmptyOverlay && lastRenderableGroupsRef.current.length > 0
-      ? lastRenderableGroupsRef.current
-      : captureGroups;
-  const renderedSelectedCapture =
-    showEmptyOverlay && lastRenderableCaptureRef.current
-      ? lastRenderableCaptureRef.current
-      : selectedCapture;
+  const renderedCaptureGroups = captureGroups;
+  const renderedSelectedCapture = selectedCapture;
   const resolvedEmptyStateTitle =
     emptyStateTitle ??
     (isFilteringResults ? "No matching captures" : "Clipboard board is empty");
@@ -218,6 +213,7 @@ export function ClipboardBoardPanel({
       const canShowTip =
         Boolean(activeCaptureId) &&
         !state.previewingImageId &&
+        !state.previewingOcrCaptureId &&
         !state.pendingDeleteCapture;
       const previousActiveCaptureId = lastActiveTipCaptureIdRef.current;
 
@@ -248,12 +244,15 @@ export function ClipboardBoardPanel({
       const previousActiveCaptureId = resolveActiveCaptureId(previousState);
       const previewingImageChanged =
         state.previewingImageId !== previousState.previewingImageId;
+      const previewingOcrChanged =
+        state.previewingOcrCaptureId !== previousState.previewingOcrCaptureId;
       const pendingDeleteCaptureChanged =
         state.pendingDeleteCapture?.id !== previousState.pendingDeleteCapture?.id;
 
       if (
         activeCaptureId === previousActiveCaptureId &&
         !previewingImageChanged &&
+        !previewingOcrChanged &&
         !pendingDeleteCaptureChanged
       ) {
         return;
@@ -358,7 +357,10 @@ export function ClipboardBoardPanel({
           windowMode && "flex h-screen flex-col",
         )}
       >
-        <ClipboardBoardToolbar autoFocusSearch={autoFocusSearch} />
+        <ClipboardBoardToolbar
+          autoFocusSearch={autoFocusSearch}
+          searchFocusRequest={searchFocusRequest}
+        />
         <ClipboardAccessibilityBanner />
 
         <div className={cn("overflow-hidden", windowMode && "min-h-0 flex-1")}>
@@ -394,6 +396,14 @@ export function ClipboardBoardPanel({
                       void openImageLightbox.execute({ captureId: renderedSelectedCapture.id });
                     }
                   }}
+                  onOpenImageOcr={() => {
+                    if (renderedSelectedCapture?.contentKind !== "image") {
+                      return;
+                    }
+
+                    setPreviewingImageId(null);
+                    setPreviewingOcrCaptureId(renderedSelectedCapture.id);
+                  }}
                 />
               </div>
             </div>
@@ -423,6 +433,12 @@ export function ClipboardBoardPanel({
       <CaptureImageLightbox
         capture={previewingImage}
         onClose={() => setPreviewingImageId(null)}
+      />
+
+      <CaptureOcrLightbox
+        key={previewingOcrCapture?.id ?? "clipboard-ocr-preview"}
+        capture={previewingOcrCapture}
+        onClose={() => setPreviewingOcrCaptureId(null)}
       />
 
       <AlertDialog
@@ -599,8 +615,10 @@ function ClipboardWindowSelectionTip({
 
 function ClipboardBoardToolbar({
   autoFocusSearch = false,
+  searchFocusRequest = 0,
 }: {
   autoFocusSearch?: boolean;
+  searchFocusRequest?: number;
 }) {
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
@@ -608,6 +626,22 @@ function ClipboardBoardToolbar({
   const setFilter = useClipboardBoardStore((state) => state.setFilter);
   const activeFilter = getClipboardFilterOption(filter);
   const hasSearchValue = searchValue.trim().length > 0;
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!autoFocusSearch || searchFocusRequest === 0) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [autoFocusSearch, searchFocusRequest]);
 
   return (
     <div className="app-board-toolbar border-b border-border/55 px-2.5 py-2.5 sm:px-3 sm:py-2.5">
@@ -615,6 +649,7 @@ function ClipboardBoardToolbar({
         <div className="relative min-w-0">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground/80" />
           <Input
+            ref={searchInputRef}
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             placeholder="Type to filter entries..."

@@ -1,6 +1,11 @@
 import { useDeferredValue, useEffect, useLayoutEffect, useMemo } from "react"
 
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query"
 
 import { queryKeys } from "@/app/query-keys"
 import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events"
@@ -11,8 +16,10 @@ import {
 } from "@/features/clipboard/lib/clipboard-board"
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store"
 import { getClipboardPage, getPinnedClipboardCaptures } from "@/lib/tauri"
+import type { ClipboardPageResult, PinnedClipboardCapture } from "@/types/shell"
 
 const CLIPBOARD_PAGE_SIZE = 40
+const CLIPBOARD_QUERY_STALE_TIME = Number.POSITIVE_INFINITY
 
 export function useClipboardBoardView() {
   const searchValue = useClipboardBoardStore((state) => state.searchValue)
@@ -25,6 +32,12 @@ export function useClipboardBoardView() {
   )
   const summaryQueryKey = queryKeys.clipboardPageSummary()
   const pinnedQueryKey = queryKeys.clipboardPinnedCaptures()
+  const cachedSummaryPage = queryClient.getQueryData<ClipboardPageResult>(summaryQueryKey)
+  const cachedPinnedCaptures =
+    queryClient.getQueryData<PinnedClipboardCapture[]>(pinnedQueryKey)
+  const cachedListPage = queryClient.getQueryData<InfiniteData<ClipboardPageResult, number>>(
+    listQueryKey,
+  )
 
   const { data: summaryPage } = useQuery({
     queryKey: summaryQueryKey,
@@ -33,16 +46,16 @@ export function useClipboardBoardView() {
         page: 0,
         pageSize: 1,
         filter: "all",
-      }),
-    staleTime: 2 * 60 * 1_000,
-    placeholderData: (previousData) => previousData,
+    }),
+    staleTime: CLIPBOARD_QUERY_STALE_TIME,
+    placeholderData: (previousData) => previousData ?? cachedSummaryPage,
   })
 
   const { data: pinnedCaptures = [] } = useQuery({
     queryKey: pinnedQueryKey,
     queryFn: getPinnedClipboardCaptures,
-    staleTime: 2 * 60 * 1_000,
-    placeholderData: (previousData) => previousData,
+    staleTime: CLIPBOARD_QUERY_STALE_TIME,
+    placeholderData: (previousData) => previousData ?? cachedPinnedCaptures,
   })
 
   const {
@@ -66,12 +79,12 @@ export function useClipboardBoardView() {
       }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
-    staleTime: 2 * 60 * 1_000,
-    placeholderData: (previousData) => previousData,
+    staleTime: CLIPBOARD_QUERY_STALE_TIME,
+    placeholderData: (previousData) => previousData ?? cachedListPage,
   })
 
   useClipboardCaptureEvents(() => {
-    void queryClient.invalidateQueries({ queryKey: listQueryKey, exact: true })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageBase() })
     void queryClient.invalidateQueries({ queryKey: summaryQueryKey, exact: true })
     void queryClient.invalidateQueries({ queryKey: pinnedQueryKey, exact: true })
     void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() })
@@ -97,6 +110,8 @@ export function useClipboardBoardView() {
     text: 0,
     links: 0,
     images: 0,
+    videos: 0,
+    files: 0,
   }
   const historyDays = summaryPage?.historyDays ?? firstPage?.historyDays ?? 3
   const status: "loading" | "error" | "ready" =

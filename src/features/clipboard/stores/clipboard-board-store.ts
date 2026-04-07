@@ -9,6 +9,7 @@ const initialClipboardBoardState = {
   selectedCaptureId: null,
   preferredSelectedCaptureId: null,
   previewingImageId: null,
+  previewingOcrCaptureId: null,
   pendingDeleteCapture: null,
   pendingPinCapture: null,
   pinnedCaptures: [] as PinnedClipboardCapture[],
@@ -22,6 +23,7 @@ type ClipboardBoardState = {
   selectedCaptureId: string | null;
   preferredSelectedCaptureId: string | null;
   previewingImageId: string | null;
+  previewingOcrCaptureId: string | null;
   pendingDeleteCapture: ClipboardCapture | null;
   pendingPinCapture: ClipboardCapture | null;
   pinnedCaptures: PinnedClipboardCapture[];
@@ -34,6 +36,7 @@ type ClipboardBoardState = {
   setSelectedCaptureId: (value: string | null) => void;
   setPreferredSelectedCaptureId: (value: string | null) => void;
   setPreviewingImageId: (value: string | null) => void;
+  setPreviewingOcrCaptureId: (value: string | null) => void;
   setPendingDeleteCapture: (capture: ClipboardCapture | null) => void;
   setPendingPinCapture: (capture: ClipboardCapture | null) => void;
   setPinnedCaptures: (captures: PinnedClipboardCapture[]) => void;
@@ -54,6 +57,7 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
   setSelectedCaptureId: (value) => set({ selectedCaptureId: value }),
   setPreferredSelectedCaptureId: (value) => set({ preferredSelectedCaptureId: value }),
   setPreviewingImageId: (value) => set({ previewingImageId: value }),
+  setPreviewingOcrCaptureId: (value) => set({ previewingOcrCaptureId: value }),
   setPendingDeleteCapture: (capture) => set({ pendingDeleteCapture: capture }),
   setPendingPinCapture: (capture) => set({ pendingPinCapture: capture }),
   setPinnedCaptures: (captures) => set({ pinnedCaptures: captures }),
@@ -70,6 +74,8 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
         state.preferredSelectedCaptureId === captureId ? null : state.preferredSelectedCaptureId,
       previewingImageId:
         state.previewingImageId === captureId ? null : state.previewingImageId,
+      previewingOcrCaptureId:
+        state.previewingOcrCaptureId === captureId ? null : state.previewingOcrCaptureId,
       pendingDeleteCapture:
         state.pendingDeleteCapture?.id === captureId ? null : state.pendingDeleteCapture,
       pendingPinCapture:

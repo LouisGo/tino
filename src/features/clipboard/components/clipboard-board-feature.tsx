@@ -9,11 +9,13 @@ export function ClipboardBoardFeature({
   fillHeight = false,
   windowMode = false,
   autoFocusSearch = false,
+  searchFocusRequest = 0,
 }: {
   showSummary?: boolean;
   fillHeight?: boolean;
   windowMode?: boolean;
   autoFocusSearch?: boolean;
+  searchFocusRequest?: number;
 }) {
   useShortcutScope("clipboard.panel");
   const {
@@ -50,6 +52,7 @@ export function ClipboardBoardFeature({
         fillHeight={fillHeight}
         windowMode={windowMode}
         autoFocusSearch={autoFocusSearch}
+        searchFocusRequest={searchFocusRequest}
         onLoadMore={onLoadMore}
         emptyStateTitle={
           status === "loading"

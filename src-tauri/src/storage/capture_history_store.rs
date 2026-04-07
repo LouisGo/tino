@@ -69,6 +69,8 @@ pub struct CaptureHistorySummary {
     pub text: usize,
     pub links: usize,
     pub images: usize,
+    pub videos: usize,
+    pub files: usize,
 }
 
 pub struct CaptureHistoryPage {
@@ -658,7 +660,9 @@ fn query_summary(
             COUNT(*) AS total,
             SUM(CASE WHEN content_kind IN ('plain_text', 'rich_text') THEN 1 ELSE 0 END) AS text_count,
             SUM(CASE WHEN content_kind = 'link' THEN 1 ELSE 0 END) AS link_count,
-            SUM(CASE WHEN content_kind = 'image' THEN 1 ELSE 0 END) AS image_count
+            SUM(CASE WHEN content_kind = 'image' THEN 1 ELSE 0 END) AS image_count,
+            SUM(CASE WHEN content_kind = 'video' THEN 1 ELSE 0 END) AS video_count,
+            SUM(CASE WHEN content_kind = 'file' THEN 1 ELSE 0 END) AS file_count
         FROM capture_history
         WHERE {where_sql}
         "#
@@ -671,6 +675,8 @@ fn query_summary(
                 text: row.get::<_, Option<i64>>(1)?.unwrap_or_default().max(0) as usize,
                 links: row.get::<_, Option<i64>>(2)?.unwrap_or_default().max(0) as usize,
                 images: row.get::<_, Option<i64>>(3)?.unwrap_or_default().max(0) as usize,
+                videos: row.get::<_, Option<i64>>(4)?.unwrap_or_default().max(0) as usize,
+                files: row.get::<_, Option<i64>>(5)?.unwrap_or_default().max(0) as usize,
             })
         })
         .map_err(|error| error.to_string())
@@ -790,6 +796,8 @@ fn build_where_clause(
         "text" => clauses.push("content_kind IN ('plain_text', 'rich_text')".into()),
         "link" => clauses.push("content_kind = 'link'".into()),
         "image" => clauses.push("content_kind = 'image'".into()),
+        "video" => clauses.push("content_kind = 'video'".into()),
+        "file" => clauses.push("content_kind = 'file'".into()),
         _ => {}
     }
 
@@ -1063,6 +1071,47 @@ mod tests {
             result.captures[0].ocr_text.as_deref(),
             Some("Launch checklist")
         );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn query_page_counts_and_filters_file_reference_kinds() {
+        let root = unique_root();
+        let store = CaptureHistoryStore::new(&root).expect("store should initialize");
+        store
+            .upsert_capture(&sample_upsert(
+                "cap_video",
+                "video",
+                "archived",
+                "/tmp/clip.mov",
+            ))
+            .expect("video capture should insert");
+        store
+            .upsert_capture(&sample_upsert(
+                "cap_file",
+                "file",
+                "queued",
+                "/tmp/installer.dmg",
+            ))
+            .expect("file capture should insert");
+
+        let result = store
+            .query_page(&CaptureHistoryQuery {
+                history_days: 1,
+                excluded_capture_ids: Vec::new(),
+                search: String::new(),
+                filter: "video".into(),
+                page: 0,
+                page_size: 20,
+            })
+            .expect("query should succeed");
+
+        assert_eq!(result.total, 1);
+        assert_eq!(result.summary.total, 2);
+        assert_eq!(result.summary.videos, 1);
+        assert_eq!(result.summary.files, 1);
+        assert_eq!(result.captures[0].id, "cap_video");
 
         let _ = fs::remove_dir_all(root);
     }

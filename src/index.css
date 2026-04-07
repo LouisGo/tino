@@ -132,12 +132,20 @@
   --clipboard-kind-link-soft: oklch(0.32 0.04 252);
   --clipboard-kind-image: oklch(0.77 0.11 292);
   --clipboard-kind-image-soft: oklch(0.32 0.05 292);
+  --clipboard-kind-video: oklch(0.75 0.1 48);
+  --clipboard-kind-video-soft: oklch(0.34 0.05 48);
+  --clipboard-kind-file: oklch(0.74 0.08 165);
+  --clipboard-kind-file-soft: oklch(0.31 0.04 165);
   --kind-text: var(--clipboard-kind-text);
   --kind-text-soft: var(--clipboard-kind-text-soft);
   --kind-link: var(--clipboard-kind-link);
   --kind-link-soft: var(--clipboard-kind-link-soft);
   --kind-image: var(--clipboard-kind-image);
   --kind-image-soft: var(--clipboard-kind-image-soft);
+  --kind-video: var(--clipboard-kind-video);
+  --kind-video-soft: var(--clipboard-kind-video-soft);
+  --kind-file: var(--clipboard-kind-file);
+  --kind-file-soft: var(--clipboard-kind-file-soft);
   --gradient-preview-image: linear-gradient(
     180deg,
     color-mix(in oklch, var(--card) 88%, var(--background) 12%),
@@ -175,6 +183,16 @@
     color-mix(in oklch, var(--secondary) 18%, var(--card) 82%)
   );
   --summary-tone-images: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+    color-mix(in oklch, var(--secondary) 18%, var(--card) 82%)
+  );
+  --summary-tone-videos: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 88%, var(--background) 12%),
+    color-mix(in oklch, var(--secondary) 18%, var(--card) 82%)
+  );
+  --summary-tone-files: linear-gradient(
     180deg,
     color-mix(in oklch, var(--card) 88%, var(--background) 12%),
     color-mix(in oklch, var(--secondary) 18%, var(--card) 82%)
@@ -273,12 +291,20 @@
   --clipboard-kind-link-soft: oklch(0.95 0.035 252);
   --clipboard-kind-image: oklch(0.62 0.12 292);
   --clipboard-kind-image-soft: oklch(0.95 0.04 292);
+  --clipboard-kind-video: oklch(0.61 0.12 48);
+  --clipboard-kind-video-soft: oklch(0.95 0.04 48);
+  --clipboard-kind-file: oklch(0.57 0.1 165);
+  --clipboard-kind-file-soft: oklch(0.95 0.035 165);
   --kind-text: var(--clipboard-kind-text);
   --kind-text-soft: var(--clipboard-kind-text-soft);
   --kind-link: var(--clipboard-kind-link);
   --kind-link-soft: var(--clipboard-kind-link-soft);
   --kind-image: var(--clipboard-kind-image);
   --kind-image-soft: var(--clipboard-kind-image-soft);
+  --kind-video: var(--clipboard-kind-video);
+  --kind-video-soft: var(--clipboard-kind-video-soft);
+  --kind-file: var(--clipboard-kind-file);
+  --kind-file-soft: var(--clipboard-kind-file-soft);
   --gradient-body:
     radial-gradient(
       circle at top left,
@@ -381,6 +407,16 @@
     color-mix(in oklch, var(--secondary) 24%, var(--card) 76%)
   );
   --summary-tone-images: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+    color-mix(in oklch, var(--secondary) 24%, var(--card) 76%)
+  );
+  --summary-tone-videos: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--card) 95%, var(--background) 5%),
+    color-mix(in oklch, var(--secondary) 24%, var(--card) 76%)
+  );
+  --summary-tone-files: linear-gradient(
     180deg,
     color-mix(in oklch, var(--card) 95%, var(--background) 5%),
     color-mix(in oklch, var(--secondary) 24%, var(--card) 76%)
@@ -2557,6 +2593,26 @@
       var(--summary-tone-images);
   }
 
+  .app-summary-tone-videos {
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--kind-video) 22%, transparent) 0,
+        transparent 40%
+      ),
+      var(--summary-tone-videos);
+  }
+
+  .app-summary-tone-files {
+    background-image:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, var(--kind-file) 22%, transparent) 0,
+        transparent 40%
+      ),
+      var(--summary-tone-files);
+  }
+
   .app-kind-badge-text {
     @apply border-transparent;
     background-color: color-mix(in oklch, var(--kind-text) 14%, var(--background) 86%);
@@ -2575,6 +2631,18 @@
     color: color-mix(in oklch, var(--kind-image) 86%, var(--foreground) 14%);
   }
 
+  .app-kind-badge-video {
+    @apply border-transparent;
+    background-color: color-mix(in oklch, var(--kind-video) 15%, var(--background) 85%);
+    color: color-mix(in oklch, var(--kind-video) 86%, var(--foreground) 14%);
+  }
+
+  .app-kind-badge-file {
+    @apply border-transparent;
+    background-color: color-mix(in oklch, var(--kind-file) 15%, var(--background) 85%);
+    color: color-mix(in oklch, var(--kind-file) 86%, var(--foreground) 14%);
+  }
+
   .app-kind-text-text {
     color: color-mix(in oklch, var(--kind-text) 78%, var(--foreground) 22%);
   }
@@ -2585,6 +2653,14 @@
 
   .app-kind-text-image {
     color: color-mix(in oklch, var(--kind-image) 80%, var(--foreground) 20%);
+  }
+
+  .app-kind-text-video {
+    color: color-mix(in oklch, var(--kind-video) 82%, var(--foreground) 18%);
+  }
+
+  .app-kind-text-file {
+    color: color-mix(in oklch, var(--kind-file) 80%, var(--foreground) 20%);
   }
 
   .dark .app-kind-badge-text {
@@ -2602,6 +2678,16 @@
     color: color-mix(in oklch, var(--kind-image) 74%, var(--foreground) 26%);
   }
 
+  .dark .app-kind-badge-video {
+    background-color: color-mix(in oklch, var(--kind-video) 13%, var(--card) 87%);
+    color: color-mix(in oklch, var(--kind-video) 74%, var(--foreground) 26%);
+  }
+
+  .dark .app-kind-badge-file {
+    background-color: color-mix(in oklch, var(--kind-file) 13%, var(--card) 87%);
+    color: color-mix(in oklch, var(--kind-file) 74%, var(--foreground) 26%);
+  }
+
   .dark .app-kind-text-text {
     color: color-mix(in oklch, var(--kind-text) 10%, var(--foreground) 90%);
   }
@@ -2612,6 +2698,14 @@
 
   .dark .app-kind-text-image {
     color: color-mix(in oklch, var(--kind-image) 18%, var(--foreground) 82%);
+  }
+
+  .dark .app-kind-text-video {
+    color: color-mix(in oklch, var(--kind-video) 20%, var(--foreground) 80%);
+  }
+
+  .dark .app-kind-text-file {
+    color: color-mix(in oklch, var(--kind-file) 18%, var(--foreground) 82%);
   }
 
   .app-preview-image {
@@ -2640,6 +2734,23 @@
         transparent 22%
       ),
       var(--gradient-preview-link);
+    background-repeat: no-repeat;
+    background-size: 52% 52%, 100% 100%;
+  }
+
+  .app-preview-file {
+    background-color: color-mix(in oklch, var(--card) 96%, var(--background) 4%);
+    background-image:
+      radial-gradient(
+        circle at 8% 10%,
+        color-mix(in oklch, var(--kind-file) 12%, transparent) 0,
+        transparent 22%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 97%, var(--background) 3%),
+        color-mix(in oklch, var(--secondary) 14%, var(--card) 86%)
+      );
     background-repeat: no-repeat;
     background-size: 52% 52%, 100% 100%;
   }
@@ -2956,6 +3067,52 @@
     -webkit-backdrop-filter: blur(14px);
   }
 
+  .app-ocr-sheet {
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, white 14%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 97%, var(--background) 3%),
+        color-mix(in oklch, var(--card) 90%, var(--background) 10%) 34%,
+        color-mix(in oklch, var(--card) 94%, var(--background) 6%)
+      );
+    box-shadow:
+      0 28px 84px color-mix(in oklch, black 22%, transparent),
+      0 0 0 1px color-mix(in oklch, white 8%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 12%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .app-ocr-sheet-header {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, white 10%, transparent),
+        transparent 82%
+      ),
+      color-mix(in oklch, var(--card) 92%, var(--background) 8%);
+    box-shadow: inset 0 -1px 0 color-mix(in oklch, var(--border) 54%, transparent);
+  }
+
+  .app-preview-action-tooltip {
+    border-color: color-mix(in oklch, var(--primary) 14%, var(--border));
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 97%, white 3%),
+        color-mix(in oklch, var(--card) 93%, var(--background) 7%)
+      );
+    box-shadow:
+      0 14px 28px color-mix(in oklch, black 14%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 12%, transparent);
+    color: color-mix(in oklch, var(--foreground) 88%, var(--primary) 12%);
+  }
+
   .dark .app-overlay-chip {
     background-color: color-mix(in oklch, black 58%, var(--card) 42%);
     color: oklch(0.98 0 0);
@@ -2963,6 +3120,50 @@
     box-shadow:
       0 14px 28px color-mix(in oklch, black 34%, transparent),
       inset 0 1px 0 color-mix(in oklch, white 8%, transparent);
+  }
+
+  .dark .app-ocr-sheet {
+    background:
+      radial-gradient(
+        circle at top left,
+        color-mix(in oklch, white 8%, transparent) 0,
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 90%, black 10%),
+        color-mix(in oklch, var(--card) 84%, var(--background) 16%) 34%,
+        color-mix(in oklch, var(--card) 88%, var(--background) 12%)
+      );
+    box-shadow:
+      0 30px 90px color-mix(in oklch, black 42%, transparent),
+      0 0 0 1px color-mix(in oklch, white 6%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 7%, transparent);
+  }
+
+  .dark .app-ocr-sheet-header {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, white 4%, transparent),
+        transparent 82%
+      ),
+      color-mix(in oklch, var(--card) 84%, var(--background) 16%);
+    box-shadow: inset 0 -1px 0 color-mix(in oklch, var(--border) 38%, transparent);
+  }
+
+  .dark .app-preview-action-tooltip {
+    border-color: color-mix(in oklch, var(--primary) 20%, var(--border));
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in oklch, var(--card) 88%, black 12%),
+        color-mix(in oklch, var(--card) 82%, var(--background) 18%)
+      );
+    box-shadow:
+      0 18px 34px color-mix(in oklch, black 34%, transparent),
+      inset 0 1px 0 color-mix(in oklch, white 6%, transparent);
+    color: color-mix(in oklch, white 88%, var(--primary) 12%);
   }
 
   .app-markdown-preview {

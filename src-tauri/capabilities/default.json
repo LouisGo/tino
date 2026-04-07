@@ -18,6 +18,14 @@
     "global-shortcut:allow-unregister-all",
     "log:default",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        { "path": "$HOME/**" },
+        { "path": "$TEMP/**" },
+        { "path": "/Volumes/**" }
+      ]
+    },
     "autostart:default",
     {
       "identifier": "http:default",

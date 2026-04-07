@@ -17,13 +17,14 @@ use {
     chrono::Local,
     libc::pid_t,
     objc2_app_kit::{
-        NSApplicationActivationOptions, NSPasteboard, NSPasteboardTypeHTML, NSPasteboardTypePNG,
-        NSPasteboardTypeRTF, NSPasteboardTypeString, NSRunningApplication, NSWorkspace,
+        NSApplicationActivationOptions, NSPasteboard, NSPasteboardTypeFileURL,
+        NSPasteboardTypeHTML, NSPasteboardTypePNG, NSPasteboardTypeRTF, NSPasteboardTypeString,
+        NSPasteboardTypeURL, NSRunningApplication, NSWorkspace,
     },
     objc2_core_graphics::{
         CGEvent, CGEventFlags, CGEventSource, CGEventSourceStateID, CGEventTapLocation,
     },
-    objc2_foundation::{NSData, NSString},
+    objc2_foundation::{NSData, NSString, NSURL},
     sha2::{Digest, Sha256},
     std::{
         ffi::{c_char, c_void, CStr},
@@ -504,6 +505,40 @@ fn copy_capture_to_clipboard_macos(capture: &ClipboardReplayRequest) -> Result<S
                 &raw_text,
                 None,
                 Some(image_bytes.as_slice()),
+            ));
+        }
+        "video" | "file" => {
+            let file_path = capture.raw_text.trim();
+            if file_path.is_empty() {
+                return Err(format!(
+                    "{} capture is missing a local file path",
+                    capture.content_kind
+                ));
+            }
+
+            let metadata = fs::metadata(file_path).map_err(|error| error.to_string())?;
+            if !metadata.is_file() {
+                return Err(format!("{file_path} is not a file"));
+            }
+
+            let file_url = NSURL::fileURLWithPath(&NSString::from_str(file_path));
+            let file_url_string = file_url
+                .absoluteString()
+                .ok_or_else(|| "failed to encode file URL".to_string())?;
+            let plain_path = NSString::from_str(file_path);
+
+            if !pasteboard.setString_forType(&file_url_string, unsafe { NSPasteboardTypeFileURL }) {
+                return Err("failed to write file to clipboard".into());
+            }
+
+            let _ = pasteboard.setString_forType(&file_url_string, unsafe { NSPasteboardTypeURL });
+            let _ = pasteboard.setString_forType(&plain_path, unsafe { NSPasteboardTypeString });
+
+            return Ok(build_capture_hash(
+                capture.content_kind.as_str(),
+                file_path,
+                None,
+                None::<&[u8]>,
             ));
         }
         "link" => {

@@ -9,15 +9,18 @@ use {
     objc2::{rc::Retained, runtime::AnyObject},
     objc2_app_kit::{
         NSBitmapImageFileType, NSBitmapImageRep, NSPasteboard, NSPasteboardTypeHTML,
-        NSPasteboardTypePNG, NSPasteboardTypeRTF, NSPasteboardTypeString, NSPasteboardTypeTIFF,
+        NSPasteboardTypeFileURL, NSPasteboardTypePNG, NSPasteboardTypeRTF,
+        NSPasteboardTypeString, NSPasteboardTypeTIFF, NSPasteboardTypeURL,
         NSRunningApplication, NSWorkspace, NSWorkspaceApplicationKey,
         NSWorkspaceDidActivateApplicationNotification,
     },
-    objc2_foundation::{NSDictionary, NSNotification, NSString},
+    objc2_foundation::{NSDictionary, NSNotification, NSString, NSURL},
     sha2::{Digest, Sha256},
     std::{
         collections::VecDeque,
+        fs,
         io::Cursor,
+        path::Path,
         ptr::NonNull,
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -438,6 +441,31 @@ fn read_capture_record(detected_at: Instant) -> Result<Option<CaptureRecord>, St
     let pasteboard = NSPasteboard::generalPasteboard();
     let (source_app_name, source_app_bundle_id, source_app_icon_bytes) =
         read_clipboard_source_application(&pasteboard, detected_at);
+    if let Some((content_kind, file_path, byte_size)) = read_clipboard_file_reference(&pasteboard)? {
+        let hash = build_capture_hash(content_kind, &file_path, None, None::<&[u8]>);
+
+        return Ok(Some(CaptureRecord {
+            id: format!("cap_{}", Uuid::now_v7().simple()),
+            source: "clipboard".into(),
+            source_app_name,
+            source_app_bundle_id,
+            source_app_icon_path: None,
+            captured_at: Local::now().to_rfc3339(),
+            content_kind: content_kind.into(),
+            raw_text: file_path,
+            raw_rich: None,
+            raw_rich_format: None,
+            link_url: None,
+            asset_path: None,
+            thumbnail_path: None,
+            image_width: None,
+            image_height: None,
+            byte_size,
+            hash,
+            image_bytes: None,
+            source_app_icon_bytes,
+        }));
+    }
     let plain_text = unsafe { pasteboard.stringForType(NSPasteboardTypeString) }
         .map(|text| text.to_string())
         .unwrap_or_default();
@@ -1040,6 +1068,86 @@ fn read_clipboard_image(
     let byte_size = encoded.len();
 
     Ok(Some((encoded, width, height, byte_size)))
+}
+
+#[cfg(target_os = "macos")]
+fn read_clipboard_file_reference(
+    pasteboard: &NSPasteboard,
+) -> Result<Option<(&'static str, String, Option<u64>)>, String> {
+    let Some(items) = pasteboard.pasteboardItems() else {
+        return Ok(None);
+    };
+
+    for item in items.iter() {
+        let Some(file_path) = read_clipboard_item_file_path(&item) else {
+            continue;
+        };
+
+        if !file_path.try_exists().map_err(|error| error.to_string())? || file_path.is_dir() {
+            continue;
+        }
+
+        let content_kind = if is_video_file_path(&file_path) {
+            "video"
+        } else {
+            "file"
+        };
+        let byte_size = fs::metadata(&file_path)
+            .ok()
+            .filter(|metadata| metadata.is_file())
+            .map(|metadata| metadata.len());
+
+        return Ok(Some((
+            content_kind,
+            file_path.display().to_string(),
+            byte_size,
+        )));
+    }
+
+    Ok(None)
+}
+
+#[cfg(target_os = "macos")]
+fn read_clipboard_item_file_path(item: &objc2_app_kit::NSPasteboardItem) -> Option<std::path::PathBuf> {
+    item.stringForType(unsafe { NSPasteboardTypeFileURL })
+        .or_else(|| item.stringForType(unsafe { NSPasteboardTypeURL }))
+        .and_then(|value| file_url_string_to_path(&value.to_string()))
+}
+
+#[cfg(target_os = "macos")]
+fn file_url_string_to_path(value: &str) -> Option<std::path::PathBuf> {
+    let url = NSURL::URLWithString(&NSString::from_str(value.trim()))?;
+    url.to_file_path()
+}
+
+#[cfg(target_os = "macos")]
+fn is_video_file_path(path: &Path) -> bool {
+    let Some(extension) = path.extension().and_then(|value| value.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        extension.to_ascii_lowercase().as_str(),
+        "3gp"
+            | "asf"
+            | "avi"
+            | "flv"
+            | "m2ts"
+            | "m4v"
+            | "mkv"
+            | "mov"
+            | "mp4"
+            | "mpeg"
+            | "mpg"
+            | "mts"
+            | "ogm"
+            | "ogv"
+            | "qt"
+            | "ts"
+            | "vob"
+            | "webm"
+            | "wmv"
+    )
 }
 
 #[cfg(target_os = "macos")]

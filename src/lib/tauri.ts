@@ -142,6 +142,36 @@ const mockSnapshot: DashboardSnapshot = {
       imageHeight: 800,
       byteSize: 70000,
     },
+    {
+      id: "cap_004",
+      source: "clipboard",
+      sourceAppName: "Longshot",
+      sourceAppBundleId: "com.chitaner.Longshot",
+      sourceAppIconPath: mockImageAsset,
+      contentKind: "video",
+      preview: "Longshot20260407223007.mov",
+      secondaryPreview: "~/Library/Containers/com.chitaner.Longshot/Data/tmp · 2.6 MB",
+      capturedAt: minutesAgoIsoString(21),
+      status: "archived",
+      rawText: "/Users/louistation/Library/Containers/com.chitaner.Longshot/Data/tmp/Longshot20260407223007.mov",
+      fileMissing: false,
+      byteSize: 2726297,
+    },
+    {
+      id: "cap_005",
+      source: "clipboard",
+      sourceAppName: "Finder",
+      sourceAppBundleId: "com.apple.finder",
+      sourceAppIconPath: mockImageAsset,
+      contentKind: "file",
+      preview: "insomnium-3.6.0-mac-arm64.dmg",
+      secondaryPreview: "~/MySpace/Notes/temp · 197.2 MB",
+      capturedAt: minutesAgoIsoString(33),
+      status: "queued",
+      rawText: "/Users/louistation/MySpace/Notes/temp/insomnium-3.6.0-mac-arm64.dmg",
+      fileMissing: false,
+      byteSize: 206779187,
+    },
   ],
 };
 
@@ -169,6 +199,7 @@ function normalizeClipboardCapture(capture: RustCapturePreview): ClipboardCaptur
     status: capture.status ?? "archived",
     rawText: capture.rawText ?? "",
     ocrText: capture.ocrText ?? null,
+    fileMissing: capture.fileMissing ?? false,
     rawRich: capture.rawRich ?? null,
     rawRichFormat: capture.rawRichFormat ?? null,
     linkUrl: capture.linkUrl ?? null,
@@ -297,6 +328,8 @@ export async function getClipboardPage(
           capture.contentKind === "plain_text" || capture.contentKind === "rich_text").length,
         links: searchMatched.filter((capture) => capture.contentKind === "link").length,
         images: searchMatched.filter((capture) => capture.contentKind === "image").length,
+        videos: searchMatched.filter((capture) => capture.contentKind === "video").length,
+        files: searchMatched.filter((capture) => capture.contentKind === "file").length,
       },
     } satisfies ClipboardPageResult;
   }
@@ -521,6 +554,14 @@ export async function openExternalTarget(target: string) {
   }
 
   await openPath(target);
+}
+
+export async function openPathInDefaultApp(path: string) {
+  if (!path || !isTauriRuntime()) {
+    return;
+  }
+
+  await openPath(path);
 }
 
 export async function openImageInPreview(path: string) {

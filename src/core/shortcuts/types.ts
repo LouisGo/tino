@@ -89,8 +89,15 @@ export type ShortcutExecution = {
   trigger: ShortcutTriggerContext;
 };
 
+export type ShortcutScopeActivationOptions = {
+  reservedAccelerators?: string[];
+};
+
 export type ShortcutManager = {
-  activateScope: (scopeId: ShortcutScopeId) => () => void;
+  activateScope: (
+    scopeId: ShortcutScopeId,
+    options?: ShortcutScopeActivationOptions,
+  ) => () => void;
   definitions: ShortcutDefinition<unknown, unknown>[];
   execute: (
     id: AppShortcutId,

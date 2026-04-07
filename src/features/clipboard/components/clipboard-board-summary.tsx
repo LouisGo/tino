@@ -53,6 +53,20 @@ export function ClipboardBoardSummary({
       hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.images, summary.total),
       toneClass: "app-summary-tone-images",
     },
+    {
+      filter: "video" as ClipboardFilter,
+      label: "Videos",
+      value: statusLabel ? "..." : summary.videos,
+      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.videos, summary.total),
+      toneClass: "app-summary-tone-videos",
+    },
+    {
+      filter: "file" as ClipboardFilter,
+      label: "Files",
+      value: statusLabel ? "..." : summary.files,
+      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.files, summary.total),
+      toneClass: "app-summary-tone-files",
+    },
   ] as const;
 
   return (
@@ -67,7 +81,7 @@ export function ClipboardBoardSummary({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 min-[900px]:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 min-[900px]:grid-cols-3 min-[1320px]:grid-cols-6">
           {summaryTiles.map((tile) => (
             <SummaryTile
               key={tile.label}

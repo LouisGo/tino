@@ -9,11 +9,12 @@ import { useContextMenu } from "@/core/context-menu";
 import { clipboardCaptureContextMenu } from "@/features/clipboard/clipboard-capture-context-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
-  capturePreviewSurfaceClassName,
+  captureSurfaceClassName,
   detailRows,
   formatKindLabel,
   statusVariant,
 } from "@/features/clipboard/lib/clipboard-board";
+import { resolveFileReferencePreviewModel } from "@/features/clipboard/lib/file-reference-preview";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import { formatRelativeTimestamp } from "@/lib/time";
 import type { ClipboardCapture } from "@/types/shell";
@@ -29,10 +30,12 @@ export function ClipboardCaptureDetail({
   capture,
   highlightQuery,
   onOpenImage,
+  onOpenImageOcr,
 }: {
   capture: ClipboardCapture | null;
   highlightQuery: string;
   onOpenImage: () => void;
+  onOpenImageOcr: () => void;
 }) {
   const copyCapture = useCommand<{ capture: ClipboardCapture }>("clipboard.copyCapture");
   const openImagePreview = useCommand<{ path: string }>("system.openImageInPreview");
@@ -42,10 +45,11 @@ export function ClipboardCaptureDetail({
     return <div className="min-h-0 flex-1" aria-hidden="true" />;
   }
 
+  const kindLabel = resolveCaptureKindLabel(capture);
   const toolbarMeta = (
     <>
       <Badge className="px-1.5 py-0.5 text-[10px] font-medium">
-        {formatKindLabel(capture.contentKind)}
+        {kindLabel}
       </Badge>
       <Badge variant={statusVariant(capture.status)} className="px-1.5 py-0.5 text-[10px] font-medium">
         {capture.status}
@@ -86,7 +90,7 @@ export function ClipboardCaptureDetail({
   return (
     <>
       <div
-        className={`grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto] ${capturePreviewSurfaceClassName(capture.contentKind)}`}
+        className={`grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto] ${captureSurfaceClassName(capture)}`}
         onContextMenu={(event) => onContextMenu(event, capture)}
       >
         <div className="min-h-0 min-w-0">
@@ -95,6 +99,7 @@ export function ClipboardCaptureDetail({
               capture={capture}
               highlightQuery={highlightQuery}
               onOpenImage={onOpenImage}
+              onOpenImageOcr={onOpenImageOcr}
               sharedSurface
               toolbarMeta={toolbarMeta}
               toolbarActions={toolbarActions}
@@ -108,12 +113,22 @@ export function ClipboardCaptureDetail({
   );
 }
 
+function resolveCaptureKindLabel(capture: ClipboardCapture) {
+  if (capture.contentKind === "file" || capture.contentKind === "video") {
+    return resolveFileReferencePreviewModel(capture).contentTypeLabel;
+  }
+
+  return formatKindLabel(capture.contentKind);
+}
+
 function TooltipIconButton({
   label,
+  disabled = false,
   onClick,
   children,
 }: {
   label: string;
+  disabled?: boolean;
   onClick: () => void;
   children: ReactNode;
 }) {
@@ -125,6 +140,7 @@ function TooltipIconButton({
           size="icon"
           className="size-7 rounded-[10px] border-border/50 bg-background/42 text-muted-foreground/80 shadow-none transition hover:bg-secondary/50 hover:text-foreground [&_svg]:size-3"
           aria-label={label}
+          disabled={disabled}
           onClick={onClick}
         >
           {children}

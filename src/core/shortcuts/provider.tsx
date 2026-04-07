@@ -14,7 +14,7 @@ import { ShortcutManagerContext } from "@/core/shortcuts/context";
 import {
   createShortcutExecution,
   executeShortcutExecution,
-  findLocalShortcutExecution,
+  findLocalShortcutHandling,
   findShortcutConflicts,
   resolveShortcutCatalog,
 } from "@/core/shortcuts/manager";
@@ -27,6 +27,7 @@ import type {
   ShortcutBindingOverride,
   ShortcutDefinition,
   ShortcutManager,
+  ShortcutScopeActivationOptions,
   ShortcutScopeId,
 } from "@/core/shortcuts/types";
 
@@ -43,7 +44,9 @@ export function AppShortcutProvider({
   const language = useI18nLanguage();
   const platform = useMemo(() => getShortcutPlatform(), []);
   const registry = useMemo(() => new ShortcutRegistry().registerMany(shortcuts), [shortcuts]);
-  const [scopes, setScopes] = useState<Array<{ id: ShortcutScopeId; key: number }>>([]);
+  const [scopes, setScopes] = useState<
+    Array<{ id: ShortcutScopeId; key: number; reservedAccelerators: string[] }>
+  >([]);
   const scopeSerialRef = useRef(0);
   const overridesRecord = useMemo(() => overrides ?? {}, [overrides]);
   const resolvedShortcuts = useMemo(
@@ -61,10 +64,14 @@ export function AppShortcutProvider({
     scopesRef.current = scopes;
   }, [scopes]);
 
-  const activateScope = useCallback((scopeId: ShortcutScopeId) => {
+  const activateScope = useCallback((
+    scopeId: ShortcutScopeId,
+    options?: ShortcutScopeActivationOptions,
+  ) => {
     const key = ++scopeSerialRef.current;
+    const reservedAccelerators = options?.reservedAccelerators ?? [];
 
-    setScopes((current) => [...current, { id: scopeId, key }]);
+    setScopes((current) => [...current, { id: scopeId, key, reservedAccelerators }]);
 
     return () => {
       setScopes((current) => current.filter((value) => value.key !== key));
@@ -72,7 +79,7 @@ export function AppShortcutProvider({
   }, []);
 
   const manager = useMemo<ShortcutManager>(() => ({
-    activateScope: (scopeId) => activateScope(scopeId),
+    activateScope: (scopeId, options) => activateScope(scopeId, options),
     definitions: registry.getAll(),
     execute: async (id, trigger) => {
       const shortcut = resolvedShortcutsRef.current.find((candidate) => candidate.id === id);
@@ -125,21 +132,26 @@ export function AppShortcutProvider({
       return;
     }
 
-    const rawScopes = scopesRef.current.map((scope) => scope.id);
-    const execution = findLocalShortcutExecution(
+    const handling = findLocalShortcutHandling(
       registry,
       commands,
       overridesRecord,
       platform,
-      rawScopes,
+      scopesRef.current,
       event,
       language,
     );
 
-    if (!execution) {
+    if (!handling) {
       return;
     }
 
+    if (handling.type === "blocked") {
+      event.stopPropagation();
+      return;
+    }
+
+    const execution = handling.execution;
     if (isEditableShortcutTarget(event.target) && execution.shortcut.kind === "local") {
       if (!execution.shortcut.allowInEditable) {
         return;

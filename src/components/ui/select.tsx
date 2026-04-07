@@ -2,10 +2,59 @@ import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
+import { useShortcutScope } from "@/core/shortcuts";
 import { resolvePortalContainer } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
-const Select = SelectPrimitive.Root;
+const SELECT_SHORTCUT_SCOPE = "ui.select";
+const SELECT_RESERVED_ACCELERATORS = [
+  "ArrowDown",
+  "ArrowUp",
+  "Command+K",
+  "Control+K",
+  "End",
+  "Enter",
+  "Escape",
+  "Home",
+  "PageDown",
+  "PageUp",
+];
+
+function Select({
+  defaultOpen,
+  onOpenChange,
+  open: openProp,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) {
+  const [open, setOpen] = React.useState(Boolean(openProp ?? defaultOpen));
+
+  React.useEffect(() => {
+    if (openProp === undefined) {
+      return;
+    }
+
+    setOpen(openProp);
+  }, [openProp]);
+
+  const handleOpenChange = React.useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  }, [onOpenChange]);
+
+  useShortcutScope(SELECT_SHORTCUT_SCOPE, {
+    active: open,
+    reservedAccelerators: SELECT_RESERVED_ACCELERATORS,
+  });
+
+  return (
+    <SelectPrimitive.Root
+      defaultOpen={defaultOpen}
+      onOpenChange={handleOpenChange}
+      open={openProp}
+      {...props}
+    />
+  );
+}
 
 const SelectGroup = SelectPrimitive.Group;
 

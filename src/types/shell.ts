@@ -80,7 +80,7 @@ export type SettingsDraft = Omit<
   shortcutOverrides: ShortcutOverrideRecord;
 };
 
-export type ClipboardHistoryFilter = "all" | "text" | "link" | "image";
+export type ClipboardHistoryFilter = "all" | "text" | "link" | "image" | "video" | "file";
 
 export type ClipboardPageRequest = Omit<RustClipboardPageRequest, "search" | "filter"> & {
   search?: string | null;

@@ -1,14 +1,15 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
-import { FileText, ImageIcon, Link2, Pin } from "lucide-react";
+import { File as FileIcon, FileText, Film, ImageIcon, Link2, Pin } from "lucide-react";
 
 import { useCommand } from "@/core/commands";
-import { useContextMenu } from "@/core/context-menu";
+import { useActiveContextMenuTarget, useContextMenu } from "@/core/context-menu";
 import { clipboardCaptureContextMenu } from "@/features/clipboard/clipboard-capture-context-menu";
 import {
   captureListSummary,
   type ClipboardCaptureGroup,
 } from "@/features/clipboard/lib/clipboard-board";
+import { resolveFileReferencePreviewModel } from "@/features/clipboard/lib/file-reference-preview";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture, ContentKind } from "@/types/shell";
@@ -38,11 +39,20 @@ export function ClipboardCaptureList({
   const confirmCapture = useCommand<{ captureId?: string } | undefined>(
     "clipboard.confirmWindowSelection",
   );
-  const { onContextMenu } = useContextMenu(clipboardCaptureContextMenu, {
+  const { onContextMenu, openAtElement } = useContextMenu(clipboardCaptureContextMenu, {
     onOpen: (capture) => {
       void selectCapture.execute({ captureId: capture.id });
     },
   });
+  const selectedCapture = useMemo(
+    () =>
+      selectedCaptureId
+        ? groups
+            .flatMap((group) => group.captures)
+            .find((capture) => capture.id === selectedCaptureId) ?? null
+        : null,
+    [groups, selectedCaptureId],
+  );
   const tryLoadMore = useEffectEvent(() => {
     if (
       !isLoadTriggerVisibleRef.current ||
@@ -104,9 +114,18 @@ export function ClipboardCaptureList({
     const selectedElement = scrollViewport.querySelector<HTMLElement>(
       `[data-capture-id="${captureId}"]`,
     );
+    const firstCaptureElement = scrollViewport.querySelector<HTMLElement>("[data-capture-id]");
     const shouldRevealGroupHeader =
       selectedElement?.dataset.groupFirst === "true"
       && selectedElement?.dataset.groupKind === "pinned";
+
+    if (selectedElement && firstCaptureElement === selectedElement) {
+      scrollViewport.scrollTo({
+        top: 0,
+        behavior: "auto",
+      });
+      return;
+    }
 
     selectedElement?.scrollIntoView({
       block: shouldRevealGroupHeader ? "start" : "nearest",
@@ -124,6 +143,24 @@ export function ClipboardCaptureList({
       behavior: "smooth",
     });
   }, [scrollToTopRequest, scrollViewport]);
+
+  useActiveContextMenuTarget({
+    active: selectedCapture !== null,
+    isEnabled: () => selectedCapture !== null,
+    openMenu: () => {
+      if (!selectedCapture) {
+        return false;
+      }
+
+      const captureId =
+        typeof CSS === "undefined" ? selectedCapture.id : CSS.escape(selectedCapture.id);
+      const selectedElement = scrollViewport?.querySelector<HTMLElement>(
+        `[data-capture-id="${captureId}"]`,
+      ) ?? null;
+
+      return openAtElement(selectedElement, selectedCapture);
+    },
+  });
 
   return (
     <div className="flex h-full min-h-0 flex-col border-r border-border/55 bg-card/72">
@@ -211,12 +248,32 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
 
   return (
     <div className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-secondary/70 text-muted-foreground/84">
-      {renderKindIcon(capture.contentKind, "size-[15px]")}
+      {renderKindIcon(capture, "size-[15px]")}
     </div>
   );
 }
 
-function renderKindIcon(contentKind: ContentKind, className = "size-5") {
+function renderKindIcon(capture: ClipboardCapture | ContentKind, className = "size-5") {
+  if (typeof capture !== "string" && (capture.contentKind === "file" || capture.contentKind === "video")) {
+    const previewKind = resolveFileReferencePreviewModel(capture).kind;
+
+    if (previewKind === "video") {
+      return <Film className={className} />;
+    }
+
+    if (previewKind === "image") {
+      return <ImageIcon className={className} />;
+    }
+
+    if (previewKind === "pdf") {
+      return <FileText className={className} />;
+    }
+
+    return <FileIcon className={className} />;
+  }
+
+  const contentKind = typeof capture === "string" ? capture : capture.contentKind;
+
   switch (contentKind) {
     case "link":
       return <Link2 className={className} />;

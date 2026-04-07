@@ -1,8 +1,10 @@
 import type { ShortcutBindingOverride, ShortcutDefinition } from "@/core/shortcuts";
 import { systemShortcuts } from "@/app/shortcuts/system-shortcuts";
+import { contextMenuShortcuts } from "@/core/context-menu";
 import { clipboardShortcuts } from "@/features/clipboard/clipboard-shortcuts";
 
 export const appShortcuts = [
+  ...contextMenuShortcuts,
   ...systemShortcuts,
   ...clipboardShortcuts,
 ] satisfies ShortcutDefinition<unknown, unknown>[];

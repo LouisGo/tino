@@ -417,6 +417,8 @@ pub struct CapturePreview {
     pub status: String,
     pub raw_text: String,
     pub ocr_text: Option<String>,
+    #[serde(default)]
+    pub file_missing: bool,
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
     pub link_url: Option<String>,
@@ -464,6 +466,8 @@ pub struct ClipboardPageSummary {
     pub text: usize,
     pub links: usize,
     pub images: usize,
+    pub videos: usize,
+    pub files: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -1825,6 +1829,8 @@ fn matches_clipboard_filter(capture: &CapturePreview, filter: &str) -> bool {
         "text" => matches!(capture.content_kind.as_str(), "plain_text" | "rich_text"),
         "link" => capture.content_kind == "link",
         "image" => capture.content_kind == "image",
+        "video" => capture.content_kind == "video",
+        "file" => capture.content_kind == "file",
         _ => true,
     }
 }
@@ -1877,6 +1883,8 @@ pub(crate) fn query_clipboard_history_page_legacy(
         text: 0,
         links: 0,
         images: 0,
+        videos: 0,
+        files: 0,
     };
     let mut filtered_total = 0usize;
 
@@ -1897,6 +1905,8 @@ pub(crate) fn query_clipboard_history_page_legacy(
             "plain_text" | "rich_text" => summary.text += 1,
             "link" => summary.links += 1,
             "image" => summary.images += 1,
+            "video" => summary.videos += 1,
+            "file" => summary.files += 1,
             _ => {}
         }
         summary.total += 1;
@@ -2021,6 +2031,7 @@ fn capture_history_entry_to_preview(entry: CaptureHistoryEntry) -> CapturePrevie
         status: entry.status,
         raw_text: entry.raw_text,
         ocr_text: entry.ocr_text,
+        file_missing: false,
         raw_rich: entry.raw_rich,
         raw_rich_format: entry.raw_rich_format,
         link_url: entry.link_url,
@@ -2038,6 +2049,8 @@ fn capture_history_summary_to_page_summary(summary: CaptureHistorySummary) -> Cl
         text: summary.text,
         links: summary.links,
         images: summary.images,
+        videos: summary.videos,
+        files: summary.files,
     }
 }
 
@@ -2436,6 +2449,11 @@ fn merge_capture_preview(existing: &mut CapturePreview, incoming: &CapturePrevie
 
     if existing.ocr_text != incoming.ocr_text && incoming.ocr_text.is_some() {
         existing.ocr_text = incoming.ocr_text.clone();
+        changed = true;
+    }
+
+    if existing.file_missing != incoming.file_missing {
+        existing.file_missing = incoming.file_missing;
         changed = true;
     }
 
@@ -3028,6 +3046,10 @@ fn render_capture_entry(capture: &CaptureRecord, knowledge_root: &Path) -> Strin
         entry.push_str(&format!("- URL: {}\n\n", link_url));
     }
 
+    if matches!(capture.content_kind.as_str(), "file" | "video") {
+        entry.push_str(&format!("- Path: `{}`\n", capture.raw_text));
+    }
+
     if let (Some(width), Some(height)) = (capture.image_width, capture.image_height) {
         entry.push_str(&format!("- Dimensions: {}x{}\n", width, height));
     }
@@ -3214,6 +3236,8 @@ fn hydrate_capture_preview_assets(
     _knowledge_root: &Path,
     capture: &mut CapturePreview,
 ) -> Result<(), String> {
+    capture.file_missing = is_missing_file_reference(&capture.content_kind, &capture.raw_text);
+
     if capture.content_kind != "image" {
         return Ok(());
     }
@@ -3244,6 +3268,8 @@ fn hydrate_capture_preview_assets(
 }
 
 fn build_capture_preview(capture: &CaptureRecord, status: &str) -> CapturePreview {
+    let file_missing = is_missing_file_reference(&capture.content_kind, &capture.raw_text);
+
     CapturePreview {
         id: capture.id.clone(),
         source: capture.source.clone(),
@@ -3253,6 +3279,7 @@ fn build_capture_preview(capture: &CaptureRecord, status: &str) -> CapturePrevie
         content_kind: capture.content_kind.clone(),
         preview: match capture.content_kind.as_str() {
             "image" => "Clipboard image".into(),
+            "video" | "file" => build_file_display(&capture.raw_text),
             "link" => capture
                 .link_url
                 .as_deref()
@@ -3265,6 +3292,7 @@ fn build_capture_preview(capture: &CaptureRecord, status: &str) -> CapturePrevie
         status: status.into(),
         raw_text: capture.raw_text.clone(),
         ocr_text: None,
+        file_missing,
         raw_rich: capture.raw_rich.clone(),
         raw_rich_format: capture.raw_rich_format.clone(),
         link_url: capture.link_url.clone(),
@@ -3299,6 +3327,7 @@ fn build_capture_secondary_preview(capture: &CaptureRecord) -> Option<String> {
             .link_url
             .as_deref()
             .map(|link_url| build_link_secondary_preview(link_url, &capture.raw_text)),
+        "video" | "file" => build_file_secondary_preview(&capture.raw_text, capture.byte_size),
         _ => {
             let line_count = capture.raw_text.lines().count().max(1);
             Some(format!(
@@ -3325,6 +3354,73 @@ fn build_link_display(link_url: &str) -> String {
     }
 
     preview
+}
+
+fn is_missing_file_reference(content_kind: &str, raw_text: &str) -> bool {
+    if !matches!(content_kind, "file" | "video") {
+        return false;
+    }
+
+    let normalized = raw_text.trim();
+    if normalized.is_empty() {
+        return true;
+    }
+
+    let path = Path::new(normalized);
+    match path.try_exists() {
+        Ok(true) => path.is_dir(),
+        Ok(false) | Err(_) => true,
+    }
+}
+
+fn build_file_display(path: &str) -> String {
+    Path::new(path.trim())
+        .file_name()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.trim().is_empty())
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| build_preview(path))
+}
+
+fn build_file_secondary_preview(path: &str, byte_size: Option<u64>) -> Option<String> {
+    let normalized = path.trim();
+    if normalized.is_empty() {
+        return byte_size.map(format_bytes);
+    }
+
+    let parent = Path::new(normalized)
+        .parent()
+        .map(|value| compact_home_path(&value.display().to_string()))
+        .filter(|value| !value.trim().is_empty());
+
+    let mut parts = Vec::new();
+    if let Some(parent) = parent {
+        parts.push(parent);
+    }
+    if let Some(byte_size) = byte_size {
+        parts.push(format_bytes(byte_size));
+    }
+
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join(" · "))
+    }
+}
+
+fn compact_home_path(path: &str) -> String {
+    let Some(home_dir) = std::env::var_os("HOME") else {
+        return path.to_string();
+    };
+    let home_dir = home_dir.to_string_lossy();
+
+    if path == home_dir {
+        "~".into()
+    } else if let Some(suffix) = path.strip_prefix(home_dir.as_ref()) {
+        format!("~{suffix}")
+    } else {
+        path.to_string()
+    }
 }
 
 fn build_link_secondary_preview(link_url: &str, fallback: &str) -> String {
@@ -3543,6 +3639,7 @@ mod tests {
             status: "archived".into(),
             raw_text: format!("raw-{id}"),
             ocr_text: None,
+            file_missing: false,
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,

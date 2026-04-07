@@ -17,6 +17,21 @@ import type {
   ShortcutScopeId,
 } from "@/core/shortcuts/types";
 
+type ActiveShortcutScope = {
+  id: ShortcutScopeId;
+  reservedAccelerators: string[];
+};
+
+export type LocalShortcutHandling =
+  | {
+      execution: ShortcutExecution;
+      type: "execution";
+    }
+  | {
+      scopeId: ShortcutScopeId;
+      type: "blocked";
+    };
+
 export function resolveShortcutCatalog(
   registry: ShortcutRegistry,
   overrides: Record<string, ShortcutBindingOverride>,
@@ -125,6 +140,65 @@ export function findLocalShortcutExecution(
 
     if (execution) {
       return execution;
+    }
+  }
+
+  return null;
+}
+
+export function findLocalShortcutHandling(
+  registry: ShortcutRegistry,
+  commands: CommandExecutor,
+  overrides: Record<string, ShortcutBindingOverride>,
+  platform: ShortcutPlatform,
+  scopes: ActiveShortcutScope[],
+  event: KeyboardEvent,
+  locale?: string,
+): LocalShortcutHandling | null {
+  const resolved = resolveShortcutCatalog(registry, overrides, platform, locale).filter(
+    (
+      shortcut,
+    ): shortcut is ResolvedShortcutDefinition & {
+      allowInEditable?: boolean;
+      allowRepeat?: boolean;
+      kind: "local";
+      scopes: ShortcutScopeId[];
+    } =>
+      shortcut.kind === "local"
+      && shortcut.isEnabled
+      && shortcut.accelerator !== null
+      && (!event.repeat || Boolean(shortcut.allowRepeat))
+      && matchesShortcutEvent(event, shortcut.accelerator, platform),
+  );
+
+  for (let index = scopes.length - 1; index >= 0; index -= 1) {
+    const scope = scopes[index];
+    const shortcut = resolved.find((candidate) => candidate.scopes.includes(scope.id));
+    if (shortcut) {
+      const execution = createShortcutExecution(shortcut, {
+        commands,
+        platform,
+        trigger: {
+          event,
+          platform,
+          scopeId: scope.id,
+          source: "local",
+        },
+      });
+
+      if (execution) {
+        return {
+          execution,
+          type: "execution",
+        };
+      }
+    }
+
+    if (scope.reservedAccelerators.some((accelerator) => matchesShortcutEvent(event, accelerator, platform))) {
+      return {
+        scopeId: scope.id,
+        type: "blocked",
+      };
     }
   }
 

@@ -95,6 +95,13 @@ export const enUSResources = defineLocaleSchema({
         "macOS permission now appears to be on for this app copy, but paste back may still fail until Tino starts fresh.",
       bannerRestartAction: "Restart Tino Now",
     },
+    clipboardPreview: {
+      enlarge: "Enlarge",
+      ocrResult: "OCR Result",
+      ocrDialogTitle: "OCR Result",
+      copyOcrResult: "Copy OCR Result",
+      copiedToClipboard: "Copied to clipboard",
+    },
   },
   shell: {
     aria: {
@@ -238,6 +245,19 @@ export const enUSResources = defineLocaleSchema({
       },
       openImageInPreview: {
         label: "Open In Preview",
+      },
+      openPathInDefaultApp: {
+        label: "Open In Default App",
+        errorTitle: "Could Not Open File",
+        errorBody: [
+          "Tino could not open this file with the system default app.",
+          "",
+          "Path: {{path}}",
+          "Reason: {{reason}}",
+          "",
+          "Use Reveal to locate the original file manually.",
+        ].join("\n"),
+        errorReasonFallback: "Unknown error",
       },
       revealPath: {
         label: "Reveal In File Manager",
@@ -479,6 +499,13 @@ export const zhCNResources = {
         "看起来当前这份应用副本的 macOS 权限已经打开了，但在 Tino 重新启动之前，回填仍然可能失败。",
       bannerRestartAction: "立即重启 Tino",
     },
+    clipboardPreview: {
+      enlarge: "Enlarge",
+      ocrResult: "OCR Result",
+      ocrDialogTitle: "OCR Result",
+      copyOcrResult: "Copy OCR Result",
+      copiedToClipboard: "Copied to clipboard",
+    },
   },
   shell: {
     aria: {
@@ -621,6 +648,19 @@ export const zhCNResources = {
       },
       openImageInPreview: {
         label: "在预览中打开",
+      },
+      openPathInDefaultApp: {
+        label: "用默认应用打开",
+        errorTitle: "无法打开文件",
+        errorBody: [
+          "Tino 无法使用系统默认应用打开该文件。",
+          "",
+          "路径：{{path}}",
+          "原因：{{reason}}",
+          "",
+          "请改用 Reveal 来定位原始文件。",
+        ].join("\n"),
+        errorReasonFallback: "未知错误",
       },
       revealPath: {
         label: "在文件管理器中显示",

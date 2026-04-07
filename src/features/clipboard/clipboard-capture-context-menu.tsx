@@ -2,6 +2,7 @@ import {
   Copy,
   Eye,
   ExternalLink,
+  FolderOpen,
   ImageIcon,
   Pin,
   PinOff,
@@ -13,6 +14,11 @@ import {
   contextMenuSeparator,
   createContextMenuRegistry,
 } from "@/core/context-menu";
+import {
+  captureReferencePath,
+  isFileReferenceKind,
+} from "@/features/clipboard/lib/clipboard-board";
+import { isTauriRuntime } from "@/lib/tauri";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import type { ClipboardCapture } from "@/types/shell";
 
@@ -59,15 +65,34 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
     },
   }),
   contextMenuItem({
-    key: "reveal-asset",
-    label: "Reveal Asset",
+    key: "open-file-default-app",
+    label: "Open",
     icon: <ExternalLink className="size-4" />,
-    hidden: (capture) => capture.contentKind !== "image" || !capture.assetPath,
+    hidden: (capture) =>
+      !isFileReferenceKind(capture.contentKind)
+      || Boolean(capture.fileMissing)
+      || !captureReferencePath(capture)
+      || !isTauriRuntime(),
+    command: {
+      id: "system.openPathInDefaultApp",
+      payload: (capture) => ({ path: captureReferencePath(capture) }),
+    },
+  }),
+  contextMenuItem({
+    key: "reveal-asset",
+    label: (capture) => (isFileReferenceKind(capture.contentKind) ? "Reveal File" : "Reveal Asset"),
+    icon: <FolderOpen className="size-4" />,
+    hidden: (capture) =>
+      capture.contentKind === "image"
+        ? !capture.assetPath
+        : !isFileReferenceKind(capture.contentKind) || Boolean(capture.fileMissing),
     command: {
       id: "clipboard.revealCaptureAsset",
       payload: (capture) => ({
         capture,
-        path: capture.assetPath ?? "",
+        path: capture.contentKind === "image"
+          ? (capture.assetPath ?? "")
+          : captureReferencePath(capture),
       }),
     },
   }),

@@ -140,6 +140,7 @@ export type CapturePreview = {
 	status?: string,
 	rawText?: string,
 	ocrText?: string | null,
+	fileMissing?: boolean,
 	rawRich?: string | null,
 	rawRichFormat?: string | null,
 	linkUrl?: string | null,
@@ -172,6 +173,8 @@ export type ClipboardPageSummary = {
 	text: number,
 	links: number,
 	images: number,
+	videos: number,
+	files: number,
 };
 
 export type ClipboardReplayRequest = {

@@ -61,6 +61,11 @@ function hasOpenClipboardTransientLayer() {
   );
 }
 
+function hasActiveClipboardPreview() {
+  const { previewingImageId, previewingOcrCaptureId } = useClipboardBoardStore.getState();
+  return Boolean(previewingImageId || previewingOcrCaptureId);
+}
+
 function isClipboardWindow() {
   return isTauriRuntime() && getCurrentWindow().label === "clipboard";
 }
@@ -169,7 +174,7 @@ export const clipboardCommands = [
     id: "clipboard.dismissWindowSession",
     label: "Dismiss Clipboard Window Session",
     run: async () => {
-      if (hasOpenClipboardTransientLayer()) {
+      if (hasOpenClipboardTransientLayer() || hasActiveClipboardPreview()) {
         return;
       }
 
@@ -200,10 +205,10 @@ export const clipboardCommands = [
     id: "clipboard.selectAdjacentCapture",
     label: "Select Adjacent Capture",
     isEnabled: ({ direction }) => {
-      const { previewingImageId, visibleCaptures } = useClipboardBoardStore.getState();
+      const { visibleCaptures } = useClipboardBoardStore.getState();
       return (
         (direction === "next" || direction === "previous")
-        && !previewingImageId
+        && !hasActiveClipboardPreview()
         && !hasOpenClipboardTransientLayer()
         && visibleCaptures.length > 0
       );
@@ -233,10 +238,10 @@ export const clipboardCommands = [
     id: "clipboard.selectBoundaryCapture",
     label: "Select Boundary Capture",
     isEnabled: ({ boundary }) => {
-      const { previewingImageId, visibleCaptures } = useClipboardBoardStore.getState();
+      const { visibleCaptures } = useClipboardBoardStore.getState();
       return (
         (boundary === "first" || boundary === "last")
-        && !previewingImageId
+        && !hasActiveClipboardPreview()
         && !hasOpenClipboardTransientLayer()
         && visibleCaptures.length > 0
       );
@@ -258,10 +263,12 @@ export const clipboardCommands = [
   }),
   defineCommand<void, void>({
     id: "clipboard.closeImagePreview",
-    label: "Close Image Preview",
-    isEnabled: () => Boolean(useClipboardBoardStore.getState().previewingImageId),
+    label: "Close Preview Overlay",
+    isEnabled: () => hasActiveClipboardPreview(),
     run: () => {
-      useClipboardBoardStore.getState().setPreviewingImageId(null);
+      const store = useClipboardBoardStore.getState();
+      store.setPreviewingImageId(null);
+      store.setPreviewingOcrCaptureId(null);
     },
   }),
   defineCommand<ClipboardCaptureIdPayload, void>({
@@ -277,7 +284,9 @@ export const clipboardCommands = [
     label: "Open Image Viewer",
     isEnabled: ({ captureId }) => Boolean(captureId.trim()),
     run: ({ captureId }: ClipboardCaptureIdPayload) => {
-      useClipboardBoardStore.getState().setPreviewingImageId(captureId);
+      const store = useClipboardBoardStore.getState();
+      store.setPreviewingOcrCaptureId(null);
+      store.setPreviewingImageId(captureId);
     },
   }),
   defineCommand<ClipboardConfirmSelectionPayload | undefined, void>({
@@ -285,7 +294,7 @@ export const clipboardCommands = [
     label: "Confirm Clipboard Window Selection",
     isEnabled: (payload) =>
       isClipboardWindow()
-      && !useClipboardBoardStore.getState().previewingImageId
+      && !hasActiveClipboardPreview()
       && !hasOpenClipboardTransientLayer()
       && Boolean(getCaptureForConfirmation(payload)),
     run: async (payload) => {

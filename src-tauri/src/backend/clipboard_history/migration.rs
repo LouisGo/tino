@@ -48,6 +48,7 @@ mod tests {
             status: "archived".into(),
             raw_text: format!("raw-{id}"),
             ocr_text: None,
+            file_missing: false,
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,

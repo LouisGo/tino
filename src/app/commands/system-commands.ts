@@ -1,8 +1,13 @@
 import { defineCommand, type CommandDefinition } from "@/core/commands";
-import { tx } from "@/i18n";
+import { message } from "@tauri-apps/plugin-dialog";
+
+import { resolveText, tx } from "@/i18n";
 import { openExternalLink } from "@/lib/external-links";
+import { createRendererLogger } from "@/lib/logger";
 import {
+  isTauriRuntime,
   openImageInPreview,
+  openPathInDefaultApp,
   revealPath,
   toggleClipboardWindowVisibility,
   toggleMainWindowVisibility,
@@ -20,6 +25,49 @@ type OpenExternalTargetPayload = {
 type OpenImageInPreviewPayload = {
   path: string;
 };
+
+type OpenPathInDefaultAppPayload = {
+  path: string;
+};
+
+const logger = createRendererLogger("system.commands");
+
+function formatCommandError(error: unknown) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  if (typeof error === "string" && error.trim()) {
+    return error.trim();
+  }
+
+  return resolveText(
+    tx("commands", "system.openPathInDefaultApp.errorReasonFallback"),
+  );
+}
+
+async function showOpenPathFailureDialog(path: string, error: unknown) {
+  const body = resolveText(
+    tx("commands", "system.openPathInDefaultApp.errorBody", {
+      values: {
+        path,
+        reason: formatCommandError(error),
+      },
+    }),
+  );
+
+  if (!isTauriRuntime()) {
+    window.alert(body);
+    return;
+  }
+
+  await message(body, {
+    kind: "error",
+    title: resolveText(
+      tx("commands", "system.openPathInDefaultApp.errorTitle"),
+    ),
+  });
+}
 
 export const systemCommands = [
   defineCommand<void, boolean>({
@@ -89,6 +137,22 @@ export const systemCommands = [
     isEnabled: ({ path }) => Boolean(path.trim()),
     run: async ({ path }: OpenImageInPreviewPayload) => {
       await openImageInPreview(path);
+    },
+  }),
+  defineCommand<OpenPathInDefaultAppPayload, void>({
+    id: "system.openPathInDefaultApp",
+    label: tx("commands", "system.openPathInDefaultApp.label"),
+    isEnabled: ({ path }) => Boolean(path.trim()),
+    run: async ({ path }: OpenPathInDefaultAppPayload) => {
+      try {
+        await openPathInDefaultApp(path);
+      } catch (error) {
+        logger.error("Failed to open path in default app", {
+          error: formatCommandError(error),
+          path,
+        });
+        await showOpenPathFailureDialog(path, error);
+      }
     },
   }),
 ] satisfies CommandDefinition<unknown, unknown>[];

@@ -1,7 +1,11 @@
 import { useContext, useEffect } from "react";
 
 import { ShortcutManagerContext } from "@/core/shortcuts/context";
-import type { AppShortcutId, ShortcutScopeId } from "@/core/shortcuts/types";
+import type {
+  AppShortcutId,
+  ShortcutScopeActivationOptions,
+  ShortcutScopeId,
+} from "@/core/shortcuts/types";
 
 export function useShortcutManager() {
   const manager = useContext(ShortcutManagerContext);
@@ -18,18 +22,19 @@ export function useAppShortcut(id: AppShortcutId) {
 
 export function useShortcutScope(
   scopeId: ShortcutScopeId,
-  options?: {
+  options?: ShortcutScopeActivationOptions & {
     active?: boolean;
   },
 ) {
   const manager = useShortcutManager();
   const active = options?.active ?? true;
+  const reservedAccelerators = options?.reservedAccelerators;
 
   useEffect(() => {
     if (!active) {
       return;
     }
 
-    return manager.activateScope(scopeId);
-  }, [active, manager, scopeId]);
+    return manager.activateScope(scopeId, { reservedAccelerators });
+  }, [active, manager, reservedAccelerators, scopeId]);
 }
