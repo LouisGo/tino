@@ -113,9 +113,12 @@ export function ClipboardCaptureList({
     const selectedElement = scrollViewport.querySelector<HTMLElement>(
       `[data-capture-id="${captureId}"]`,
     );
+    const shouldRevealGroupHeader =
+      selectedElement?.dataset.groupFirst === "true"
+      && selectedElement?.dataset.groupKind === "pinned";
 
     selectedElement?.scrollIntoView({
-      block: "nearest",
+      block: shouldRevealGroupHeader ? "start" : "nearest",
       inline: "nearest",
     });
   }, [scrollViewport, selectedCaptureId]);
@@ -158,12 +161,14 @@ export function ClipboardCaptureList({
                       key={capture.id}
                       type="button"
                       data-capture-id={capture.id}
+                      data-group-first={group.captures[0]?.id === capture.id ? "true" : "false"}
+                      data-group-kind={group.kind}
                       onClick={() => void selectCapture.execute({ captureId: capture.id })}
                       onDoubleClick={() =>
                         void confirmCapture.execute({ captureId: capture.id })}
                       onContextMenu={(event) => onContextMenu(event, capture)}
                       className={cn(
-                        "flex h-[44px] w-full items-center gap-2.5 rounded-[14px] border px-2.5 text-left transition",
+                        "flex h-[44px] w-full scroll-mt-7 items-center gap-2.5 rounded-[14px] border px-2.5 text-left transition",
                         selectedCaptureId === capture.id
                           ? "border-primary/18 bg-primary/[0.08] shadow-none"
                           : "border-transparent bg-transparent hover:border-border/55 hover:bg-secondary/34",

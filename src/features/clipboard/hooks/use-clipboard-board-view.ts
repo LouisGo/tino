@@ -105,6 +105,7 @@ export function useClipboardBoardView() {
     store.setPinnedCaptures(pinnedCaptures)
     store.setVisibleCaptures(visibleCaptures)
     const preferredSelectedCaptureId = store.preferredSelectedCaptureId
+    const defaultCaptureId = captures[0]?.id ?? visibleCaptures[0]?.id ?? null
 
     if (visibleCaptures.length === 0) {
       if (
@@ -136,9 +137,9 @@ export function useClipboardBoardView() {
       !store.selectedCaptureId
       || !visibleCaptures.some((capture) => capture.id === store.selectedCaptureId)
     ) {
-      store.setSelectedCaptureId(visibleCaptures[0].id)
+      store.setSelectedCaptureId(defaultCaptureId)
     }
-  }, [pinnedCaptures, visibleCaptures])
+  }, [captures, pinnedCaptures, visibleCaptures])
 
   useEffect(
     () => () => {
