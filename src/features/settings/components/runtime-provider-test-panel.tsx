@@ -1,12 +1,8 @@
-import { useState } from "react";
-
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, LoaderCircle, Wand2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, LoaderCircle, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  getRuntimeProviderSmokeTestPrompt,
   resolveProviderAccessConfig,
   runRuntimeProviderSmokeTest,
   type ProviderAccessConfig,
@@ -21,121 +17,80 @@ export function RuntimeProviderTestPanel({
   providerConfig: ProviderAccessConfig;
 }) {
   const t = useScopedT("settings");
-  const [prompt, setPrompt] = useState(getRuntimeProviderSmokeTestPrompt);
   const providerAccess = resolveProviderAccessConfig(providerConfig);
-  const trimmedPrompt = prompt.trim();
 
   const testMutation = useMutation({
-    mutationFn: async () => runRuntimeProviderSmokeTest(providerConfig, trimmedPrompt),
+    mutationFn: async () => runRuntimeProviderSmokeTest(providerConfig),
   });
 
-  const canRun = providerAccess.isConfigured && trimmedPrompt.length > 0;
+  const canRun = providerAccess.isConfigured;
 
   return (
     <SettingField
       label={t("provider.test.label")}
       description={t("provider.test.description")}
     >
-      <div className="max-w-[720px] space-y-3">
-        <div className="rounded-[22px] border border-border/80 bg-surface-elevated/80 p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">
-                {t("provider.test.promptLabel")}
-              </p>
-              <p className="text-xs leading-5 text-muted-foreground">
-                {t("provider.test.promptHint")}
-              </p>
-            </div>
-            <div className="rounded-full border border-border/80 bg-background/70 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-              {providerAccess.providerLabel}
-            </div>
-          </div>
-
-          <Textarea
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            className="mt-3 min-h-[110px] bg-background/80"
-            placeholder={getRuntimeProviderSmokeTestPrompt()}
-          />
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs leading-5 text-muted-foreground">
-              {t("provider.test.supportHint")}
-            </p>
-
-            <Button
-              type="button"
-              onClick={() => {
-                testMutation.mutate();
-              }}
-              disabled={!canRun || testMutation.isPending}
-            >
-              {testMutation.isPending ? (
-                <LoaderCircle className="animate-spin" />
-              ) : (
-                <Wand2 />
-              )}
-              {testMutation.isPending
-                ? t("provider.test.running")
-                : t("provider.test.run")}
-            </Button>
-          </div>
-        </div>
-
+      <div className="max-w-[720px]">
         <div
           className={cn(
-            "rounded-[22px] border p-4",
+            "space-y-3 rounded-[22px] border p-3.5",
             testMutation.isError
               ? "border-destructive/30 bg-destructive/5"
-              : "border-border/80 bg-background/60",
+              : testMutation.isSuccess
+                ? "app-tone-success app-tone-panel"
+                : "border-border/80 bg-background/60",
           )}
         >
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-            {testMutation.isSuccess ? <CheckCircle2 className="size-4 text-primary" /> : null}
-            <span>{t("provider.test.resultLabel")}</span>
-          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              testMutation.mutate();
+            }}
+            disabled={!canRun || testMutation.isPending}
+          >
+            {testMutation.isPending ? (
+              <LoaderCircle className="animate-spin" />
+            ) : (
+              <Wand2 />
+            )}
+            {testMutation.isPending
+              ? t("provider.test.running")
+              : t("provider.test.run")}
+          </Button>
 
-          {testMutation.isPending ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {t("provider.test.pendingBody")}
-            </p>
-          ) : testMutation.isError ? (
-            <p className="mt-3 text-sm leading-6 text-destructive">
-              {testMutation.error instanceof Error
-                ? testMutation.error.message
-                : t("provider.test.unknownError")}
-            </p>
-          ) : testMutation.isSuccess ? (
-            <>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground">
-                {testMutation.data.text}
+          <div className="text-sm leading-6">
+            {!canRun ? (
+              <p className="text-muted-foreground">
+                {t("provider.test.disabledBody")}
               </p>
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                {t("provider.test.meta", {
-                  values: {
-                    durationMs: String(testMutation.data.durationMs),
-                    finishReason: testMutation.data.finishReason,
-                    inputTokens: formatTokenCount(testMutation.data.inputTokens),
-                    outputTokens: formatTokenCount(testMutation.data.outputTokens),
-                    responseModel: testMutation.data.responseModel,
-                  },
-                })}
+            ) : testMutation.isPending ? (
+              <p className="text-muted-foreground">
+                {t("provider.test.pendingBody")}
               </p>
-            </>
-          ) : (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {canRun
-                ? t("provider.test.idleBody")
-                : t("provider.test.disabledBody")}
-            </p>
-          )}
+            ) : testMutation.isError ? (
+              <div className="flex items-start gap-2 rounded-2xl border border-destructive/20 bg-destructive/8 px-3 py-2.5 text-destructive">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                <p className="[overflow-wrap:anywhere] whitespace-pre-wrap">
+                  {testMutation.error instanceof Error
+                    ? testMutation.error.message
+                    : t("provider.test.unknownError")}
+                </p>
+              </div>
+            ) : testMutation.isSuccess ? (
+              <div className="flex items-start gap-2 font-medium text-emerald-900 dark:text-emerald-100">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-300" />
+                <p className="[overflow-wrap:anywhere] whitespace-pre-wrap">
+                  {t("provider.test.successBody")}
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                {t("provider.test.idleBody")}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </SettingField>
   );
-}
-
-function formatTokenCount(value: number | undefined) {
-  return value === undefined ? "-" : String(value);
 }

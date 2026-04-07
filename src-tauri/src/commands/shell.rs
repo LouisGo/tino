@@ -26,6 +26,7 @@ use {
     sha2::{Digest, Sha256},
     std::{
         ffi::{c_char, c_void, CStr},
+        sync::atomic::{AtomicBool, Ordering},
         thread,
         time::{Duration, Instant},
     },
@@ -657,6 +658,8 @@ const TARGET_ACTIVATION_SETTLE_MS: u64 = 80;
 const TARGET_FRONTMOST_EARLY_EXIT_POLLS: usize = 3;
 #[cfg(target_os = "macos")]
 const TARGET_FOCUSED_EARLY_EXIT_POLLS: usize = 2;
+#[cfg(target_os = "macos")]
+static ACCESSIBILITY_PROMPT_REQUESTED_THIS_LAUNCH: AtomicBool = AtomicBool::new(false);
 
 #[cfg(target_os = "macos")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -673,11 +676,14 @@ type AXUIElementRef = *const c_void;
 type CFTypeRef = *const c_void;
 #[cfg(target_os = "macos")]
 type CFStringRef = *const c_void;
+#[cfg(target_os = "macos")]
+type CFDictionaryRef = *const c_void;
 
 #[cfg(target_os = "macos")]
 #[link(name = "ApplicationServices", kind = "framework")]
 unsafe extern "C" {
     fn AXIsProcessTrusted() -> u8;
+    fn AXIsProcessTrustedWithOptions(options: CFDictionaryRef) -> u8;
     fn AXUIElementCreateSystemWide() -> AXUIElementRef;
     fn AXUIElementCreateApplication(pid: pid_t) -> AXUIElementRef;
     fn AXUIElementCopyAttributeValue(
@@ -696,11 +702,20 @@ unsafe extern "C" {
         settable: *mut u8,
     ) -> i32;
     fn AXUIElementGetPid(element: AXUIElementRef, pid: *mut pid_t) -> i32;
+    static kAXTrustedCheckOptionPrompt: CFStringRef;
 }
 
 #[cfg(target_os = "macos")]
 #[link(name = "CoreFoundation", kind = "framework")]
 unsafe extern "C" {
+    fn CFDictionaryCreate(
+        allocator: *const c_void,
+        keys: *const CFTypeRef,
+        values: *const CFTypeRef,
+        num_values: isize,
+        key_callbacks: *const c_void,
+        value_callbacks: *const c_void,
+    ) -> CFDictionaryRef;
     fn CFRelease(value: CFTypeRef);
     fn CFGetTypeID(value: CFTypeRef) -> usize;
     fn CFBooleanGetTypeID() -> usize;
@@ -769,7 +784,39 @@ fn is_accessibility_trusted() -> bool {
 }
 
 #[cfg(target_os = "macos")]
+fn request_accessibility_trust_prompt_if_needed() {
+    if is_accessibility_trusted() {
+        return;
+    }
+
+    if ACCESSIBILITY_PROMPT_REQUESTED_THIS_LAUNCH.swap(true, Ordering::Relaxed) {
+        return;
+    }
+
+    let keys = [unsafe { kAXTrustedCheckOptionPrompt }.cast()];
+    let values = [unsafe { kCFBooleanTrue }];
+    let options = unsafe {
+        CFDictionaryCreate(
+            std::ptr::null(),
+            keys.as_ptr(),
+            values.as_ptr(),
+            1,
+            std::ptr::null(),
+            std::ptr::null(),
+        )
+    };
+    let Some(options) = CfOwned::new(options) else {
+        log::warn!("failed to build Accessibility trust prompt options");
+        return;
+    };
+
+    let _ = unsafe { AXIsProcessTrustedWithOptions(options.0.cast()) };
+}
+
+#[cfg(target_os = "macos")]
 fn open_accessibility_settings_impl() -> Result<(), String> {
+    request_accessibility_trust_prompt_if_needed();
+
     let status = Command::new("open")
         .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         .status()

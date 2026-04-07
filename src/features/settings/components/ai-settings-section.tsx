@@ -100,6 +100,15 @@ export function AiSettingsSection({
     selectedVendor,
     form.state.values.model,
   );
+  const orderedProviderProfiles = [...providerProfiles].sort((left, right) => {
+    const leftIsActive = left.id === settingsDraft.activeRuntimeProviderId;
+    const rightIsActive = right.id === settingsDraft.activeRuntimeProviderId;
+    if (leftIsActive === rightIsActive) {
+      return 0;
+    }
+
+    return leftIsActive ? -1 : 1;
+  });
 
   return (
     <SettingsSection
@@ -118,7 +127,7 @@ export function AiSettingsSection({
             description={t("provider.list.description")}
           >
             <div className="space-y-3">
-              {providerProfiles.map((profile) => {
+              {orderedProviderProfiles.map((profile) => {
                 const providerAccess = resolveProviderAccessConfig(profile);
                 const isActive = settingsDraft.activeRuntimeProviderId === profile.id;
                 const isSelected = selectedProviderId === profile.id;
@@ -131,11 +140,23 @@ export function AiSettingsSection({
                 return (
                   <div
                     key={profile.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    onClick={() => selectProvider(profile.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        selectProvider(profile.id);
+                      }
+                    }}
                     className={cn(
-                      "rounded-[20px] border px-4 py-3 transition-colors",
-                      isSelected
-                        ? "border-primary/40 bg-primary/5"
-                        : "border-border/80 bg-background/60",
+                      "rounded-[20px] border px-4 py-3 transition-[border-color,background-color,box-shadow] outline-none cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30",
+                      isActive
+                        ? "border-primary/30 bg-primary/10 shadow-sm"
+                        : isSelected
+                          ? "border-border/90 bg-background/85"
+                          : "border-border/80 bg-background/60 hover:border-primary/20 hover:bg-secondary/70",
                     )}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -145,7 +166,13 @@ export function AiSettingsSection({
                             {profile.name}
                           </p>
                           {isActive ? (
-                            <Badge variant="secondary">{t("provider.list.currentActive")}</Badge>
+                            <Badge variant="success" className="inline-flex items-center gap-1.5">
+                              <ShieldCheck className="size-3.5" />
+                              {t("provider.list.currentActive")}
+                            </Badge>
+                          ) : null}
+                          {isSelected && !isActive ? (
+                            <Badge variant="secondary">{t("provider.list.editing")}</Badge>
                           ) : null}
                           <Badge variant="secondary">{statusLabel}</Badge>
                         </div>
@@ -155,21 +182,15 @@ export function AiSettingsSection({
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
-                        {!isSelected ? (
+                        {!isActive ? (
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => selectProvider(profile.id)}
-                          >
-                            {t("provider.list.edit")}
-                          </Button>
-                        ) : null}
-                        {!isActive ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => setActiveProvider(profile.id)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveProvider(profile.id);
+                            }}
                           >
                             {t("provider.list.useNow")}
                           </Button>
@@ -180,7 +201,10 @@ export function AiSettingsSection({
                           size="icon"
                           disabled={!canDeleteProvider}
                           aria-label={t("provider.list.delete")}
-                          onClick={() => setProviderPendingDelete(profile)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setProviderPendingDelete(profile);
+                          }}
                         >
                           <Trash2 className="size-4" />
                         </Button>
