@@ -1,14 +1,16 @@
-import { Kbd } from "@/components/ui/kbd";
+import { Kbd, type KbdSize } from "@/components/ui/kbd";
 import { useScopedT } from "@/i18n";
 import { useAppShortcut, useShortcutManager } from "@/core/shortcuts/hooks";
 import { formatShortcutAccelerator } from "@/core/shortcuts/utils";
 
 export function ShortcutKbd({
   className,
+  size = "md",
   shortcutId,
   whenDisabled = "hidden",
 }: {
   className?: string;
+  size?: KbdSize;
   shortcutId: string;
   whenDisabled?: "hidden" | "placeholder";
 }) {
@@ -28,6 +30,7 @@ export function ShortcutKbd({
     <Kbd
       className={className}
       keys={formatShortcutAccelerator(shortcut.accelerator, platform)}
+      size={size}
     />
   );
 }
