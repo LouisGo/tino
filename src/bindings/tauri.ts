@@ -14,6 +14,7 @@ export const commands = {
 	setClipboardCapturePinned: (request: SetClipboardCapturePinnedRequest) => typedError<UpdateClipboardPinResult, string>(__TAURI_INVOKE("set_clipboard_capture_pinned", { request })),
 	deleteClipboardCapture: (request: DeleteClipboardCaptureRequest) => typedError<DeleteClipboardCaptureResult, string>(__TAURI_INVOKE("delete_clipboard_capture", { request })),
 	getAppSettings: () => typedError<AppSettings, string>(__TAURI_INVOKE("get_app_settings")),
+	reportAppActivity: () => typedError<null, string>(__TAURI_INVOKE("report_app_activity")),
 	saveAppSettings: (settings: AppSettings) => typedError<AppSettings, string>(__TAURI_INVOKE("save_app_settings", { settings })),
 	toggleMainWindowVisibility: () => typedError<boolean, string>(__TAURI_INVOKE("toggle_main_window_visibility")),
 	toggleClipboardWindowVisibility: () => typedError<boolean, string>(__TAURI_INVOKE("toggle_clipboard_window_visibility")),

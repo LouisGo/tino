@@ -17,6 +17,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         shell::set_clipboard_capture_pinned,
         shell::delete_clipboard_capture,
         shell::get_app_settings,
+        shell::report_app_activity,
         shell::save_app_settings,
         shell::toggle_main_window_visibility,
         shell::toggle_clipboard_window_visibility,

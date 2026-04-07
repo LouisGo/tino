@@ -422,6 +422,14 @@ export async function getAppSettings(): Promise<SettingsDraft> {
   return normalizeSettingsDraft(await unwrapTauriResult(tauriCommands.getAppSettings()));
 }
 
+export async function reportAppActivity() {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  await unwrapTauriResult(tauriCommands.reportAppActivity());
+}
+
 export async function getLogDirectory() {
   if (!isTauriRuntime()) {
     return "~/Library/Logs/com.louistation.tino";

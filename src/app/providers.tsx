@@ -31,7 +31,7 @@ import {
   THEME_PREFERENCE_CHANGED_EVENT,
   type ThemePreference,
 } from "@/lib/theme";
-import { getAppSettings, isTauriRuntime } from "@/lib/tauri";
+import { getAppSettings, isTauriRuntime, reportAppActivity } from "@/lib/tauri";
 import { preloadNonCriticalRouteChunks } from "@/router";
 import { useAppShellStore } from "@/stores/app-shell-store";
 import { useThemeStore } from "@/stores/theme-store";
@@ -40,6 +40,8 @@ import type { AppLocalePreference } from "@/types/shell";
 type AppProvidersProps = {
   router: AnyRouter;
 };
+
+const APP_ACTIVITY_REPORT_THROTTLE_MS = 750;
 
 export function AppProviders({ router }: AppProvidersProps) {
   return (
@@ -128,6 +130,48 @@ function AppShellRuntime({ router }: AppProvidersProps) {
     const timeoutId = window.setTimeout(preload, 400);
     return () => {
       window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isTauriRuntime()) {
+      return;
+    }
+
+    let lastReportedAt = 0;
+
+    const reportActivity = () => {
+      const now = Date.now();
+      if (now - lastReportedAt < APP_ACTIVITY_REPORT_THROTTLE_MS) {
+        return;
+      }
+
+      lastReportedAt = now;
+      void reportAppActivity().catch(() => {});
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        reportActivity();
+      }
+    };
+
+    reportActivity();
+
+    window.addEventListener("focus", reportActivity);
+    window.addEventListener("pointerdown", reportActivity, { passive: true });
+    window.addEventListener("keydown", reportActivity);
+    window.addEventListener("paste", reportActivity);
+    window.addEventListener("wheel", reportActivity, { passive: true });
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", reportActivity);
+      window.removeEventListener("pointerdown", reportActivity);
+      window.removeEventListener("keydown", reportActivity);
+      window.removeEventListener("paste", reportActivity);
+      window.removeEventListener("wheel", reportActivity);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

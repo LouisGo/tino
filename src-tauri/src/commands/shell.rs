@@ -262,6 +262,12 @@ pub fn get_app_settings(state: State<'_, AppState>) -> Result<AppSettings, Strin
 
 #[tauri::command]
 #[specta::specta]
+pub fn report_app_activity(state: State<'_, AppState>) -> Result<(), String> {
+    state.record_app_activity()
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn save_app_settings(
     state: State<'_, AppState>,
     settings: AppSettings,

@@ -1,3 +1,4 @@
+mod app_idle;
 mod app_state;
 mod backend;
 mod capture;
@@ -481,7 +482,7 @@ fn hide_panel_windows_except(app: &AppHandle, active_label: Option<&str>) {
         }
 
         save_panel_window_state(app, spec.label);
-        let _ = window.hide();
+        let _ = hide_window_and_clear_focus(app, spec.label, &window);
     }
 }
 
@@ -495,7 +496,7 @@ fn hide_main_window_if_visible(app: &AppHandle) {
     }
 
     save_main_window_state(app);
-    let _ = window.hide();
+    let _ = hide_window_and_clear_focus(app, MAIN_WINDOW_LABEL, &window);
 }
 
 fn resolve_panel_layout_for_target(
@@ -719,6 +720,29 @@ fn current_shell_strings(app: &AppHandle) -> locale::LocalizedShellStrings {
     localized_shell_strings(locale)
 }
 
+fn record_window_focus_change(app: &AppHandle, label: &str, focused: bool) {
+    let Some(state) = app.try_state::<AppState>() else {
+        return;
+    };
+
+    if let Err(error) = state.record_window_focus_change(label, focused) {
+        log::warn!(
+            "failed to record window focus change for {}: {}",
+            label,
+            error
+        );
+    }
+}
+
+fn hide_window_and_clear_focus(
+    app: &AppHandle,
+    label: &str,
+    window: &WebviewWindow,
+) -> Result<(), String> {
+    record_window_focus_change(app, label, false);
+    window.hide().map_err(|error| error.to_string())
+}
+
 pub(crate) fn open_clipboard_window(app: &AppHandle) {
     open_panel_window(app, CLIPBOARD_PANEL_LABEL);
 }
@@ -731,7 +755,7 @@ pub(crate) fn toggle_main_window_visibility(app: &AppHandle) -> Result<bool, Str
     let is_visible = window.is_visible().map_err(|error| error.to_string())?;
 
     if is_visible {
-        window.hide().map_err(|error| error.to_string())?;
+        hide_window_and_clear_focus(app, MAIN_WINDOW_LABEL, &window)?;
         return Ok(false);
     }
 
@@ -745,7 +769,7 @@ pub(crate) fn toggle_clipboard_window_visibility(app: &AppHandle) -> Result<bool
 
         if is_visible {
             save_panel_window_state(app, CLIPBOARD_PANEL_LABEL);
-            window.hide().map_err(|error| error.to_string())?;
+            hide_window_and_clear_focus(app, CLIPBOARD_PANEL_LABEL, &window)?;
             return Ok(false);
         }
 
@@ -1019,6 +1043,20 @@ pub fn run() {
             create_tray(app.handle())?;
             restore_main_window_state(app.handle());
             configure_native_macos_window(app.handle());
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+                record_window_focus_change(
+                    app.handle(),
+                    MAIN_WINDOW_LABEL,
+                    window.is_focused().unwrap_or(false),
+                );
+            }
+            if let Some(window) = app.get_webview_window(CLIPBOARD_PANEL_LABEL) {
+                record_window_focus_change(
+                    app.handle(),
+                    CLIPBOARD_PANEL_LABEL,
+                    window.is_focused().unwrap_or(false),
+                );
+            }
 
             if let Err(error) = install_panel_window_tracker(app.handle()) {
                 log::warn!("failed to install panel window tracker: {}", error);
@@ -1046,17 +1084,29 @@ pub fn run() {
             ..
         } => focus_main_window(app_handle),
         RunEvent::WindowEvent { label, event, .. } if label == MAIN_WINDOW_LABEL => match event {
+            WindowEvent::Focused(focused) => {
+                record_window_focus_change(app_handle, &label, focused);
+            }
+            WindowEvent::CloseRequested { .. } => {
+                record_window_focus_change(app_handle, &label, false);
+                save_main_window_state(app_handle);
+            }
             WindowEvent::Moved(_)
             | WindowEvent::Resized(_)
-            | WindowEvent::CloseRequested { .. }
             | WindowEvent::ScaleFactorChanged { .. } => save_main_window_state(app_handle),
             _ => {}
         },
         RunEvent::WindowEvent { label, event, .. } if is_panel_window_label(&label) => {
             match event {
+                WindowEvent::Focused(focused) => {
+                    record_window_focus_change(app_handle, &label, focused);
+                }
+                WindowEvent::CloseRequested { .. } => {
+                    record_window_focus_change(app_handle, &label, false);
+                    save_panel_window_state(app_handle, &label)
+                }
                 WindowEvent::Moved(_)
                 | WindowEvent::Resized(_)
-                | WindowEvent::CloseRequested { .. }
                 | WindowEvent::ScaleFactorChanged { .. } => {
                     save_panel_window_state(app_handle, &label)
                 }

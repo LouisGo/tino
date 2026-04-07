@@ -14,16 +14,14 @@ use std::{
 #[cfg(target_os = "macos")]
 use std::{
     panic::AssertUnwindSafe,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        mpsc,
-    },
+    sync::atomic::{AtomicBool, Ordering},
     time::Instant,
 };
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use uuid::Uuid;
 
+use crate::app_idle::{AppTaskScheduler, TaskPriority};
 use crate::backend::clipboard_history::migration::reconcile_capture_history_store;
 use crate::backend::clipboard_history::read::{
     load_recent_clipboard_captures, query_clipboard_history_page,
@@ -67,6 +65,8 @@ const CLIPBOARD_CAPTURES_UPDATED_EVENT: &str = "clipboard-captures-updated";
 const IMAGE_OCR_MAX_ATTEMPTS: usize = 2;
 #[cfg(target_os = "macos")]
 const IMAGE_OCR_RETRY_DELAY_MS: u64 = 150;
+#[cfg(target_os = "macos")]
+const IMAGE_OCR_BACKFILL_BATCH_SIZE: usize = 4;
 const RUNNING_WATCH_STATUS: &str = "Rust clipboard poller active";
 const STARTING_WATCH_STATUS: &str = "Rust clipboard poller starting";
 const DEDUP_WINDOW_MINUTES: i64 = 5;
@@ -673,18 +673,7 @@ struct StateData {
 
 #[cfg(target_os = "macos")]
 #[derive(Debug)]
-enum ImageOcrMessage {
-    Recognize {
-        capture_id: String,
-        asset_path: PathBuf,
-    },
-    Backfill,
-}
-
-#[cfg(target_os = "macos")]
-#[derive(Debug)]
 struct ImageOcrRuntime {
-    sender: mpsc::Sender<ImageOcrMessage>,
     queued_capture_ids: Mutex<HashSet<String>>,
     backfill_queued: AtomicBool,
 }
@@ -692,6 +681,7 @@ struct ImageOcrRuntime {
 #[derive(Debug)]
 struct SharedState {
     app_handle: AppHandle,
+    task_scheduler: AppTaskScheduler,
     default_knowledge_root: PathBuf,
     app_data_dir: PathBuf,
     clipboard_cache_dir: PathBuf,
@@ -751,19 +741,17 @@ impl AppState {
         runtime.ready_batch_count = count_ready_batches(&knowledge_root)?;
         runtime.updated_at = now_rfc3339();
 
-        #[cfg(target_os = "macos")]
-        let (image_ocr, image_ocr_receiver) = Self::create_image_ocr_runtime();
-
         let state = Self {
             shared: Arc::new(SharedState {
                 app_handle: app.clone(),
+                task_scheduler: AppTaskScheduler::new(),
                 default_knowledge_root,
                 app_data_dir,
                 clipboard_cache_dir,
                 app_log_dir,
                 settings_path,
                 #[cfg(target_os = "macos")]
-                image_ocr,
+                image_ocr: Self::create_image_ocr_runtime(),
                 inner: Mutex::new(StateData {
                     settings,
                     runtime,
@@ -773,17 +761,24 @@ impl AppState {
             }),
         };
 
-        #[cfg(target_os = "macos")]
-        state.spawn_image_ocr_worker(image_ocr_receiver);
-
         state.persist_runtime_snapshot()?;
-        state.spawn_image_ocr_backfill();
+        state.request_image_ocr_backfill();
 
         Ok(state)
     }
 
     pub fn current_settings(&self) -> Result<AppSettings, String> {
         Ok(self.lock_state()?.settings.clone())
+    }
+
+    pub fn record_app_activity(&self) -> Result<(), String> {
+        self.shared.task_scheduler.record_user_activity()
+    }
+
+    pub fn record_window_focus_change(&self, label: &str, focused: bool) -> Result<(), String> {
+        self.shared
+            .task_scheduler
+            .update_window_focus(label, focused)
     }
 
     pub fn sync_current_global_shortcuts(&self) -> Result<(), String> {
@@ -843,7 +838,7 @@ impl AppState {
         if previous_settings.clipboard_history_days != normalized.clipboard_history_days
             || previous_settings.knowledge_root != normalized.knowledge_root
         {
-            self.spawn_image_ocr_backfill();
+            self.request_image_ocr_backfill();
         }
 
         Ok(normalized)
@@ -1528,61 +1523,11 @@ impl AppState {
     }
 
     #[cfg(target_os = "macos")]
-    fn create_image_ocr_runtime() -> (ImageOcrRuntime, mpsc::Receiver<ImageOcrMessage>) {
-        let (sender, receiver) = mpsc::channel();
-        (
-            ImageOcrRuntime {
-                sender,
-                queued_capture_ids: Mutex::new(HashSet::new()),
-                backfill_queued: AtomicBool::new(false),
-            },
-            receiver,
-        )
-    }
-
-    #[cfg(target_os = "macos")]
-    fn spawn_image_ocr_worker(&self, receiver: mpsc::Receiver<ImageOcrMessage>) {
-        let state = self.clone();
-
-        std::thread::spawn(move || {
-            while let Ok(message) = receiver.recv() {
-                match message {
-                    ImageOcrMessage::Recognize {
-                        capture_id,
-                        asset_path,
-                    } => {
-                        let cleanup_capture_id = capture_id.clone();
-                        let started_at = Instant::now();
-                        let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                            state.process_image_ocr_job(capture_id, asset_path);
-                        }));
-                        if let Err(payload) = result {
-                            state.release_image_ocr_capture(&cleanup_capture_id);
-                            warn!(
-                                "image OCR worker panicked for capture {} after {} ms: {}",
-                                cleanup_capture_id,
-                                started_at.elapsed().as_millis(),
-                                panic_payload_message(&payload)
-                            );
-                        }
-                    }
-                    ImageOcrMessage::Backfill => {
-                        let started_at = Instant::now();
-                        let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
-                            state.process_image_ocr_backfill();
-                        }));
-                        state.clear_image_ocr_backfill_flag();
-                        if let Err(payload) = result {
-                            warn!(
-                                "image OCR backfill worker panicked after {} ms: {}",
-                                started_at.elapsed().as_millis(),
-                                panic_payload_message(&payload)
-                            );
-                        }
-                    }
-                }
-            }
-        });
+    fn create_image_ocr_runtime() -> ImageOcrRuntime {
+        ImageOcrRuntime {
+            queued_capture_ids: Mutex::new(HashSet::new()),
+            backfill_queued: AtomicBool::new(false),
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -1650,27 +1595,36 @@ impl AppState {
     #[cfg(target_os = "macos")]
     fn process_image_ocr_backfill(&self) {
         let started_at = Instant::now();
-        let candidates = match self.pending_image_ocr_backfill_candidates(24) {
-            Ok(candidates) => candidates,
-            Err(error) => {
-                warn!("failed to load image OCR backfill candidates: {error}");
-                return;
-            }
-        };
+        let candidates =
+            match self.pending_image_ocr_backfill_candidates(IMAGE_OCR_BACKFILL_BATCH_SIZE) {
+                Ok(candidates) => candidates,
+                Err(error) => {
+                    warn!("failed to load image OCR backfill candidates: {error}");
+                    self.clear_image_ocr_backfill_flag();
+                    return;
+                }
+            };
 
         info!(
             "queued OCR backfill scan with {} pending image capture(s)",
             candidates.len()
         );
 
+        let should_schedule_next_batch = candidates.len() >= IMAGE_OCR_BACKFILL_BATCH_SIZE;
+        self.clear_image_ocr_backfill_flag();
+
         for (capture_id, asset_path) in candidates {
-            self.enqueue_image_ocr_capture(&capture_id, asset_path);
+            self.schedule_image_ocr_capture(&capture_id, asset_path, TaskPriority::Idle);
         }
 
         info!(
             "finished OCR backfill scan in {} ms",
             started_at.elapsed().as_millis()
         );
+
+        if should_schedule_next_batch {
+            self.request_image_ocr_backfill();
+        }
     }
 
     #[cfg(target_os = "macos")]
@@ -1689,7 +1643,36 @@ impl AppState {
     }
 
     #[cfg(target_os = "macos")]
-    fn enqueue_image_ocr_capture(&self, capture_id: &str, asset_path: PathBuf) {
+    fn request_image_ocr_backfill(&self) {
+        if self
+            .shared
+            .image_ocr
+            .backfill_queued
+            .swap(true, Ordering::AcqRel)
+        {
+            return;
+        }
+
+        let state = self.clone();
+        if let Err(error) = self
+            .shared
+            .task_scheduler
+            .schedule(TaskPriority::Idle, move || {
+                state.process_image_ocr_backfill();
+            })
+        {
+            self.clear_image_ocr_backfill_flag();
+            warn!("failed to schedule image OCR backfill: {error}");
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    fn schedule_image_ocr_capture(
+        &self,
+        capture_id: &str,
+        asset_path: PathBuf,
+        priority: TaskPriority,
+    ) {
         let normalized_capture_id = capture_id.trim();
         if normalized_capture_id.is_empty() {
             return;
@@ -1718,19 +1701,28 @@ impl AppState {
             asset_path.display()
         );
 
-        if let Err(error) = self
-            .shared
-            .image_ocr
-            .sender
-            .send(ImageOcrMessage::Recognize {
-                capture_id: normalized_capture_id.to_string(),
-                asset_path,
-            })
-        {
+        let scheduled_capture_id = normalized_capture_id.to_string();
+        let cleanup_capture_id = scheduled_capture_id.clone();
+        let state = self.clone();
+        if let Err(error) = self.shared.task_scheduler.schedule(priority, move || {
+            let started_at = Instant::now();
+            let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                state.process_image_ocr_job(scheduled_capture_id, asset_path);
+            }));
+            if let Err(payload) = result {
+                state.release_image_ocr_capture(&cleanup_capture_id);
+                warn!(
+                    "image OCR task panicked for capture {} after {} ms: {}",
+                    cleanup_capture_id,
+                    started_at.elapsed().as_millis(),
+                    panic_payload_message(&payload)
+                );
+            }
+        }) {
             if let Ok(mut queued_capture_ids) = self.shared.image_ocr.queued_capture_ids.lock() {
                 queued_capture_ids.remove(normalized_capture_id);
             }
-            warn!("failed to enqueue image OCR for capture {normalized_capture_id}: {error}");
+            warn!("failed to schedule image OCR for capture {normalized_capture_id}: {error}");
         }
     }
 
@@ -1743,31 +1735,18 @@ impl AppState {
             return;
         }
 
-        self.enqueue_image_ocr_capture(normalized_capture_id, PathBuf::from(normalized_asset_path));
+        self.schedule_image_ocr_capture(
+            normalized_capture_id,
+            PathBuf::from(normalized_asset_path),
+            TaskPriority::UserInitiated,
+        );
     }
 
     #[cfg(not(target_os = "macos"))]
     fn spawn_image_ocr_for_capture(&self, _capture_id: &str, _asset_path: Option<&str>) {}
 
-    #[cfg(target_os = "macos")]
-    fn spawn_image_ocr_backfill(&self) {
-        if self
-            .shared
-            .image_ocr
-            .backfill_queued
-            .swap(true, Ordering::AcqRel)
-        {
-            return;
-        }
-
-        if let Err(error) = self.shared.image_ocr.sender.send(ImageOcrMessage::Backfill) {
-            self.clear_image_ocr_backfill_flag();
-            warn!("failed to enqueue image OCR backfill: {error}");
-        }
-    }
-
     #[cfg(not(target_os = "macos"))]
-    fn spawn_image_ocr_backfill(&self) {}
+    fn request_image_ocr_backfill(&self) {}
 
     #[cfg(target_os = "macos")]
     fn pending_image_ocr_backfill_candidates(
@@ -3575,6 +3554,12 @@ mod tests {
         }
     }
 
+    fn recent_captured_at(hour: u32, minute: u32) -> String {
+        let day = Local::now().date_naive().format("%Y-%m-%d");
+        let offset = Local::now().format("%:z");
+        format!("{day}T{hour:02}:{minute:02}:00{offset}")
+    }
+
     fn sample_settings() -> AppSettings {
         AppSettings::defaults(&unique_root())
     }
@@ -3643,8 +3628,8 @@ mod tests {
         let root = unique_root();
         ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
 
-        let first = sample_preview("cap_1", "2026-04-04T12:00:00+08:00");
-        let second = sample_preview("cap_2", "2026-04-04T12:30:00+08:00");
+        let first = sample_preview("cap_1", &recent_captured_at(12, 0));
+        let second = sample_preview("cap_2", &recent_captured_at(12, 30));
         append_clipboard_history_entry(&root, &first).expect("first preview should append");
         append_clipboard_history_entry(&root, &second).expect("second preview should append");
 
@@ -3665,7 +3650,7 @@ mod tests {
         let root = unique_root();
         ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
 
-        let capture = sample_preview("cap_1", "2026-04-04T12:00:00+08:00");
+        let capture = sample_preview("cap_1", &recent_captured_at(12, 0));
         let history_path = clipboard_history_file_path(&root, &capture.captured_at)
             .expect("history path should build");
         append_clipboard_history_entry(&root, &capture).expect("preview should append");
