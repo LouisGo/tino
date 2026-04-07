@@ -4,8 +4,7 @@ use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::{
-    collections::BTreeMap,
-    collections::VecDeque,
+    collections::{BTreeMap, HashSet, VecDeque},
     fs,
     fs::OpenOptions,
     io::Write,
@@ -14,7 +13,6 @@ use std::{
 };
 #[cfg(target_os = "macos")]
 use std::{
-    collections::HashSet,
     panic::AssertUnwindSafe,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -50,6 +48,7 @@ use crate::vision_ocr::recognize_text_from_image_path;
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const RUNTIME_FILE_NAME: &str = "runtime.json";
 const QUEUE_FILE_NAME: &str = "queue.json";
+const PINNED_CLIPBOARD_CAPTURES_FILE_NAME: &str = "pinned-captures.json";
 const FILTERS_LOG_FILE_NAME: &str = "filters.log";
 const BATCHES_DIR_NAME: &str = "batches";
 const ASSETS_DIR_NAME: &str = "assets";
@@ -62,6 +61,7 @@ const DEFAULT_CLIPBOARD_HISTORY_DAYS: u16 = 3;
 const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
 const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 14;
 const MAX_CLIPBOARD_STORAGE_BYTES: u64 = 256 * 1024 * 1024;
+pub(crate) const MAX_PINNED_CLIPBOARD_CAPTURES: usize = 5;
 const CLIPBOARD_CAPTURES_UPDATED_EVENT: &str = "clipboard-captures-updated";
 #[cfg(target_os = "macos")]
 const IMAGE_OCR_MAX_ATTEMPTS: usize = 2;
@@ -427,6 +427,19 @@ pub struct CapturePreview {
     pub byte_size: Option<u64>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
+#[serde(default, rename_all = "camelCase")]
+pub struct PinnedClipboardCapture {
+    pub capture: CapturePreview,
+    pub pinned_at: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+struct PinnedClipboardState {
+    pub captures: Vec<PinnedClipboardCapture>,
+}
+
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DashboardSnapshot {
@@ -471,7 +484,18 @@ pub struct DeleteClipboardCaptureResult {
     pub id: String,
     pub removed_from_history: bool,
     pub removed_from_store: bool,
+    pub removed_from_pinned: bool,
     pub deleted: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateClipboardPinResult {
+    pub capture_id: String,
+    pub pinned: bool,
+    pub changed: bool,
+    pub replaced_capture_id: Option<String>,
+    pub pinned_count: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -933,12 +957,91 @@ impl AppState {
 
     pub fn clipboard_page(&self, request: ClipboardPageRequest) -> Result<ClipboardPage, String> {
         let settings = self.current_settings()?;
+        let excluded_capture_ids =
+            load_pinned_clipboard_capture_ids(&self.shared.clipboard_cache_dir)?;
         query_clipboard_history_page(
             &settings.knowledge_root_path(),
             &self.shared.clipboard_cache_dir,
             settings.clipboard_history_days,
+            &excluded_capture_ids,
             &request,
         )
+    }
+
+    pub fn pinned_clipboard_captures(&self) -> Result<Vec<PinnedClipboardCapture>, String> {
+        let settings = self.current_settings()?;
+        let knowledge_root = settings.knowledge_root_path();
+        let mut state = load_pinned_clipboard_state(&self.shared.clipboard_cache_dir)?;
+
+        for pinned_capture in &mut state.captures {
+            hydrate_capture_preview_assets(&knowledge_root, &mut pinned_capture.capture)?;
+        }
+
+        Ok(state.captures)
+    }
+
+    pub fn set_clipboard_capture_pinned(
+        &self,
+        capture: CapturePreview,
+        pinned: bool,
+        replace_oldest: bool,
+    ) -> Result<UpdateClipboardPinResult, String> {
+        let normalized_id = capture.id.trim().to_string();
+        if normalized_id.is_empty() {
+            return Err("capture id is required".into());
+        }
+
+        let mut state = load_pinned_clipboard_state(&self.shared.clipboard_cache_dir)?;
+        let existing_index = state
+            .captures
+            .iter()
+            .position(|entry| entry.capture.id == normalized_id);
+
+        let (changed, replaced_capture_id) = if pinned {
+            if let Some(index) = existing_index {
+                state.captures[index].capture = capture;
+                (true, None)
+            } else {
+                let replaced_capture_id = if state.captures.len() >= MAX_PINNED_CLIPBOARD_CAPTURES {
+                    if !replace_oldest {
+                        return Err(format!(
+                            "Pinned captures are limited to {} items.",
+                            MAX_PINNED_CLIPBOARD_CAPTURES
+                        ));
+                    }
+
+                    Some(state.captures.remove(0).capture.id)
+                } else {
+                    None
+                };
+
+                state.captures.push(PinnedClipboardCapture {
+                    capture,
+                    pinned_at: now_rfc3339(),
+                });
+                (true, replaced_capture_id)
+            }
+        } else if let Some(index) = existing_index {
+            state.captures.remove(index);
+            (true, None)
+        } else {
+            (false, None)
+        };
+
+        normalize_pinned_clipboard_state(&mut state);
+        persist_pinned_clipboard_state(&self.shared.clipboard_cache_dir, &state)?;
+
+        if changed {
+            self.emit_clipboard_updated();
+        }
+
+        Ok(UpdateClipboardPinResult {
+            capture_id: normalized_id,
+            pinned,
+            changed,
+            replaced_capture_id,
+            pinned_count: state.captures.len(),
+        })
     }
 
     pub fn delete_clipboard_capture(
@@ -956,13 +1059,20 @@ impl AppState {
             settings.clipboard_history_days,
             normalized_id,
         )?;
+        let removed_from_pinned =
+            remove_pinned_clipboard_capture(&self.shared.clipboard_cache_dir, normalized_id)?;
+        let deleted = result.deleted || removed_from_pinned;
 
-        if result.deleted {
+        if deleted {
             self.persist_runtime_snapshot()?;
             self.emit_clipboard_updated();
         }
 
-        Ok(result)
+        Ok(DeleteClipboardCaptureResult {
+            removed_from_pinned,
+            deleted,
+            ..result
+        })
     }
 
     pub fn process_capture(
@@ -1668,6 +1778,7 @@ impl AppState {
         let store = CaptureHistoryStore::new(&self.shared.clipboard_cache_dir)?;
         let page = store.query_page(&CaptureHistoryQuery {
             history_days: settings.clipboard_history_days,
+            excluded_capture_ids: Vec::new(),
             search: String::new(),
             filter: "image".into(),
             page: 0,
@@ -1762,6 +1873,7 @@ fn matches_clipboard_search(capture: &CapturePreview, search: &str) -> bool {
 pub(crate) fn query_clipboard_history_page_legacy(
     knowledge_root: &Path,
     history_days: u16,
+    excluded_capture_ids: &HashSet<String>,
     request: &ClipboardPageRequest,
 ) -> Result<ClipboardPage, String> {
     let page_size = request.page_size.clamp(1, 100);
@@ -1791,6 +1903,10 @@ pub(crate) fn query_clipboard_history_page_legacy(
 
     visit_clipboard_history_entries(knowledge_root, history_days, |capture| {
         if !should_persist_capture_history(&capture.status) {
+            return Ok(());
+        }
+
+        if excluded_capture_ids.contains(&capture.id) {
             return Ok(());
         }
 
@@ -1994,12 +2110,14 @@ pub(crate) fn query_capture_history_page_from_store(
     knowledge_root: &Path,
     clipboard_cache_root: &Path,
     history_days: u16,
+    excluded_capture_ids: &HashSet<String>,
     request: &ClipboardPageRequest,
 ) -> Result<ClipboardPage, String> {
     let store = CaptureHistoryStore::new(clipboard_cache_root)?;
     let page_size = request.page_size.clamp(1, 100);
     let query = CaptureHistoryQuery {
         history_days,
+        excluded_capture_ids: excluded_capture_ids.iter().cloned().collect(),
         search: request.search.as_deref().unwrap_or("").trim().to_string(),
         filter: request
             .filter
@@ -2684,6 +2802,95 @@ fn persist_queue_state(knowledge_root: &Path, queue_state: &QueueState) -> Resul
     write_json_file(&queue_path, queue_state)
 }
 
+fn load_pinned_clipboard_state(
+    clipboard_cache_root: &Path,
+) -> Result<PinnedClipboardState, String> {
+    let path = pinned_clipboard_captures_file_path(clipboard_cache_root);
+    if !path.exists() {
+        return Ok(PinnedClipboardState::default());
+    }
+
+    let bytes = fs::read(path).map_err(|error| error.to_string())?;
+    let mut state = serde_json::from_slice::<PinnedClipboardState>(&bytes)
+        .map_err(|error| error.to_string())?;
+    normalize_pinned_clipboard_state(&mut state);
+    Ok(state)
+}
+
+fn persist_pinned_clipboard_state(
+    clipboard_cache_root: &Path,
+    state: &PinnedClipboardState,
+) -> Result<(), String> {
+    let mut normalized = state.clone();
+    normalize_pinned_clipboard_state(&mut normalized);
+    let path = pinned_clipboard_captures_file_path(clipboard_cache_root);
+    write_json_file(&path, &normalized)
+}
+
+fn normalize_pinned_clipboard_state(state: &mut PinnedClipboardState) {
+    for entry in &mut state.captures {
+        entry.capture.id = entry.capture.id.trim().to_string();
+        if entry.pinned_at.trim().is_empty() {
+            entry.pinned_at = if entry.capture.captured_at.trim().is_empty() {
+                now_rfc3339()
+            } else {
+                entry.capture.captured_at.clone()
+            };
+        }
+    }
+
+    state
+        .captures
+        .retain(|entry| !entry.capture.id.trim().is_empty());
+    state.captures.sort_by(|left, right| {
+        left.pinned_at
+            .cmp(&right.pinned_at)
+            .then_with(|| left.capture.id.cmp(&right.capture.id))
+    });
+
+    let mut seen_capture_ids = HashSet::new();
+    state.captures = state
+        .captures
+        .drain(..)
+        .rev()
+        .filter(|entry| seen_capture_ids.insert(entry.capture.id.clone()))
+        .collect();
+    state.captures.reverse();
+
+    if state.captures.len() > MAX_PINNED_CLIPBOARD_CAPTURES {
+        let overflow = state.captures.len() - MAX_PINNED_CLIPBOARD_CAPTURES;
+        state.captures.drain(0..overflow);
+    }
+}
+
+fn load_pinned_clipboard_capture_ids(
+    clipboard_cache_root: &Path,
+) -> Result<HashSet<String>, String> {
+    Ok(load_pinned_clipboard_state(clipboard_cache_root)?
+        .captures
+        .into_iter()
+        .map(|entry| entry.capture.id)
+        .collect())
+}
+
+fn remove_pinned_clipboard_capture(
+    clipboard_cache_root: &Path,
+    capture_id: &str,
+) -> Result<bool, String> {
+    let mut state = load_pinned_clipboard_state(clipboard_cache_root)?;
+    let initial_len = state.captures.len();
+    state
+        .captures
+        .retain(|entry| entry.capture.id != capture_id);
+
+    if state.captures.len() == initial_len {
+        return Ok(false);
+    }
+
+    persist_pinned_clipboard_state(clipboard_cache_root, &state)?;
+    Ok(true)
+}
+
 fn enqueue_capture(knowledge_root: &Path, capture: &CaptureRecord) -> Result<usize, String> {
     let mut queue_state = load_queue_state(knowledge_root)?;
     queue_state.pending.push_back(capture.clone());
@@ -3253,6 +3460,10 @@ fn clipboard_history_dir_path(clipboard_cache_root: &Path) -> PathBuf {
     clipboard_cache_root.join(CLIPBOARD_HISTORY_DIR_NAME)
 }
 
+fn pinned_clipboard_captures_file_path(clipboard_cache_root: &Path) -> PathBuf {
+    clipboard_cache_root.join(PINNED_CLIPBOARD_CAPTURES_FILE_NAME)
+}
+
 fn batches_dir_path(knowledge_root: &Path) -> PathBuf {
     knowledge_root.join("_system").join(BATCHES_DIR_NAME)
 }
@@ -3550,5 +3761,49 @@ mod tests {
         );
 
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn normalize_pinned_clipboard_state_keeps_oldest_first_and_limits_to_five() {
+        let mut state = PinnedClipboardState {
+            captures: vec![
+                PinnedClipboardCapture {
+                    capture: sample_preview("cap_6", "2026-04-06T12:00:00+08:00"),
+                    pinned_at: "2026-04-06T12:00:00+08:00".into(),
+                },
+                PinnedClipboardCapture {
+                    capture: sample_preview("cap_4", "2026-04-04T12:00:00+08:00"),
+                    pinned_at: "2026-04-04T12:00:00+08:00".into(),
+                },
+                PinnedClipboardCapture {
+                    capture: sample_preview("cap_2", "2026-04-02T12:00:00+08:00"),
+                    pinned_at: "2026-04-02T12:00:00+08:00".into(),
+                },
+                PinnedClipboardCapture {
+                    capture: sample_preview("cap_5", "2026-04-05T12:00:00+08:00"),
+                    pinned_at: "2026-04-05T12:00:00+08:00".into(),
+                },
+                PinnedClipboardCapture {
+                    capture: sample_preview("cap_1", "2026-04-01T12:00:00+08:00"),
+                    pinned_at: "2026-04-01T12:00:00+08:00".into(),
+                },
+                PinnedClipboardCapture {
+                    capture: sample_preview("cap_3", "2026-04-03T12:00:00+08:00"),
+                    pinned_at: "2026-04-03T12:00:00+08:00".into(),
+                },
+            ],
+        };
+
+        normalize_pinned_clipboard_state(&mut state);
+
+        assert_eq!(state.captures.len(), 5);
+        assert_eq!(
+            state
+                .captures
+                .iter()
+                .map(|entry| entry.capture.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["cap_2", "cap_3", "cap_4", "cap_5", "cap_6"]
+        );
     }
 }

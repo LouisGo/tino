@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
-import { FileText, ImageIcon, Link2 } from "lucide-react";
+import { FileText, ImageIcon, Link2, Pin } from "lucide-react";
 
 import { useCommand } from "@/core/commands";
 import { useContextMenu } from "@/core/context-menu";
@@ -25,6 +25,7 @@ export function ClipboardCaptureList({
   emptyStateTitle,
   emptyStateDescription,
   onRetry,
+  scrollToTopRequest,
 }: {
   groups: ClipboardCaptureGroup[];
   selectedCaptureId: string | null;
@@ -35,6 +36,7 @@ export function ClipboardCaptureList({
   emptyStateTitle?: string;
   emptyStateDescription?: string;
   onRetry?: () => void;
+  scrollToTopRequest: number;
 }) {
   const [scrollViewport, setScrollViewport] = useState<HTMLDivElement | null>(null);
   const [loadTrigger, setLoadTrigger] = useState<HTMLDivElement | null>(null);
@@ -118,6 +120,17 @@ export function ClipboardCaptureList({
     });
   }, [scrollViewport, selectedCaptureId]);
 
+  useEffect(() => {
+    if (!scrollViewport || scrollToTopRequest === 0) {
+      return;
+    }
+
+    scrollViewport.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }, [scrollToTopRequest, scrollViewport]);
+
   return (
     <div className="flex h-full min-h-0 flex-col border-r border-border/55 bg-card/72">
       <div
@@ -128,8 +141,16 @@ export function ClipboardCaptureList({
           {hasCaptures ? (
             groups.map((group) => (
               <section key={group.key} className="space-y-1.5">
-                <p className="px-1 text-[9px] font-semibold tracking-[0.18em] text-muted-foreground/78 uppercase">
-                  {group.label}
+                <p
+                  className={cn(
+                    "px-1 text-[9px] font-semibold tracking-[0.18em] uppercase",
+                    group.kind === "pinned"
+                      ? "inline-flex items-center gap-1.5 text-foreground/72"
+                      : "text-muted-foreground/78",
+                  )}
+                >
+                  {group.kind === "pinned" ? <Pin className="size-3" /> : null}
+                  <span>{group.label}</span>
                 </p>
                 <div className="space-y-0.5">
                   {group.captures.map((capture) => (

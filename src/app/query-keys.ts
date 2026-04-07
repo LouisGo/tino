@@ -9,4 +9,5 @@ export const queryKeys = {
   clipboardPage: (filter: string, search: string) =>
     [...queryKeys.clipboardPageBase(), filter, search] as const,
   clipboardPageSummary: () => ["clipboard-page-summary"] as const,
+  clipboardPinnedCaptures: () => ["clipboard-pinned-captures"] as const,
 };

@@ -4,8 +4,9 @@ import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-quer
 
 import { queryKeys } from "@/app/query-keys"
 import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events"
+import { matchesFilter, matchesSearch } from "@/features/clipboard/lib/clipboard-board"
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store"
-import { getClipboardPage } from "@/lib/tauri"
+import { getClipboardPage, getPinnedClipboardCaptures } from "@/lib/tauri"
 
 const CLIPBOARD_PAGE_SIZE = 40
 
@@ -19,6 +20,7 @@ export function useClipboardBoardView() {
     [filter, deferredSearch],
   )
   const summaryQueryKey = queryKeys.clipboardPageSummary()
+  const pinnedQueryKey = queryKeys.clipboardPinnedCaptures()
 
   const { data: summaryPage } = useQuery({
     queryKey: summaryQueryKey,
@@ -28,6 +30,13 @@ export function useClipboardBoardView() {
         pageSize: 1,
         filter: "all",
       }),
+    staleTime: 2 * 60 * 1_000,
+    placeholderData: (previousData) => previousData,
+  })
+
+  const { data: pinnedCaptures = [] } = useQuery({
+    queryKey: pinnedQueryKey,
+    queryFn: getPinnedClipboardCaptures,
     staleTime: 2 * 60 * 1_000,
     placeholderData: (previousData) => previousData,
   })
@@ -60,11 +69,24 @@ export function useClipboardBoardView() {
   useClipboardCaptureEvents(() => {
     void queryClient.invalidateQueries({ queryKey: listQueryKey, exact: true })
     void queryClient.invalidateQueries({ queryKey: summaryQueryKey, exact: true })
+    void queryClient.invalidateQueries({ queryKey: pinnedQueryKey, exact: true })
     void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() })
   })
 
   const pages = data?.pages ?? []
   const captures = pages.flatMap((page) => page.captures)
+  const visiblePinnedCaptures = useMemo(
+    () =>
+      pinnedCaptures
+        .filter(({ capture }) => matchesFilter(capture.contentKind, filter))
+        .filter(({ capture }) => matchesSearch(capture, deferredSearch))
+        .map(({ capture }) => capture),
+    [deferredSearch, filter, pinnedCaptures],
+  )
+  const visibleCaptures = useMemo(
+    () => [...visiblePinnedCaptures, ...captures],
+    [captures, visiblePinnedCaptures],
+  )
   const firstPage = pages[0]
   const summary = summaryPage?.summary ?? {
     total: 0,
@@ -80,22 +102,47 @@ export function useClipboardBoardView() {
 
   useEffect(() => {
     const store = useClipboardBoardStore.getState()
-    store.setVisibleCaptures(captures)
+    store.setPinnedCaptures(pinnedCaptures)
+    store.setVisibleCaptures(visibleCaptures)
+    const preferredSelectedCaptureId = store.preferredSelectedCaptureId
 
-    if (captures.length === 0) {
-      if (store.selectedCaptureId !== null) {
+    if (visibleCaptures.length === 0) {
+      if (
+        store.selectedCaptureId !== null
+        && preferredSelectedCaptureId === null
+      ) {
         store.setSelectedCaptureId(null)
       }
       return
     }
 
-    if (!store.selectedCaptureId || !captures.some((capture) => capture.id === store.selectedCaptureId)) {
-      store.setSelectedCaptureId(captures[0].id)
+    if (preferredSelectedCaptureId) {
+      const preferredCapture = visibleCaptures.find(
+        (capture) => capture.id === preferredSelectedCaptureId,
+      )
+
+      if (preferredCapture) {
+        if (store.selectedCaptureId !== preferredCapture.id) {
+          store.setSelectedCaptureId(preferredCapture.id)
+        }
+        store.setPreferredSelectedCaptureId(null)
+        return
+      }
+
+      return
     }
-  }, [captures])
+
+    if (
+      !store.selectedCaptureId
+      || !visibleCaptures.some((capture) => capture.id === store.selectedCaptureId)
+    ) {
+      store.setSelectedCaptureId(visibleCaptures[0].id)
+    }
+  }, [pinnedCaptures, visibleCaptures])
 
   useEffect(
     () => () => {
+      useClipboardBoardStore.getState().setPinnedCaptures([])
       useClipboardBoardStore.getState().setVisibleCaptures([])
     },
     [],
@@ -107,6 +154,7 @@ export function useClipboardBoardView() {
     hasNextPage,
     historyDays,
     isFetchingNextPage,
+    pinnedCaptures: visiblePinnedCaptures,
     isRefreshingList: isFetching && !isFetchingNextPage,
     onLoadMore: () => void fetchNextPage({ cancelRefetch: false }),
     onRetry: status === "error" ? () => void refetch() : undefined,

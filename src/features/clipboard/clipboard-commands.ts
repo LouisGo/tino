@@ -2,7 +2,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { message } from "@tauri-apps/plugin-dialog";
 
 import { queryKeys } from "@/app/query-keys";
-import { defineCommand, type CommandDefinition } from "@/core/commands";
+import { defineCommand, type CommandDefinition, type CommandServices } from "@/core/commands";
 import {
   promptForAccessibilityRestart,
   showAccessibilityPermissionDialog,
@@ -14,12 +14,21 @@ import {
   deleteClipboardCapture,
   isTauriRuntime,
   revealPath,
+  setClipboardCapturePinned,
   returnCaptureToPreviousApp,
 } from "@/lib/tauri";
-import type { ClipboardCapture, DeleteClipboardCaptureResult } from "@/types/shell";
+import type {
+  ClipboardCapture,
+  DeleteClipboardCaptureResult,
+  UpdateClipboardPinResult,
+} from "@/types/shell";
 
 type ClipboardCapturePayload = {
   capture: ClipboardCapture;
+};
+
+type ClipboardPinCapturePayload = ClipboardCapturePayload & {
+  replaceOldest?: boolean;
 };
 
 type ClipboardCaptureIdPayload = {
@@ -113,6 +122,42 @@ function getCaptureForConfirmation(
 
   const { visibleCaptures } = useClipboardBoardStore.getState();
   return visibleCaptures.find((capture) => capture.id === captureId) ?? null;
+}
+
+async function invalidateClipboardBoardQueries(queryClient: CommandServices["queryClient"]) {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.clipboardPageBase(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.clipboardPageSummary(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.clipboardPinnedCaptures(),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.dashboardSnapshot(),
+    }),
+  ]);
+}
+
+async function executePinCapture(
+  capture: ClipboardCapture,
+  queryClient: CommandServices["queryClient"],
+  replaceOldest = false,
+) {
+  const result = await setClipboardCapturePinned(capture, true, replaceOldest);
+  if (!result.changed) {
+    return result;
+  }
+
+  const store = useClipboardBoardStore.getState();
+  store.setPendingPinCapture(null);
+  store.setPreferredSelectedCaptureId(capture.id);
+  store.setSelectedCaptureId(capture.id);
+  store.requestListScrollToTop();
+  await invalidateClipboardBoardQueries(queryClient);
+  return result;
 }
 
 export const clipboardCommands = [
@@ -310,6 +355,45 @@ export const clipboardCommands = [
       await copyCaptureToClipboard(capture);
     },
   }),
+  defineCommand<ClipboardPinCapturePayload, UpdateClipboardPinResult | null>({
+    id: "clipboard.pinCapture",
+    label: "Pin Capture",
+    isEnabled: ({ capture }) => Boolean(capture.id.trim()),
+    run: async (
+      { capture, replaceOldest = false }: ClipboardPinCapturePayload,
+      { queryClient },
+    ) => {
+      const store = useClipboardBoardStore.getState();
+      const pinnedCaptures = store.pinnedCaptures;
+      const isAlreadyPinned = pinnedCaptures.some((entry) => entry.capture.id === capture.id);
+      const reachedPinnedLimit =
+        !isAlreadyPinned && pinnedCaptures.length >= 5 && !replaceOldest;
+
+      if (reachedPinnedLimit) {
+        store.setPendingPinCapture(capture);
+        return null;
+      }
+
+      return executePinCapture(capture, queryClient, replaceOldest);
+    },
+  }),
+  defineCommand<ClipboardCapturePayload, UpdateClipboardPinResult | null>({
+    id: "clipboard.unpinCapture",
+    label: "Unpin Capture",
+    isEnabled: ({ capture }) => Boolean(capture.id.trim()),
+    run: async ({ capture }: ClipboardCapturePayload, { queryClient }) => {
+      const store = useClipboardBoardStore.getState();
+      const result = await setClipboardCapturePinned(capture, false);
+      if (!result.changed) {
+        return result;
+      }
+
+      store.setPreferredSelectedCaptureId(capture.id);
+      store.setSelectedCaptureId(capture.id);
+      await invalidateClipboardBoardQueries(queryClient);
+      return result;
+    },
+  }),
   defineCommand<ClipboardCaptureAssetPayload, void>({
     id: "clipboard.revealCaptureAsset",
     label: "Reveal Asset",
@@ -341,17 +425,7 @@ export const clipboardCommands = [
       }
 
       useClipboardBoardStore.getState().removeCapture(capture.id);
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.clipboardPageBase(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.clipboardPageSummary(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.dashboardSnapshot(),
-        }),
-      ]);
+      await invalidateClipboardBoardQueries(queryClient);
 
       return result;
     },

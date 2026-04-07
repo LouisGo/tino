@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
 use log::warn;
 
@@ -12,12 +12,14 @@ pub(crate) fn query_clipboard_history_page(
     knowledge_root: &Path,
     clipboard_cache_root: &Path,
     history_days: u16,
+    excluded_capture_ids: &HashSet<String>,
     request: &ClipboardPageRequest,
 ) -> Result<ClipboardPage, String> {
     match query_capture_history_page_from_store(
         knowledge_root,
         clipboard_cache_root,
         history_days,
+        excluded_capture_ids,
         request,
     ) {
         Ok(page) => Ok(page),
@@ -25,7 +27,12 @@ pub(crate) fn query_clipboard_history_page(
             warn!(
                 "failed to read capture history from sqlite store, falling back to jsonl: {error}"
             );
-            query_clipboard_history_page_legacy(clipboard_cache_root, history_days, request)
+            query_clipboard_history_page_legacy(
+                clipboard_cache_root,
+                history_days,
+                excluded_capture_ids,
+                request,
+            )
         }
     }
 }

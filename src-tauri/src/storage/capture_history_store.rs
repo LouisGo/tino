@@ -79,6 +79,7 @@ pub struct CaptureHistoryPage {
 
 pub struct CaptureHistoryQuery {
     pub history_days: u16,
+    pub excluded_capture_ids: Vec<String>,
     pub search: String,
     pub filter: String,
     pub page: usize,
@@ -645,7 +646,12 @@ fn query_summary(
     connection: &Connection,
     query: &CaptureHistoryQuery,
 ) -> Result<CaptureHistorySummary, String> {
-    let (where_sql, params) = build_where_clause(query.history_days, &query.search, "all");
+    let (where_sql, params) = build_where_clause(
+        query.history_days,
+        &query.excluded_capture_ids,
+        &query.search,
+        "all",
+    );
     let sql = format!(
         r#"
         SELECT
@@ -674,7 +680,12 @@ fn query_filtered_total(
     connection: &Connection,
     query: &CaptureHistoryQuery,
 ) -> Result<usize, String> {
-    let (where_sql, params) = build_where_clause(query.history_days, &query.search, &query.filter);
+    let (where_sql, params) = build_where_clause(
+        query.history_days,
+        &query.excluded_capture_ids,
+        &query.search,
+        &query.filter,
+    );
     let sql = format!("SELECT COUNT(*) FROM capture_history WHERE {where_sql}");
 
     connection
@@ -691,8 +702,12 @@ fn query_filtered_captures(
 ) -> Result<Vec<CaptureHistoryEntry>, String> {
     let page_size = query.page_size.clamp(1, 100);
     let offset = query.page.saturating_mul(page_size);
-    let (where_sql, mut params) =
-        build_where_clause(query.history_days, &query.search, &query.filter);
+    let (where_sql, mut params) = build_where_clause(
+        query.history_days,
+        &query.excluded_capture_ids,
+        &query.search,
+        &query.filter,
+    );
     let sql = format!(
         r#"
         SELECT
@@ -742,12 +757,26 @@ fn query_filtered_captures(
         .map_err(|error| error.to_string())
 }
 
-fn build_where_clause(history_days: u16, search: &str, filter: &str) -> (String, Vec<Value>) {
+fn build_where_clause(
+    history_days: u16,
+    excluded_capture_ids: &[String],
+    search: &str,
+    filter: &str,
+) -> (String, Vec<Value>) {
     let mut clauses = vec![
         "captured_day >= ?".to_string(),
         "status IN ('archived', 'queued')".to_string(),
     ];
     let mut params = vec![Value::Text(history_cutoff_day(history_days))];
+
+    if !excluded_capture_ids.is_empty() {
+        let placeholders = (0..excluded_capture_ids.len())
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(", ");
+        clauses.push(format!("id NOT IN ({placeholders})"));
+        params.extend(excluded_capture_ids.iter().cloned().map(Value::Text));
+    }
 
     let normalized_search = search.trim().to_ascii_lowercase();
     if !normalized_search.is_empty() {
@@ -937,6 +966,7 @@ mod tests {
         let result = store
             .query_page(&CaptureHistoryQuery {
                 history_days: 1,
+                excluded_capture_ids: Vec::new(),
                 search: "rust".into(),
                 filter: "text".into(),
                 page: 0,
@@ -984,6 +1014,7 @@ mod tests {
         let result = store
             .query_page(&CaptureHistoryQuery {
                 history_days: 1,
+                excluded_capture_ids: Vec::new(),
                 search: String::new(),
                 filter: "all".into(),
                 page: 0,
@@ -1018,6 +1049,7 @@ mod tests {
         let result = store
             .query_page(&CaptureHistoryQuery {
                 history_days: 1,
+                excluded_capture_ids: Vec::new(),
                 search: "launch".into(),
                 filter: "image".into(),
                 page: 0,
@@ -1031,6 +1063,46 @@ mod tests {
             result.captures[0].ocr_text.as_deref(),
             Some("Launch checklist")
         );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn query_page_excludes_requested_capture_ids() {
+        let root = unique_root();
+        let store = CaptureHistoryStore::new(&root).expect("store should initialize");
+        store
+            .upsert_capture(&sample_upsert(
+                "cap_oldest",
+                "plain_text",
+                "archived",
+                "rust clipboard",
+            ))
+            .expect("oldest capture should insert");
+        store
+            .upsert_capture(&sample_upsert(
+                "cap_newest",
+                "plain_text",
+                "archived",
+                "clipboard board",
+            ))
+            .expect("newest capture should insert");
+
+        let result = store
+            .query_page(&CaptureHistoryQuery {
+                history_days: 1,
+                excluded_capture_ids: vec!["cap_oldest".into()],
+                search: String::new(),
+                filter: "all".into(),
+                page: 0,
+                page_size: 20,
+            })
+            .expect("query should succeed");
+
+        assert_eq!(result.total, 1);
+        assert_eq!(result.summary.total, 1);
+        assert_eq!(result.captures.len(), 1);
+        assert_eq!(result.captures[0].id, "cap_newest");
 
         let _ = fs::remove_dir_all(root);
     }

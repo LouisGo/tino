@@ -57,6 +57,7 @@ pub(crate) fn delete_capture_with_fallback(
         id: capture_id.to_string(),
         removed_from_history,
         removed_from_store,
+        removed_from_pinned: false,
         deleted: removed_from_history || removed_from_store,
     })
 }

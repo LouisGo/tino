@@ -47,6 +47,7 @@ mod tests {
             captured_at: captured_at.into(),
             status: "archived".into(),
             raw_text: format!("raw-{id}"),
+            ocr_text: None,
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,
@@ -75,6 +76,7 @@ mod tests {
         let result = store
             .query_page(&CaptureHistoryQuery {
                 history_days: 3,
+                excluded_capture_ids: Vec::new(),
                 search: String::new(),
                 filter: "all".into(),
                 page: 0,

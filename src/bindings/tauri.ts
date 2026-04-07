@@ -10,6 +10,8 @@ export const commands = {
 	applyBatchDecision: (request: ApplyBatchDecisionRequest) => typedError<ApplyBatchDecisionResult, string>(__TAURI_INVOKE("apply_batch_decision", { request })),
 	getDashboardSnapshot: () => typedError<DashboardSnapshot, string>(__TAURI_INVOKE("get_dashboard_snapshot")),
 	getClipboardPage: (request: ClipboardPageRequest) => typedError<ClipboardPage, string>(__TAURI_INVOKE("get_clipboard_page", { request })),
+	getPinnedClipboardCaptures: () => typedError<PinnedClipboardCapture[], string>(__TAURI_INVOKE("get_pinned_clipboard_captures")),
+	setClipboardCapturePinned: (request: SetClipboardCapturePinnedRequest) => typedError<UpdateClipboardPinResult, string>(__TAURI_INVOKE("set_clipboard_capture_pinned", { request })),
 	deleteClipboardCapture: (request: DeleteClipboardCaptureRequest) => typedError<DeleteClipboardCaptureResult, string>(__TAURI_INVOKE("delete_clipboard_capture", { request })),
 	getAppSettings: () => typedError<AppSettings, string>(__TAURI_INVOKE("get_app_settings")),
 	saveAppSettings: (settings: AppSettings) => typedError<AppSettings, string>(__TAURI_INVOKE("save_app_settings", { settings })),
@@ -208,6 +210,7 @@ export type DeleteClipboardCaptureResult = {
 	id: string,
 	removedFromHistory: boolean,
 	removedFromStore: boolean,
+	removedFromPinned: boolean,
 	deleted: boolean,
 };
 
@@ -219,6 +222,11 @@ export type PersistedKnowledgeOutput = {
 	filePath: string | null,
 	topicSlug: string | null,
 	topicName: string | null,
+};
+
+export type PinnedClipboardCapture = {
+	capture?: CapturePreview,
+	pinnedAt?: string,
 };
 
 export type PossibleTopicSuggestion = {
@@ -249,12 +257,26 @@ export type RuntimeProviderProfile = {
 
 export type RuntimeProviderVendor = "openai" | "deepseek";
 
+export type SetClipboardCapturePinnedRequest = {
+	capture: CapturePreview,
+	pinned: boolean,
+	replaceOldest?: boolean,
+};
+
 export type TopicIndexEntry = {
 	topicSlug: string,
 	topicName: string,
 	topicSummary: string,
 	recentTags: string[],
 	lastUpdatedAt: string,
+};
+
+export type UpdateClipboardPinResult = {
+	captureId: string,
+	pinned: boolean,
+	changed: boolean,
+	replacedCaptureId: string | null,
+	pinnedCount: number,
 };
 
 /* Tauri Specta runtime */

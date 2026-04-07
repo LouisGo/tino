@@ -1,6 +1,7 @@
 use crate::app_state::{
-    AppSettings, AppState, ClipboardPage, ClipboardPageRequest, ClipboardWindowTarget,
-    DashboardSnapshot, DeleteClipboardCaptureResult,
+    AppSettings, AppState, CapturePreview, ClipboardPage, ClipboardPageRequest,
+    ClipboardWindowTarget, DashboardSnapshot, DeleteClipboardCaptureResult, PinnedClipboardCapture,
+    UpdateClipboardPinResult,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -48,6 +49,15 @@ pub struct ClipboardReplayRequest {
 #[serde(rename_all = "camelCase")]
 pub struct DeleteClipboardCaptureRequest {
     id: String,
+}
+
+#[derive(Debug, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SetClipboardCapturePinnedRequest {
+    capture: CapturePreview,
+    pinned: bool,
+    #[serde(default)]
+    replace_oldest: bool,
 }
 
 #[derive(Debug, Serialize, Type)]
@@ -216,6 +226,23 @@ pub fn get_clipboard_page(
     request: ClipboardPageRequest,
 ) -> Result<ClipboardPage, String> {
     state.clipboard_page(request)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_pinned_clipboard_captures(
+    state: State<'_, AppState>,
+) -> Result<Vec<PinnedClipboardCapture>, String> {
+    state.pinned_clipboard_captures()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_clipboard_capture_pinned(
+    state: State<'_, AppState>,
+    request: SetClipboardCapturePinnedRequest,
+) -> Result<UpdateClipboardPinResult, String> {
+    state.set_clipboard_capture_pinned(request.capture, request.pinned, request.replace_oldest)
 }
 
 #[tauri::command]

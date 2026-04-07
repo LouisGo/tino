@@ -24,6 +24,7 @@ export function ClipboardBoardFeature({
     isRefreshingList,
     onLoadMore,
     onRetry,
+    pinnedCaptures,
     status,
     summary,
   } = useClipboardBoardView();
@@ -39,13 +40,14 @@ export function ClipboardBoardFeature({
       ) : null}
       <ClipboardBoardPanel
         captures={captures}
+        pinnedCaptures={pinnedCaptures}
         hasNextPage={hasNextPage}
-         isRefreshingList={isRefreshingList}
-         isFetchingNextPage={isFetchingNextPage}
+        isRefreshingList={isRefreshingList}
+        isFetchingNextPage={isFetchingNextPage}
         fillHeight={fillHeight}
         windowMode={windowMode}
         autoFocusSearch={autoFocusSearch}
-         onLoadMore={onLoadMore}
+        onLoadMore={onLoadMore}
         emptyStateTitle={
           status === "loading"
             ? "Loading clipboard history"
@@ -60,8 +62,8 @@ export function ClipboardBoardFeature({
               ? errorMessage
               : "Try clearing the search term or switching the type filter back to all entries."
         }
-         onRetry={onRetry}
-       />
+        onRetry={onRetry}
+      />
     </div>
   );
 }

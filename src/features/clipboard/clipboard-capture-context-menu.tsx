@@ -3,6 +3,8 @@ import {
   Eye,
   ExternalLink,
   ImageIcon,
+  Pin,
+  PinOff,
   Trash2,
 } from "lucide-react";
 
@@ -11,6 +13,7 @@ import {
   contextMenuSeparator,
   createContextMenuRegistry,
 } from "@/core/context-menu";
+import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import type { ClipboardCapture } from "@/types/shell";
 
 export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCapture>([
@@ -66,6 +69,34 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
         capture,
         path: capture.assetPath ?? "",
       }),
+    },
+  }),
+  contextMenuItem({
+    key: "toggle-pin",
+    label: (capture) =>
+      useClipboardBoardStore
+        .getState()
+        .pinnedCaptures
+        .some((entry) => entry.capture.id === capture.id)
+        ? "Unpin"
+        : "Pin to Top",
+    icon: (capture) =>
+      useClipboardBoardStore
+        .getState()
+        .pinnedCaptures
+        .some((entry) => entry.capture.id === capture.id)
+        ? <PinOff className="size-4" />
+        : <Pin className="size-4" />,
+    onSelect: (capture, runtime) => {
+      const isPinned = useClipboardBoardStore
+        .getState()
+        .pinnedCaptures
+        .some((entry) => entry.capture.id === capture.id);
+
+      return runtime.commands.execute(
+        isPinned ? "clipboard.unpinCapture" : "clipboard.pinCapture",
+        { capture },
+      );
     },
   }),
   contextMenuSeparator("clipboard-divider-danger"),

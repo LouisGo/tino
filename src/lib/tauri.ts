@@ -18,6 +18,7 @@ import type {
   CapturePreview as RustCapturePreview,
   ClipboardPage as RustClipboardPage,
   DashboardSnapshot as RustDashboardSnapshot,
+  PinnedClipboardCapture as RustPinnedClipboardCapture,
   RuntimeProviderProfile as RustRuntimeProviderProfile,
 } from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
@@ -27,8 +28,10 @@ import type {
   DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
+  PinnedClipboardCapture,
   RuntimeProviderProfile,
   SettingsDraft,
+  UpdateClipboardPinResult,
 } from "@/types/shell";
 
 export const clipboardCapturesUpdatedEvent = "clipboard-captures-updated";
@@ -143,6 +146,7 @@ const mockSnapshot: DashboardSnapshot = {
 };
 
 let mockRecentCaptures = [...mockSnapshot.recentCaptures];
+let mockPinnedCaptures: PinnedClipboardCapture[] = [];
 
 function getMockSnapshot(): DashboardSnapshot {
   return {
@@ -213,6 +217,17 @@ function normalizeClipboardPageResult(page: RustClipboardPage): ClipboardPageRes
   };
 }
 
+function normalizePinnedClipboardCapture(
+  pinnedCapture: RustPinnedClipboardCapture,
+): PinnedClipboardCapture {
+  return {
+    capture: normalizeClipboardCapture(
+      (pinnedCapture.capture ?? {}) as RustCapturePreview,
+    ),
+    pinnedAt: pinnedCapture.pinnedAt ?? "",
+  };
+}
+
 function normalizeDashboardSnapshot(snapshot: RustDashboardSnapshot): DashboardSnapshot {
   return {
     ...snapshot,
@@ -235,9 +250,14 @@ export async function getClipboardPage(
 ): Promise<ClipboardPageResult> {
   if (!isTauriRuntime()) {
     const snapshot = getMockSnapshot();
+    const pinnedCaptureIds = new Set(mockPinnedCaptures.map((entry) => entry.capture.id));
     const normalizedSearch = request.search?.trim().toLowerCase() ?? "";
     const normalizedFilter = request.filter ?? "all";
     const searchMatched = snapshot.recentCaptures.filter((capture) => {
+      if (pinnedCaptureIds.has(capture.id)) {
+        return false;
+      }
+
       if (!normalizedSearch) {
         return true;
       }
@@ -293,15 +313,100 @@ export async function getClipboardPage(
   );
 }
 
+export async function getPinnedClipboardCaptures(): Promise<PinnedClipboardCapture[]> {
+  if (!isTauriRuntime()) {
+    return mockPinnedCaptures;
+  }
+
+  const captures = await unwrapTauriResult(tauriCommands.getPinnedClipboardCaptures());
+  return captures.map(normalizePinnedClipboardCapture);
+}
+
+export async function setClipboardCapturePinned(
+  capture: ClipboardCapture,
+  pinned: boolean,
+  replaceOldest = false,
+): Promise<UpdateClipboardPinResult> {
+  if (!isTauriRuntime()) {
+    const existingIndex = mockPinnedCaptures.findIndex((entry) => entry.capture.id === capture.id);
+
+    if (pinned) {
+      let replacedCaptureId: string | null = null;
+
+      if (existingIndex >= 0) {
+        mockPinnedCaptures[existingIndex] = {
+          ...mockPinnedCaptures[existingIndex],
+          capture,
+        };
+      } else {
+        if (mockPinnedCaptures.length >= 5) {
+          if (!replaceOldest) {
+            throw new Error("Pinned captures are limited to 5 items.");
+          }
+
+          replacedCaptureId = mockPinnedCaptures[0]?.capture.id ?? null;
+          mockPinnedCaptures = mockPinnedCaptures.slice(1);
+        }
+
+        mockPinnedCaptures = [
+          ...mockPinnedCaptures,
+          {
+            capture,
+            pinnedAt: nowIsoString(),
+          },
+        ];
+      }
+
+      return {
+        captureId: capture.id,
+        pinned: true,
+        changed: true,
+        replacedCaptureId,
+        pinnedCount: mockPinnedCaptures.length,
+      } satisfies UpdateClipboardPinResult;
+    }
+
+    if (existingIndex < 0) {
+      return {
+        captureId: capture.id,
+        pinned: false,
+        changed: false,
+        replacedCaptureId: null,
+        pinnedCount: mockPinnedCaptures.length,
+      } satisfies UpdateClipboardPinResult;
+    }
+
+    mockPinnedCaptures = mockPinnedCaptures.filter((entry) => entry.capture.id !== capture.id);
+    return {
+      captureId: capture.id,
+      pinned: false,
+      changed: true,
+      replacedCaptureId: null,
+      pinnedCount: mockPinnedCaptures.length,
+    } satisfies UpdateClipboardPinResult;
+  }
+
+  return unwrapTauriResult(
+    tauriCommands.setClipboardCapturePinned({
+      capture,
+      pinned,
+      replaceOldest,
+    }),
+  );
+}
+
 export async function deleteClipboardCapture(
   id: string,
 ): Promise<DeleteClipboardCaptureResult> {
   if (!isTauriRuntime()) {
+    const removedFromPinned = mockPinnedCaptures.some((entry) => entry.capture.id === id);
+    mockPinnedCaptures = mockPinnedCaptures.filter((entry) => entry.capture.id !== id);
     mockRecentCaptures = mockRecentCaptures.filter((capture) => capture.id !== id);
     return {
       id,
       removedFromHistory: true,
       removedFromStore: true,
+      removedFromPinned,
       deleted: true,
     } satisfies DeleteClipboardCaptureResult;
   }

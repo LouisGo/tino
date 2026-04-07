@@ -13,6 +13,8 @@ pub fn builder() -> Builder<tauri::Wry> {
         ai::apply_batch_decision,
         shell::get_dashboard_snapshot,
         shell::get_clipboard_page,
+        shell::get_pinned_clipboard_captures,
+        shell::set_clipboard_capture_pinned,
         shell::delete_clipboard_capture,
         shell::get_app_settings,
         shell::save_app_settings,

@@ -32,7 +32,12 @@ import {
   ClipboardCaptureList,
 } from "@/features/clipboard/components/clipboard-capture-list";
 import { ClipboardCaptureDetail } from "@/features/clipboard/components/clipboard-capture-detail";
-import { clipboardFilterOptions, getClipboardFilterOption, groupCapturesByDay } from "@/features/clipboard/lib/clipboard-board";
+import {
+  buildClipboardCaptureGroups,
+  captureTitle,
+  clipboardFilterOptions,
+  getClipboardFilterOption,
+} from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import {
@@ -48,6 +53,7 @@ const WINDOW_SELECTION_TIP_IDLE_MS = 2000;
 
 export function ClipboardBoardPanel({
   captures,
+  pinnedCaptures,
   hasNextPage,
   isRefreshingList,
   isFetchingNextPage,
@@ -60,6 +66,7 @@ export function ClipboardBoardPanel({
   autoFocusSearch = false,
 }: {
   captures: ClipboardCapture[];
+  pinnedCaptures: ClipboardCapture[];
   hasNextPage?: boolean;
   isRefreshingList?: boolean;
   isFetchingNextPage?: boolean;
@@ -74,28 +81,44 @@ export function ClipboardBoardPanel({
   const selectedCaptureId = useClipboardBoardStore((state) => state.selectedCaptureId);
   const previewingImageId = useClipboardBoardStore((state) => state.previewingImageId);
   const pendingDeleteCapture = useClipboardBoardStore((state) => state.pendingDeleteCapture);
+  const pendingPinCapture = useClipboardBoardStore((state) => state.pendingPinCapture);
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
+  const listScrollRequest = useClipboardBoardStore((state) => state.listScrollRequest);
   const setPreviewingImageId = useClipboardBoardStore((state) => state.setPreviewingImageId);
   const setPendingDeleteCapture = useClipboardBoardStore((state) => state.setPendingDeleteCapture);
+  const setPendingPinCapture = useClipboardBoardStore((state) => state.setPendingPinCapture);
   const openImageLightbox = useCommand<{ captureId: string }>("clipboard.showImageLightbox");
+  const confirmPinCapture = useCommand<{
+    capture: ClipboardCapture;
+    replaceOldest?: boolean;
+  }>("clipboard.pinCapture");
   const confirmDeleteCapture = useCommand<{ capture: ClipboardCapture }>("clipboard.deleteCapture");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPinning, setIsPinning] = useState(false);
   const [showWindowSelectionTip, setShowWindowSelectionTip] = useState(false);
   const [windowTargetAppName, setWindowTargetAppName] = useState<string | null>(null);
   const hideWindowSelectionTipTimeoutRef = useRef<number | null>(null);
   const lastActiveTipCaptureIdRef = useRef<string | null>(null);
-  const captureGroups = groupCapturesByDay(captures);
+  const visibleCaptures = [...pinnedCaptures, ...captures];
+  const captureGroups = buildClipboardCaptureGroups({
+    captures,
+    pinnedCaptures,
+  });
+  const oldestPinnedLabel = pinnedCaptures[0]
+    ? captureTitle(pinnedCaptures[0])
+    : "the oldest pinned capture";
   const selectedCapture =
-    captures.find((capture) => capture.id === selectedCaptureId) ??
-    captures[0] ??
+    visibleCaptures.find((capture) => capture.id === selectedCaptureId) ??
+    visibleCaptures[0] ??
     null;
   const previewingImage =
-    captures.find((capture) => capture.id === previewingImageId) ?? null;
+    visibleCaptures.find((capture) => capture.id === previewingImageId) ?? null;
   const canShowWindowSelectionTip =
     windowMode &&
     Boolean(selectedCapture) &&
     !previewingImageId &&
-    !pendingDeleteCapture;
+    !pendingDeleteCapture &&
+    !pendingPinCapture;
   const highlightQuery = searchValue.trim();
 
   function clearWindowSelectionTipTimeout() {
@@ -213,6 +236,10 @@ export function ClipboardBoardPanel({
     setPendingDeleteCapture(null);
   }
 
+  function closePinDialog() {
+    setPendingPinCapture(null);
+  }
+
   function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
     return (
       (typeof value === "object" || typeof value === "function") &&
@@ -250,6 +277,38 @@ export function ClipboardBoardPanel({
     }
   }
 
+  function handleConfirmPin(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    if (!pendingPinCapture || isPinning) {
+      return;
+    }
+
+    try {
+      const result = confirmPinCapture.execute({
+        capture: pendingPinCapture,
+        replaceOldest: true,
+      });
+      if (!isPromiseLike(result)) {
+        closePinDialog();
+        return;
+      }
+
+      setIsPinning(true);
+      void Promise.resolve(result)
+        .then(() => {
+          closePinDialog();
+        })
+        .catch((error) => {
+          console.error("[clipboard] failed to pin capture", error);
+        })
+        .finally(() => {
+          setIsPinning(false);
+        });
+    } catch (error) {
+      console.error("[clipboard] failed to pin capture", error);
+    }
+  }
+
   return (
     <>
       <section
@@ -282,6 +341,7 @@ export function ClipboardBoardPanel({
               emptyStateTitle={emptyStateTitle}
               emptyStateDescription={emptyStateDescription}
               onRetry={onRetry}
+              scrollToTopRequest={listScrollRequest}
             />
 
             <div className="flex h-full min-h-0 min-w-0 flex-col self-stretch bg-card/92">
@@ -310,6 +370,41 @@ export function ClipboardBoardPanel({
         capture={previewingImage}
         onClose={() => setPreviewingImageId(null)}
       />
+
+      <AlertDialog
+        open={Boolean(pendingPinCapture)}
+        onOpenChange={(open: boolean) => {
+          if (!open && !isPinning) {
+            closePinDialog();
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-[min(25rem,calc(100vw-2rem))]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace Oldest Pinned Capture?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can keep up to 5 pinned captures. Pinning this item will replace "
+              {oldestPinnedLabel}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPinning}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPinning || !pendingPinCapture}
+              onClick={handleConfirmPin}
+            >
+              {isPinning ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" />
+                  Pinning...
+                </>
+              ) : (
+                "Replace Oldest"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={Boolean(pendingDeleteCapture)}
@@ -440,7 +535,8 @@ function ClipboardWindowSelectionTip({
         <span className="text-[11px] font-medium text-foreground/72">{title}</span>
         <ShortcutKbd
           shortcutId="clipboard.confirmWindowSelection"
-          className="shrink-0 [&_kbd]:min-h-5 [&_kbd]:min-w-5 [&_kbd]:rounded-[7px] [&_kbd]:px-1.5 [&_kbd]:text-[9px]"
+          className="shrink-0"
+          size="lg"
         />
       </div>
     </div>

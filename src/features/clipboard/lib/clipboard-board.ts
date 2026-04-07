@@ -8,6 +8,7 @@ export type ClipboardFilter = "all" | "text" | "link" | "image";
 export type ClipboardCaptureGroup = {
   key: string;
   label: string;
+  kind: "pinned" | "day";
   captures: ClipboardCapture[];
 };
 
@@ -179,11 +180,36 @@ export function groupCapturesByDay(captures: ClipboardCapture[]) {
     groups.set(key, {
       key,
       label: formatCaptureGroupLabel(capture.capturedAt),
+      kind: "day",
       captures: [capture],
     });
   }
 
   return Array.from(groups.values());
+}
+
+export function buildClipboardCaptureGroups({
+  captures,
+  pinnedCaptures,
+}: {
+  captures: ClipboardCapture[];
+  pinnedCaptures: ClipboardCapture[];
+}) {
+  const groups = groupCapturesByDay(captures);
+
+  if (pinnedCaptures.length === 0) {
+    return groups;
+  }
+
+  return [
+    {
+      key: "pinned",
+      label: "Pinned",
+      kind: "pinned" as const,
+      captures: pinnedCaptures,
+    },
+    ...groups,
+  ];
 }
 
 export function formatKindLabel(contentKind: ContentKind) {

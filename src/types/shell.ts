@@ -18,11 +18,13 @@ import type {
   ClipboardPageRequest as RustClipboardPageRequest,
   DashboardSnapshot as RustDashboardSnapshot,
   DeleteClipboardCaptureResult as RustDeleteClipboardCaptureResult,
+  PinnedClipboardCapture as RustPinnedClipboardCapture,
   ReviewAction as RustReviewAction,
   ReviewFeedbackRecord as RustReviewFeedbackRecord,
   RuntimeProviderProfile as RustRuntimeProviderProfile,
   RuntimeProviderVendor as RustRuntimeProviderVendor,
   TopicIndexEntry as RustTopicIndexEntry,
+  UpdateClipboardPinResult as RustUpdateClipboardPinResult,
 } from "@/bindings/tauri";
 
 type RequireKeys<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
@@ -46,6 +48,10 @@ export type ClipboardPageResult = Omit<RustClipboardPage, "captures"> & {
 };
 
 export type DeleteClipboardCaptureResult = RustDeleteClipboardCaptureResult;
+export type PinnedClipboardCapture = Omit<RustPinnedClipboardCapture, "capture"> & {
+  capture: ClipboardCapture;
+};
+export type UpdateClipboardPinResult = RustUpdateClipboardPinResult;
 export type AppLocale = RustAppLocale;
 export type AppLocaleMode = RustAppLocaleMode;
 export type AppLocalePreference = RustAppLocalePreference;
