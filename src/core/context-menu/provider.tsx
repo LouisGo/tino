@@ -1,111 +1,43 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
-  useState,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 
+import * as RadixContextMenu from "@radix-ui/react-context-menu";
 import { ChevronRight } from "lucide-react";
 
-import {
-  CONTEXT_MENU_HOST_SCOPE,
-  CONTEXT_MENU_SHORTCUT_SCOPE,
-} from "@/core/context-menu/constants";
+import { CONTEXT_MENU_HOST_SCOPE } from "@/core/context-menu/constants";
 import { ContextMenuSurfaceContext } from "@/core/context-menu/context";
 import { useContextMenuStore } from "@/core/context-menu/store";
 import { useShortcutScope } from "@/core/shortcuts";
-import { resolvePortalContainer } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
 export function ContextMenuProvider({ children }: { children: ReactNode }) {
-  const {
-    activeIndex,
-    closeMenu,
-    interactionMode,
-    instanceId,
-    isOpen,
-    items,
-    openMenu,
-    selectItemAt,
-    setActiveIndexFromPointer,
-    x,
-    y,
-  } = useContextMenuStore();
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  const [position, setPosition] = useState({ left: 0, top: 0 });
-  const portalContainer = resolvePortalContainer();
+  const { closeMenu, isOpen, items, openMenu, sessionId, x, y } = useContextMenuStore();
+  const triggerRef = useRef<HTMLSpanElement | null>(null);
   useShortcutScope(CONTEXT_MENU_HOST_SCOPE);
-  useShortcutScope(CONTEXT_MENU_SHORTCUT_SCOPE, { active: isOpen });
   const handleOpenMenu = useCallback<typeof openMenu>((nextMenu) => {
-    setPosition({
-      left: nextMenu.x,
-      top: nextMenu.y,
-    });
     openMenu(nextMenu);
   }, [openMenu]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (!isOpen || items.length === 0 || typeof window === "undefined" || !triggerRef.current) {
       return;
     }
 
-    const suppressContextMenu = (event: MouseEvent) => {
-      event.preventDefault();
-    };
-
-    window.addEventListener("contextmenu", suppressContextMenu, true);
-    return () => {
-      window.removeEventListener("contextmenu", suppressContextMenu, true);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen || typeof window === "undefined") {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (menuRef.current?.contains(event.target as Node)) {
-        return;
-      }
-
-      closeMenu();
-    };
-
-    const handleViewportChange = () => {
-      closeMenu();
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown, true);
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("blur", handleViewportChange);
-    window.addEventListener("scroll", handleViewportChange, true);
-
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown, true);
-      window.removeEventListener("resize", handleViewportChange);
-      window.removeEventListener("blur", handleViewportChange);
-      window.removeEventListener("scroll", handleViewportChange, true);
-    };
-  }, [closeMenu, isOpen]);
-
-  useLayoutEffect(() => {
-    if (!isOpen || !menuRef.current || typeof window === "undefined") {
-      return;
-    }
-
-    const rect = menuRef.current.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const margin = 12;
-
-    setPosition({
-      left: Math.max(margin, Math.min(x, viewportWidth - rect.width - margin)),
-      top: Math.max(margin, Math.min(y, viewportHeight - rect.height - margin)),
+    const trigger = triggerRef.current;
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      button: 2,
+      buttons: 2,
+      cancelable: true,
+      clientX: x,
+      clientY: y,
     });
+
+    trigger.dispatchEvent(event);
   }, [isOpen, items, x, y]);
 
   return (
@@ -116,82 +48,83 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      {isOpen && portalContainer
-        ? createPortal(
+      <RadixContextMenu.Root
+        key={sessionId}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            closeMenu();
+          }
+        }}
+        modal={false}
+      >
+        <RadixContextMenu.Trigger asChild>
+          <span
+            ref={triggerRef}
+            aria-hidden="true"
+            className="fixed size-px pointer-events-none opacity-0"
+            style={{
+              left: x,
+              top: y,
+            }}
+          />
+        </RadixContextMenu.Trigger>
+        <RadixContextMenu.Portal>
+          {isOpen && items.length > 0 ? (
             <>
               <div
                 data-slot="context-menu-mask"
                 aria-hidden="true"
                 className="fixed inset-0 z-[139] bg-transparent"
-                onPointerDown={() => {
+                onPointerDown={(event) => {
+                  event.preventDefault();
                   closeMenu();
                 }}
               />
-              <div
-                ref={menuRef}
+              <RadixContextMenu.Content
                 data-slot="context-menu-content"
-                role="menu"
-                aria-orientation="vertical"
-                aria-activedescendant={
-                  activeIndex >= 0 ? `context-menu-item-${instanceId}-${activeIndex}` : undefined
-                }
-                className="fixed z-[140] min-w-[220px] cursor-default rounded-[20px] border border-border/80 bg-card/96 p-1.5 shadow-[var(--shadow-overlay-elevated)] backdrop-blur-xl"
-                style={{
-                  left: position.left,
-                  top: position.top,
+                loop
+                collisionPadding={12}
+                onCloseAutoFocus={(event) => {
+                  event.preventDefault();
                 }}
+                className="z-[140] min-w-[220px] rounded-[20px] border border-border/80 bg-card/96 p-1.5 shadow-[var(--shadow-overlay-elevated)] backdrop-blur-xl"
               >
                 <div className="space-y-1">
-                  {items.map((item, index) =>
+                  {items.map((item) =>
                     item.type === "separator" ? (
-                      <div key={item.key} className="my-1 h-px bg-border/70" />
-                    ) : (
-                      <button
-                        id={`context-menu-item-${instanceId}-${index}`}
+                      <RadixContextMenu.Separator
                         key={item.key}
-                        type="button"
-                        role="menuitem"
+                        className="my-1 h-px bg-border/70"
+                      />
+                    ) : (
+                      <RadixContextMenu.Item
+                        key={item.key}
                         disabled={item.disabled}
-                        data-active={activeIndex === index ? "true" : undefined}
-                        className={cn(
-                          "flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-sm transition",
-                          item.disabled
-                            ? "cursor-not-allowed text-muted-foreground/70"
-                            : activeIndex === index
-                              ? item.danger
-                                ? "cursor-pointer bg-destructive/10 text-destructive"
-                                : "cursor-pointer bg-secondary/70 text-foreground"
-                            : interactionMode === "pointer"
-                              ? item.danger
-                                ? "cursor-pointer text-destructive hover:bg-destructive/10"
-                                : "cursor-pointer text-foreground hover:bg-secondary/70"
-                              : item.danger
-                                ? "cursor-pointer text-destructive"
-                                : "cursor-pointer text-foreground",
-                        )}
-                        onPointerMove={(event) => {
-                          setActiveIndexFromPointer(index, {
-                            x: event.clientX,
-                            y: event.clientY,
+                        onSelect={() => {
+                          void Promise.resolve(item.onSelect?.()).catch((error) => {
+                            console.error("[context-menu] action failed", error);
                           });
                         }}
-                        onClick={() => {
-                          void selectItemAt(index);
-                        }}
+                        className={cn(
+                          "flex h-10 cursor-default select-none items-center gap-3 rounded-[14px] px-3 text-left text-sm outline-none transition data-[disabled]:pointer-events-none data-[disabled]:text-muted-foreground/70",
+                          item.danger
+                            ? "text-destructive data-[highlighted]:bg-destructive/10"
+                            : "text-foreground data-[highlighted]:bg-secondary/70",
+                        )}
                       >
                         <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground">
                           {item.icon ?? <ChevronRight className="size-3.5 opacity-0" />}
                         </span>
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      </button>
+                      </RadixContextMenu.Item>
                     ),
                   )}
                 </div>
-              </div>
-            </>,
-            portalContainer,
-          )
-        : null}
+              </RadixContextMenu.Content>
+            </>
+          ) : null}
+        </RadixContextMenu.Portal>
+      </RadixContextMenu.Root>
     </ContextMenuSurfaceContext.Provider>
   );
 }

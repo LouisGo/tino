@@ -8,6 +8,7 @@ import {
   showAccessibilityPermissionDialog,
 } from "@/features/clipboard/lib/accessibility-permission-flow";
 import { getDefaultVisibleClipboardSelection } from "@/features/clipboard/lib/clipboard-board";
+import { hideClipboardWindowForNextOpen } from "@/features/clipboard/lib/clipboard-window-session";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import {
@@ -70,40 +71,13 @@ function isClipboardWindow() {
   return isTauriRuntime() && getCurrentWindow().label === "clipboard";
 }
 
-const WINDOW_HIDE_SETTLE_ATTEMPTS = 6;
-const WINDOW_HIDE_SETTLE_INTERVAL_MS = 8;
-
-function delay(ms: number) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
 async function closeClipboardWindowForConfirmation() {
-  useClipboardBoardStore.getState().resetState();
-
   if (!isClipboardWindow()) {
     return;
   }
 
   const currentWindow = getCurrentWindow();
-  try {
-    await currentWindow.hide();
-  } catch {
-    return;
-  }
-
-  for (let attempt = 0; attempt < WINDOW_HIDE_SETTLE_ATTEMPTS; attempt += 1) {
-    try {
-      if (!(await currentWindow.isVisible())) {
-        return;
-      }
-    } catch {
-      return;
-    }
-
-    await delay(WINDOW_HIDE_SETTLE_INTERVAL_MS);
-  }
+  await hideClipboardWindowForNextOpen(currentWindow);
 }
 
 function getSelectedVisibleCapture() {
@@ -189,15 +163,13 @@ export const clipboardCommands = [
         return;
       }
 
-      store.resetState();
-
       if (!isTauriRuntime()) {
         return;
       }
 
       const currentWindow = getCurrentWindow();
       if (currentWindow.label === "clipboard") {
-        await currentWindow.hide();
+        await hideClipboardWindowForNextOpen(currentWindow);
       }
     },
   }),

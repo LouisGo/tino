@@ -77,7 +77,10 @@ export function WorkspaceSettingsSection({
     placeholderData: (previousData) => previousData,
     refetchOnMount: "always",
   });
-  const sourceAppOptions = sourceAppsQuery.data ?? [];
+  const sourceAppOptions = useMemo(
+    () => sourceAppsQuery.data ?? [],
+    [sourceAppsQuery.data],
+  );
   const selectedBundleIds = new Set(
     settingsDraft.clipboardExcludedSourceApps.map((rule) => rule.bundleId.toLowerCase()),
   );

@@ -1,5 +1,7 @@
 import { useEffect, useEffectEvent } from "react"
 
+import pDebounce from "p-debounce"
+
 import { createRendererLogger } from "@/lib/logger"
 import type { SettingsDraft } from "@/types/shell"
 
@@ -22,12 +24,16 @@ export function usePendingSettingsPersistence({
   saveSettingsDraft,
   settingsDraft,
 }: UsePendingSettingsPersistenceOptions) {
+  const persistPendingDraft = useEffectEvent(async (draft: SettingsDraft) => {
+    await saveSettingsDraft(draft)
+  })
+
   const schedulePendingSettingsFlush = useEffectEvent(() => {
     if (!hasPendingChanges || isSavingSettings) {
       return
     }
 
-    void saveSettingsDraft(getCurrentDraft()).catch((error) => {
+    void persistPendingDraft(getCurrentDraft()).catch((error) => {
       logger.error("Failed to persist pending settings", error)
     })
   })
@@ -47,12 +53,23 @@ export function usePendingSettingsPersistence({
       return
     }
 
-    const timeout = window.setTimeout(() => {
-      schedulePendingSettingsFlush()
-    }, 700)
+    const abortController = new AbortController()
+    const debouncedFlush = pDebounce(
+      async () => schedulePendingSettingsFlush(),
+      700,
+      { signal: abortController.signal },
+    )
+
+    void debouncedFlush().catch((error) => {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return
+      }
+
+      logger.error("Failed to debounce pending settings persistence", error)
+    })
 
     return () => {
-      window.clearTimeout(timeout)
+      abortController.abort()
     }
   }, [hasPendingChanges, isSavingSettings, persistedSettings, settingsDraft])
 

@@ -34,6 +34,7 @@ type ClipboardBoardState = {
   visibleCaptures: ClipboardCapture[];
   listScrollRequest: number;
   resetState: () => void;
+  resetWindowSession: () => void;
   setSearchValue: (value: string) => void;
   setFilter: (value: ClipboardFilter) => void;
   toggleSummaryFilter: (value: ClipboardFilter) => void;
@@ -75,6 +76,11 @@ export function selectClipboardSearchFocusBlockingLayer(
 export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
   ...initialClipboardBoardState,
   resetState: () => set(initialClipboardBoardState),
+  resetWindowSession: () =>
+    set((state) => ({
+      ...initialClipboardBoardState,
+      listScrollRequest: state.listScrollRequest + 1,
+    })),
   setSearchValue: (value) => set({ searchValue: value }),
   setFilter: (value) => set({ filter: value }),
   toggleSummaryFilter: (value) =>

@@ -1,6 +1,7 @@
 export const queryKeys = {
   dashboardSnapshot: () => ["dashboard-snapshot"] as const,
   appSettings: () => ["app-settings"] as const,
+  appSettingsSave: () => ["app-settings", "save"] as const,
   autostartEnabled: () => ["autostart-enabled"] as const,
   aiBatchSummaries: () => ["ai-batch-summaries"] as const,
   aiBatchPayload: (batchId: string) => ["ai-batch-payload", batchId] as const,

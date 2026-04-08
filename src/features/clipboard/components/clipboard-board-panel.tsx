@@ -394,6 +394,7 @@ export function ClipboardBoardPanel({
                 isFetchingNextPage={isFetchingNextPage}
                 onLoadMore={onLoadMore}
                 scrollToTopRequest={listScrollRequest}
+                viewportResetRequest={windowMode ? searchFocusRequest : 0}
               />
 
               <div className="flex h-full min-h-0 min-w-0 flex-col self-stretch bg-card/92">

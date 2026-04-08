@@ -4,7 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { useShortcutScope } from "@/core/shortcuts";
 import { ClipboardBoardFeature } from "@/features/clipboard/components/clipboard-board-feature";
-import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
+import { hideClipboardWindowForNextOpen } from "@/features/clipboard/lib/clipboard-window-session";
 import { isTauriRuntime } from "@/lib/tauri";
 
 export function ClipboardWindowPage() {
@@ -32,7 +32,7 @@ export function ClipboardWindowPage() {
     const previousRootOverflow = rootStyle?.overflow ?? "";
     const previousRootHeight = rootStyle?.height ?? "";
     const previousRootBackground = rootStyle?.background ?? "";
-    const interactiveSelector = [
+    const nonDraggableSelector = [
       "button",
       "input",
       "textarea",
@@ -44,6 +44,9 @@ export function ClipboardWindowPage() {
       ".app-selectable",
       "img",
       "svg",
+      "[data-window-drag-disabled='true']",
+      "[data-slot='context-menu-content']",
+      "[role='dialog']",
     ].join(", ");
 
     htmlStyle.overflow = "hidden";
@@ -69,7 +72,7 @@ export function ClipboardWindowPage() {
         return;
       }
 
-      if (target.closest(interactiveSelector)) {
+      if (target.closest(nonDraggableSelector)) {
         return;
       }
 
@@ -80,12 +83,10 @@ export function ClipboardWindowPage() {
 
     void currentWindow.onFocusChanged(({ payload: focused }) => {
       if (!focused) {
-        useClipboardBoardStore.getState().resetState();
-        void currentWindow.hide();
+        void hideClipboardWindowForNextOpen(currentWindow);
         return;
       }
 
-      useClipboardBoardStore.getState().resetState();
       setSearchFocusRequest((current) => current + 1);
     }).then((dispose) => {
       unlistenFocus = dispose;

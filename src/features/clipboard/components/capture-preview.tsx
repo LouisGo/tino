@@ -5,15 +5,13 @@ import {
   useMemo,
   useRef,
   useState,
-  startTransition,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import DOMPurify from "dompurify";
 import ReactMarkdown from "react-markdown";
+import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
@@ -59,13 +57,9 @@ import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
 
 const MIN_IMAGE_SCALE = 0.8;
+const DEFAULT_IMAGE_SCALE = 1;
 const MAX_IMAGE_SCALE = 6;
 type TextPreviewMode = "preview" | "raw_text" | "raw_rich";
-
-type Point = {
-  x: number;
-  y: number;
-};
 
 export function CaptureDetailPreview({
   capture,
@@ -310,6 +304,7 @@ function TextCapturePreview({
 
       <div
         ref={scrollViewportRef}
+        data-window-drag-disabled="true"
         className="app-scroll-area min-h-0 min-w-0 flex-1 overflow-auto px-4 pb-4 pt-3"
       >
         {mode === "preview" && previewKind === "html" ? (
@@ -555,6 +550,7 @@ export function CaptureImageLightbox({
 
   return createPortal(
     <div
+      data-window-drag-disabled="true"
       className="app-overlay-backdrop fixed inset-0 z-[140]"
       onClick={onClose}
     >
@@ -638,11 +634,13 @@ export function CaptureOcrLightbox({
 
   return createPortal(
     <div
+      data-window-drag-disabled="true"
       className="app-overlay-backdrop fixed inset-0 z-[140]"
       onClick={onClose}
     >
       <div className="flex h-full w-full items-center justify-center p-3 sm:p-5">
         <section
+          data-window-drag-disabled="true"
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
@@ -681,6 +679,7 @@ export function CaptureOcrLightbox({
 
           <div
             ref={scrollViewportRef}
+            data-window-drag-disabled="true"
             className="app-scroll-area min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4 sm:px-5"
           >
             <div className="flex min-h-full items-center justify-center">
@@ -710,405 +709,129 @@ function InteractiveImageViewport({
   width?: number;
   height?: number;
 }) {
-  const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const [naturalSize, setNaturalSize] = useState({
-    width: width ?? 0,
-    height: height ?? 0,
-  });
-  const [scale, setScale] = useState(MIN_IMAGE_SCALE);
-  const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const scaleRef = useRef(scale);
-  const offsetRef = useRef(offset);
-  const pointersRef = useRef(new Map<number, Point>());
-  const dragRef = useRef<{
-    pointerId: number;
-    start: Point;
-    origin: Point;
-  } | null>(null);
-  const pinchRef = useRef<{
-    distance: number;
-    scale: number;
-    offset: Point;
-    midpoint: Point;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!containerElement) {
-      return;
-    }
-
-    const observer = new ResizeObserver(([entry]) => {
-      const { width: nextWidth, height: nextHeight } = entry.contentRect;
-      setContainerSize({ width: nextWidth, height: nextHeight });
-    });
-
-    observer.observe(containerElement);
-    return () => observer.disconnect();
-  }, [containerElement]);
-
-  useEffect(() => {
-    scaleRef.current = scale;
-  }, [scale]);
-
-  useEffect(() => {
-    offsetRef.current = offset;
-  }, [offset]);
-
-  const imageWidth = naturalSize.width || width || 1;
-  const imageHeight = naturalSize.height || height || 1;
-  const fitScale =
-    containerSize.width > 0 && containerSize.height > 0
-      ? Math.min(containerSize.width / imageWidth, containerSize.height / imageHeight)
-      : 1;
-  const fitWidth = imageWidth * fitScale;
-  const fitHeight = imageHeight * fitScale;
-
-  function panLimit(nextScale = scaleRef.current) {
-    return {
-      x: Math.abs(fitWidth * nextScale - containerSize.width) / 2,
-      y: Math.abs(fitHeight * nextScale - containerSize.height) / 2,
-    };
-  }
-
-  function clampOffset(nextOffset: Point, nextScale = scale) {
-    if (containerSize.width <= 0 || containerSize.height <= 0) {
-      return { x: 0, y: 0 };
-    }
-
-    const limits = panLimit(nextScale);
-
-    return {
-      x: clamp(nextOffset.x, -limits.x, limits.x),
-      y: clamp(nextOffset.y, -limits.y, limits.y),
-    };
-  }
-
-  function zoomTo(
-    nextScale: number,
-    anchor?: Point,
-    baseScale = scaleRef.current,
-    baseOffset = offsetRef.current,
-  ) {
-    const clampedScale = clamp(nextScale, MIN_IMAGE_SCALE, MAX_IMAGE_SCALE);
-
-    if (
-      containerSize.width <= 0 ||
-      containerSize.height <= 0 ||
-      clampedScale === baseScale
-    ) {
-      setScale(clampedScale);
-      if (clampedScale === MIN_IMAGE_SCALE) {
-        setOffset({ x: 0, y: 0 });
-      }
-      return;
-    }
-
-    const anchorPoint = anchor ?? {
-      x: containerSize.width / 2,
-      y: containerSize.height / 2,
-    };
-    const relativeX = anchorPoint.x - containerSize.width / 2;
-    const relativeY = anchorPoint.y - containerSize.height / 2;
-    const imageX = (relativeX - baseOffset.x) / baseScale;
-    const imageY = (relativeY - baseOffset.y) / baseScale;
-    const nextOffset = clampOffset(
-      {
-        x: relativeX - imageX * clampedScale,
-        y: relativeY - imageY * clampedScale,
-      },
-      clampedScale,
-    );
-
-    setScale(clampedScale);
-    setOffset(clampedScale === MIN_IMAGE_SCALE ? { x: 0, y: 0 } : nextOffset);
-  }
-
-  useEffect(() => {
-    setOffset((currentOffset) => {
-      const limits = {
-        x: Math.abs(fitWidth * scale - containerSize.width) / 2,
-        y: Math.abs(fitHeight * scale - containerSize.height) / 2,
-      };
-      const clamped = {
-        x: clamp(currentOffset.x, -limits.x, limits.x),
-        y: clamp(currentOffset.y, -limits.y, limits.y),
-      };
-
-      if (clamped.x === currentOffset.x && clamped.y === currentOffset.y) {
-        return currentOffset;
-      }
-
-      return clamped;
-    });
-  }, [fitHeight, fitWidth, scale, containerSize.height, containerSize.width]);
-
-  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!src) {
-      return;
-    }
-
-    const point = pointFromPointerEvent(event);
-    pointersRef.current.set(event.pointerId, point);
-    event.currentTarget.setPointerCapture(event.pointerId);
-
-    if (pointersRef.current.size === 1) {
-      setIsDragging(true);
-      dragRef.current =
-        canPanAtScale(scaleRef.current)
-          ? {
-              pointerId: event.pointerId,
-              start: point,
-              origin: offsetRef.current,
-            }
-          : null;
-      pinchRef.current = null;
-      return;
-    }
-
-    if (pointersRef.current.size === 2) {
-      const [firstPoint, secondPoint] = [...pointersRef.current.values()];
-      pinchRef.current = {
-        distance: pointDistance(firstPoint, secondPoint),
-        scale: scaleRef.current,
-        offset: offsetRef.current,
-        midpoint: midpoint(firstPoint, secondPoint),
-      };
-      dragRef.current = null;
-    }
-  }
-
-  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!pointersRef.current.has(event.pointerId)) {
-      return;
-    }
-
-    const point = pointFromPointerEvent(event);
-    pointersRef.current.set(event.pointerId, point);
-
-    if (pointersRef.current.size === 2 && pinchRef.current) {
-      const [firstPoint, secondPoint] = [...pointersRef.current.values()];
-      const nextMidpoint = midpoint(firstPoint, secondPoint);
-      const nextDistance = pointDistance(firstPoint, secondPoint);
-      const scaleRatio =
-        pinchRef.current.distance > 0
-          ? nextDistance / pinchRef.current.distance
-          : 1;
-      const nextScale = clamp(
-        pinchRef.current.scale * scaleRatio,
-        MIN_IMAGE_SCALE,
-        MAX_IMAGE_SCALE,
-      );
-      const startRelativeX =
-        pinchRef.current.midpoint.x - containerSize.width / 2;
-      const startRelativeY =
-        pinchRef.current.midpoint.y - containerSize.height / 2;
-      const imageX =
-        (startRelativeX - pinchRef.current.offset.x) / pinchRef.current.scale;
-      const imageY =
-        (startRelativeY - pinchRef.current.offset.y) / pinchRef.current.scale;
-      const nextRelativeX = nextMidpoint.x - containerSize.width / 2;
-      const nextRelativeY = nextMidpoint.y - containerSize.height / 2;
-      const nextOffset = clampOffset(
-        {
-          x: nextRelativeX - imageX * nextScale,
-          y: nextRelativeY - imageY * nextScale,
-        },
-        nextScale,
-      );
-
-      setScale(nextScale);
-      setOffset(nextScale === MIN_IMAGE_SCALE ? { x: 0, y: 0 } : nextOffset);
-      return;
-    }
-
-    if (dragRef.current && dragRef.current.pointerId === event.pointerId) {
-      const nextOffset = clampOffset({
-        x: dragRef.current.origin.x + point.x - dragRef.current.start.x,
-        y: dragRef.current.origin.y + point.y - dragRef.current.start.y,
-      });
-
-      setOffset(nextOffset);
-    }
-  }
-
-  function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
-    pointersRef.current.delete(event.pointerId);
-    setIsDragging(false);
-
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-
-    if (pointersRef.current.size < 2) {
-      pinchRef.current = null;
-    }
-
-    if (pointersRef.current.size === 1 && canPanAtScale(scaleRef.current)) {
-      const [remainingPointerId, remainingPoint] = [...pointersRef.current.entries()][0];
-      dragRef.current = {
-        pointerId: remainingPointerId,
-        start: remainingPoint,
-        origin: offsetRef.current,
-      };
-      return;
-    }
-
-    dragRef.current = null;
-  }
-
-  function handleWheel(event: ReactWheelEvent<HTMLDivElement>) {
-    if (!src) {
-      return;
-    }
-
-    if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
-      const rect = event.currentTarget.getBoundingClientRect();
-      const anchor = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
-      };
-      const direction = event.deltaY < 0 ? 1 : -1;
-      const factor = direction > 0 ? 1.14 : 1 / 1.14;
-
-      zoomTo(scaleRef.current * factor, anchor);
-      return;
-    }
-
-    if (canPanAtScale(scaleRef.current)) {
-      event.preventDefault();
-      setOffset((currentOffset) =>
-        clampOffset({
-          x: currentOffset.x - event.deltaX,
-          y: currentOffset.y - event.deltaY,
-        }),
-      );
-    }
-  }
-
-  function handleDoubleClick(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!src) {
-      return;
-    }
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    const anchor = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    };
-
-    zoomTo(scaleRef.current > 1.8 ? MIN_IMAGE_SCALE : 2, anchor);
-  }
-
-  function canPanAtScale(nextScale: number) {
-    const limits = panLimit(nextScale);
-    return limits.x > 0.5 || limits.y > 0.5;
-  }
+  const [displayScale, setDisplayScale] = useState(DEFAULT_IMAGE_SCALE);
 
   return (
-    <div className="relative h-full w-full">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center p-4 sm:p-6">
-        <div
-          className="pointer-events-auto flex items-center gap-1.5"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-[14px] border-white/14 bg-black/52 text-white shadow-none hover:bg-black/66 hover:text-white"
-            onClick={() => zoomTo(scale - 0.1)}
-            disabled={scale <= MIN_IMAGE_SCALE}
-          >
-            <Minus />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="min-w-[72px] rounded-[14px] border-white/14 bg-black/52 px-2.5 font-mono text-[11px] text-white shadow-none hover:bg-black/66 hover:text-white"
-            onClick={() => zoomTo(MIN_IMAGE_SCALE)}
-          >
-            {Math.round(scale * 100)}%
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-[14px] border-white/14 bg-black/52 text-white shadow-none hover:bg-black/66 hover:text-white"
-            onClick={() => zoomTo(scale + 0.1)}
-            disabled={scale >= MAX_IMAGE_SCALE}
-          >
-            <Plus />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-[14px] border-white/14 bg-black/52 text-white shadow-none hover:bg-black/66 hover:text-white"
-            onClick={() => {
-              setScale(MIN_IMAGE_SCALE);
-              setOffset({ x: 0, y: 0 });
-            }}
-          >
-            <RotateCcw />
-          </Button>
-        </div>
-      </div>
-
-      <div
-        ref={setContainerElement}
-        className="absolute inset-0 overflow-hidden touch-none select-none"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
-        onLostPointerCapture={handlePointerEnd}
-        onWheel={handleWheel}
-        onDoubleClick={handleDoubleClick}
-      >
-        {src ? (
-          <div className="absolute inset-0">
+    <TransformWrapper
+      minScale={MIN_IMAGE_SCALE}
+      maxScale={MAX_IMAGE_SCALE}
+      initialScale={DEFAULT_IMAGE_SCALE}
+      limitToBounds
+      centerOnInit
+      centerZoomedOut
+      doubleClick={{
+        mode: "toggle",
+        step: 2.5,
+      }}
+      wheel={{
+        step: 0.14,
+        activationKeys: (keys) => keys.includes("Control") || keys.includes("Meta"),
+      }}
+      panning={{
+        disabled: !src,
+        allowLeftClickPan: true,
+      }}
+      pinch={{
+        disabled: !src,
+      }}
+      trackPadPanning={{
+        disabled: !src,
+      }}
+      velocityAnimation={{
+        disabled: true,
+      }}
+      onTransform={(_ref, state) => {
+        setDisplayScale(state.scale);
+      }}
+      onInit={(ref) => {
+        setDisplayScale(ref.state.scale);
+      }}
+    >
+      {({ resetTransform, zoomIn, zoomOut }) => (
+        <div data-window-drag-disabled="true" className="relative h-full w-full">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center p-4 sm:p-6">
             <div
-              className="absolute top-1/2 left-1/2 will-change-transform"
-              style={{
-                width: fitWidth,
-                height: fitHeight,
-                transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px)) scale(${scale})`,
-                transformOrigin: "center center",
-                cursor: canPanAtScale(scale) ? (isDragging ? "grabbing" : "grab") : "zoom-in",
-              }}
+              className="pointer-events-auto flex items-center gap-1.5"
               onClick={(event) => event.stopPropagation()}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-[14px] border-white/14 bg-black/52 text-white shadow-none hover:bg-black/66 hover:text-white"
+                onClick={() => zoomOut(0.2)}
+                disabled={displayScale <= MIN_IMAGE_SCALE}
+              >
+                <Minus />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-w-[72px] rounded-[14px] border-white/14 bg-black/52 px-2.5 font-mono text-[11px] text-white shadow-none hover:bg-black/66 hover:text-white"
+                onClick={() => resetTransform()}
+              >
+                {Math.round((displayScale / DEFAULT_IMAGE_SCALE) * 100)}%
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-[14px] border-white/14 bg-black/52 text-white shadow-none hover:bg-black/66 hover:text-white"
+                onClick={() => zoomIn(0.2)}
+                disabled={displayScale >= MAX_IMAGE_SCALE}
+              >
+                <Plus />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-[14px] border-white/14 bg-black/52 text-white shadow-none hover:bg-black/66 hover:text-white"
+                onClick={() => resetTransform()}
+              >
+                <RotateCcw />
+              </Button>
+            </div>
+          </div>
+
+          {src ? (
+            <TransformComponent
+              wrapperStyle={{
+                height: "100%",
+                width: "100%",
+              }}
+              wrapperClass="touch-none select-none"
+              contentStyle={{
+                alignItems: "center",
+                display: "flex",
+                justifyContent: "center",
+              }}
             >
               <img
                 src={src}
                 alt={alt}
                 draggable={false}
-                className="size-full object-contain shadow-[0_24px_80px_rgba(0,0,0,0.34)]"
-                onLoad={(event) => {
-                  const nextWidth = event.currentTarget.naturalWidth;
-                  const nextHeight = event.currentTarget.naturalHeight;
-
-                  if (nextWidth && nextHeight) {
-                    startTransition(() => {
-                      setNaturalSize({ width: nextWidth, height: nextHeight });
-                    });
-                  }
+                style={{
+                  height: height ? `${height}px` : undefined,
+                  maxHeight: "calc(100vh - 5rem)",
+                  maxWidth: "calc(100vw - 3rem)",
+                  objectFit: "contain",
+                  width: width ? `${width}px` : undefined,
                 }}
+                className="block select-none shadow-[0_24px_80px_rgba(0,0,0,0.34)]"
+              />
+            </TransformComponent>
+          ) : (
+            <div
+              className="flex h-full items-center justify-center p-6"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <PreviewEmptyState
+                title="Image preview unavailable"
+                description="The image asset could not be loaded for enlarged preview."
               />
             </div>
-          </div>
-        ) : (
-          <div
-            className="flex h-full items-center justify-center p-6"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <PreviewEmptyState
-              title="Image preview unavailable"
-              description="The image asset could not be loaded for enlarged preview."
-            />
-          </div>
-        )}
-      </div>
-    </div>
+          )}
+        </div>
+      )}
+    </TransformWrapper>
   );
 }
 
@@ -1243,27 +966,4 @@ function extractHostname(target: string) {
   } catch {
     return null;
   }
-}
-
-function pointFromPointerEvent(event: ReactPointerEvent<HTMLElement>) {
-  const rect = event.currentTarget.getBoundingClientRect();
-  return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top,
-  };
-}
-
-function pointDistance(first: Point, second: Point) {
-  return Math.hypot(first.x - second.x, first.y - second.y);
-}
-
-function midpoint(first: Point, second: Point) {
-  return {
-    x: (first.x + second.x) / 2,
-    y: (first.y + second.y) / 2,
-  };
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
 }

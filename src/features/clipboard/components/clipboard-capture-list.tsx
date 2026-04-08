@@ -1,5 +1,6 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { EllipsisVertical, FileText, ImageIcon, Link2, Pin, Play } from "lucide-react";
 
 import { useCommand } from "@/core/commands";
@@ -15,6 +16,43 @@ import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-a
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture, ContentKind } from "@/types/shell";
 
+type ClipboardCaptureListRow =
+  | {
+      key: string;
+      type: "group";
+      group: ClipboardCaptureGroup;
+      isFirstGroup: boolean;
+    }
+  | {
+      key: string;
+      type: "capture";
+      capture: ClipboardCapture;
+      groupKind: ClipboardCaptureGroup["kind"];
+      isGroupFirst: boolean;
+    }
+  | {
+      key: "loading";
+      type: "loading";
+    };
+
+const FIRST_GROUP_ROW_HEIGHT = 20;
+const GROUP_ROW_HEIGHT = 30;
+const CAPTURE_ROW_HEIGHT = 46;
+const LOADING_ROW_HEIGHT = 32;
+
+function estimateClipboardCaptureListRowSize(row: ClipboardCaptureListRow | undefined) {
+  switch (row?.type) {
+    case "group":
+      return row.isFirstGroup ? FIRST_GROUP_ROW_HEIGHT : GROUP_ROW_HEIGHT;
+    case "loading":
+      return LOADING_ROW_HEIGHT;
+    case "capture":
+      return CAPTURE_ROW_HEIGHT;
+    default:
+      return CAPTURE_ROW_HEIGHT;
+  }
+}
+
 export function ClipboardCaptureList({
   groups,
   selectedCaptureId,
@@ -23,6 +61,7 @@ export function ClipboardCaptureList({
   isFetchingNextPage,
   onLoadMore,
   scrollToTopRequest,
+  viewportResetRequest,
 }: {
   groups: ClipboardCaptureGroup[];
   selectedCaptureId: string | null;
@@ -31,11 +70,11 @@ export function ClipboardCaptureList({
   isFetchingNextPage?: boolean;
   onLoadMore: () => void;
   scrollToTopRequest: number;
+  viewportResetRequest: number;
 }) {
   const [scrollViewport, setScrollViewport] = useState<HTMLDivElement | null>(null);
-  const [loadTrigger, setLoadTrigger] = useState<HTMLDivElement | null>(null);
   const isAutoLoadingRef = useRef(false);
-  const isLoadTriggerVisibleRef = useRef(false);
+  const suppressSelectedCaptureScrollRef = useRef(false);
   const selectCapture = useCommand<{ captureId: string }>("clipboard.selectCapture");
   const confirmCapture = useCommand<{ captureId?: string } | undefined>(
     "clipboard.confirmWindowSelection",
@@ -54,9 +93,74 @@ export function ClipboardCaptureList({
         : null,
     [groups, selectedCaptureId],
   );
+  const rows = useMemo<ClipboardCaptureListRow[]>(() => {
+    const nextRows: ClipboardCaptureListRow[] = [];
+
+    groups.forEach((group, groupIndex) => {
+      nextRows.push({
+        key: `group:${group.key}`,
+        type: "group",
+        group,
+        isFirstGroup: groupIndex === 0,
+      });
+
+      group.captures.forEach((capture, captureIndex) => {
+        nextRows.push({
+          key: `capture:${capture.id}`,
+          type: "capture",
+          capture,
+          groupKind: group.kind,
+          isGroupFirst: captureIndex === 0,
+        });
+      });
+    });
+
+    if (isFetchingNextPage) {
+      nextRows.push({
+        key: "loading",
+        type: "loading",
+      });
+    }
+
+    return nextRows;
+  }, [groups, isFetchingNextPage]);
+  const captureRowIndexById = useMemo(() => {
+    const nextIndexMap = new Map<string, number>();
+
+    rows.forEach((row, rowIndex) => {
+      if (row.type === "capture") {
+        nextIndexMap.set(row.capture.id, rowIndex);
+      }
+    });
+
+    return nextIndexMap;
+  }, [rows]);
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual uses imperative APIs that React Compiler intentionally skips memoizing.
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    estimateSize: (index) => estimateClipboardCaptureListRowSize(rows[index]),
+    getItemKey: (index) => rows[index]?.key ?? index,
+    getScrollElement: () => scrollViewport,
+    overscan: 10,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const lastVirtualRowIndex = virtualRows[virtualRows.length - 1]?.index ?? -1;
+  const resetScrollViewportToTop = useEffectEvent(() => {
+    if (!scrollViewport) {
+      return;
+    }
+
+    rowVirtualizer.measure();
+    rowVirtualizer.scrollToOffset(0, {
+      behavior: "auto",
+    });
+    scrollViewport.scrollTo({
+      top: 0,
+      behavior: "auto",
+    });
+  });
   const tryLoadMore = useEffectEvent(() => {
     if (
-      !isLoadTriggerVisibleRef.current ||
       !hasNextPage ||
       isRefreshingList ||
       isFetchingNextPage ||
@@ -68,12 +172,6 @@ export function ClipboardCaptureList({
     isAutoLoadingRef.current = true;
     onLoadMore();
   });
-  const handleLoadMoreIntersect = useEffectEvent(
-    ([entry]: IntersectionObserverEntry[]) => {
-      isLoadTriggerVisibleRef.current = Boolean(entry?.isIntersecting);
-      tryLoadMore();
-    },
-  );
 
   useEffect(() => {
     if (!isFetchingNextPage) {
@@ -88,39 +186,84 @@ export function ClipboardCaptureList({
   }, [isRefreshingList, hasNextPage]);
 
   useEffect(() => {
-    if (!scrollViewport || !loadTrigger || !hasNextPage) {
+    if (
+      !scrollViewport ||
+      !hasNextPage ||
+      isRefreshingList ||
+      isFetchingNextPage ||
+      rows.length === 0
+    ) {
       return;
     }
 
-    const observer = new IntersectionObserver(handleLoadMoreIntersect, {
-      root: scrollViewport,
-      rootMargin: "0px 0px 240px 0px",
-      threshold: 0,
+    const preloadThresholdIndex = Math.max(rows.length - 6, 0);
+    if (lastVirtualRowIndex < preloadThresholdIndex) {
+      return;
+    }
+
+    tryLoadMore();
+  }, [
+    hasNextPage,
+    isFetchingNextPage,
+    isRefreshingList,
+    lastVirtualRowIndex,
+    rows.length,
+    scrollViewport,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!scrollViewport || viewportResetRequest === 0) {
+      return;
+    }
+
+    rowVirtualizer.measure();
+
+    let nestedAnimationFrameId = 0;
+    const animationFrameId = window.requestAnimationFrame(() => {
+      rowVirtualizer.measure();
+      nestedAnimationFrameId = window.requestAnimationFrame(() => {
+        rowVirtualizer.measure();
+      });
     });
 
-    observer.observe(loadTrigger);
     return () => {
-      isLoadTriggerVisibleRef.current = false;
-      observer.disconnect();
+      window.cancelAnimationFrame(animationFrameId);
+      window.cancelAnimationFrame(nestedAnimationFrameId);
     };
-  }, [hasNextPage, loadTrigger, scrollViewport]);
+  }, [rowVirtualizer, scrollViewport, viewportResetRequest]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!scrollViewport || scrollToTopRequest === 0) {
+      return;
+    }
+
+    suppressSelectedCaptureScrollRef.current = true;
+    resetScrollViewportToTop();
+  }, [scrollToTopRequest, scrollViewport]);
+
+  useLayoutEffect(() => {
     if (!scrollViewport || !selectedCaptureId) {
       return;
     }
 
-    const captureId =
-      typeof CSS === "undefined" ? selectedCaptureId : CSS.escape(selectedCaptureId);
-    const selectedElement = scrollViewport.querySelector<HTMLElement>(
-      `[data-capture-id="${captureId}"]`,
-    );
-    const firstCaptureElement = scrollViewport.querySelector<HTMLElement>("[data-capture-id]");
-    const shouldRevealGroupHeader =
-      selectedElement?.dataset.groupFirst === "true"
-      && selectedElement?.dataset.groupKind === "pinned";
+    const selectedRowIndex = captureRowIndexById.get(selectedCaptureId);
+    if (selectedRowIndex === undefined) {
+      return;
+    }
 
-    if (selectedElement && firstCaptureElement === selectedElement) {
+    if (suppressSelectedCaptureScrollRef.current) {
+      suppressSelectedCaptureScrollRef.current = false;
+      return;
+    }
+
+    const selectedRow = rows[selectedRowIndex];
+    const firstCaptureRowIndex = rows.findIndex((row) => row.type === "capture");
+    const shouldRevealGroupHeader =
+      selectedRow?.type === "capture"
+      && selectedRow.isGroupFirst
+      && selectedRow.groupKind === "pinned";
+
+    if (shouldRevealGroupHeader && selectedRowIndex === firstCaptureRowIndex) {
       scrollViewport.scrollTo({
         top: 0,
         behavior: "auto",
@@ -128,38 +271,64 @@ export function ClipboardCaptureList({
       return;
     }
 
-    selectedElement?.scrollIntoView({
-      block: shouldRevealGroupHeader ? "start" : "nearest",
-      inline: "nearest",
-    });
-  }, [scrollViewport, selectedCaptureId]);
-
-  useEffect(() => {
-    if (!scrollViewport || scrollToTopRequest === 0) {
-      return;
-    }
-
-    scrollViewport.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  }, [scrollToTopRequest, scrollViewport]);
+    rowVirtualizer.scrollToIndex(
+      shouldRevealGroupHeader ? Math.max(0, selectedRowIndex - 1) : selectedRowIndex,
+      {
+        align: shouldRevealGroupHeader ? "start" : "auto",
+      },
+    );
+  }, [captureRowIndexById, rowVirtualizer, rows, scrollViewport, selectedCaptureId]);
 
   useActiveContextMenuTarget({
     active: selectedCapture !== null,
     isEnabled: () => selectedCapture !== null,
-    openMenu: () => {
+    openMenu: async () => {
       if (!selectedCapture) {
         return false;
       }
 
-      const captureId =
-        typeof CSS === "undefined" ? selectedCapture.id : CSS.escape(selectedCapture.id);
-      const selectedElement = scrollViewport?.querySelector<HTMLElement>(
-        `[data-capture-id="${captureId}"]`,
-      ) ?? null;
+      const resolveSelectedElement = () => {
+        const captureId =
+          typeof CSS === "undefined" ? selectedCapture.id : CSS.escape(selectedCapture.id);
+        return scrollViewport?.querySelector<HTMLElement>(
+          `[data-capture-id="${captureId}"]`,
+        ) ?? null;
+      };
 
-      return openAtElement(selectedElement, selectedCapture);
+      const selectedElement = resolveSelectedElement();
+      if (selectedElement) {
+        return openAtElement(selectedElement, selectedCapture);
+      }
+
+      const selectedRowIndex = captureRowIndexById.get(selectedCapture.id);
+      const selectedRow = selectedRowIndex === undefined ? null : rows[selectedRowIndex];
+      if (selectedRowIndex === undefined || !selectedRow) {
+        return openAtElement(null, selectedCapture);
+      }
+
+      const shouldRevealPinnedHeader =
+        selectedRow.type === "capture"
+        && selectedRow.isGroupFirst
+        && selectedRow.groupKind === "pinned";
+
+      rowVirtualizer.scrollToIndex(
+        shouldRevealPinnedHeader
+          ? Math.max(0, selectedRowIndex - 1)
+          : selectedRowIndex,
+        {
+          align: shouldRevealPinnedHeader ? "start" : "auto",
+        },
+      );
+
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      });
+
+      return openAtElement(resolveSelectedElement(), selectedCapture);
     },
   });
 
@@ -167,86 +336,150 @@ export function ClipboardCaptureList({
     <div className="flex h-full min-h-0 flex-col border-r border-border/55 bg-card/72">
       <div
         ref={setScrollViewport}
+        data-window-drag-disabled="true"
         className="app-scroll-area min-h-0 flex-1 overflow-y-auto p-2"
+        style={{
+          overflowAnchor: "none",
+        }}
       >
-        <div className="space-y-2.5">
-          {groups.map((group) => (
-            <section key={group.key} className="space-y-1.5">
-              <p
-                className={cn(
-                  "px-1 text-[9px] font-semibold tracking-[0.18em] uppercase",
-                  group.kind === "pinned"
-                    ? "inline-flex items-center gap-1.5 text-foreground/72"
-                    : "text-muted-foreground/78",
-                )}
-              >
-                {group.kind === "pinned" ? <Pin className="size-3" /> : null}
-                <span>{group.label}</span>
-              </p>
-              <div className="space-y-0.5">
-                {group.captures.map((capture) => {
-                  const isSelected = selectedCaptureId === capture.id;
+        <div
+          className="relative w-full"
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+          }}
+        >
+          {virtualRows.map((virtualRow) => {
+            const row = rows[virtualRow.index];
 
-                  return (
-                    <div
-                      key={capture.id}
-                      data-capture-id={capture.id}
-                      data-group-first={group.captures[0]?.id === capture.id ? "true" : "false"}
-                      data-group-kind={group.kind}
-                      onContextMenu={(event) => onContextMenu(event, capture)}
+            if (!row) {
+              return null;
+            }
+
+            return (
+              <div
+                key={virtualRow.key}
+                data-index={virtualRow.index}
+                className="absolute left-0 top-0 w-full"
+                style={{
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                {row.type === "group" ? (
+                  <div
+                    className={cn(
+                      "flex items-end px-1 pb-1.5",
+                      row.isFirstGroup ? "h-5" : "h-[30px] pt-2.5",
+                    )}
+                  >
+                    <p
                       className={cn(
-                        "group flex h-[44px] w-full scroll-mt-7 items-center gap-0.5 rounded-[14px] border pl-2.5 pr-1 transition",
-                        isSelected
-                          ? "border-primary/18 bg-primary/[0.08] shadow-none"
-                          : "border-transparent bg-transparent hover:border-border/55 hover:bg-secondary/34",
+                        "text-[9px]/[14px] font-semibold tracking-[0.18em] uppercase",
+                        row.group.kind === "pinned"
+                          ? "inline-flex items-center gap-1.5 text-foreground/72"
+                          : "text-muted-foreground/78",
                       )}
                     >
-                      <button
-                        type="button"
-                        onClick={() => void selectCapture.execute({ captureId: capture.id })}
-                        onDoubleClick={() =>
-                          void confirmCapture.execute({ captureId: capture.id })}
-                        className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-                      >
-                        <CaptureThumb capture={capture} />
+                      {row.group.kind === "pinned" ? <Pin className="size-3" /> : null}
+                      <span>{row.group.label}</span>
+                    </p>
+                  </div>
+                ) : null}
 
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium text-foreground/92">
-                            {captureListSummary(capture)}
-                          </p>
-                        </div>
-                      </button>
+                {row.type === "capture" ? (
+                  <div className="pb-0.5">
+                    <CaptureListRow
+                      capture={row.capture}
+                      groupKind={row.groupKind}
+                      isGroupFirst={row.isGroupFirst}
+                      isSelected={selectedCaptureId === row.capture.id}
+                      onConfirmCapture={() =>
+                        void confirmCapture.execute({ captureId: row.capture.id })}
+                      onContextMenu={onContextMenu}
+                      onOpenMenu={openAtElement}
+                      onSelectCapture={() =>
+                        void selectCapture.execute({ captureId: row.capture.id })}
+                    />
+                  </div>
+                ) : null}
 
-                      {isSelected ? (
-                        <button
-                          type="button"
-                          aria-label="More actions"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            openAtElement(event.currentTarget, capture);
-                          }}
-                          className="inline-flex h-7 w-4 shrink-0 items-center justify-center text-muted-foreground/72 transition-colors group-hover:text-foreground/70 hover:text-foreground/82 dark:text-muted-foreground/62 dark:group-hover:text-foreground/84 dark:hover:text-foreground/92"
-                        >
-                          <EllipsisVertical className="size-3.5" />
-                        </button>
-                      ) : null}
-                    </div>
-                  );
-                })}
+                {row.type === "loading" ? (
+                  <div className="flex h-8 items-center justify-center px-2 text-[11px]/[14px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+                    Loading older captures...
+                  </div>
+                ) : null}
               </div>
-            </section>
-          ))}
-
-          {hasNextPage ? <div ref={setLoadTrigger} aria-hidden className="h-px w-full" /> : null}
-
-          {isFetchingNextPage ? (
-            <div className="flex items-center justify-center px-2 pb-1 text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-              Loading older captures...
-            </div>
-          ) : null}
+            );
+          })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CaptureListRow({
+  capture,
+  groupKind,
+  isGroupFirst,
+  isSelected,
+  onConfirmCapture,
+  onContextMenu,
+  onOpenMenu,
+  onSelectCapture,
+}: {
+  capture: ClipboardCapture;
+  groupKind: ClipboardCaptureGroup["kind"];
+  isGroupFirst: boolean;
+  isSelected: boolean;
+  onConfirmCapture: () => void;
+  onContextMenu: (event: React.MouseEvent, context: ClipboardCapture) => void;
+  onOpenMenu: (element: Element | null, context: ClipboardCapture) => boolean;
+  onSelectCapture: () => void;
+}) {
+  return (
+    <div
+      data-capture-id={capture.id}
+      data-group-first={isGroupFirst ? "true" : "false"}
+      data-group-kind={groupKind}
+      onContextMenu={(event) => onContextMenu(event, capture)}
+      className={cn(
+        "group flex h-[44px] w-full scroll-mt-7 items-center gap-0.5 rounded-[14px] border pl-2.5 pr-1 transition",
+        isSelected
+          ? "border-primary/18 bg-primary/[0.08] shadow-none"
+          : "border-transparent bg-transparent hover:border-border/55 hover:bg-secondary/34",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onSelectCapture}
+        onDoubleClick={onConfirmCapture}
+        className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+      >
+        <CaptureThumb capture={capture} />
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-medium text-foreground/92">
+            {captureListSummary(capture)}
+          </p>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        aria-label="More actions"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onOpenMenu(event.currentTarget, capture);
+        }}
+        className={cn(
+          "inline-flex h-7 w-4 shrink-0 items-center justify-center text-muted-foreground/72 transition-[opacity,color] group-hover:text-foreground/70 hover:text-foreground/82 group-focus-within:text-foreground/70 dark:text-muted-foreground/62 dark:group-hover:text-foreground/84 dark:hover:text-foreground/92 dark:group-focus-within:text-foreground/84",
+          isSelected
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+        )}
+      >
+        <EllipsisVertical className="size-3.5" />
+      </button>
     </div>
   );
 }
