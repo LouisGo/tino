@@ -1,10 +1,23 @@
 import type { ClipboardCapture } from "@/types/shell";
 
 export type FileReferencePreviewKind = "image" | "video" | "audio" | "pdf" | "generic";
+export type FileReferenceIconKind =
+  | "image"
+  | "video"
+  | "audio"
+  | "pdf"
+  | "presentation"
+  | "spreadsheet"
+  | "document"
+  | "markdown"
+  | "code"
+  | "archive"
+  | "unknown";
 export type FileReferencePresentation = "previewable" | "generic";
 
 type FileReferencePreviewStrategy = {
   kind: FileReferencePreviewKind;
+  iconKind: FileReferenceIconKind;
   matches: (extension: string) => boolean;
   contentTypeLabel: string;
   presentation: FileReferencePresentation;
@@ -14,6 +27,7 @@ type FileReferencePreviewStrategy = {
 
 export type FileReferencePreviewModel = {
   kind: FileReferencePreviewKind;
+  iconKind: FileReferenceIconKind;
   path: string;
   fileName: string;
   extension: string;
@@ -75,9 +89,107 @@ const AUDIO_EXTENSIONS = new Set([
   "wav",
 ]);
 
+const PRESENTATION_EXTENSIONS = new Set([
+  "key",
+  "odp",
+  "ppt",
+  "pptx",
+]);
+
+const SPREADSHEET_EXTENSIONS = new Set([
+  "csv",
+  "numbers",
+  "ods",
+  "tsv",
+  "xls",
+  "xlsx",
+]);
+
+const DOCUMENT_EXTENSIONS = new Set([
+  "doc",
+  "docx",
+  "odt",
+  "pages",
+  "rtf",
+  "txt",
+]);
+
+const MARKDOWN_EXTENSIONS = new Set([
+  "markdown",
+  "md",
+  "mdx",
+]);
+
+const CODE_EXTENSIONS = new Set([
+  "bash",
+  "c",
+  "cc",
+  "conf",
+  "cpp",
+  "css",
+  "cts",
+  "cxx",
+  "env",
+  "fish",
+  "go",
+  "h",
+  "hpp",
+  "htm",
+  "html",
+  "hxx",
+  "ini",
+  "java",
+  "js",
+  "json",
+  "jsonc",
+  "jsx",
+  "kt",
+  "kts",
+  "less",
+  "lua",
+  "mjs",
+  "mts",
+  "php",
+  "pl",
+  "py",
+  "rb",
+  "rs",
+  "scss",
+  "sh",
+  "sql",
+  "swift",
+  "toml",
+  "ts",
+  "tsx",
+  "xml",
+  "yaml",
+  "yml",
+  "zsh",
+]);
+
+const PACKAGE_EXTENSIONS = new Set([
+  "dmg",
+  "iso",
+  "pkg",
+]);
+
+const ARCHIVE_EXTENSIONS = new Set([
+  "7z",
+  "bz2",
+  "gz",
+  "rar",
+  "tar",
+  "tbz2",
+  "tgz",
+  "txz",
+  "xz",
+  "zip",
+]);
+
 const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
   {
     kind: "image",
+    iconKind: "image",
     matches: (extension) => IMAGE_EXTENSIONS.has(extension),
     contentTypeLabel: "Image File",
     presentation: "previewable",
@@ -86,6 +198,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
   },
   {
     kind: "video",
+    iconKind: "video",
     matches: (extension) => VIDEO_EXTENSIONS.has(extension),
     contentTypeLabel: "Video",
     presentation: "previewable",
@@ -94,6 +207,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
   },
   {
     kind: "audio",
+    iconKind: "audio",
     matches: (extension) => AUDIO_EXTENSIONS.has(extension),
     contentTypeLabel: "Audio File",
     presentation: "previewable",
@@ -102,18 +216,83 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
   },
   {
     kind: "pdf",
+    iconKind: "pdf",
     matches: (extension) => extension === "pdf",
     contentTypeLabel: "PDF Document",
     presentation: "previewable",
     inlinePreview: true,
     surfaceVariant: "file",
   },
+  {
+    kind: "generic",
+    iconKind: "presentation",
+    matches: (extension) => PRESENTATION_EXTENSIONS.has(extension),
+    contentTypeLabel: "Presentation",
+    presentation: "generic",
+    inlinePreview: false,
+    surfaceVariant: "file",
+  },
+  {
+    kind: "generic",
+    iconKind: "spreadsheet",
+    matches: (extension) => SPREADSHEET_EXTENSIONS.has(extension),
+    contentTypeLabel: "Spreadsheet",
+    presentation: "generic",
+    inlinePreview: false,
+    surfaceVariant: "file",
+  },
+  {
+    kind: "generic",
+    iconKind: "document",
+    matches: (extension) => DOCUMENT_EXTENSIONS.has(extension),
+    contentTypeLabel: "Document",
+    presentation: "generic",
+    inlinePreview: false,
+    surfaceVariant: "file",
+  },
+  {
+    kind: "generic",
+    iconKind: "markdown",
+    matches: (extension) => MARKDOWN_EXTENSIONS.has(extension),
+    contentTypeLabel: "Markdown",
+    presentation: "generic",
+    inlinePreview: false,
+    surfaceVariant: "file",
+  },
+  {
+    kind: "generic",
+    iconKind: "code",
+    matches: (extension) => CODE_EXTENSIONS.has(extension),
+    contentTypeLabel: "Code File",
+    presentation: "generic",
+    inlinePreview: false,
+    surfaceVariant: "file",
+  },
+  {
+    kind: "generic",
+    iconKind: "archive",
+    matches: (extension) => PACKAGE_EXTENSIONS.has(extension),
+    contentTypeLabel: "Package",
+    presentation: "generic",
+    inlinePreview: false,
+    surfaceVariant: "file",
+  },
+  {
+    kind: "generic",
+    iconKind: "archive",
+    matches: (extension) => ARCHIVE_EXTENSIONS.has(extension),
+    contentTypeLabel: "Archive",
+    presentation: "generic",
+    inlinePreview: false,
+    surfaceVariant: "file",
+  },
 ];
 
 const GENERIC_FILE_REFERENCE_PREVIEW_STRATEGY: FileReferencePreviewStrategy = {
   kind: "generic",
+  iconKind: "unknown",
   matches: () => true,
-  contentTypeLabel: "File",
+  contentTypeLabel: "Unknown File Type",
   presentation: "generic",
   inlinePreview: false,
   surfaceVariant: "file",
@@ -141,6 +320,7 @@ export function resolveFileReferencePreviewModel(
 
   return {
     kind: strategy.kind,
+    iconKind: strategy.iconKind,
     path,
     fileName,
     extension,

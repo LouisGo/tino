@@ -41,6 +41,7 @@ use crate::storage::capture_history_store::{
     CaptureHistoryEntry, CaptureHistoryQuery, CaptureHistoryStore, CaptureHistorySummary,
     CaptureHistoryUpsert,
 };
+use crate::video_thumbnail::generate_video_thumbnail_png;
 use crate::vision_ocr::recognize_text_from_image_path;
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
@@ -53,6 +54,7 @@ const ASSETS_DIR_NAME: &str = "assets";
 const CLIPBOARD_HISTORY_DIR_NAME: &str = "clipboard";
 const APP_ICONS_DIR_NAME: &str = "app-icons";
 const IMAGE_THUMBNAIL_MAX_EDGE: u32 = 240;
+const VIDEO_THUMBNAIL_MAX_EDGE: f64 = 640.0;
 const BATCH_TRIGGER_SIZE: usize = 20;
 const BATCH_TRIGGER_MAX_WAIT_MINUTES: i64 = 10;
 const DEFAULT_CLIPBOARD_HISTORY_DAYS: u16 = 7;
@@ -1375,6 +1377,26 @@ impl AppState {
             stored_capture.thumbnail_path =
                 Some(persisted_assets.thumbnail_path.display().to_string());
             stored_capture.image_bytes = None;
+        }
+        if stored_capture.content_kind == "video" {
+            match ensure_video_thumbnail_path(
+                &knowledge_root,
+                &stored_capture.id,
+                &stored_capture.captured_at,
+                &stored_capture.raw_text,
+                stored_capture.thumbnail_path.as_deref(),
+            ) {
+                Ok(Some(thumbnail_path)) => {
+                    stored_capture.thumbnail_path = Some(thumbnail_path);
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    warn!(
+                        "failed to generate video thumbnail for capture {}: {}",
+                        stored_capture.id, error
+                    );
+                }
+            }
         }
 
         if let Some(source_app_icon_path) =
@@ -3407,9 +3429,7 @@ fn persist_image_assets(
         .image_bytes
         .as_ref()
         .ok_or_else(|| format!("image capture {} is missing in-memory bytes", capture.id))?;
-    let captured_at = parse_captured_at(&capture.captured_at)?;
-    let asset_dir =
-        assets_dir_path(knowledge_root).join(captured_at.format("%Y-%m-%d").to_string());
+    let asset_dir = capture_asset_dir_path(knowledge_root, &capture.captured_at)?;
     fs::create_dir_all(&asset_dir).map_err(|error| error.to_string())?;
 
     let asset_path = asset_dir.join(format!("{}.png", capture.id));
@@ -3437,6 +3457,59 @@ fn thumbnail_path_for_asset(asset_path: &Path) -> PathBuf {
         .and_then(|value| value.to_str())
         .unwrap_or("clipboard-image");
     asset_path.with_file_name(format!("{stem}.thumb.png"))
+}
+
+fn capture_asset_dir_path(knowledge_root: &Path, captured_at: &str) -> Result<PathBuf, String> {
+    let captured_at = parse_captured_at(captured_at)?;
+    Ok(assets_dir_path(knowledge_root).join(captured_at.format("%Y-%m-%d").to_string()))
+}
+
+fn video_thumbnail_asset_path(
+    knowledge_root: &Path,
+    capture_id: &str,
+    captured_at: &str,
+) -> Result<PathBuf, String> {
+    Ok(capture_asset_dir_path(knowledge_root, captured_at)?
+        .join(format!("{capture_id}.video.thumb.png")))
+}
+
+fn ensure_video_thumbnail_path(
+    knowledge_root: &Path,
+    capture_id: &str,
+    captured_at: &str,
+    raw_video_path: &str,
+    existing_thumbnail_path: Option<&str>,
+) -> Result<Option<String>, String> {
+    let thumbnail_path = existing_thumbnail_path
+        .map(|value| PathBuf::from(value.trim()))
+        .filter(|path| !path.as_os_str().is_empty())
+        .unwrap_or(video_thumbnail_asset_path(
+            knowledge_root,
+            capture_id,
+            captured_at,
+        )?);
+
+    if thumbnail_path.exists() {
+        return Ok(Some(thumbnail_path.display().to_string()));
+    }
+
+    let source_path = PathBuf::from(raw_video_path.trim());
+    if source_path.as_os_str().is_empty() || !source_path.exists() {
+        return Ok(None);
+    }
+
+    if let Some(parent) = thumbnail_path.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
+    let Some(image_bytes) =
+        generate_video_thumbnail_png(&source_path, VIDEO_THUMBNAIL_MAX_EDGE)?
+    else {
+        return Ok(None);
+    };
+
+    fs::write(&thumbnail_path, image_bytes).map_err(|error| error.to_string())?;
+    Ok(Some(thumbnail_path.display().to_string()))
 }
 
 fn persist_source_app_icon(
@@ -3517,10 +3590,32 @@ fn hydrate_runtime_preview_assets(
 }
 
 fn hydrate_capture_preview_assets(
-    _knowledge_root: &Path,
+    knowledge_root: &Path,
     capture: &mut CapturePreview,
 ) -> Result<(), String> {
     capture.file_missing = is_missing_file_reference(&capture.content_kind, &capture.raw_text);
+
+    if capture.content_kind == "video" {
+        match ensure_video_thumbnail_path(
+            knowledge_root,
+            &capture.id,
+            &capture.captured_at,
+            &capture.raw_text,
+            capture.thumbnail_path.as_deref(),
+        ) {
+            Ok(Some(thumbnail_path)) => {
+                capture.thumbnail_path = Some(thumbnail_path);
+            }
+            Ok(None) => {}
+            Err(error) => {
+                warn!(
+                    "failed to hydrate video thumbnail for capture {}: {}",
+                    capture.id, error
+                );
+            }
+        }
+        return Ok(());
+    }
 
     if capture.content_kind != "image" {
         return Ok(());

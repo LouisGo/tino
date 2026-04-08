@@ -24,6 +24,8 @@ image = "0.25"
 libc = "0.2"
 log = "0.4"
 objc2-app-kit = { version = "0.3", features = ["NSPasteboard", "NSWorkspace", "NSRunningApplication", "NSImage", "NSBitmapImageRep", "NSImageRep", "NSGraphicsContext", "libc"] }
+objc2-av-foundation = { version = "0.3", features = ["AVAsset", "AVAssetImageGenerator", "objc2-core-foundation", "objc2-core-graphics", "objc2-core-media"] }
+objc2-core-media = "0.3"
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFString"] }
 objc2-core-graphics = { version = "0.3", features = ["CGDirectDisplay", "CGEvent", "CGEventSource", "CGEventTypes", "CGRemoteOperation", "libc"] }
 objc2-foundation = { version = "0.3", features = ["block2", "NSBundle", "NSDictionary", "NSString"] }

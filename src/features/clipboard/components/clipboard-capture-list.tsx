@@ -1,10 +1,11 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
-import { File as FileIcon, FileText, Film, ImageIcon, Link2, Pin } from "lucide-react";
+import { EllipsisVertical, FileText, ImageIcon, Link2, Pin, Play } from "lucide-react";
 
 import { useCommand } from "@/core/commands";
 import { useActiveContextMenuTarget, useContextMenu } from "@/core/context-menu";
 import { clipboardCaptureContextMenu } from "@/features/clipboard/clipboard-capture-context-menu";
+import { FileReferenceTypeIcon } from "@/features/clipboard/components/file-reference-type-icon";
 import {
   captureListSummary,
   type ClipboardCaptureGroup,
@@ -183,33 +184,56 @@ export function ClipboardCaptureList({
                 <span>{group.label}</span>
               </p>
               <div className="space-y-0.5">
-                {group.captures.map((capture) => (
-                  <button
-                    key={capture.id}
-                    type="button"
-                    data-capture-id={capture.id}
-                    data-group-first={group.captures[0]?.id === capture.id ? "true" : "false"}
-                    data-group-kind={group.kind}
-                    onClick={() => void selectCapture.execute({ captureId: capture.id })}
-                    onDoubleClick={() =>
-                      void confirmCapture.execute({ captureId: capture.id })}
-                    onContextMenu={(event) => onContextMenu(event, capture)}
-                    className={cn(
-                      "flex h-[44px] w-full scroll-mt-7 items-center gap-2.5 rounded-[14px] border px-2.5 text-left transition",
-                      selectedCaptureId === capture.id
-                        ? "border-primary/18 bg-primary/[0.08] shadow-none"
-                        : "border-transparent bg-transparent hover:border-border/55 hover:bg-secondary/34",
-                    )}
-                  >
-                    <CaptureThumb capture={capture} />
+                {group.captures.map((capture) => {
+                  const isSelected = selectedCaptureId === capture.id;
 
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-medium text-foreground/92">
-                        {captureListSummary(capture)}
-                      </p>
+                  return (
+                    <div
+                      key={capture.id}
+                      data-capture-id={capture.id}
+                      data-group-first={group.captures[0]?.id === capture.id ? "true" : "false"}
+                      data-group-kind={group.kind}
+                      onContextMenu={(event) => onContextMenu(event, capture)}
+                      className={cn(
+                        "group flex h-[44px] w-full scroll-mt-7 items-center gap-0.5 rounded-[14px] border pl-2.5 pr-1 transition",
+                        isSelected
+                          ? "border-primary/18 bg-primary/[0.08] shadow-none"
+                          : "border-transparent bg-transparent hover:border-border/55 hover:bg-secondary/34",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => void selectCapture.execute({ captureId: capture.id })}
+                        onDoubleClick={() =>
+                          void confirmCapture.execute({ captureId: capture.id })}
+                        className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                      >
+                        <CaptureThumb capture={capture} />
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-medium text-foreground/92">
+                            {captureListSummary(capture)}
+                          </p>
+                        </div>
+                      </button>
+
+                      {isSelected ? (
+                        <button
+                          type="button"
+                          aria-label="More actions"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openAtElement(event.currentTarget, capture);
+                          }}
+                          className="inline-flex h-7 w-4 shrink-0 items-center justify-center text-muted-foreground/72 transition-colors group-hover:text-foreground/70 hover:text-foreground/82 dark:text-muted-foreground/62 dark:group-hover:text-foreground/84 dark:hover:text-foreground/92"
+                        >
+                          <EllipsisVertical className="size-3.5" />
+                        </button>
+                      ) : null}
                     </div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             </section>
           ))}
@@ -229,19 +253,30 @@ export function ClipboardCaptureList({
 
 function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
   const thumbnailSrc = useClipboardAssetSrc(
-    capture.contentKind === "image" ? capture.thumbnailPath : null,
+    capture.contentKind === "image" || capture.contentKind === "video"
+      ? capture.thumbnailPath
+      : null,
   );
 
-  if (capture.contentKind === "image" && thumbnailSrc) {
+  if ((capture.contentKind === "image" || capture.contentKind === "video") && thumbnailSrc) {
     return (
-      <div className="size-[30px] shrink-0 overflow-hidden rounded-[10px] bg-secondary/70 ring-1 ring-border/30">
+      <div className="relative size-[30px] shrink-0 overflow-hidden rounded-[10px] bg-secondary/70 ring-1 ring-border/30">
         <img
           src={thumbnailSrc}
-          alt={capture.preview || "Clipboard image thumbnail"}
+          alt={capture.preview || (capture.contentKind === "video"
+            ? "Clipboard video thumbnail"
+            : "Clipboard image thumbnail")}
           loading="lazy"
           decoding="async"
           className="size-full object-cover"
         />
+        {capture.contentKind === "video" ? (
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="inline-flex size-4 items-center justify-center rounded-full bg-black/78 text-white shadow-[0_4px_12px_rgba(0,0,0,0.28)]">
+              <Play className="ml-[1px] size-2.5 fill-current" />
+            </span>
+          </span>
+        ) : null}
       </div>
     );
   }
@@ -255,21 +290,8 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
 
 function renderKindIcon(capture: ClipboardCapture | ContentKind, className = "size-5") {
   if (typeof capture !== "string" && (capture.contentKind === "file" || capture.contentKind === "video")) {
-    const previewKind = resolveFileReferencePreviewModel(capture).kind;
-
-    if (previewKind === "video") {
-      return <Film className={className} />;
-    }
-
-    if (previewKind === "image") {
-      return <ImageIcon className={className} />;
-    }
-
-    if (previewKind === "pdf") {
-      return <FileText className={className} />;
-    }
-
-    return <FileIcon className={className} />;
+    const model = resolveFileReferencePreviewModel(capture);
+    return <FileReferenceTypeIcon kind={model.iconKind} className={className} />;
   }
 
   const contentKind = typeof capture === "string" ? capture : capture.contentKind;

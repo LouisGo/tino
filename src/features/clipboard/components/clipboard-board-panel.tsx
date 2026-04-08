@@ -374,7 +374,9 @@ export function ClipboardBoardPanel({
           <div className="relative min-h-0 h-full">
             <div
               className={cn(
-                "grid min-h-0 grid-cols-[clamp(14rem,24vw,24rem)_minmax(0,1fr)] items-stretch gap-0",
+                windowMode
+                  ? "grid min-h-0 grid-cols-[clamp(15rem,24vw,24rem)_minmax(0,1fr)] items-stretch gap-0"
+                  : "grid min-h-0 grid-cols-[clamp(14rem,24vw,24rem)_minmax(0,1fr)] items-stretch gap-0",
                 windowMode
                   ? "h-full"
                   : fillHeight

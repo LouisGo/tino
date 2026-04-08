@@ -164,6 +164,7 @@ const mockSnapshot: DashboardSnapshot = {
       status: "archived",
       rawText: "/Users/louistation/Library/Containers/com.chitaner.Longshot/Data/tmp/Longshot20260407223007.mov",
       fileMissing: false,
+      thumbnailPath: mockImageAsset,
       byteSize: 2726297,
     },
     {

@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
@@ -8,11 +7,7 @@ import {
 
 import {
   ExternalLink,
-  File as FileIcon,
-  FileText,
-  Film,
   FolderOpen,
-  ImageIcon,
   Pause,
   Play,
   TriangleAlert,
@@ -21,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { useCommand } from "@/core/commands";
+import { FileReferenceTypeIcon } from "@/features/clipboard/components/file-reference-type-icon";
 import { PreviewToolbar } from "@/features/clipboard/components/preview-toolbar";
 import {
   isPreviewableFileReference,
@@ -47,7 +43,12 @@ export function FileReferencePreview({
 }) {
   const model = resolveFileReferencePreviewModel(capture);
   const previewSrc = resolveAssetUrl(model.path);
-  const [mediaLoadFailed, setMediaLoadFailed] = useState(false);
+  const thumbnailSrc = capture.contentKind === "video"
+    ? resolveAssetUrl(capture.thumbnailPath)
+    : null;
+  const previewStateKey = `${model.kind}:${model.path}:${previewSrc ?? ""}`;
+  const [failedPreviewKey, setFailedPreviewKey] = useState<string | null>(null);
+  const mediaLoadFailed = failedPreviewKey === previewStateKey;
   const usesPreviewableLayout = isPreviewableFileReference(model) && !mediaLoadFailed && Boolean(previewSrc);
   const canOpenInDefaultApp = isTauriRuntime() && !model.fileMissing && Boolean(model.path);
   const canRevealPath = !model.fileMissing && Boolean(model.path);
@@ -56,10 +57,6 @@ export function FileReferencePreview({
     : model.surfaceVariant === "image"
       ? "app-preview-image"
       : "app-preview-file";
-
-  useEffect(() => {
-    setMediaLoadFailed(false);
-  }, [model.kind, model.path, previewSrc]);
 
   return (
     <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden")}>
@@ -83,7 +80,8 @@ export function FileReferencePreview({
           capture={capture}
           model={model}
           previewSrc={previewSrc}
-          onPreviewError={() => setMediaLoadFailed(true)}
+          thumbnailSrc={thumbnailSrc}
+          onPreviewError={() => setFailedPreviewKey(previewStateKey)}
         />
       ) : (
         <GenericFileReferenceLayout
@@ -150,11 +148,13 @@ function PreviewableFileReferenceLayout({
   capture,
   model,
   previewSrc,
+  thumbnailSrc,
   onPreviewError,
 }: {
   capture: ClipboardCapture;
   model: FileReferencePreviewModel;
   previewSrc: string;
+  thumbnailSrc?: string | null;
   onPreviewError: () => void;
 }) {
   return (
@@ -164,6 +164,7 @@ function PreviewableFileReferenceLayout({
           capture={capture}
           model={model}
           previewSrc={previewSrc}
+          thumbnailSrc={thumbnailSrc}
           onPreviewError={onPreviewError}
         />
       </div>
@@ -175,11 +176,13 @@ function FileReferenceInlineStage({
   capture,
   model,
   previewSrc,
+  thumbnailSrc,
   onPreviewError,
 }: {
   capture: ClipboardCapture;
   model: FileReferencePreviewModel;
   previewSrc: string;
+  thumbnailSrc?: string | null;
   onPreviewError: () => void;
 }) {
   switch (model.kind) {
@@ -197,17 +200,19 @@ function FileReferenceInlineStage({
     case "video":
       return (
         <VideoReferenceStage
+          key={`${previewSrc}:${thumbnailSrc ?? ""}`}
           previewSrc={previewSrc}
+          posterSrc={thumbnailSrc}
           title={capture.preview || model.fileName || "Video preview"}
           onPreviewError={onPreviewError}
         />
       );
     case "audio":
-      return (
+          return (
         <div className="flex size-full items-center justify-center p-4">
           <div className="flex w-full max-w-[34rem] flex-col items-center gap-5 rounded-[24px] border border-border/55 bg-card/84 px-6 py-7 text-center shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
             <div className="inline-flex size-14 items-center justify-center rounded-[18px] border border-border/55 bg-background/78 text-muted-foreground/88">
-              <FileIcon className="size-6" />
+              <FileReferenceTypeIcon kind="audio" className="size-6" />
             </div>
             <div className="space-y-1.5">
               <p className="text-base font-semibold text-foreground/90">
@@ -244,10 +249,12 @@ function FileReferenceInlineStage({
 
 function VideoReferenceStage({
   previewSrc,
+  posterSrc,
   title,
   onPreviewError,
 }: {
   previewSrc: string;
+  posterSrc?: string | null;
   title: string;
   onPreviewError: () => void;
 }) {
@@ -257,22 +264,6 @@ function VideoReferenceStage({
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const progressRatio = duration > 0 ? Math.min(Math.max(currentTime / duration, 0), 1) : 0;
-
-  useEffect(() => {
-    setIsPlaying(false);
-    setIsMuted(false);
-    setDuration(0);
-    setCurrentTime(0);
-
-    const video = videoRef.current;
-    if (!video) {
-      return;
-    }
-
-    video.pause();
-    video.currentTime = 0;
-    video.muted = false;
-  }, [previewSrc]);
 
   function togglePlayback() {
     const video = videoRef.current;
@@ -319,6 +310,7 @@ function VideoReferenceStage({
       <video
         ref={videoRef}
         src={previewSrc}
+        poster={posterSrc ?? undefined}
         playsInline
         preload="metadata"
         disablePictureInPicture
@@ -414,7 +406,7 @@ function GenericFileReferenceLayout({
                   : "app-kind-text-file",
             )}
           >
-            {renderKindIcon(model.kind)}
+            <FileReferenceTypeIcon kind={model.iconKind} className="size-6" />
           </div>
 
           <div className="space-y-2.5">
@@ -425,7 +417,7 @@ function GenericFileReferenceLayout({
               {capture.preview || model.fileName || "File reference"}
             </p>
             <p className="max-w-[26rem] text-sm leading-6 text-muted-foreground/80">
-              {genericLayoutDescription(tone, model.kind)}
+              {genericLayoutDescription(tone, model)}
             </p>
           </div>
 
@@ -472,7 +464,7 @@ function previewStageShellClassName(kind: FileReferencePreviewKind) {
 
 function genericLayoutDescription(
   tone: FileReferenceFallbackTone,
-  kind: FileReferencePreviewKind,
+  model: Pick<FileReferencePreviewModel, "contentTypeLabel" | "iconKind">,
 ) {
   if (tone === "missing") {
     return "The original local file is no longer available from its saved path.";
@@ -482,7 +474,7 @@ function genericLayoutDescription(
     return "This file cannot be previewed inline right now. Reveal the original file to inspect it.";
   }
 
-  switch (kind) {
+  switch (model.iconKind) {
     case "image":
       return "This image is stored as a local file reference.";
     case "video":
@@ -491,6 +483,20 @@ function genericLayoutDescription(
       return "This audio file is stored as a local file reference.";
     case "pdf":
       return "This document is stored as a local file reference.";
+    case "presentation":
+      return "This presentation is stored as a local file reference.";
+    case "spreadsheet":
+      return "This spreadsheet is stored as a local file reference.";
+    case "document":
+      return "This document is stored as a local file reference.";
+    case "markdown":
+      return "This Markdown file is stored as a local file reference.";
+    case "code":
+      return "This code file is stored as a local file reference.";
+    case "archive":
+      return `This ${model.contentTypeLabel.toLowerCase()} is stored as a local file reference.`;
+    case "unknown":
+      return "Tino could not identify this file type yet. Reveal the original file to inspect it.";
     default:
       return "This file type does not have an inline preview yet. Reveal the original file to inspect it.";
   }
@@ -503,17 +509,4 @@ function ReferenceWarning({ children }: { children: ReactNode }) {
       <span>{children}</span>
     </div>
   );
-}
-
-function renderKindIcon(kind: FileReferencePreviewKind) {
-  switch (kind) {
-    case "image":
-      return <ImageIcon className="size-6" />;
-    case "video":
-      return <Film className="size-6" />;
-    case "pdf":
-      return <FileText className="size-6" />;
-    default:
-      return <FileIcon className="size-6" />;
-  }
 }
