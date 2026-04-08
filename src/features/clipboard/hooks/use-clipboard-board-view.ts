@@ -15,6 +15,7 @@ import {
   matchesSearch,
 } from "@/features/clipboard/lib/clipboard-board"
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store"
+import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults"
 import { getClipboardPage, getPinnedClipboardCaptures } from "@/lib/tauri"
 import type { ClipboardPageResult, PinnedClipboardCapture } from "@/types/shell"
 
@@ -113,7 +114,8 @@ export function useClipboardBoardView() {
     videos: 0,
     files: 0,
   }
-  const historyDays = summaryPage?.historyDays ?? firstPage?.historyDays ?? 3
+  const historyDays =
+    summaryPage?.historyDays ?? firstPage?.historyDays ?? DEFAULT_CLIPBOARD_HISTORY_DAYS
   const status: "loading" | "error" | "ready" =
     !firstPage && isPending ? "loading" : !firstPage && isError ? "error" : "ready"
   const errorMessage =

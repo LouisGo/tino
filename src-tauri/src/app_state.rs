@@ -55,7 +55,7 @@ const APP_ICONS_DIR_NAME: &str = "app-icons";
 const IMAGE_THUMBNAIL_MAX_EDGE: u32 = 240;
 const BATCH_TRIGGER_SIZE: usize = 20;
 const BATCH_TRIGGER_MAX_WAIT_MINUTES: i64 = 10;
-const DEFAULT_CLIPBOARD_HISTORY_DAYS: u16 = 3;
+const DEFAULT_CLIPBOARD_HISTORY_DAYS: u16 = 7;
 const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
 const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 14;
 const MAX_CLIPBOARD_STORAGE_BYTES: u64 = 256 * 1024 * 1024;
@@ -2253,6 +2253,8 @@ fn visit_clipboard_history_entries<F>(
 where
     F: FnMut(&CapturePreview) -> Result<(), String>,
 {
+    let retention_cutoff = retention_cutoff_timestamp(history_days);
+
     for history_path in clipboard_history_paths_desc(clipboard_cache_root, history_days)? {
         let content = fs::read_to_string(&history_path).map_err(|error| error.to_string())?;
         let mut lines = content.lines().collect::<Vec<&str>>();
@@ -2271,6 +2273,9 @@ where
             if !should_persist_capture_history(&capture.status) {
                 continue;
             }
+            if !is_capture_within_retention_window(&capture.captured_at, &retention_cutoff) {
+                continue;
+            }
             visit(&capture)?;
         }
     }
@@ -2283,6 +2288,7 @@ fn load_clipboard_history_entries_by_day(
     history_days: u16,
 ) -> Result<BTreeMap<NaiveDate, BTreeMap<String, CapturePreview>>, String> {
     let mut entries_by_day: BTreeMap<NaiveDate, BTreeMap<String, CapturePreview>> = BTreeMap::new();
+    let retention_cutoff = retention_cutoff_timestamp(history_days);
 
     for history_path in clipboard_history_paths_desc(clipboard_cache_root, history_days)? {
         let Some(date) = path_date(&history_path) else {
@@ -2300,6 +2306,9 @@ fn load_clipboard_history_entries_by_day(
                 continue;
             };
             if !should_persist_capture_history(&capture.status) {
+                continue;
+            }
+            if !is_capture_within_retention_window(&capture.captured_at, &retention_cutoff) {
                 continue;
             }
 
@@ -2514,7 +2523,7 @@ fn clipboard_history_paths_desc(
         return Ok(Vec::new());
     }
 
-    let cutoff = retention_cutoff_date(history_days);
+    let cutoff = retention_prune_start_date(history_days);
     let mut paths = Vec::new();
 
     for entry in fs::read_dir(dir).map_err(|error| error.to_string())? {
@@ -2549,17 +2558,20 @@ fn enforce_clipboard_retention(
     clipboard_cache_root: &Path,
     history_days: u16,
 ) -> Result<(), String> {
-    let cutoff = retention_cutoff_date(history_days);
-    let cutoff_day = cutoff.format("%Y-%m-%d").to_string();
+    let retention_cutoff = retention_cutoff_timestamp(history_days);
+    let prune_start_date = retention_prune_start_date(history_days);
 
     prune_dated_children(
         &clipboard_history_dir_path(clipboard_cache_root),
         "jsonl",
-        cutoff,
+        prune_start_date,
     )?;
-    if let Err(error) = CaptureHistoryStore::new(clipboard_cache_root)
-        .and_then(|store| store.delete_before_day(&cutoff_day))
-    {
+    let retained_entries =
+        load_clipboard_history_entries_by_day(clipboard_cache_root, history_days)?;
+    persist_clipboard_history_entries(clipboard_cache_root, history_days, &retained_entries)?;
+    if let Err(error) = CaptureHistoryStore::new(clipboard_cache_root).and_then(|store| {
+        store.delete_before_capture_timestamp(retention_cutoff.timestamp_millis())
+    }) {
         warn!("failed to prune sqlite capture history retention window: {error}");
     }
     enforce_clipboard_storage_budget(clipboard_cache_root)?;
@@ -2567,9 +2579,19 @@ fn enforce_clipboard_retention(
     Ok(())
 }
 
-fn retention_cutoff_date(history_days: u16) -> NaiveDate {
+fn retention_cutoff_timestamp(history_days: u16) -> DateTime<FixedOffset> {
     let keep_days = history_days.max(1) as i64;
-    Local::now().date_naive() - Duration::days(keep_days - 1)
+    Local::now().fixed_offset() - Duration::days(keep_days)
+}
+
+fn retention_prune_start_date(history_days: u16) -> NaiveDate {
+    retention_cutoff_timestamp(history_days).date_naive() - Duration::days(1)
+}
+
+fn is_capture_within_retention_window(captured_at: &str, cutoff: &DateTime<FixedOffset>) -> bool {
+    parse_captured_at(captured_at)
+        .map(|captured_at| captured_at >= *cutoff)
+        .unwrap_or(false)
 }
 
 fn prune_dated_children(
@@ -3657,6 +3679,10 @@ mod tests {
         format!("{day}T{hour:02}:{minute:02}:00{offset}")
     }
 
+    fn relative_captured_at(duration: Duration) -> String {
+        (Local::now().fixed_offset() - duration).to_rfc3339()
+    }
+
     fn sample_settings() -> AppSettings {
         AppSettings::defaults(&unique_root())
     }
@@ -3794,6 +3820,33 @@ mod tests {
             asset_path.exists(),
             "persisted assets referenced by daily should not be pruned by clipboard retention"
         );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn clipboard_retention_prunes_expired_entries_without_dropping_retained_ones() {
+        let root = unique_root();
+        ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
+
+        let expired = sample_preview(
+            "cap_expired",
+            &relative_captured_at(Duration::days(1) + Duration::minutes(1)),
+        );
+        let retained = sample_preview(
+            "cap_retained",
+            &relative_captured_at(Duration::days(1) - Duration::minutes(1)),
+        );
+
+        append_clipboard_history_entry(&root, &expired).expect("expired preview should append");
+        append_clipboard_history_entry(&root, &retained).expect("retained preview should append");
+
+        enforce_clipboard_retention(&root, 1).expect("retention should succeed");
+
+        let remaining =
+            load_capture_history_entries_legacy(&root, 7).expect("remaining history should load");
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, "cap_retained");
 
         let _ = fs::remove_dir_all(root);
     }

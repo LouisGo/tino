@@ -8,11 +8,10 @@ use {
     log::{error, info},
     objc2::{rc::Retained, runtime::AnyObject},
     objc2_app_kit::{
-        NSBitmapImageFileType, NSBitmapImageRep, NSPasteboard, NSPasteboardTypeHTML,
-        NSPasteboardTypeFileURL, NSPasteboardTypePNG, NSPasteboardTypeRTF,
-        NSPasteboardTypeString, NSPasteboardTypeTIFF, NSPasteboardTypeURL,
-        NSRunningApplication, NSWorkspace, NSWorkspaceApplicationKey,
-        NSWorkspaceDidActivateApplicationNotification,
+        NSBitmapImageFileType, NSBitmapImageRep, NSPasteboard, NSPasteboardTypeFileURL,
+        NSPasteboardTypeHTML, NSPasteboardTypePNG, NSPasteboardTypeRTF, NSPasteboardTypeString,
+        NSPasteboardTypeTIFF, NSPasteboardTypeURL, NSRunningApplication, NSWorkspace,
+        NSWorkspaceApplicationKey, NSWorkspaceDidActivateApplicationNotification,
     },
     objc2_foundation::{NSDictionary, NSNotification, NSString, NSURL},
     sha2::{Digest, Sha256},
@@ -441,7 +440,8 @@ fn read_capture_record(detected_at: Instant) -> Result<Option<CaptureRecord>, St
     let pasteboard = NSPasteboard::generalPasteboard();
     let (source_app_name, source_app_bundle_id, source_app_icon_bytes) =
         read_clipboard_source_application(&pasteboard, detected_at);
-    if let Some((content_kind, file_path, byte_size)) = read_clipboard_file_reference(&pasteboard)? {
+    if let Some((content_kind, file_path, byte_size)) = read_clipboard_file_reference(&pasteboard)?
+    {
         let hash = build_capture_hash(content_kind, &file_path, None, None::<&[u8]>);
 
         return Ok(Some(CaptureRecord {
@@ -1108,7 +1108,9 @@ fn read_clipboard_file_reference(
 }
 
 #[cfg(target_os = "macos")]
-fn read_clipboard_item_file_path(item: &objc2_app_kit::NSPasteboardItem) -> Option<std::path::PathBuf> {
+fn read_clipboard_item_file_path(
+    item: &objc2_app_kit::NSPasteboardItem,
+) -> Option<std::path::PathBuf> {
     item.stringForType(unsafe { NSPasteboardTypeFileURL })
         .or_else(|| item.stringForType(unsafe { NSPasteboardTypeURL }))
         .and_then(|value| file_url_string_to_path(&value.to_string()))

@@ -688,7 +688,7 @@ export function CaptureOcrLightbox({
                 content={normalizedOcrText}
                 highlightQuery=""
                 tone="reading"
-                className="w-full max-w-full text-center text-[11px] leading-[1.72] text-foreground/84 sm:text-[11.5px]"
+                className="w-full max-w-full text-left text-[11px] leading-[1.72] text-foreground/84 sm:text-[11.5px]"
               />
             </div>
           </div>

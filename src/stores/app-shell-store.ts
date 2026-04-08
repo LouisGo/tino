@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { defaultAppLocalePreference } from "@/i18n";
+import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults";
 import type { SettingsDraft } from "@/types/shell";
 
 type AppShellState = {
@@ -16,7 +17,7 @@ const initialSettingsDraft: SettingsDraft = {
   runtimeProviderProfiles: [],
   activeRuntimeProviderId: "",
   localePreference: defaultAppLocalePreference(),
-  clipboardHistoryDays: 3,
+  clipboardHistoryDays: DEFAULT_CLIPBOARD_HISTORY_DAYS,
   shortcutOverrides: {},
 };
 

@@ -1,0 +1,1 @@
+export const DEFAULT_CLIPBOARD_HISTORY_DAYS = 7;

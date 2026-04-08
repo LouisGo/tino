@@ -9,7 +9,7 @@ use chrono::{DateTime, Duration, FixedOffset, Local};
 use rusqlite::{params, params_from_iter, types::Value, Connection, OptionalExtension, Row};
 
 const SQLITE_FILE_NAME: &str = "tino.db";
-const CAPTURE_HISTORY_SCHEMA_VERSION: i32 = 3;
+const CAPTURE_HISTORY_SCHEMA_VERSION: i32 = 4;
 
 #[derive(Debug, Clone)]
 pub struct CaptureHistoryUpsert {
@@ -105,6 +105,7 @@ impl CaptureHistoryStore {
         let connection = self.open_connection()?;
         let timestamp = now_rfc3339();
         let captured_day = capture_day(&capture.captured_at)?;
+        let captured_at_epoch_ms = captured_at_epoch_ms(&capture.captured_at)?;
 
         connection
             .execute(
@@ -112,6 +113,7 @@ impl CaptureHistoryStore {
                 INSERT INTO capture_history (
                     id,
                     captured_at,
+                    captured_at_epoch_ms,
                     captured_day,
                     source,
                     source_app_name,
@@ -136,10 +138,11 @@ impl CaptureHistoryStore {
                     updated_at
                 )
                 VALUES (
-                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24
+                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25
                 )
                 ON CONFLICT(id) DO UPDATE SET
                     captured_at = excluded.captured_at,
+                    captured_at_epoch_ms = excluded.captured_at_epoch_ms,
                     captured_day = excluded.captured_day,
                     source = excluded.source,
                     source_app_name = excluded.source_app_name,
@@ -165,6 +168,7 @@ impl CaptureHistoryStore {
                 params![
                     &capture.id,
                     &capture.captured_at,
+                    captured_at_epoch_ms,
                     &captured_day,
                     &capture.source,
                     capture.source_app_name.as_deref(),
@@ -206,17 +210,25 @@ impl CaptureHistoryStore {
             .map_err(|error| error.to_string())?;
         let timestamp = now_rfc3339();
         let replayed_day = capture_day(replayed_at)?;
+        let replayed_at_epoch_ms = captured_at_epoch_ms(replayed_at)?;
         let changed = transaction
             .execute(
                 r#"
                 UPDATE capture_history
                 SET
                     captured_at = ?1,
-                    captured_day = ?2,
-                    updated_at = ?3
-                WHERE id = ?4
+                    captured_at_epoch_ms = ?2,
+                    captured_day = ?3,
+                    updated_at = ?4
+                WHERE id = ?5
                 "#,
-                params![replayed_at, &replayed_day, &timestamp, capture_id],
+                params![
+                    replayed_at,
+                    replayed_at_epoch_ms,
+                    &replayed_day,
+                    &timestamp,
+                    capture_id
+                ],
             )
             .map_err(|error| error.to_string())?;
 
@@ -244,7 +256,7 @@ impl CaptureHistoryStore {
         limit: usize,
     ) -> Result<Vec<CaptureHistoryEntry>, String> {
         let connection = self.open_connection()?;
-        let cutoff_day = history_cutoff_day(history_days);
+        let cutoff_epoch_ms = history_cutoff_epoch_ms(history_days);
         let mut statement = connection
             .prepare(
                 r#"
@@ -273,9 +285,9 @@ impl CaptureHistoryStore {
                     created_at,
                     updated_at
                 FROM capture_history
-                WHERE captured_day >= ?1
+                WHERE captured_at_epoch_ms >= ?1
                   AND status IN ('archived', 'queued')
-                ORDER BY captured_at DESC, id DESC
+                ORDER BY captured_at_epoch_ms DESC, captured_at DESC, id DESC
                 LIMIT ?2
                 "#,
             )
@@ -283,7 +295,7 @@ impl CaptureHistoryStore {
 
         let rows = statement
             .query_map(
-                params![cutoff_day, limit as i64],
+                params![cutoff_epoch_ms, limit as i64],
                 map_capture_history_entry_row,
             )
             .map_err(|error| error.to_string())?;
@@ -324,6 +336,7 @@ impl CaptureHistoryStore {
                     INSERT INTO capture_history (
                         id,
                         captured_at,
+                        captured_at_epoch_ms,
                         captured_day,
                         source,
                         source_app_name,
@@ -347,7 +360,7 @@ impl CaptureHistoryStore {
                         created_at,
                         updated_at
                     ) VALUES (
-                        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24
+                        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25
                     )
                     "#,
                 )
@@ -356,10 +369,12 @@ impl CaptureHistoryStore {
             for capture in captures {
                 let timestamp = now_rfc3339();
                 let captured_day = capture_day(&capture.captured_at)?;
+                let captured_at_epoch_ms = captured_at_epoch_ms(&capture.captured_at)?;
                 statement
                     .execute(params![
                         &capture.id,
                         &capture.captured_at,
+                        captured_at_epoch_ms,
                         &captured_day,
                         &capture.source,
                         capture.source_app_name.as_deref(),
@@ -428,12 +443,12 @@ impl CaptureHistoryStore {
         Ok(changed > 0)
     }
 
-    pub fn delete_before_day(&self, cutoff: &str) -> Result<(), String> {
+    pub fn delete_before_capture_timestamp(&self, cutoff_epoch_ms: i64) -> Result<(), String> {
         let connection = self.open_connection()?;
         connection
             .execute(
-                "DELETE FROM capture_history WHERE captured_day < ?1",
-                [cutoff],
+                "DELETE FROM capture_history WHERE captured_at_epoch_ms < ?1",
+                [cutoff_epoch_ms],
             )
             .map_err(|error| error.to_string())?;
         checkpoint_and_vacuum(&connection)
@@ -548,6 +563,7 @@ fn run_migrations(connection: &Connection) -> Result<(), String> {
             CREATE TABLE IF NOT EXISTS capture_history (
                 id TEXT PRIMARY KEY,
                 captured_at TEXT NOT NULL,
+                captured_at_epoch_ms INTEGER NOT NULL DEFAULT 0,
                 captured_day TEXT NOT NULL,
                 source TEXT NOT NULL,
                 source_app_name TEXT,
@@ -587,17 +603,34 @@ fn run_migrations(connection: &Connection) -> Result<(), String> {
             .map_err(|error| error.to_string())?;
     }
 
+    if !column_exists(connection, "capture_history", "captured_at_epoch_ms")? {
+        connection
+            .execute(
+                "ALTER TABLE capture_history ADD COLUMN captured_at_epoch_ms INTEGER NOT NULL DEFAULT 0",
+                [],
+            )
+            .map_err(|error| error.to_string())?;
+    }
+
+    backfill_captured_at_epoch_ms(connection)?;
+
     connection
         .execute_batch(
             r#"
             CREATE INDEX IF NOT EXISTS idx_capture_history_captured_at
             ON capture_history (captured_at DESC);
 
+            CREATE INDEX IF NOT EXISTS idx_capture_history_captured_at_epoch_ms
+            ON capture_history (captured_at_epoch_ms DESC);
+
             CREATE INDEX IF NOT EXISTS idx_capture_history_captured_day
             ON capture_history (captured_day DESC);
 
             CREATE INDEX IF NOT EXISTS idx_capture_history_status_captured_at
             ON capture_history (status, captured_at DESC);
+
+            CREATE INDEX IF NOT EXISTS idx_capture_history_status_captured_at_epoch_ms
+            ON capture_history (status, captured_at_epoch_ms DESC);
 
             CREATE INDEX IF NOT EXISTS idx_capture_history_kind_captured_at
             ON capture_history (content_kind, captured_at DESC);
@@ -642,6 +675,38 @@ fn column_exists(connection: &Connection, table: &str, column: &str) -> Result<b
     }
 
     Ok(false)
+}
+
+fn backfill_captured_at_epoch_ms(connection: &Connection) -> Result<(), String> {
+    let mut statement = connection
+        .prepare(
+            r#"
+            SELECT id, captured_at
+            FROM capture_history
+            WHERE captured_at_epoch_ms IS NULL OR captured_at_epoch_ms = 0
+            "#,
+        )
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|error| error.to_string())?;
+
+    let pending = rows
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+
+    for (id, captured_at) in pending {
+        connection
+            .execute(
+                "UPDATE capture_history SET captured_at_epoch_ms = ?1 WHERE id = ?2",
+                params![captured_at_epoch_ms(&captured_at)?, id],
+            )
+            .map_err(|error| error.to_string())?;
+    }
+
+    Ok(())
 }
 
 fn query_summary(
@@ -742,7 +807,7 @@ fn query_filtered_captures(
             updated_at
         FROM capture_history
         WHERE {where_sql}
-        ORDER BY captured_at DESC, id DESC
+        ORDER BY captured_at_epoch_ms DESC, captured_at DESC, id DESC
         LIMIT ? OFFSET ?
         "#
     );
@@ -770,10 +835,10 @@ fn build_where_clause(
     filter: &str,
 ) -> (String, Vec<Value>) {
     let mut clauses = vec![
-        "captured_day >= ?".to_string(),
+        "captured_at_epoch_ms >= ?".to_string(),
         "status IN ('archived', 'queued')".to_string(),
     ];
-    let mut params = vec![Value::Text(history_cutoff_day(history_days))];
+    let mut params = vec![Value::Integer(history_cutoff_epoch_ms(history_days))];
 
     if !excluded_capture_ids.is_empty() {
         let placeholders = (0..excluded_capture_ids.len())
@@ -838,16 +903,21 @@ fn map_capture_history_entry_row(row: &Row<'_>) -> rusqlite::Result<CaptureHisto
     })
 }
 
-fn history_cutoff_day(history_days: u16) -> String {
+fn history_cutoff_epoch_ms(history_days: u16) -> i64 {
     let retained_days = history_days.max(1);
-    let cutoff = Local::now().date_naive() - Duration::days(i64::from(retained_days - 1));
-    cutoff.format("%Y-%m-%d").to_string()
+    (Local::now().fixed_offset() - Duration::days(i64::from(retained_days))).timestamp_millis()
 }
 
 fn capture_day(captured_at: &str) -> Result<String, String> {
     let parsed = DateTime::<FixedOffset>::parse_from_rfc3339(captured_at)
         .map_err(|error| error.to_string())?;
     Ok(parsed.format("%Y-%m-%d").to_string())
+}
+
+fn captured_at_epoch_ms(captured_at: &str) -> Result<i64, String> {
+    DateTime::<FixedOffset>::parse_from_rfc3339(captured_at)
+        .map(|parsed| parsed.timestamp_millis())
+        .map_err(|error| error.to_string())
 }
 
 fn now_rfc3339() -> String {
@@ -890,6 +960,18 @@ mod tests {
             byte_size: None,
             hash: Some(format!("hash-{id}")),
         }
+    }
+
+    fn sample_upsert_at(
+        id: &str,
+        kind: &str,
+        status: &str,
+        raw_text: &str,
+        captured_at: String,
+    ) -> CaptureHistoryUpsert {
+        let mut capture = sample_upsert(id, kind, status, raw_text);
+        capture.captured_at = captured_at;
+        capture
     }
 
     #[test]
@@ -1152,6 +1234,97 @@ mod tests {
         assert_eq!(result.summary.total, 1);
         assert_eq!(result.captures.len(), 1);
         assert_eq!(result.captures[0].id, "cap_newest");
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn query_page_uses_precise_per_entry_retention_window() {
+        let root = unique_root();
+        let store = CaptureHistoryStore::new(&root).expect("store should initialize");
+        let now = Local::now().fixed_offset();
+
+        store
+            .upsert_capture(&sample_upsert_at(
+                "cap_expired",
+                "plain_text",
+                "archived",
+                "expired clipboard",
+                (now - Duration::days(1) - Duration::minutes(1)).to_rfc3339(),
+            ))
+            .expect("expired capture should insert");
+        store
+            .upsert_capture(&sample_upsert_at(
+                "cap_retained",
+                "plain_text",
+                "archived",
+                "retained clipboard",
+                (now - Duration::days(1) + Duration::minutes(1)).to_rfc3339(),
+            ))
+            .expect("retained capture should insert");
+
+        let result = store
+            .query_page(&CaptureHistoryQuery {
+                history_days: 1,
+                excluded_capture_ids: Vec::new(),
+                search: String::new(),
+                filter: "all".into(),
+                page: 0,
+                page_size: 20,
+            })
+            .expect("query should succeed");
+
+        assert_eq!(result.total, 1);
+        assert_eq!(result.summary.total, 1);
+        assert_eq!(result.captures.len(), 1);
+        assert_eq!(result.captures[0].id, "cap_retained");
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn delete_before_capture_timestamp_removes_only_expired_rows() {
+        let root = unique_root();
+        let store = CaptureHistoryStore::new(&root).expect("store should initialize");
+        let now = Local::now().fixed_offset();
+
+        store
+            .upsert_capture(&sample_upsert_at(
+                "cap_expired",
+                "plain_text",
+                "archived",
+                "expired clipboard",
+                (now - Duration::days(1) - Duration::minutes(1)).to_rfc3339(),
+            ))
+            .expect("expired capture should insert");
+        store
+            .upsert_capture(&sample_upsert_at(
+                "cap_retained",
+                "plain_text",
+                "archived",
+                "retained clipboard",
+                (now - Duration::days(1) + Duration::minutes(1)).to_rfc3339(),
+            ))
+            .expect("retained capture should insert");
+
+        store
+            .delete_before_capture_timestamp(history_cutoff_epoch_ms(1))
+            .expect("precise retention prune should succeed");
+
+        let result = store
+            .query_page(&CaptureHistoryQuery {
+                history_days: 7,
+                excluded_capture_ids: Vec::new(),
+                search: String::new(),
+                filter: "all".into(),
+                page: 0,
+                page_size: 20,
+            })
+            .expect("query should succeed");
+
+        assert_eq!(result.total, 1);
+        assert_eq!(result.captures.len(), 1);
+        assert_eq!(result.captures[0].id, "cap_retained");
 
         let _ = fs::remove_dir_all(root);
     }

@@ -11,6 +11,7 @@ import {
   normalizeAppLocalePreference,
   syncLocalePreference,
 } from "@/i18n";
+import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults";
 import { appEnv, dataChannel, isProductionDataChannel } from "@/lib/runtime-profile";
 import { isTauriRuntime, unwrapTauriResult } from "@/lib/tauri-core";
 import type {
@@ -71,7 +72,7 @@ const mockSettings: SettingsDraft = {
   ],
   activeRuntimeProviderId: "provider_mock_primary",
   localePreference: defaultAppLocalePreference(),
-  clipboardHistoryDays: 3,
+  clipboardHistoryDays: DEFAULT_CLIPBOARD_HISTORY_DAYS,
   shortcutOverrides: {},
 };
 
@@ -231,7 +232,7 @@ function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
       settings.runtimeProviderProfiles.map(normalizeRuntimeProviderProfile),
     activeRuntimeProviderId: settings.activeRuntimeProviderId,
     localePreference: normalizeAppLocalePreference(settings.localePreference),
-    clipboardHistoryDays: settings.clipboardHistoryDays ?? 3,
+    clipboardHistoryDays: settings.clipboardHistoryDays ?? DEFAULT_CLIPBOARD_HISTORY_DAYS,
     shortcutOverrides: settings.shortcutOverrides ?? {},
   };
 }
