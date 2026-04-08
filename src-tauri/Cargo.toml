@@ -23,10 +23,12 @@ chrono = { version = "0.4", features = ["serde"] }
 image = "0.25"
 libc = "0.2"
 log = "0.4"
-objc2-app-kit = { version = "0.3", features = ["NSPasteboard", "NSWorkspace", "NSRunningApplication", "NSImage", "NSBitmapImageRep", "NSImageRep", "libc"] }
+objc2-app-kit = { version = "0.3", features = ["NSPasteboard", "NSWorkspace", "NSRunningApplication", "NSImage", "NSBitmapImageRep", "NSImageRep", "NSGraphicsContext", "libc"] }
+objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFString"] }
 objc2-core-graphics = { version = "0.3", features = ["CGDirectDisplay", "CGEvent", "CGEventSource", "CGEventTypes", "CGRemoteOperation", "libc"] }
-objc2-foundation = { version = "0.3", features = ["block2"] }
+objc2-foundation = { version = "0.3", features = ["block2", "NSBundle", "NSDictionary", "NSString"] }
 objc2 = { version = "0.6", features = ["exception"] }
+plist = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

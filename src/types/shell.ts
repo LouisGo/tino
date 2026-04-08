@@ -16,6 +16,9 @@ import type {
   CapturePreview as RustCapturePreview,
   ClipboardPage as RustClipboardPage,
   ClipboardPageRequest as RustClipboardPageRequest,
+  ClipboardSourceAppIconResult as RustClipboardSourceAppIconResult,
+  ClipboardSourceAppOption as RustClipboardSourceAppOption,
+  ClipboardSourceAppRule as RustClipboardSourceAppRule,
   DashboardSnapshot as RustDashboardSnapshot,
   DeleteClipboardCaptureResult as RustDeleteClipboardCaptureResult,
   PinnedClipboardCapture as RustPinnedClipboardCapture,
@@ -61,6 +64,23 @@ export type RuntimeProviderProfile = RequireKeys<
   RustRuntimeProviderProfile,
   "id" | "name" | "vendor" | "baseUrl" | "apiKey" | "model"
 >;
+export type ClipboardSourceAppRule = RequireKeys<
+  RustClipboardSourceAppRule,
+  "bundleId" | "appName"
+>;
+export type ClipboardSourceAppOption = RequireKeys<
+  RustClipboardSourceAppOption,
+  "bundleId" | "appName"
+> & {
+  appPath: string | null;
+  iconPath: string | null;
+};
+export type ClipboardSourceAppIconResult = RequireKeys<
+  RustClipboardSourceAppIconResult,
+  "appPath"
+> & {
+  iconPath: string | null;
+};
 export type ShortcutOverrideRecord = NonNullable<RustAppSettings["shortcutOverrides"]>;
 
 export type SettingsDraft = Omit<
@@ -70,6 +90,8 @@ export type SettingsDraft = Omit<
   | "activeRuntimeProviderId"
   | "localePreference"
   | "clipboardHistoryDays"
+  | "clipboardExcludedSourceApps"
+  | "clipboardExcludedKeywords"
   | "shortcutOverrides"
 > & {
   knowledgeRoot: string;
@@ -77,6 +99,8 @@ export type SettingsDraft = Omit<
   activeRuntimeProviderId: string;
   localePreference: AppLocalePreference;
   clipboardHistoryDays: number;
+  clipboardExcludedSourceApps: ClipboardSourceAppRule[];
+  clipboardExcludedKeywords: string[];
   shortcutOverrides: ShortcutOverrideRecord;
 };
 

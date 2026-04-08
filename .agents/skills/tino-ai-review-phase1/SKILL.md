@@ -1,27 +1,23 @@
 ---
 name: tino-ai-review-phase1
-description: "Use this skill for Tino /ai work in the current M6 hidden-intervention persistence state: live batch debugging, manual live candidate runs, applyBatchDecision behavior, queue-to-batch promotion, or running the near-real mock chain."
+description: "Use this skill for current Tino `/ai` hidden-intervention work: live batch debugging, `applyBatchDecision`, queue-to-batch promotion, manual candidate runs, and the near-real mock review chain."
 ---
 
-# Tino AI Review Current State
+# Tino AI Review State
 
 ## Load Order
 
 1. Read `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md`.
-2. Read `docs/03-planning/HANDOFF.md` only if you need broader current-state alignment.
-3. Read `docs/03-planning/Tino AI Runtime 与 Agent 工程方案 v0.1.md` only if the task is about next-phase architecture, not current semantics.
+2. Read `docs/03-planning/HANDOFF.md` only if you need broader current-state or phase alignment.
+3. Read `docs/03-planning/Tino AI Runtime 与 Agent 工程方案 v0.1.md` only for next-phase architecture, not current semantics.
 
-## Current Truths
+## Current Contract
 
 - `/ai` is currently a hidden intervention, calibration, and debug surface, not the primary end-user product path.
-- `/ai` can display a real live batch from the filesystem.
-- `/ai` can manually run renderer-side live `generateObject` for a live batch when provider settings are configured.
-- `applyBatchDecision` applies review, validates references, writes `_system/reviews/*.json`, writes controlled `topics/` / `_inbox/` outputs, and marks the batch `persisted`.
-- `applyBatchDecision` still does not generate batches, call a model, or create a separate formal topic-index asset.
-- Batch generation happens earlier: `capture -> queue -> promote -> _system/batches/*.json`.
+- `applyBatchDecision` is review plus controlled persistence. It writes review artifacts and approved outputs; it does not generate batches or call a model.
+- Live candidate generation is renderer-side and stays local until submit.
+- Batch generation happens earlier: `capture -> _system/queue.json -> promote -> _system/batches/*.json`.
 - If `apiKey` is empty, capture stays in `daily` and does not enter the AI queue.
-- Live candidate output stays renderer-local until review submit; persistence now happens only through manual hidden intervention apply.
-- `/ai` exists for exceptions, calibration, and developer visibility.
 
 ## Debug Order For Empty `/ai`
 
@@ -33,35 +29,16 @@ description: "Use this skill for Tino /ai work in the current M6 hidden-interven
 
 ## Mock Chain
 
-Use the filesystem mock chain, not browser demo fixtures, when you need a near-real `/ai` verification path.
-
-Common command:
-
-```bash
-pnpm mock:ai-review run --profile preview --count 20
-```
-
-Useful variants:
-
-```bash
-pnpm mock:ai-review inject --profile preview --count 20
-pnpm mock:ai-review promote --profile preview
-pnpm mock:ai-review status --profile preview
-```
-
-Relevant files:
-
-- `scripts/mock-ai-review-chain.mjs`
-- `src/features/ai/lib/mock-fixtures.ts`
-- `src/features/ai/lib/mock-review.ts`
+- Use the filesystem mock chain, not browser demo fixtures, for near-real `/ai` verification.
+- Main command: `pnpm mock:ai-review run --profile preview --count 20`.
+- Script and fixtures: `scripts/mock-ai-review-chain.mjs`, `src/features/ai/lib/mock-fixtures.ts`, `src/features/ai/lib/mock-review.ts`.
 
 Browser fixture files are preview-only and do not write a knowledge root.
 
 ## Guardrails
 
 - Do not describe the current system as "AI finished" or as fully automatic.
-- Be precise: live `generateObject` and manual persistence now both exist in the hidden intervention flow, but silent automatic routing is still disconnected.
-- Do not frame `/ai` review as the product centerpiece or as the normal daily workflow for ordinary users.
-- Do not claim users should build trust by manually reviewing every batch.
+- Do not frame `/ai` review as the product centerpiece or as the normal daily workflow.
+- Do not claim users should manually review every batch.
 - Do not repurpose `applyBatchDecision` into task generation without updating docs and phase framing.
-- If `/ai` semantics change, update both `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md` and `docs/03-planning/HANDOFF.md`.
+- If `/ai` semantics change, update `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md` and `docs/03-planning/HANDOFF.md`.

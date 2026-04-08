@@ -14,6 +14,8 @@ export const commands = {
 	setClipboardCapturePinned: (request: SetClipboardCapturePinnedRequest) => typedError<UpdateClipboardPinResult, string>(__TAURI_INVOKE("set_clipboard_capture_pinned", { request })),
 	deleteClipboardCapture: (request: DeleteClipboardCaptureRequest) => typedError<DeleteClipboardCaptureResult, string>(__TAURI_INVOKE("delete_clipboard_capture", { request })),
 	getAppSettings: () => typedError<AppSettings, string>(__TAURI_INVOKE("get_app_settings")),
+	listClipboardSourceApps: () => typedError<ClipboardSourceAppOption[], string>(__TAURI_INVOKE("list_clipboard_source_apps")),
+	getClipboardSourceAppIcons: (appPaths: string[]) => typedError<ClipboardSourceAppIconResult[], string>(__TAURI_INVOKE("get_clipboard_source_app_icons", { appPaths })),
 	reportAppActivity: () => typedError<null, string>(__TAURI_INVOKE("report_app_activity")),
 	saveAppSettings: (settings: AppSettings) => typedError<AppSettings, string>(__TAURI_INVOKE("save_app_settings", { settings })),
 	toggleMainWindowVisibility: () => typedError<boolean, string>(__TAURI_INVOKE("toggle_main_window_visibility")),
@@ -80,6 +82,8 @@ export type AppSettings = {
 	activeRuntimeProviderId: string,
 	localePreference?: AppLocalePreference,
 	clipboardHistoryDays?: number,
+	clipboardExcludedSourceApps?: ClipboardSourceAppRule[],
+	clipboardExcludedKeywords?: string[],
 	shortcutOverrides?: { [key in string]: AppShortcutOverride },
 };
 
@@ -189,6 +193,23 @@ export type ClipboardReplayRequest = {
 
 export type ClipboardReturnResult = {
 	pasted: boolean,
+};
+
+export type ClipboardSourceAppIconResult = {
+	appPath: string,
+	iconPath: string | null,
+};
+
+export type ClipboardSourceAppOption = {
+	bundleId: string,
+	appName: string,
+	appPath: string | null,
+	iconPath: string | null,
+};
+
+export type ClipboardSourceAppRule = {
+	bundleId: string,
+	appName: string,
 };
 
 export type DashboardSnapshot = {

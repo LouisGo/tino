@@ -18,6 +18,9 @@ import type {
   AppSettings as RustAppSettings,
   CapturePreview as RustCapturePreview,
   ClipboardPage as RustClipboardPage,
+  ClipboardSourceAppIconResult as RustClipboardSourceAppIconResult,
+  ClipboardSourceAppOption as RustClipboardSourceAppOption,
+  ClipboardSourceAppRule as RustClipboardSourceAppRule,
   DashboardSnapshot as RustDashboardSnapshot,
   PinnedClipboardCapture as RustPinnedClipboardCapture,
   RuntimeProviderProfile as RustRuntimeProviderProfile,
@@ -26,6 +29,9 @@ import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
   ClipboardCapture,
   ClipboardPageRequest,
+  ClipboardSourceAppIconResult,
+  ClipboardSourceAppOption,
+  ClipboardSourceAppRule,
   DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
@@ -73,6 +79,8 @@ const mockSettings: SettingsDraft = {
   activeRuntimeProviderId: "provider_mock_primary",
   localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: DEFAULT_CLIPBOARD_HISTORY_DAYS,
+  clipboardExcludedSourceApps: [],
+  clipboardExcludedKeywords: [],
   shortcutOverrides: {},
 };
 
@@ -178,6 +186,32 @@ const mockSnapshot: DashboardSnapshot = {
 
 let mockRecentCaptures = [...mockSnapshot.recentCaptures];
 let mockPinnedCaptures: PinnedClipboardCapture[] = [];
+const mockClipboardSourceApps: ClipboardSourceAppOption[] = [
+  {
+    bundleId: "com.apple.Safari",
+    appName: "Safari",
+    appPath: "/Applications/Safari.app",
+    iconPath: mockImageAsset,
+  },
+  {
+    bundleId: "com.apple.finder",
+    appName: "Finder",
+    appPath: "/System/Library/CoreServices/Finder.app",
+    iconPath: mockImageAsset,
+  },
+  {
+    bundleId: "abnerworks.Typora",
+    appName: "Typora",
+    appPath: "/Applications/Typora.app",
+    iconPath: mockImageAsset,
+  },
+  {
+    bundleId: "com.bjango.cleanshotx",
+    appName: "CleanShot X",
+    appPath: "/Applications/CleanShot X.app",
+    iconPath: mockImageAsset,
+  },
+];
 
 function getMockSnapshot(): DashboardSnapshot {
   return {
@@ -225,6 +259,35 @@ function normalizeRuntimeProviderProfile(
   };
 }
 
+function normalizeClipboardSourceAppRule(
+  rule: RustClipboardSourceAppRule,
+): ClipboardSourceAppRule {
+  return {
+    bundleId: rule.bundleId,
+    appName: rule.appName,
+  };
+}
+
+function normalizeClipboardSourceAppOption(
+  option: RustClipboardSourceAppOption,
+): ClipboardSourceAppOption {
+  return {
+    bundleId: option.bundleId,
+    appName: option.appName,
+    appPath: option.appPath ?? null,
+    iconPath: option.iconPath ?? null,
+  };
+}
+
+function normalizeClipboardSourceAppIconResult(
+  result: RustClipboardSourceAppIconResult,
+): ClipboardSourceAppIconResult {
+  return {
+    appPath: result.appPath,
+    iconPath: result.iconPath ?? null,
+  };
+}
+
 function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
   return {
     knowledgeRoot: settings.knowledgeRoot,
@@ -233,6 +296,9 @@ function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
     activeRuntimeProviderId: settings.activeRuntimeProviderId,
     localePreference: normalizeAppLocalePreference(settings.localePreference),
     clipboardHistoryDays: settings.clipboardHistoryDays ?? DEFAULT_CLIPBOARD_HISTORY_DAYS,
+    clipboardExcludedSourceApps:
+      (settings.clipboardExcludedSourceApps ?? []).map(normalizeClipboardSourceAppRule),
+    clipboardExcludedKeywords: settings.clipboardExcludedKeywords ?? [],
     shortcutOverrides: settings.shortcutOverrides ?? {},
   };
 }
@@ -454,6 +520,30 @@ export async function getAppSettings(): Promise<SettingsDraft> {
   }
 
   return normalizeSettingsDraft(await unwrapTauriResult(tauriCommands.getAppSettings()));
+}
+
+export async function listClipboardSourceApps(): Promise<ClipboardSourceAppOption[]> {
+  if (!isTauriRuntime()) {
+    return mockClipboardSourceApps;
+  }
+
+  const options = await unwrapTauriResult(tauriCommands.listClipboardSourceApps());
+  return options.map(normalizeClipboardSourceAppOption);
+}
+
+export async function getClipboardSourceAppIcons(
+  appPaths: string[],
+): Promise<ClipboardSourceAppIconResult[]> {
+  if (!isTauriRuntime()) {
+    return appPaths.map((appPath) => ({
+      appPath,
+      iconPath:
+        mockClipboardSourceApps.find((option) => option.appPath === appPath)?.iconPath ?? null,
+    }));
+  }
+
+  const icons = await unwrapTauriResult(tauriCommands.getClipboardSourceAppIcons(appPaths));
+  return icons.map(normalizeClipboardSourceAppIconResult);
 }
 
 export async function reportAppActivity() {

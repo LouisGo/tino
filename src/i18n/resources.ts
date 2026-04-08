@@ -67,6 +67,13 @@ export const enUSResources = defineLocaleSchema({
       settings: "Settings",
     },
     clipboardPermission: {
+      startupDialogTitle: "Set Up Accessibility Before You Need Paste Back",
+      startupDialogBody: [
+        "Tino can ask for macOS Accessibility permission now, so clipboard paste back is less likely to interrupt you later.",
+        "",
+        "After you continue, Tino will open System Settings > Privacy & Security > Accessibility.",
+        "Turn on Tino there, then fully quit and reopen the app to finish setup.",
+      ].join("\n"),
       enableDialogTitle: "Enable Accessibility, Then Restart Tino",
       enableDialogBody: [
         "Tino needs macOS Accessibility permission to paste content back into the previous app.",
@@ -471,6 +478,13 @@ export const zhCNResources = {
       settings: "设置",
     },
     clipboardPermission: {
+      startupDialogTitle: "建议现在先完成辅助功能授权",
+      startupDialogBody: [
+        "Tino 可以现在就请求 macOS 的辅助功能权限，这样后面在剪贴板回填时就尽量不用再次打断你。",
+        "",
+        "继续后，Tino 会打开“系统设置 > 隐私与安全性 > 辅助功能”。",
+        "请在那里把 Tino 打开，然后彻底退出并重新打开应用，完成设置。",
+      ].join("\n"),
       enableDialogTitle: "先开启辅助功能权限，再重启 Tino",
       enableDialogBody: [
         "Tino 需要 macOS 的辅助功能权限，才能把内容回填到上一个应用。",

@@ -8,7 +8,7 @@ export const systemShortcuts = [
     label: tx("shortcuts", "shell.toggleMainWindow.label"),
     description: tx("shortcuts", "shell.toggleMainWindow.description"),
     defaults: {
-      default: "CommandOrControl+Shift+Alt+T",
+      default: "CommandOrControl+Alt+T",
     },
     command: {
       id: "system.toggleMainWindowVisibility",
@@ -20,7 +20,7 @@ export const systemShortcuts = [
     label: tx("shortcuts", "shell.toggleClipboardWindow.label"),
     description: tx("shortcuts", "shell.toggleClipboardWindow.description"),
     defaults: {
-      default: "CommandOrControl+Shift+Alt+V",
+      default: "CommandOrControl+Alt+V",
     },
     command: {
       id: "system.toggleClipboardWindowVisibility",

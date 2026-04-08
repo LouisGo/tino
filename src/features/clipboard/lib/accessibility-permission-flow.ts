@@ -3,10 +3,25 @@ import { confirm, message } from "@tauri-apps/plugin-dialog";
 import { resolveText, tx } from "@/i18n";
 import { requestAppRestart } from "@/lib/tauri";
 
+export function formatAccessibilityWarmupDialog() {
+  return resolveText(
+    tx("common", "clipboardPermission.startupDialogBody"),
+  );
+}
+
 export function formatAccessibilityPermissionDialog() {
   return resolveText(
     tx("common", "clipboardPermission.enableDialogBody"),
   );
+}
+
+export async function showAccessibilityWarmupDialog() {
+  await message(formatAccessibilityWarmupDialog(), {
+    kind: "warning",
+    title: resolveText(
+      tx("common", "clipboardPermission.startupDialogTitle"),
+    ),
+  });
 }
 
 export async function promptForAccessibilityRestart() {

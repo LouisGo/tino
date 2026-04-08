@@ -4,7 +4,7 @@ use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::{
-    collections::{BTreeMap, HashSet, VecDeque},
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
     fs,
     fs::OpenOptions,
     io::Write,
@@ -73,9 +73,9 @@ const DEDUP_WINDOW_MINUTES: i64 = 5;
 const MIN_CAPTURE_TEXT_CHARS: usize = 4;
 const OTP_MAX_CHARS: usize = 8;
 const GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID: &str = "shell.toggleMainWindow";
-const GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_DEFAULT: &str = "CommandOrControl+Shift+Alt+T";
+const GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_DEFAULT: &str = "CommandOrControl+Alt+T";
 const GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_ID: &str = "shell.toggleClipboardWindow";
-const GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_DEFAULT: &str = "CommandOrControl+Shift+Alt+V";
+const GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_DEFAULT: &str = "CommandOrControl+Alt+V";
 
 fn default_clipboard_history_days() -> u16 {
     DEFAULT_CLIPBOARD_HISTORY_DAYS
@@ -107,6 +107,22 @@ pub struct AppShortcutOverride {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
+pub struct ClipboardSourceAppRule {
+    pub bundle_id: String,
+    pub app_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardSourceAppOption {
+    pub bundle_id: String,
+    pub app_name: String,
+    pub app_path: Option<String>,
+    pub icon_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub knowledge_root: String,
     pub runtime_provider_profiles: Vec<RuntimeProviderProfile>,
@@ -115,6 +131,10 @@ pub struct AppSettings {
     pub locale_preference: AppLocalePreference,
     #[serde(default = "default_clipboard_history_days")]
     pub clipboard_history_days: u16,
+    #[serde(default)]
+    pub clipboard_excluded_source_apps: Vec<ClipboardSourceAppRule>,
+    #[serde(default)]
+    pub clipboard_excluded_keywords: Vec<String>,
     #[serde(default)]
     pub shortcut_overrides: BTreeMap<String, AppShortcutOverride>,
 }
@@ -130,6 +150,8 @@ impl AppSettings {
             active_runtime_provider_id,
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: DEFAULT_CLIPBOARD_HISTORY_DAYS,
+            clipboard_excluded_source_apps: Vec::new(),
+            clipboard_excluded_keywords: Vec::new(),
             shortcut_overrides: BTreeMap::new(),
         }
     }
@@ -155,6 +177,11 @@ impl AppSettings {
         self.clipboard_history_days = self
             .clipboard_history_days
             .clamp(MIN_CLIPBOARD_HISTORY_DAYS, MAX_CLIPBOARD_HISTORY_DAYS);
+
+        self.clipboard_excluded_source_apps =
+            normalize_clipboard_source_app_rules(self.clipboard_excluded_source_apps);
+        self.clipboard_excluded_keywords =
+            normalize_clipboard_excluded_keywords(self.clipboard_excluded_keywords);
 
         self.shortcut_overrides = self
             .shortcut_overrides
@@ -213,6 +240,10 @@ struct LegacyAppSettings {
     #[serde(default = "default_clipboard_history_days")]
     pub clipboard_history_days: u16,
     #[serde(default)]
+    pub clipboard_excluded_source_apps: Vec<ClipboardSourceAppRule>,
+    #[serde(default)]
+    pub clipboard_excluded_keywords: Vec<String>,
+    #[serde(default)]
     pub shortcut_overrides: BTreeMap<String, AppShortcutOverride>,
 }
 
@@ -230,6 +261,8 @@ impl LegacyAppSettings {
         settings.active_runtime_provider_id = settings.runtime_provider_profiles[0].id.clone();
         settings.locale_preference = self.locale_preference;
         settings.clipboard_history_days = self.clipboard_history_days;
+        settings.clipboard_excluded_source_apps = self.clipboard_excluded_source_apps;
+        settings.clipboard_excluded_keywords = self.clipboard_excluded_keywords;
         settings.shortcut_overrides = self.shortcut_overrides;
         settings
     }
@@ -270,6 +303,10 @@ struct LegacyManagedAppSettings {
     #[serde(default = "default_clipboard_history_days")]
     pub clipboard_history_days: u16,
     #[serde(default)]
+    pub clipboard_excluded_source_apps: Vec<ClipboardSourceAppRule>,
+    #[serde(default)]
+    pub clipboard_excluded_keywords: Vec<String>,
+    #[serde(default)]
     pub shortcut_overrides: BTreeMap<String, AppShortcutOverride>,
 }
 
@@ -285,6 +322,8 @@ impl LegacyManagedAppSettings {
             active_runtime_provider_id: self.active_runtime_provider_id,
             locale_preference: self.locale_preference,
             clipboard_history_days: self.clipboard_history_days,
+            clipboard_excluded_source_apps: self.clipboard_excluded_source_apps,
+            clipboard_excluded_keywords: self.clipboard_excluded_keywords,
             shortcut_overrides: self.shortcut_overrides,
         }
     }
@@ -331,6 +370,61 @@ fn execute_app_global_shortcut(app: &AppHandle, shortcut_id: &str) -> Result<(),
         }
         _ => Err(format!("unknown app global shortcut: {shortcut_id}")),
     }
+}
+
+fn normalize_bundle_id_key(bundle_id: &str) -> Option<String> {
+    let trimmed = bundle_id.trim();
+
+    (!trimmed.is_empty()).then(|| trimmed.to_ascii_lowercase())
+}
+
+fn normalize_clipboard_source_app_rules(
+    rules: Vec<ClipboardSourceAppRule>,
+) -> Vec<ClipboardSourceAppRule> {
+    let mut seen_bundle_ids = HashSet::new();
+
+    rules
+        .into_iter()
+        .filter_map(|rule| {
+            let bundle_id = rule.bundle_id.trim();
+            let bundle_id_key = normalize_bundle_id_key(bundle_id)?;
+            if !seen_bundle_ids.insert(bundle_id_key) {
+                return None;
+            }
+
+            let app_name = rule.app_name.trim();
+
+            Some(ClipboardSourceAppRule {
+                bundle_id: bundle_id.to_string(),
+                app_name: if app_name.is_empty() {
+                    bundle_id.to_string()
+                } else {
+                    app_name.to_string()
+                },
+            })
+        })
+        .collect()
+}
+
+fn normalize_clipboard_excluded_keywords(keywords: Vec<String>) -> Vec<String> {
+    let mut seen_keywords = HashSet::new();
+    let mut normalized = Vec::new();
+
+    for candidate in keywords {
+        for keyword in candidate.split([';', '；', '\n', '\r']) {
+            let keyword = keyword.trim();
+            if keyword.is_empty() {
+                continue;
+            }
+
+            let dedupe_key = keyword.to_lowercase();
+            if seen_keywords.insert(dedupe_key) {
+                normalized.push(keyword.to_string());
+            }
+        }
+    }
+
+    normalized
 }
 
 fn register_app_global_shortcut(
@@ -664,7 +758,72 @@ struct FilterLogEntry {
     captured_at: String,
     hash: String,
     reason: String,
+    rule_kind: String,
+    #[serde(default)]
+    rule_value: Option<String>,
+    #[serde(default)]
+    source_app_name: Option<String>,
+    #[serde(default)]
+    source_app_bundle_id: Option<String>,
+    content_kind: String,
     preview: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CaptureFilterReason {
+    reason: String,
+    rule_kind: &'static str,
+    rule_value: Option<String>,
+}
+
+impl CaptureFilterReason {
+    fn builtin(code: &'static str) -> Self {
+        Self {
+            reason: code.to_string(),
+            rule_kind: "builtin",
+            rule_value: Some(code.to_string()),
+        }
+    }
+
+    fn source_app(bundle_id: &str, app_name: Option<&str>) -> Self {
+        let label = app_name
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or(bundle_id);
+
+        Self {
+            reason: format!("source_app_excluded: {label}"),
+            rule_kind: "source_app",
+            rule_value: Some(bundle_id.to_string()),
+        }
+    }
+
+    fn keyword(keyword: &str) -> Self {
+        Self {
+            reason: format!("keyword_excluded: {keyword}"),
+            rule_kind: "keyword",
+            rule_value: Some(keyword.to_string()),
+        }
+    }
+
+    fn as_status_reason(&self) -> String {
+        self.reason.clone()
+    }
+
+    fn into_filter_log_entry(self, capture: &CaptureRecord) -> FilterLogEntry {
+        FilterLogEntry {
+            id: capture.id.clone(),
+            captured_at: capture.captured_at.clone(),
+            hash: capture.hash.clone(),
+            reason: self.reason,
+            rule_kind: self.rule_kind.to_string(),
+            rule_value: self.rule_value,
+            source_app_name: capture.source_app_name.clone(),
+            source_app_bundle_id: capture.source_app_bundle_id.clone(),
+            content_kind: capture.content_kind.clone(),
+            preview: build_preview(&capture.raw_text),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -691,6 +850,8 @@ struct SharedState {
     clipboard_cache_dir: PathBuf,
     app_log_dir: PathBuf,
     settings_path: PathBuf,
+    clipboard_source_apps_cache: Mutex<Option<Vec<ClipboardSourceAppOption>>>,
+    clipboard_source_app_icons_cache: Mutex<HashMap<String, Option<String>>>,
     #[cfg(target_os = "macos")]
     image_ocr: ImageOcrRuntime,
     inner: Mutex<StateData>,
@@ -754,6 +915,8 @@ impl AppState {
                 clipboard_cache_dir,
                 app_log_dir,
                 settings_path,
+                clipboard_source_apps_cache: Mutex::new(None),
+                clipboard_source_app_icons_cache: Mutex::new(HashMap::new()),
                 #[cfg(target_os = "macos")]
                 image_ocr: Self::create_image_ocr_runtime(),
                 inner: Mutex::new(StateData {
@@ -773,6 +936,83 @@ impl AppState {
 
     pub fn current_settings(&self) -> Result<AppSettings, String> {
         Ok(self.lock_state()?.settings.clone())
+    }
+
+    pub fn cached_clipboard_source_apps(
+        &self,
+    ) -> Result<Option<Vec<ClipboardSourceAppOption>>, String> {
+        self.shared
+            .clipboard_source_apps_cache
+            .lock()
+            .map(|cache| cache.clone())
+            .map_err(|error| error.to_string())
+    }
+
+    pub fn cache_clipboard_source_apps(
+        &self,
+        options: Vec<ClipboardSourceAppOption>,
+    ) -> Result<(), String> {
+        let mut cache = self
+            .shared
+            .clipboard_source_apps_cache
+            .lock()
+            .map_err(|error| error.to_string())?;
+        *cache = Some(options);
+        Ok(())
+    }
+
+    pub fn split_cached_clipboard_source_app_icons(
+        &self,
+        app_paths: &[String],
+    ) -> Result<(Vec<(String, Option<String>)>, Vec<String>), String> {
+        let cache = self
+            .shared
+            .clipboard_source_app_icons_cache
+            .lock()
+            .map_err(|error| error.to_string())?;
+        let mut hits = Vec::new();
+        let mut misses = Vec::new();
+
+        for app_path in app_paths {
+            let trimmed = app_path.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            if let Some(icon_path) = cache.get(trimmed) {
+                hits.push((trimmed.to_string(), icon_path.clone()));
+            } else {
+                misses.push(trimmed.to_string());
+            }
+        }
+
+        Ok((hits, misses))
+    }
+
+    pub fn cache_clipboard_source_app_icons(
+        &self,
+        entries: Vec<(String, Option<String>)>,
+    ) -> Result<(), String> {
+        let mut cache = self
+            .shared
+            .clipboard_source_app_icons_cache
+            .lock()
+            .map_err(|error| error.to_string())?;
+
+        for (app_path, icon_path) in entries {
+            let trimmed = app_path.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            cache.insert(trimmed.to_string(), icon_path);
+        }
+
+        Ok(())
+    }
+
+    pub fn clipboard_source_app_icons_dir(&self) -> PathBuf {
+        clipboard_app_icons_dir_path(&self.shared.clipboard_cache_dir)
     }
 
     pub fn record_app_activity(&self) -> Result<(), String> {
@@ -1085,30 +1325,25 @@ impl AppState {
         ensure_knowledge_root_layout(&knowledge_root)?;
         ensure_queue_state(&knowledge_root)?;
 
-        if let Some(reason) = detect_filter_reason(&stored_capture) {
+        if let Some(reason) = detect_filter_reason(&stored_capture, &settings) {
+            let filter_reason = reason.as_status_reason();
             append_filter_log(
                 &knowledge_root,
-                &FilterLogEntry {
-                    id: stored_capture.id.clone(),
-                    captured_at: stored_capture.captured_at.clone(),
-                    hash: stored_capture.hash.clone(),
-                    reason: reason.into(),
-                    preview: build_preview(&stored_capture.raw_text),
-                },
+                &reason.into_filter_log_entry(&stored_capture),
             )?;
 
             self.record_capture_outcome(
                 &stored_capture,
                 "filtered",
                 None,
-                Some(reason.into()),
+                Some(filter_reason.clone()),
                 None,
                 queue_depth_for_root(&knowledge_root)?,
                 &captured_at,
             )?;
 
             return Ok(CaptureProcessingResult::Filtered {
-                reason: reason.into(),
+                reason: filter_reason,
             });
         }
 
@@ -3112,7 +3347,34 @@ fn render_code_block(language: &str, content: &str) -> String {
     format!("{fence}{language}\n{content}\n{fence}\n")
 }
 
-fn detect_filter_reason(capture: &CaptureRecord) -> Option<&'static str> {
+fn detect_filter_reason(
+    capture: &CaptureRecord,
+    settings: &AppSettings,
+) -> Option<CaptureFilterReason> {
+    if let Some(capture_bundle_id_key) = capture
+        .source_app_bundle_id
+        .as_deref()
+        .and_then(normalize_bundle_id_key)
+    {
+        if let Some(rule) = settings.clipboard_excluded_source_apps.iter().find(|rule| {
+            normalize_bundle_id_key(&rule.bundle_id).as_deref() == Some(&capture_bundle_id_key)
+        }) {
+            return Some(CaptureFilterReason::source_app(
+                &rule.bundle_id,
+                Some(&rule.app_name),
+            ));
+        }
+    }
+
+    let lowered_text = capture.raw_text.to_lowercase();
+    if let Some(keyword) = settings
+        .clipboard_excluded_keywords
+        .iter()
+        .find(|keyword| lowered_text.contains(&keyword.to_lowercase()))
+    {
+        return Some(CaptureFilterReason::keyword(keyword));
+    }
+
     if capture.content_kind == "image" {
         return None;
     }
@@ -3121,12 +3383,12 @@ fn detect_filter_reason(capture: &CaptureRecord) -> Option<&'static str> {
     let char_count = trimmed.chars().count();
 
     if char_count < MIN_CAPTURE_TEXT_CHARS {
-        return Some("text_too_short");
+        return Some(CaptureFilterReason::builtin("text_too_short"));
     }
 
     let single_line = trimmed.lines().count() == 1;
     if single_line && looks_like_otp(trimmed) {
-        return Some("otp_or_verification_code");
+        return Some(CaptureFilterReason::builtin("otp_or_verification_code"));
     }
 
     None
@@ -3687,6 +3949,30 @@ mod tests {
         AppSettings::defaults(&unique_root())
     }
 
+    fn sample_capture_record(raw_text: &str) -> CaptureRecord {
+        CaptureRecord {
+            id: "cap_filter".into(),
+            source: "clipboard".into(),
+            source_app_name: Some("Safari".into()),
+            source_app_bundle_id: Some("com.apple.Safari".into()),
+            source_app_icon_path: None,
+            captured_at: "2026-04-08T12:00:00+08:00".into(),
+            content_kind: "plain_text".into(),
+            raw_text: raw_text.into(),
+            raw_rich: None,
+            raw_rich_format: None,
+            link_url: None,
+            asset_path: None,
+            thumbnail_path: None,
+            image_width: None,
+            image_height: None,
+            byte_size: None,
+            hash: "hash_filter".into(),
+            image_bytes: None,
+            source_app_icon_bytes: None,
+        }
+    }
+
     #[test]
     fn resolve_app_global_shortcuts_uses_defaults_without_overrides() {
         let settings = sample_settings();
@@ -3744,6 +4030,75 @@ mod tests {
         assert!(shortcuts
             .iter()
             .any(|shortcut| shortcut.id == GLOBAL_SHORTCUT_TOGGLE_CLIPBOARD_WINDOW_ID));
+    }
+
+    #[test]
+    fn app_settings_normalized_dedupes_clipboard_filter_rules() {
+        let mut settings = sample_settings();
+        settings.clipboard_excluded_source_apps = vec![
+            ClipboardSourceAppRule {
+                bundle_id: " com.apple.Safari ".into(),
+                app_name: "Safari".into(),
+            },
+            ClipboardSourceAppRule {
+                bundle_id: "COM.APPLE.SAFARI".into(),
+                app_name: "Safari Duplicate".into(),
+            },
+            ClipboardSourceAppRule {
+                bundle_id: "abnerworks.Typora".into(),
+                app_name: " ".into(),
+            },
+        ];
+        settings.clipboard_excluded_keywords = vec![
+            " password ; secret ".into(),
+            "Password".into(),
+            "internal；token".into(),
+        ];
+
+        let normalized = settings.normalized(&unique_root());
+
+        assert_eq!(normalized.clipboard_excluded_source_apps.len(), 2);
+        assert_eq!(
+            normalized.clipboard_excluded_source_apps[0].bundle_id,
+            "com.apple.Safari"
+        );
+        assert_eq!(
+            normalized.clipboard_excluded_source_apps[1].app_name,
+            "abnerworks.Typora"
+        );
+        assert_eq!(
+            normalized.clipboard_excluded_keywords,
+            vec!["password", "secret", "internal", "token"]
+        );
+    }
+
+    #[test]
+    fn detect_filter_reason_prefers_source_app_rule() {
+        let mut settings = sample_settings();
+        settings.clipboard_excluded_source_apps = vec![ClipboardSourceAppRule {
+            bundle_id: "com.apple.Safari".into(),
+            app_name: "Safari".into(),
+        }];
+        let capture = sample_capture_record("123");
+
+        let reason = detect_filter_reason(&capture, &settings).expect("capture should filter");
+
+        assert_eq!(reason.reason, "source_app_excluded: Safari");
+        assert_eq!(reason.rule_kind, "source_app");
+        assert_eq!(reason.rule_value.as_deref(), Some("com.apple.Safari"));
+    }
+
+    #[test]
+    fn detect_filter_reason_matches_keywords_case_insensitively() {
+        let mut settings = sample_settings();
+        settings.clipboard_excluded_keywords = vec!["PassWord".into()];
+        let capture = sample_capture_record("Temporary PASSWORD reset link");
+
+        let reason = detect_filter_reason(&capture, &settings).expect("capture should filter");
+
+        assert_eq!(reason.reason, "keyword_excluded: PassWord");
+        assert_eq!(reason.rule_kind, "keyword");
+        assert_eq!(reason.rule_value.as_deref(), Some("PassWord"));
     }
 
     #[test]

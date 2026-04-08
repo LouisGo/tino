@@ -18,6 +18,8 @@ const initialSettingsDraft: SettingsDraft = {
   activeRuntimeProviderId: "",
   localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: DEFAULT_CLIPBOARD_HISTORY_DAYS,
+  clipboardExcludedSourceApps: [],
+  clipboardExcludedKeywords: [],
   shortcutOverrides: {},
 };
 
