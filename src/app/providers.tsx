@@ -24,6 +24,10 @@ import {
 import { queryClient } from "@/app/query-client";
 import { useClipboardAccessibilityPermissionFlow } from "@/features/clipboard/hooks/use-clipboard-accessibility-permission-flow";
 import {
+  preloadClipboardSourceAppIcons,
+  preloadClipboardSourceApps,
+} from "@/features/settings/lib/clipboard-source-app-query";
+import {
   applyTheme,
   getInitialThemePreference,
   THEME_MODE_STORAGE_KEY,
@@ -116,6 +120,9 @@ function AppShellRuntime({ router }: AppProvidersProps) {
     const preload = () => {
       preloadNonCriticalRouteChunks();
       void import("@/features/clipboard/components/capture-preview");
+      void preloadClipboardSourceApps(queryClient)
+        .then(() => preloadClipboardSourceAppIcons(queryClient))
+        .catch(() => {});
     };
 
     if (typeof window.requestIdleCallback === "function") {

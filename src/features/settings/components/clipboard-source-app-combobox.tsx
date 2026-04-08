@@ -31,6 +31,7 @@ export function ClipboardSourceAppCombobox({
   const deferredQuery = useDeferredValue(query);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const optionRefs = useRef(new Map<string, HTMLButtonElement | null>());
   const listboxId = useId();
   const duplicateAppNames = useMemo(() => {
     const counts = new Map<string, number>();
@@ -99,20 +100,42 @@ export function ClipboardSourceAppCombobox({
       : Math.min(highlightedIndex, filteredOptions.length - 1);
   const activeOption = filteredOptions[activeIndex] ?? null;
 
+  useEffect(() => {
+    if (!dropdownVisible || !activeOption) {
+      return;
+    }
+
+    const activeElement = optionRefs.current.get(activeOption.bundleId);
+    if (!activeElement) {
+      return;
+    }
+
+    activeElement.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [activeOption, dropdownVisible]);
+
+  const openDropdown = () => {
+    setIsOpen((current) => {
+      if (!current) {
+        onActivate?.();
+      }
+      return true;
+    });
+  };
+
   const commitSelection = (option: ClipboardSourceAppOption) => {
     onSelect(option);
     setQuery("");
     setHighlightedIndex(0);
-    setIsOpen(true);
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
+    setIsOpen(false);
   };
 
   return (
     <div ref={rootRef} className="relative">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-4 top-1/2 z-[1] size-4 -translate-y-1/2 text-muted-foreground/70" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[1] size-3.5 -translate-y-1/2 text-muted-foreground/70" />
         <Input
           ref={inputRef}
           value={query}
@@ -121,24 +144,22 @@ export function ClipboardSourceAppCombobox({
           aria-controls={dropdownVisible ? listboxId : undefined}
           aria-expanded={dropdownVisible}
           onPointerDown={() => {
-            onActivate?.();
+            openDropdown();
           }}
           onFocus={() => {
-            onActivate?.();
-            setIsOpen(true);
+            openDropdown();
             setHighlightedIndex(0);
           }}
           onChange={(event) => {
-            onActivate?.();
+            openDropdown();
             setQuery(event.target.value);
-            setIsOpen(true);
             setHighlightedIndex(0);
           }}
           onKeyDown={(event) => {
             if (!dropdownVisible) {
               if (event.key === "ArrowDown") {
                 event.preventDefault();
-                setIsOpen(true);
+                openDropdown();
               }
               return;
             }
@@ -168,37 +189,37 @@ export function ClipboardSourceAppCombobox({
             }
           }}
           placeholder="Search apps..."
-          className="h-[52px] rounded-[24px] border-border/75 bg-white pl-11 pr-11 text-[15px] shadow-[0_16px_40px_rgba(15,23,42,0.06)]"
+          className="h-10 rounded-[18px] border-border/70 bg-surface-panel pl-9 pr-9 text-[12px] shadow-[0_14px_36px_rgba(15,23,42,0.08)]"
         />
         <ChevronDown
           className={cn(
-            "pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/65 transition-transform",
+            "pointer-events-none absolute right-3.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/65 transition-transform",
             dropdownVisible ? "rotate-180" : "",
           )}
         />
       </div>
 
       {dropdownVisible ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.75rem)] z-30 overflow-hidden rounded-[28px] border border-border/70 bg-[color:color-mix(in_oklch,var(--background)_94%,white)] shadow-[0_30px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+        <div className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-30 overflow-hidden rounded-[20px] border border-border/70 bg-[color:color-mix(in_oklch,var(--card)_94%,transparent)] shadow-[0_22px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl">
           <div
             id={listboxId}
             role="listbox"
-            className="max-h-[22rem] overflow-y-auto px-3 py-3"
+            className="max-h-[18rem] overflow-y-auto px-2 py-2"
           >
             {errorMessage ? (
-              <p className="px-3 py-5 text-sm text-destructive">
+              <p className="px-2.5 py-4 text-xs text-destructive">
                 {errorMessage}
               </p>
             ) : isLoading ? (
-              <p className="px-3 py-5 text-sm text-muted-foreground">
+              <p className="px-2.5 py-4 text-xs text-muted-foreground">
                 Loading installed apps...
               </p>
             ) : filteredOptions.length === 0 ? (
-              <p className="px-3 py-5 text-sm text-muted-foreground">
+              <p className="px-2.5 py-4 text-xs text-muted-foreground">
                 No apps matched this search.
               </p>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {filteredOptions.map((option, index) => {
                   const showSecondaryLine =
                     duplicateAppNames.has(option.appName.trim().toLowerCase())
@@ -207,6 +228,9 @@ export function ClipboardSourceAppCombobox({
                   return (
                     <button
                       key={option.bundleId}
+                      ref={(element) => {
+                        optionRefs.current.set(option.bundleId, element);
+                      }}
                       type="button"
                       role="option"
                       aria-selected={activeIndex === index}
@@ -216,7 +240,7 @@ export function ClipboardSourceAppCombobox({
                       onMouseEnter={() => setHighlightedIndex(index)}
                       onClick={() => commitSelection(option)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-[22px] px-3 py-3 text-left transition",
+                        "flex w-full items-center gap-2.5 rounded-[14px] px-2.5 py-1.5 text-left transition",
                         activeIndex === index
                           ? "bg-secondary/95 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.04)]"
                           : "hover:bg-secondary/70",
@@ -225,14 +249,14 @@ export function ClipboardSourceAppCombobox({
                       <ClipboardSourceAppAvatar
                         appName={option.appName}
                         iconPath={option.iconPath}
-                        className="size-11 shrink-0"
+                        className="size-7 shrink-0 rounded-[8px]"
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[17px] font-medium text-foreground">
+                        <span className="block truncate text-[12px] leading-4 font-medium text-foreground">
                           {option.appName}
                         </span>
                         {showSecondaryLine ? (
-                          <span className="block truncate text-xs text-muted-foreground">
+                          <span className="block truncate text-[10px] leading-4 text-muted-foreground">
                             {option.bundleId}
                           </span>
                         ) : null}

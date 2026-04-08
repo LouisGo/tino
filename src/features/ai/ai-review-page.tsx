@@ -319,7 +319,7 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
             </Button>
 
             <Button type="button" variant="outline" asChild>
-              <Link to="/settings" hash="ai">
+              <Link to="/settings" hash="ai" hashScrollIntoView={false}>
                 Open settings
                 <ArrowUpRight className="size-3.5" />
               </Link>
@@ -779,6 +779,7 @@ function AiOrganizerWorkspace({ payload }: { payload: AiBatchPayload }) {
               <Link
                 to="/settings"
                 hash="ai"
+                hashScrollIntoView={false}
                 className="font-medium text-foreground underline decoration-border underline-offset-4"
               >
                 Open settings

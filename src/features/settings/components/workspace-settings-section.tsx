@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useQuery } from "@tanstack/react-query";
-import { FolderOpen, FolderSearch } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FolderOpen, FolderSearch, Minus } from "lucide-react";
 
-import { queryKeys } from "@/app/query-keys";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,9 +21,13 @@ import {
   parseClipboardExcludedKeywordsInput,
   removeClipboardSourceAppRule,
 } from "@/features/settings/lib/clipboard-filter-settings";
+import {
+  cacheClipboardSourceAppIcons,
+  clipboardSourceAppsQueryOptions,
+  getCachedClipboardSourceApps,
+} from "@/features/settings/lib/clipboard-source-app-query";
 import { settingsSections } from "@/features/settings/settings-sections";
-import { getClipboardSourceAppIcons, listClipboardSourceApps } from "@/lib/tauri";
-import { cn } from "@/lib/utils";
+import { getClipboardSourceAppIcons } from "@/lib/tauri";
 import type { SettingsDraft } from "@/types/shell";
 
 const clipboardRetentionOptions = [
@@ -62,31 +65,19 @@ export function WorkspaceSettingsSection({
   settingsDraft: SettingsDraft;
 }) {
   const section = settingsSections[0];
+  const queryClient = useQueryClient();
   const [keywordInputDraft, setKeywordInputDraft] = useState<string | null>(null);
-  const [shouldLoadSourceApps, setShouldLoadSourceApps] = useState(false);
-  const [sourceAppIconMap, setSourceAppIconMap] = useState<Record<string, string | null>>({});
-  const sourceAppIconMapRef = useRef<Record<string, string | null>>({});
   const pendingSourceAppIconPathsRef = useRef(new Set<string>());
+  const resolvedSourceAppIconPathsRef = useRef(new Set<string>());
   const sourceAppIconQueueRef = useRef<string[]>([]);
   const sourceAppIconPumpActiveRef = useRef(false);
   const sourceAppIconPumpTimerRef = useRef<number | null>(null);
   const sourceAppsQuery = useQuery({
-    queryKey: queryKeys.clipboardSourceApps(),
-    queryFn: listClipboardSourceApps,
-    enabled: shouldLoadSourceApps,
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: Number.POSITIVE_INFINITY,
+    ...clipboardSourceAppsQueryOptions(queryClient),
     placeholderData: (previousData) => previousData,
+    refetchOnMount: "always",
   });
-  const sourceAppOptions = useMemo(
-    () =>
-      (sourceAppsQuery.data ?? []).map((option) => ({
-        ...option,
-        iconPath:
-          (option.appPath ? sourceAppIconMap[option.appPath] : undefined) ?? option.iconPath,
-      })),
-    [sourceAppIconMap, sourceAppsQuery.data],
-  );
+  const sourceAppOptions = sourceAppsQuery.data ?? [];
   const selectedBundleIds = new Set(
     settingsDraft.clipboardExcludedSourceApps.map((rule) => rule.bundleId.toLowerCase()),
   );
@@ -102,6 +93,20 @@ export function WorkspaceSettingsSection({
       ),
     [sourceAppOptions],
   );
+  const duplicateSelectedAppNames = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    for (const app of settingsDraft.clipboardExcludedSourceApps) {
+      const key = app.appName.trim().toLowerCase();
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    return new Set(
+      Array.from(counts.entries())
+        .filter(([, count]) => count > 1)
+        .map(([key]) => key),
+    );
+  }, [settingsDraft.clipboardExcludedSourceApps]);
   const selectedSourceApps = settingsDraft.clipboardExcludedSourceApps.map((rule) => {
     const option = sourceAppOptionMap.get(rule.bundleId.toLowerCase());
     const appPath = option?.appPath ?? null;
@@ -110,46 +115,35 @@ export function WorkspaceSettingsSection({
       appName: option?.appName ?? rule.appName,
       bundleId: rule.bundleId,
       appPath,
-      iconPath:
-        (appPath ? sourceAppIconMap[appPath] : undefined) ?? option?.iconPath ?? null,
+      iconPath: option?.iconPath ?? null,
     };
   });
-
-  useEffect(() => {
-    sourceAppIconMapRef.current = sourceAppIconMap;
-  }, [sourceAppIconMap]);
 
   const pumpSourceAppIconQueue = useCallback(async () => {
     if (sourceAppIconPumpActiveRef.current) {
       return;
     }
 
-    const nextPath = sourceAppIconQueueRef.current.shift();
-    if (!nextPath) {
+    const nextPaths = sourceAppIconQueueRef.current.splice(0, 6);
+    if (nextPaths.length === 0) {
       return;
     }
 
     sourceAppIconPumpActiveRef.current = true;
-    pendingSourceAppIconPathsRef.current.add(nextPath);
+    for (const appPath of nextPaths) {
+      pendingSourceAppIconPathsRef.current.add(appPath);
+    }
 
     try {
-      const [icon] = await getClipboardSourceAppIcons([nextPath]);
-      if (!icon) {
-        return;
-      }
-
-      setSourceAppIconMap((current) => {
-        if (current[icon.appPath] === icon.iconPath) {
-          return current;
-        }
-
-        return {
-          ...current,
-          [icon.appPath]: icon.iconPath,
-        };
-      });
+      cacheClipboardSourceAppIcons(
+        queryClient,
+        await getClipboardSourceAppIcons(nextPaths),
+      );
     } finally {
-      pendingSourceAppIconPathsRef.current.delete(nextPath);
+      for (const appPath of nextPaths) {
+        pendingSourceAppIconPathsRef.current.delete(appPath);
+        resolvedSourceAppIconPathsRef.current.add(appPath);
+      }
       sourceAppIconPumpActiveRef.current = false;
 
       if (sourceAppIconQueueRef.current.length > 0) {
@@ -158,26 +152,39 @@ export function WorkspaceSettingsSection({
         }, 48);
       }
     }
-  }, []);
+  }, [queryClient]);
 
   const enqueueSourceAppIcons = useCallback((appPaths: string[]) => {
     const queue = sourceAppIconQueueRef.current;
+    const cachedOptions = getCachedClipboardSourceApps(queryClient) ?? sourceAppsQuery.data ?? [];
+    const cachedIconPaths = new Map(
+      cachedOptions
+        .map((option) =>
+          option.appPath?.trim() && option.iconPath
+            ? [option.appPath.trim(), option.iconPath] as const
+            : null)
+        .filter((entry): entry is readonly [string, string] => Boolean(entry)),
+    );
 
     for (const appPath of appPaths) {
-      if (!appPath) {
+      const normalizedPath = appPath.trim();
+      if (!normalizedPath) {
         continue;
       }
-      if (sourceAppIconMapRef.current[appPath] !== undefined) {
+      if (cachedIconPaths.has(normalizedPath)) {
         continue;
       }
-      if (pendingSourceAppIconPathsRef.current.has(appPath)) {
+      if (pendingSourceAppIconPathsRef.current.has(normalizedPath)) {
         continue;
       }
-      if (queue.includes(appPath)) {
+      if (resolvedSourceAppIconPathsRef.current.has(normalizedPath)) {
+        continue;
+      }
+      if (queue.includes(normalizedPath)) {
         continue;
       }
 
-      queue.push(appPath);
+      queue.push(normalizedPath);
     }
 
     if (queue.length === 0 || sourceAppIconPumpActiveRef.current) {
@@ -191,7 +198,7 @@ export function WorkspaceSettingsSection({
     sourceAppIconPumpTimerRef.current = window.setTimeout(() => {
       void pumpSourceAppIconQueue();
     }, 120);
-  }, [pumpSourceAppIconQueue]);
+  }, [pumpSourceAppIconQueue, queryClient, sourceAppsQuery.data]);
 
   useEffect(() => () => {
     if (sourceAppIconPumpTimerRef.current !== null) {
@@ -295,9 +302,11 @@ export function WorkspaceSettingsSection({
           >
             <div className="space-y-4">
               <ClipboardSourceAppCombobox
-                isLoading={sourceAppsQuery.isLoading}
+                isLoading={!sourceAppsQuery.data && sourceAppsQuery.isFetching}
                 onActivate={() => {
-                  setShouldLoadSourceApps(true);
+                  if (!sourceAppsQuery.isFetching) {
+                    void sourceAppsQuery.refetch();
+                  }
                 }}
                 onVisibleOptionsChange={(options) => {
                   enqueueSourceAppIcons(
@@ -330,47 +339,52 @@ export function WorkspaceSettingsSection({
                   No source apps are excluded.
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-[28px] border border-border/70 bg-white/80 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-                  {selectedSourceApps.map((app, index) => (
-                    <div
-                      key={app.bundleId}
-                      className={cn(
-                        "flex items-center gap-4 px-4 py-3",
-                        index > 0 ? "border-t border-border/65" : "",
-                      )}
-                    >
-                      <ClipboardSourceAppAvatar
-                        appName={app.appName}
-                        iconPath={app.iconPath}
-                        className="size-12 shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[17px] font-medium text-foreground">
-                          {app.appName}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {app.bundleId}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked="true"
-                        aria-label={`Stop excluding ${app.appName}`}
-                        onClick={() =>
-                          patchSettingsDraft({
-                            clipboardExcludedSourceApps: removeClipboardSourceAppRule(
-                              settingsDraft.clipboardExcludedSourceApps,
-                              app.bundleId,
-                            ),
-                          })
-                        }
-                        className="inline-flex h-8 w-[4.1rem] shrink-0 items-center rounded-full bg-primary px-1 shadow-[inset_0_0_0_1px_rgba(37,99,235,0.1)] transition hover:brightness-[0.98]"
-                      >
-                        <span className="ml-auto inline-flex size-6 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,0.16)]" />
-                      </button>
-                    </div>
-                  ))}
+                <div className="overflow-hidden rounded-[24px] border border-border/70 bg-surface-panel shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+                  <div className="space-y-1 p-2">
+                    {selectedSourceApps.map((app) => {
+                      const showSecondaryLine = duplicateSelectedAppNames.has(
+                        app.appName.trim().toLowerCase(),
+                      );
+
+                      return (
+                        <div
+                          key={app.bundleId}
+                          className="flex items-center gap-2.5 rounded-[14px] px-2.5 py-1.5"
+                        >
+                          <ClipboardSourceAppAvatar
+                            appName={app.appName}
+                            iconPath={app.iconPath}
+                            className="size-7 shrink-0 rounded-[8px]"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[12px] leading-4 font-medium text-foreground">
+                              {app.appName}
+                            </p>
+                            {showSecondaryLine ? (
+                              <p className="truncate text-[10px] leading-4 text-muted-foreground">
+                                {app.bundleId}
+                              </p>
+                            ) : null}
+                          </div>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${app.appName} from excluded apps`}
+                            onClick={() =>
+                              patchSettingsDraft({
+                                clipboardExcludedSourceApps: removeClipboardSourceAppRule(
+                                  settingsDraft.clipboardExcludedSourceApps,
+                                  app.bundleId,
+                                ),
+                              })
+                            }
+                            className="inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted-foreground transition hover:bg-secondary/70 hover:text-foreground"
+                          >
+                            <Minus className="size-3.5 stroke-[2.2]" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

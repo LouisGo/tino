@@ -531,7 +531,9 @@ export function DashboardPage() {
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                 <span>{tDashboard("chat.setupHint")}</span>
                 <Button asChild variant="link" size="sm" className="h-auto px-0">
-                  <Link to="/settings" hash="ai">{tCommon("navigation.settings")}</Link>
+                  <Link to="/settings" hash="ai" hashScrollIntoView={false}>
+                    {tCommon("navigation.settings")}
+                  </Link>
                 </Button>
               </div>
             ) : null}

@@ -16,7 +16,10 @@ export function ClipboardSourceAppAvatar({
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center overflow-hidden rounded-[14px] border border-black/8 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.08)]",
+        "inline-flex items-center justify-center overflow-hidden rounded-[10px]",
+        iconSrc
+          ? ""
+          : "border border-border/70 bg-surface-elevated shadow-[0_8px_24px_rgba(15,23,42,0.12)]",
         className,
       )}
     >
@@ -29,7 +32,7 @@ export function ClipboardSourceAppAvatar({
           className="size-full object-cover"
         />
       ) : (
-        <span className="text-sm font-semibold text-foreground/70">
+        <span className="text-[11px] font-semibold text-foreground/70">
           {fallbackLabel}
         </span>
       )}

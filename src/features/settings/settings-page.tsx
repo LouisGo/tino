@@ -101,7 +101,9 @@ export function SettingsPage() {
     void navigate({
       to: "/settings",
       hash: sectionId,
+      hashScrollIntoView: false,
       replace: true,
+      resetScroll: false,
     });
   };
 
