@@ -3,10 +3,29 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  (
+    {
+      autoCapitalize = "none",
+      autoComplete = "off",
+      autoCorrect = "off",
+      autoSave = "off",
+      className,
+      spellCheck = false,
+      type,
+      ...props
+    },
+    ref,
+  ) => {
     return (
       <input
         ref={ref}
+        autoCapitalize={autoCapitalize}
+        autoComplete={autoComplete}
+        autoCorrect={autoCorrect}
+        autoSave={autoSave}
+        data-1p-ignore="true"
+        data-lpignore="true"
+        spellCheck={spellCheck}
         type={type}
         data-slot="input"
         className={cn(
