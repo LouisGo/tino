@@ -8,6 +8,8 @@ const initialClipboardBoardState = {
   filter: "all" as ClipboardFilter,
   selectedCaptureId: null,
   preferredSelectedCaptureId: null,
+  isFilterSelectOpen: false,
+  isShortcutHelpOpen: false,
   previewingImageId: null,
   previewingOcrCaptureId: null,
   pendingDeleteCapture: null,
@@ -22,6 +24,8 @@ type ClipboardBoardState = {
   filter: ClipboardFilter;
   selectedCaptureId: string | null;
   preferredSelectedCaptureId: string | null;
+  isFilterSelectOpen: boolean;
+  isShortcutHelpOpen: boolean;
   previewingImageId: string | null;
   previewingOcrCaptureId: string | null;
   pendingDeleteCapture: ClipboardCapture | null;
@@ -35,6 +39,8 @@ type ClipboardBoardState = {
   toggleSummaryFilter: (value: ClipboardFilter) => void;
   setSelectedCaptureId: (value: string | null) => void;
   setPreferredSelectedCaptureId: (value: string | null) => void;
+  setIsFilterSelectOpen: (value: boolean) => void;
+  setIsShortcutHelpOpen: (value: boolean) => void;
   setPreviewingImageId: (value: string | null) => void;
   setPreviewingOcrCaptureId: (value: string | null) => void;
   setPendingDeleteCapture: (capture: ClipboardCapture | null) => void;
@@ -44,6 +50,27 @@ type ClipboardBoardState = {
   requestListScrollToTop: () => void;
   removeCapture: (captureId: string) => void;
 };
+
+export function selectClipboardSearchFocusBlockingLayer(
+  state: Pick<
+    ClipboardBoardState,
+    | "isFilterSelectOpen"
+    | "isShortcutHelpOpen"
+    | "previewingImageId"
+    | "previewingOcrCaptureId"
+    | "pendingDeleteCapture"
+    | "pendingPinCapture"
+  >,
+) {
+  return (
+    state.isFilterSelectOpen
+    || state.isShortcutHelpOpen
+    || Boolean(state.previewingImageId)
+    || Boolean(state.previewingOcrCaptureId)
+    || Boolean(state.pendingDeleteCapture)
+    || Boolean(state.pendingPinCapture)
+  );
+}
 
 export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
   ...initialClipboardBoardState,
@@ -56,6 +83,8 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
     })),
   setSelectedCaptureId: (value) => set({ selectedCaptureId: value }),
   setPreferredSelectedCaptureId: (value) => set({ preferredSelectedCaptureId: value }),
+  setIsFilterSelectOpen: (value) => set({ isFilterSelectOpen: value }),
+  setIsShortcutHelpOpen: (value) => set({ isShortcutHelpOpen: value }),
   setPreviewingImageId: (value) => set({ previewingImageId: value }),
   setPreviewingOcrCaptureId: (value) => set({ previewingOcrCaptureId: value }),
   setPendingDeleteCapture: (capture) => set({ pendingDeleteCapture: capture }),

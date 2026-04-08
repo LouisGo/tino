@@ -118,67 +118,77 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
       {children}
       {isOpen && portalContainer
         ? createPortal(
-            <div
-              ref={menuRef}
-              data-slot="context-menu-content"
-              role="menu"
-              aria-orientation="vertical"
-              aria-activedescendant={
-                activeIndex >= 0 ? `context-menu-item-${instanceId}-${activeIndex}` : undefined
-              }
-              className="fixed z-[140] min-w-[220px] cursor-default rounded-[20px] border border-border/80 bg-card/96 p-1.5 shadow-[var(--shadow-overlay-elevated)] backdrop-blur-xl"
-              style={{
-                left: position.left,
-                top: position.top,
-              }}
-            >
-              <div className="space-y-1">
-                {items.map((item, index) =>
-                  item.type === "separator" ? (
-                    <div key={item.key} className="my-1 h-px bg-border/70" />
-                  ) : (
-                    <button
-                      id={`context-menu-item-${instanceId}-${index}`}
-                      key={item.key}
-                      type="button"
-                      role="menuitem"
-                      disabled={item.disabled}
-                      data-active={activeIndex === index ? "true" : undefined}
-                      className={cn(
-                        "flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-sm transition",
-                        item.disabled
-                          ? "cursor-not-allowed text-muted-foreground/70"
-                          : activeIndex === index
-                            ? item.danger
-                              ? "cursor-pointer bg-destructive/10 text-destructive"
-                              : "cursor-pointer bg-secondary/70 text-foreground"
-                          : interactionMode === "pointer"
-                            ? item.danger
-                              ? "cursor-pointer text-destructive hover:bg-destructive/10"
-                              : "cursor-pointer text-foreground hover:bg-secondary/70"
-                            : item.danger
-                              ? "cursor-pointer text-destructive"
-                              : "cursor-pointer text-foreground",
-                      )}
-                      onPointerMove={(event) => {
-                        setActiveIndexFromPointer(index, {
-                          x: event.clientX,
-                          y: event.clientY,
-                        });
-                      }}
-                      onClick={() => {
-                        void selectItemAt(index);
-                      }}
-                    >
-                      <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-                        {item.icon ?? <ChevronRight className="size-3.5 opacity-0" />}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    </button>
-                  ),
-                )}
+            <>
+              <div
+                data-slot="context-menu-mask"
+                aria-hidden="true"
+                className="fixed inset-0 z-[139] bg-transparent"
+                onPointerDown={() => {
+                  closeMenu();
+                }}
+              />
+              <div
+                ref={menuRef}
+                data-slot="context-menu-content"
+                role="menu"
+                aria-orientation="vertical"
+                aria-activedescendant={
+                  activeIndex >= 0 ? `context-menu-item-${instanceId}-${activeIndex}` : undefined
+                }
+                className="fixed z-[140] min-w-[220px] cursor-default rounded-[20px] border border-border/80 bg-card/96 p-1.5 shadow-[var(--shadow-overlay-elevated)] backdrop-blur-xl"
+                style={{
+                  left: position.left,
+                  top: position.top,
+                }}
+              >
+                <div className="space-y-1">
+                  {items.map((item, index) =>
+                    item.type === "separator" ? (
+                      <div key={item.key} className="my-1 h-px bg-border/70" />
+                    ) : (
+                      <button
+                        id={`context-menu-item-${instanceId}-${index}`}
+                        key={item.key}
+                        type="button"
+                        role="menuitem"
+                        disabled={item.disabled}
+                        data-active={activeIndex === index ? "true" : undefined}
+                        className={cn(
+                          "flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-sm transition",
+                          item.disabled
+                            ? "cursor-not-allowed text-muted-foreground/70"
+                            : activeIndex === index
+                              ? item.danger
+                                ? "cursor-pointer bg-destructive/10 text-destructive"
+                                : "cursor-pointer bg-secondary/70 text-foreground"
+                            : interactionMode === "pointer"
+                              ? item.danger
+                                ? "cursor-pointer text-destructive hover:bg-destructive/10"
+                                : "cursor-pointer text-foreground hover:bg-secondary/70"
+                              : item.danger
+                                ? "cursor-pointer text-destructive"
+                                : "cursor-pointer text-foreground",
+                        )}
+                        onPointerMove={(event) => {
+                          setActiveIndexFromPointer(index, {
+                            x: event.clientX,
+                            y: event.clientY,
+                          });
+                        }}
+                        onClick={() => {
+                          void selectItemAt(index);
+                        }}
+                      >
+                        <span className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+                          {item.icon ?? <ChevronRight className="size-3.5 opacity-0" />}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      </button>
+                    ),
+                  )}
+                </div>
               </div>
-            </div>,
+            </>,
             portalContainer,
           )
         : null}

@@ -20,6 +20,7 @@ import { LoaderCircle, RotateCcw, Search, ShieldAlert, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { useCommand } from "@/core/commands";
+import { useContextMenuStore } from "@/core/context-menu";
 import { ShortcutKbd } from "@/core/shortcuts";
 import {
   Select,
@@ -48,7 +49,10 @@ import {
   getClipboardFilterOption,
 } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
-import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
+import {
+  selectClipboardSearchFocusBlockingLayer,
+  useClipboardBoardStore,
+} from "@/features/clipboard/stores/clipboard-board-store";
 import {
   getClipboardWindowTargetAppName,
   openAccessibilitySettings,
@@ -96,6 +100,7 @@ export function ClipboardBoardPanel({
   const previewingOcrCaptureId = useClipboardBoardStore((state) => state.previewingOcrCaptureId);
   const pendingDeleteCapture = useClipboardBoardStore((state) => state.pendingDeleteCapture);
   const pendingPinCapture = useClipboardBoardStore((state) => state.pendingPinCapture);
+  const isShortcutHelpOpen = useClipboardBoardStore((state) => state.isShortcutHelpOpen);
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
   const listScrollRequest = useClipboardBoardStore((state) => state.listScrollRequest);
@@ -103,6 +108,7 @@ export function ClipboardBoardPanel({
   const setPreviewingOcrCaptureId = useClipboardBoardStore((state) => state.setPreviewingOcrCaptureId);
   const setPendingDeleteCapture = useClipboardBoardStore((state) => state.setPendingDeleteCapture);
   const setPendingPinCapture = useClipboardBoardStore((state) => state.setPendingPinCapture);
+  const setIsShortcutHelpOpen = useClipboardBoardStore((state) => state.setIsShortcutHelpOpen);
   const openImageLightbox = useCommand<{ captureId: string }>("clipboard.showImageLightbox");
   const confirmPinCapture = useCommand<{
     capture: ClipboardCapture;
@@ -360,6 +366,7 @@ export function ClipboardBoardPanel({
         <ClipboardBoardToolbar
           autoFocusSearch={autoFocusSearch}
           searchFocusRequest={searchFocusRequest}
+          windowMode={windowMode}
         />
         <ClipboardAccessibilityBanner />
 
@@ -428,6 +435,8 @@ export function ClipboardBoardPanel({
             visible={showWindowSelectionTip && canShowWindowSelectionTip}
           />
         ) : null}
+
+        <ClipboardShortcutHelpButton onClick={() => setIsShortcutHelpOpen(true)} />
       </section>
 
       <CaptureImageLightbox
@@ -440,6 +449,15 @@ export function ClipboardBoardPanel({
         capture={previewingOcrCapture}
         onClose={() => setPreviewingOcrCaptureId(null)}
       />
+
+      <AlertDialog
+        open={isShortcutHelpOpen}
+        onOpenChange={setIsShortcutHelpOpen}
+      >
+        <AlertDialogContent className="max-w-[min(34rem,calc(100vw-1.5rem))] gap-0 overflow-hidden p-0 sm:p-0">
+          <ClipboardShortcutHelpDialogBody windowMode={windowMode} />
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={Boolean(pendingPinCapture)}
@@ -613,20 +631,141 @@ function ClipboardWindowSelectionTip({
   );
 }
 
+function ClipboardShortcutHelpButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="absolute right-4 bottom-4 z-20">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="size-8 rounded-full border-border/60 bg-card/88 text-muted-foreground/88 shadow-[0_12px_28px_color-mix(in_oklch,var(--foreground)_10%,transparent)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-border/75 hover:bg-card hover:text-foreground focus-visible:ring-[2px] focus-visible:ring-ring/24"
+        aria-label="Open clipboard shortcuts"
+        onClick={onClick}
+      >
+        <span className="text-sm font-semibold leading-none">?</span>
+      </Button>
+    </div>
+  );
+}
+
+function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }) {
+  const shortcutRows: Array<{
+    id: string;
+    description: string;
+    shortcutIds: string[];
+  }> = [
+    {
+      id: "open-actions",
+      description: "Open actions for the selected item",
+      shortcutIds: ["contextMenu.openActiveTarget"],
+    },
+    {
+      id: "move-between-captures",
+      description: "Move through captures",
+      shortcutIds: [
+        "clipboard.selectPreviousCapture",
+        "clipboard.selectNextCapture",
+      ],
+    },
+    {
+      id: "jump-to-edges",
+      description: "Jump to the first or last capture",
+      shortcutIds: [
+        "clipboard.selectFirstCapture",
+        "clipboard.selectLastCapture",
+      ],
+    },
+    {
+      id: "paste",
+      description: windowMode
+        ? "Paste the selected item back"
+        : "Paste the selected item back in the floating window",
+      shortcutIds: ["clipboard.confirmWindowSelection"],
+    },
+    {
+      id: "dismiss",
+      description: "Close preview or dismiss the floating window",
+      shortcutIds: ["clipboard.dismissWindow"],
+    },
+  ];
+
+  return (
+    <div className="grid">
+      <div className="border-b border-border/55 bg-[linear-gradient(180deg,color-mix(in_oklch,var(--card)_92%,white_8%),color-mix(in_oklch,var(--card)_86%,var(--background)_14%))] px-4 pt-3.5 pb-3 sm:px-5 sm:pt-4 sm:pb-3.5">
+        <AlertDialogTitle className="text-base sm:text-[1.02rem]">
+          Clipboard shortcuts
+        </AlertDialogTitle>
+      </div>
+
+      <div className="px-4 pt-2 pb-2.5 sm:px-5 sm:pt-2 sm:pb-3">
+        <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-1 py-1 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground/70 uppercase sm:grid">
+          <span>Intro</span>
+          <span>Shortcut</span>
+        </div>
+
+        <div className="divide-y divide-border/45">
+          {shortcutRows.map((row) => (
+            <div
+              key={row.id}
+              className="grid gap-2 px-1 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4"
+            >
+              <div className="min-w-0">
+                <p className="text-sm leading-5.5 text-foreground/88">{row.description}</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                {row.shortcutIds.map((shortcutId, index) => (
+                  <span key={shortcutId} className="inline-flex items-center gap-2">
+                    {index > 0 ? (
+                      <span
+                        aria-hidden="true"
+                        className="text-xs text-muted-foreground/52"
+                      >
+                        /
+                      </span>
+                    ) : null}
+                    <ShortcutKbd shortcutId={shortcutId} />
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-end border-t border-border/55 px-4 pt-3 pb-3.5 sm:px-5 sm:pt-3 sm:pb-4">
+        <AlertDialogCancel className="h-8 px-3 text-xs">
+          Got it
+        </AlertDialogCancel>
+      </div>
+    </div>
+  );
+}
+
 function ClipboardBoardToolbar({
   autoFocusSearch = false,
   searchFocusRequest = 0,
+  windowMode = false,
 }: {
   autoFocusSearch?: boolean;
   searchFocusRequest?: number;
+  windowMode?: boolean;
 }) {
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
+  const isFilterSelectOpen = useClipboardBoardStore((state) => state.isFilterSelectOpen);
+  const hasClipboardFocusBlockingLayer = useClipboardBoardStore(
+    selectClipboardSearchFocusBlockingLayer,
+  );
   const setSearchValue = useClipboardBoardStore((state) => state.setSearchValue);
   const setFilter = useClipboardBoardStore((state) => state.setFilter);
+  const setIsFilterSelectOpen = useClipboardBoardStore((state) => state.setIsFilterSelectOpen);
+  const isContextMenuOpen = useContextMenuStore((state) => state.isOpen);
   const activeFilter = getClipboardFilterOption(filter);
   const hasSearchValue = searchValue.trim().length > 0;
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const hasFocusBlockingLayer = hasClipboardFocusBlockingLayer || isContextMenuOpen;
+  const previousFocusBlockingLayerRef = useRef(hasFocusBlockingLayer);
 
   useEffect(() => {
     if (!autoFocusSearch || searchFocusRequest === 0) {
@@ -643,6 +782,24 @@ function ClipboardBoardToolbar({
     };
   }, [autoFocusSearch, searchFocusRequest]);
 
+  useEffect(() => {
+    const wasFocusBlocked = previousFocusBlockingLayerRef.current;
+    previousFocusBlockingLayerRef.current = hasFocusBlockingLayer;
+
+    if (!windowMode || !wasFocusBlocked || hasFocusBlockingLayer) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [hasFocusBlockingLayer, windowMode]);
+
   return (
     <div className="app-board-toolbar border-b border-border/55 px-2.5 py-2.5 sm:px-3 sm:py-2.5">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-2.5">
@@ -655,6 +812,12 @@ function ClipboardBoardToolbar({
             placeholder="Type to filter entries..."
             data-clipboard-search-input="true"
             autoFocus={autoFocusSearch}
+            autoCapitalize="none"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            data-form-type="other"
+            name="clipboard-panel-search"
             className={cn(
               "h-10 rounded-[18px] border-border/55 bg-background/70 pl-9 text-[13px] shadow-none placeholder:text-muted-foreground/78 focus-visible:border-border/70 focus-visible:bg-card/88 focus-visible:ring-[2px] focus-visible:ring-ring/18",
               hasSearchValue ? "pr-10" : "",
@@ -675,7 +838,12 @@ function ClipboardBoardToolbar({
         <div className="flex items-center justify-end">
           <div className="relative">
             <span className="sr-only">Filter capture types</span>
-            <Select value={filter} onValueChange={setFilter}>
+            <Select
+              open={isFilterSelectOpen}
+              value={filter}
+              onOpenChange={setIsFilterSelectOpen}
+              onValueChange={setFilter}
+            >
               <SelectTrigger
                 aria-label="Filter capture types"
                 className="h-10 w-[124px] rounded-[18px] border-border/55 bg-background/70 pl-3.5 text-[13px] shadow-none focus:border-border/70 focus:ring-[2px] focus:ring-ring/18 sm:w-[140px]"
@@ -698,9 +866,16 @@ function ClipboardBoardToolbar({
                   <span className="truncate">{activeFilter.label}</span>
                 </span>
               </SelectTrigger>
-              <SelectContent align="end">
+              <SelectContent
+                align="end"
+                className="rounded-[18px] border-border/70 bg-card/96 shadow-[0_16px_40px_color-mix(in_oklch,var(--foreground)_12%,transparent)]"
+              >
                 {clipboardFilterOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className="min-h-10 rounded-[13px] py-2"
+                  >
                     <span className="inline-flex items-center gap-3">
                       {option.value !== "all" ? (
                         <span
