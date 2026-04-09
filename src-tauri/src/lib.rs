@@ -793,22 +793,34 @@ fn record_clipboard_window_target(app: &AppHandle) {
         return;
     };
 
-    let workspace = NSWorkspace::sharedWorkspace();
-    let frontmost = workspace.frontmostApplication();
-    let current = NSRunningApplication::currentApplication();
+    let current_pid = NSRunningApplication::currentApplication().processIdentifier();
+    let frontmost_target = NSWorkspace::sharedWorkspace()
+        .frontmostApplication()
+        .and_then(|application| non_self_clipboard_window_target(&application, current_pid));
 
-    let target = frontmost.and_then(|application| {
-        if application.processIdentifier() == current.processIdentifier() {
-            return None;
+    if let Some(target) = frontmost_target.clone() {
+        if let Err(error) = state.set_last_external_clipboard_window_target(Some(target)) {
+            log::warn!(
+                "failed to remember last external clipboard window target: {}",
+                error
+            );
         }
+    }
 
-        Some(ClipboardWindowTarget {
-            app_name: application.localizedName().map(|value| value.to_string()),
-            bundle_id: application
-                .bundleIdentifier()
-                .map(|value| value.to_string()),
-            process_id: application.processIdentifier(),
-        })
+    // Global shortcut handling can make Tino frontmost before we sample, so fall back
+    // to the last external app activation instead of clearing the target.
+    let target = frontmost_target.or_else(|| {
+        state
+            .last_external_clipboard_window_target()
+            .map_err(|error| {
+                log::warn!(
+                    "failed to read last external clipboard window target: {}",
+                    error
+                );
+                error
+            })
+            .ok()
+            .flatten()
     });
 
     if let Err(error) = state.set_clipboard_window_target(target) {
@@ -818,6 +830,28 @@ fn record_clipboard_window_target(app: &AppHandle) {
 
 #[cfg(not(target_os = "macos"))]
 fn record_clipboard_window_target(_app: &AppHandle) {}
+
+#[cfg(target_os = "macos")]
+fn clipboard_window_target_from_running_application(
+    application: &Retained<NSRunningApplication>,
+) -> ClipboardWindowTarget {
+    ClipboardWindowTarget {
+        app_name: application.localizedName().map(|value| value.to_string()),
+        bundle_id: application
+            .bundleIdentifier()
+            .map(|value| value.to_string()),
+        process_id: application.processIdentifier(),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn non_self_clipboard_window_target(
+    application: &Retained<NSRunningApplication>,
+    current_pid: pid_t,
+) -> Option<ClipboardWindowTarget> {
+    (application.processIdentifier() != current_pid)
+        .then(|| clipboard_window_target_from_running_application(application))
+}
 
 #[cfg(target_os = "macos")]
 fn running_application_from_notification(
@@ -845,8 +879,17 @@ fn install_panel_window_tracker(app: &AppHandle) -> Result<(), String> {
             return;
         };
 
-        if application.processIdentifier() == current_pid {
+        let Some(target) = non_self_clipboard_window_target(&application, current_pid) else {
             return;
+        };
+
+        if let Some(state) = app_handle.try_state::<AppState>() {
+            if let Err(error) = state.set_last_external_clipboard_window_target(Some(target)) {
+                log::warn!(
+                    "failed to update last external clipboard window target: {}",
+                    error
+                );
+            }
         }
 
         retarget_visible_panel_windows(&app_handle);

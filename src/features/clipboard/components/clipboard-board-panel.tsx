@@ -209,7 +209,7 @@ export function ClipboardBoardPanel({
     return () => {
       cancelled = true;
     };
-  }, [windowMode]);
+  }, [searchFocusRequest, windowMode]);
 
   useEffect(() => {
     if (!windowMode) {
@@ -278,7 +278,7 @@ export function ClipboardBoardPanel({
         hideWindowSelectionTipTimeoutRef.current = null;
       }
     };
-  }, [windowMode]);
+  }, [searchFocusRequest, windowMode]);
 
   function closeDeleteDialog() {
     setPendingDeleteCapture(null);

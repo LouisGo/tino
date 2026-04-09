@@ -598,7 +598,7 @@ pub struct UpdateClipboardPinResult {
     pub pinned_count: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClipboardWindowTarget {
     pub app_name: Option<String>,
     pub bundle_id: Option<String>,
@@ -834,6 +834,7 @@ struct StateData {
     runtime: RuntimeState,
     pending_replay_hashes: VecDeque<RecentHashEntry>,
     clipboard_window_target: Option<ClipboardWindowTarget>,
+    last_external_clipboard_window_target: Option<ClipboardWindowTarget>,
 }
 
 #[cfg(target_os = "macos")]
@@ -926,6 +927,7 @@ impl AppState {
                     runtime,
                     pending_replay_hashes: VecDeque::new(),
                     clipboard_window_target: None,
+                    last_external_clipboard_window_target: None,
                 }),
             }),
         };
@@ -1565,6 +1567,20 @@ impl AppState {
 
     pub fn clipboard_window_target(&self) -> Result<Option<ClipboardWindowTarget>, String> {
         Ok(self.lock_state()?.clipboard_window_target.clone())
+    }
+
+    pub fn set_last_external_clipboard_window_target(
+        &self,
+        target: Option<ClipboardWindowTarget>,
+    ) -> Result<(), String> {
+        self.lock_state()?.last_external_clipboard_window_target = target;
+        Ok(())
+    }
+
+    pub fn last_external_clipboard_window_target(
+        &self,
+    ) -> Result<Option<ClipboardWindowTarget>, String> {
+        Ok(self.lock_state()?.last_external_clipboard_window_target.clone())
     }
 
     pub fn set_watch_running(&self) -> Result<(), String> {
