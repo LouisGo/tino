@@ -3,18 +3,29 @@ import { message } from "@tauri-apps/plugin-dialog";
 
 import { queryKeys } from "@/app/query-keys";
 import { defineCommand, type CommandDefinition, type CommandServices } from "@/core/commands";
+import { useContextMenuStore } from "@/core/context-menu/store";
+import {
+  captureReferencePath,
+  getDefaultVisibleClipboardSelection,
+  isFileReferenceKind,
+} from "@/features/clipboard/lib/clipboard-board";
 import {
   promptForAccessibilityRestart,
   showAccessibilityPermissionDialog,
 } from "@/features/clipboard/lib/accessibility-permission-flow";
-import { getDefaultVisibleClipboardSelection } from "@/features/clipboard/lib/clipboard-board";
 import { hideClipboardWindowForNextOpen } from "@/features/clipboard/lib/clipboard-window-session";
-import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
+import {
+  selectClipboardSearchFocusBlockingLayer,
+  useClipboardBoardStore,
+} from "@/features/clipboard/stores/clipboard-board-store";
 import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import {
   copyCaptureToClipboard,
   deleteClipboardCapture,
   isTauriRuntime,
+  openExternalTarget,
+  openImageInPreview,
+  openPathInDefaultApp,
   revealPath,
   setClipboardCapturePinned,
   returnCaptureToPreviousApp,
@@ -28,6 +39,10 @@ import type {
 
 type ClipboardCapturePayload = {
   capture: ClipboardCapture;
+};
+
+type ClipboardOpenCapturePayload = {
+  capture?: ClipboardCapture | null;
 };
 
 type ClipboardPinCapturePayload = ClipboardCapturePayload & {
@@ -58,6 +73,13 @@ type ClipboardConfirmSelectionPayload = {
 const GENERIC_PASTE_BACK_ERROR = "Clipboard content could not be returned to the previous app.";
 
 function hasOpenClipboardTransientLayer() {
+  if (
+    selectClipboardSearchFocusBlockingLayer(useClipboardBoardStore.getState())
+    || useContextMenuStore.getState().isOpen
+  ) {
+    return true;
+  }
+
   return (
     Boolean(document.querySelector("[data-slot='context-menu-content']"))
     || Boolean(document.querySelector("[data-slot='alert-dialog-content']"))
@@ -108,6 +130,51 @@ function getCaptureForConfirmation(
 
   const { visibleCaptures } = useClipboardBoardStore.getState();
   return visibleCaptures.find((capture) => capture.id === captureId) ?? null;
+}
+
+function getCaptureForExternalOpen(
+  payload?: ClipboardOpenCapturePayload,
+) {
+  return payload?.capture ?? getSelectedVisibleCapture();
+}
+
+function canOpenCaptureExternally(capture: ClipboardCapture | null) {
+  if (!capture) {
+    return false;
+  }
+
+  if (capture.contentKind === "image") {
+    return Boolean(capture.assetPath);
+  }
+
+  if (capture.contentKind === "link") {
+    return Boolean((capture.linkUrl ?? capture.rawText).trim());
+  }
+
+  if (isFileReferenceKind(capture.contentKind)) {
+    return isTauriRuntime() && !capture.fileMissing && Boolean(captureReferencePath(capture));
+  }
+
+  return false;
+}
+
+async function openCaptureExternally(capture: ClipboardCapture) {
+  if (capture.contentKind === "image" && capture.assetPath) {
+    await openImageInPreview(capture.assetPath);
+    return;
+  }
+
+  if (capture.contentKind === "link") {
+    await openExternalTarget(capture.linkUrl ?? capture.rawText);
+    return;
+  }
+
+  if (isFileReferenceKind(capture.contentKind)) {
+    const path = captureReferencePath(capture);
+    if (path && !capture.fileMissing) {
+      await openPathInDefaultApp(path);
+    }
+  }
 }
 
 async function invalidateClipboardBoardQueries(queryClient: CommandServices["queryClient"]) {
@@ -262,6 +329,30 @@ export const clipboardCommands = [
       const store = useClipboardBoardStore.getState();
       store.setPreviewingOcrCaptureId(null);
       store.setPreviewingImageId(captureId);
+    },
+  }),
+  defineCommand<ClipboardOpenCapturePayload | undefined, void>({
+    id: "clipboard.openCaptureExternally",
+    label: "Open Clipboard Capture Externally",
+    isEnabled: (payload) => {
+      const capture = getCaptureForExternalOpen(payload);
+      if (!canOpenCaptureExternally(capture)) {
+        return false;
+      }
+
+      if (payload?.capture) {
+        return true;
+      }
+
+      return !hasActiveClipboardPreview() && !hasOpenClipboardTransientLayer();
+    },
+    run: async (payload) => {
+      const capture = getCaptureForExternalOpen(payload);
+      if (!capture) {
+        return;
+      }
+
+      await openCaptureExternally(capture);
     },
   }),
   defineCommand<ClipboardConfirmSelectionPayload | undefined, void>({

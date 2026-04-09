@@ -32,7 +32,10 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useCommand } from "@/core/commands";
 import { useShortcutScope } from "@/core/shortcuts";
 import { FileReferencePreview } from "@/features/clipboard/components/file-reference-preview";
-import { PreviewToolbar } from "@/features/clipboard/components/preview-toolbar";
+import {
+  PreviewToolbar,
+  PreviewToolbarPillButton,
+} from "@/features/clipboard/components/preview-toolbar";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import {
   PREVIEW_HIGHLIGHT_SELECTOR,
@@ -67,6 +70,9 @@ type ClipboardTranslate = (
     values?: Record<string, boolean | Date | null | number | string | undefined>;
   },
 ) => string;
+type ClipboardOpenCapturePayload = {
+  capture?: ClipboardCapture | null;
+};
 
 export function CaptureDetailPreview({
   capture,
@@ -75,6 +81,7 @@ export function CaptureDetailPreview({
   onOpenImageOcr,
   sharedSurface = false,
   toolbarMeta,
+  toolbarControls,
   toolbarActions,
 }: {
   capture: ClipboardCapture;
@@ -83,11 +90,15 @@ export function CaptureDetailPreview({
   onOpenImageOcr: () => void;
   sharedSurface?: boolean;
   toolbarMeta?: ReactNode;
+  toolbarControls?: ReactNode;
   toolbarActions?: ReactNode;
 }) {
   const t = useScopedT("clipboard");
   const tCommon = useScopedT("common");
-  const openTarget = useCommand<{ target: string }>("system.openExternalTarget");
+  const openCaptureExternally = useCommand<ClipboardOpenCapturePayload | undefined>(
+    "clipboard.openCaptureExternally",
+    { capture },
+  );
   const assetSrc = useClipboardAssetSrc(
     capture.contentKind === "image" ? capture.assetPath : null,
   );
@@ -99,7 +110,7 @@ export function CaptureDetailPreview({
   if (capture.contentKind === "image") {
     return (
       <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden")}>
-        <PreviewToolbar meta={toolbarMeta} actions={toolbarActions} />
+        <PreviewToolbar meta={toolbarMeta} controls={toolbarControls} actions={toolbarActions} />
         <div className="group flex min-h-0 flex-1 items-center justify-center overflow-hidden px-3 pb-3 pt-2 transition">
           {assetSrc ? (
             <div className="relative flex h-full min-h-0 w-full items-center justify-center">
@@ -150,16 +161,20 @@ export function CaptureDetailPreview({
       <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden")}>
         <PreviewToolbar
           meta={toolbarMeta}
-          controls={(
-            <button
-              type="button"
-              onClick={() => void openTarget.execute({ target })}
-              className="app-preview-inline-action app-kind-text-link inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium"
-            >
-              {t("preview.linkOpen")}
-              <ExternalLink className="size-3.5" />
-            </button>
-          )}
+          controls={openCaptureExternally.canExecute
+            ? (
+                <PreviewToolbarPillButton
+                  aria-label={t("preview.linkOpen")}
+                  className="app-kind-text-link"
+                  shortcutId="clipboard.openSelectedCapture"
+                  // tooltipLabel={t("actions.open")}
+                  onClick={() => void openCaptureExternally.execute()}
+                >
+                  {t("actions.open")}
+                  <ExternalLink className="size-3.5" />
+                </PreviewToolbarPillButton>
+              )
+            : undefined}
           actions={toolbarActions}
         />
         <div className="flex min-h-0 flex-1 flex-col items-start justify-between px-4 pb-4 pt-4 text-left">

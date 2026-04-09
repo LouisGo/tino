@@ -62,6 +62,7 @@ const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
 const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 14;
 const MAX_CLIPBOARD_STORAGE_BYTES: u64 = 256 * 1024 * 1024;
 pub(crate) const MAX_PINNED_CLIPBOARD_CAPTURES: usize = 5;
+const CLIPBOARD_BOARD_BOOTSTRAP_PAGE_SIZE: usize = 40;
 const CLIPBOARD_CAPTURES_UPDATED_EVENT: &str = "clipboard-captures-updated";
 #[cfg(target_os = "macos")]
 const IMAGE_OCR_MAX_ATTEMPTS: usize = 2;
@@ -580,6 +581,13 @@ pub struct ClipboardPage {
 
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
+pub struct ClipboardBoardBootstrap {
+    pub page: ClipboardPage,
+    pub pinned_captures: Vec<PinnedClipboardCapture>,
+}
+
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct DeleteClipboardCaptureResult {
     pub id: String,
     pub removed_from_history: bool,
@@ -853,6 +861,7 @@ struct SharedState {
     clipboard_cache_dir: PathBuf,
     app_log_dir: PathBuf,
     settings_path: PathBuf,
+    clipboard_board_bootstrap: Mutex<Option<ClipboardBoardBootstrap>>,
     clipboard_source_apps_cache: Mutex<Option<Vec<ClipboardSourceAppOption>>>,
     clipboard_source_app_icons_cache: Mutex<HashMap<String, Option<String>>>,
     #[cfg(target_os = "macos")]
@@ -918,6 +927,7 @@ impl AppState {
                 clipboard_cache_dir,
                 app_log_dir,
                 settings_path,
+                clipboard_board_bootstrap: Mutex::new(None),
                 clipboard_source_apps_cache: Mutex::new(None),
                 clipboard_source_app_icons_cache: Mutex::new(HashMap::new()),
                 #[cfg(target_os = "macos")]
@@ -932,6 +942,7 @@ impl AppState {
             }),
         };
 
+        state.try_refresh_clipboard_board_bootstrap_cache("startup");
         state.persist_runtime_snapshot()?;
         state.request_image_ocr_backfill();
 
@@ -940,6 +951,16 @@ impl AppState {
 
     pub fn current_settings(&self) -> Result<AppSettings, String> {
         Ok(self.lock_state()?.settings.clone())
+    }
+
+    pub fn clipboard_board_bootstrap(&self) -> Result<ClipboardBoardBootstrap, String> {
+        if let Some(bootstrap) = self.cached_clipboard_board_bootstrap()? {
+            return Ok(bootstrap);
+        }
+
+        let bootstrap = self.build_clipboard_board_bootstrap()?;
+        self.cache_clipboard_board_bootstrap(bootstrap.clone())?;
+        Ok(bootstrap)
     }
 
     pub fn cached_clipboard_source_apps(
@@ -1083,6 +1104,7 @@ impl AppState {
         }
 
         self.persist_runtime_snapshot()?;
+        self.try_refresh_clipboard_board_bootstrap_cache("settings update");
         if previous_settings.clipboard_history_days != normalized.clipboard_history_days
             || previous_settings.knowledge_root != normalized.knowledge_root
         {
@@ -1793,10 +1815,67 @@ impl AppState {
     }
 
     fn emit_clipboard_updated(&self) {
+        self.try_refresh_clipboard_board_bootstrap_cache("clipboard update");
         let _ = self
             .shared
             .app_handle
             .emit(CLIPBOARD_CAPTURES_UPDATED_EVENT, ());
+    }
+
+    fn cached_clipboard_board_bootstrap(&self) -> Result<Option<ClipboardBoardBootstrap>, String> {
+        self.shared
+            .clipboard_board_bootstrap
+            .lock()
+            .map(|cache| cache.clone())
+            .map_err(|error| error.to_string())
+    }
+
+    fn cache_clipboard_board_bootstrap(
+        &self,
+        bootstrap: ClipboardBoardBootstrap,
+    ) -> Result<(), String> {
+        let mut cache = self
+            .shared
+            .clipboard_board_bootstrap
+            .lock()
+            .map_err(|error| error.to_string())?;
+        *cache = Some(bootstrap);
+        Ok(())
+    }
+
+    fn refresh_clipboard_board_bootstrap_cache(&self) -> Result<(), String> {
+        let bootstrap = self.build_clipboard_board_bootstrap()?;
+        self.cache_clipboard_board_bootstrap(bootstrap)
+    }
+
+    fn try_refresh_clipboard_board_bootstrap_cache(&self, context: &str) {
+        if let Err(error) = self.refresh_clipboard_board_bootstrap_cache() {
+            warn!("failed to refresh clipboard bootstrap cache after {context}: {error}");
+        }
+    }
+
+    fn build_clipboard_board_bootstrap(&self) -> Result<ClipboardBoardBootstrap, String> {
+        let settings = self.current_settings()?;
+        let excluded_capture_ids =
+            load_pinned_clipboard_capture_ids(&self.shared.clipboard_cache_dir)?;
+        let page = query_clipboard_history_page(
+            &settings.knowledge_root_path(),
+            &self.shared.clipboard_cache_dir,
+            settings.clipboard_history_days,
+            &excluded_capture_ids,
+            &ClipboardPageRequest {
+                page: 0,
+                page_size: CLIPBOARD_BOARD_BOOTSTRAP_PAGE_SIZE,
+                search: None,
+                filter: None,
+            },
+        )?;
+        let pinned_captures = self.pinned_clipboard_captures()?;
+
+        Ok(ClipboardBoardBootstrap {
+            page,
+            pinned_captures,
+        })
     }
 
     #[cfg(target_os = "macos")]

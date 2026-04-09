@@ -21,6 +21,103 @@ const SELECT_RESERVED_ACCELERATORS = [
   "Space",
 ];
 
+function shouldStopReservedSelectShortcutPropagation(
+  event: Pick<React.KeyboardEvent, "ctrlKey" | "key" | "metaKey">,
+) {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    return true;
+  }
+
+  return (
+    event.key === "ArrowDown"
+    || event.key === "ArrowUp"
+    || event.key === "End"
+    || event.key === "Enter"
+    || event.key === "Escape"
+    || event.key === "Home"
+    || event.key === "PageDown"
+    || event.key === "PageUp"
+    || event.key === " "
+    || event.key === "Spacebar"
+  );
+}
+
+function focusWrappedSelectOption(
+  enabledOptions: HTMLElement[],
+  targetOption: HTMLElement,
+  viewport: HTMLElement | null,
+) {
+  window.setTimeout(() => {
+    if (targetOption === document.activeElement) {
+      return;
+    }
+
+    targetOption.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+
+    if (viewport) {
+      if (targetOption === enabledOptions[0]) {
+        viewport.scrollTop = 0;
+      } else if (targetOption === enabledOptions[enabledOptions.length - 1]) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    }
+
+    targetOption.focus({ preventScroll: true });
+  }, 0);
+}
+
+function maybeWrapSelectNavigation(event: React.KeyboardEvent<HTMLElement>) {
+  if (event.ctrlKey || event.metaKey || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) {
+    return false;
+  }
+
+  const contentElement = event.currentTarget;
+  const viewport = contentElement.querySelector<HTMLElement>("[data-radix-select-viewport]");
+  const enabledOptions = Array.from(
+    contentElement.querySelectorAll<HTMLElement>('[role="option"]:not([data-disabled])'),
+  );
+
+  if (enabledOptions.length < 2) {
+    return false;
+  }
+
+  const highlightedOption =
+    enabledOptions.find((option) => option.hasAttribute("data-highlighted"))
+    ?? (event.target instanceof HTMLElement ? event.target.closest<HTMLElement>('[role="option"]') : null)
+    ?? (document.activeElement instanceof HTMLElement
+      ? document.activeElement.closest<HTMLElement>('[role="option"]')
+      : null);
+
+  if (!highlightedOption) {
+    return false;
+  }
+
+  const highlightedIndex = enabledOptions.indexOf(highlightedOption);
+  if (highlightedIndex === -1) {
+    return false;
+  }
+
+  const targetOption =
+    event.key === "ArrowDown"
+      ? highlightedIndex === enabledOptions.length - 1
+        ? enabledOptions[0]
+        : null
+      : highlightedIndex === 0
+        ? enabledOptions[enabledOptions.length - 1]
+        : null;
+
+  if (!targetOption) {
+    return false;
+  }
+
+  event.preventDefault();
+  focusWrappedSelectOption(enabledOptions, targetOption, viewport);
+  return true;
+}
+
 type SelectInteractionContextValue = {
   open: boolean;
   setOpen: (value: boolean) => void;
@@ -81,7 +178,7 @@ const SelectValue = SelectPrimitive.Value;
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, onBlur, onFocus, ...props }, ref) => {
+>(({ className, children, onBlur, onFocus, onKeyDown, ...props }, ref) => {
   const interaction = React.useContext(SelectInteractionContext);
 
   return (
@@ -98,6 +195,12 @@ const SelectTrigger = React.forwardRef<
       onBlur={(event) => {
         interaction?.setTriggerFocused(false);
         onBlur?.(event);
+      }}
+      onKeyDown={(event) => {
+        if (shouldStopReservedSelectShortcutPropagation(event)) {
+          event.stopPropagation();
+        }
+        onKeyDown?.(event);
       }}
       {...props}
     >
@@ -147,7 +250,7 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => {
+>(({ className, children, onKeyDown, position = "popper", ...props }, ref) => {
   return (
     <SelectPrimitive.Portal container={resolvePortalContainer() ?? undefined}>
       <SelectPrimitive.Content
@@ -159,6 +262,13 @@ const SelectContent = React.forwardRef<
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className,
         )}
+        onKeyDown={(event) => {
+          maybeWrapSelectNavigation(event);
+          if (shouldStopReservedSelectShortcutPropagation(event)) {
+            event.stopPropagation();
+          }
+          onKeyDown?.(event);
+        }}
         {...props}
       >
         <SelectScrollUpButton />

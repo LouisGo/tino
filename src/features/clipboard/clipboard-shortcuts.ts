@@ -98,6 +98,20 @@ export const clipboardShortcuts = [
     },
   }),
   defineShortcut<void, void>({
+    id: "clipboard.openSelectedCapture",
+    kind: "local",
+    label: "Open Selected Capture",
+    description: "Open the selected clipboard item in its native app.",
+    defaults: {
+      default: "CommandOrControl+O",
+    },
+    scopes: ["clipboard.panel"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.openCaptureExternally",
+    },
+  }),
+  defineShortcut<void, void>({
     id: "clipboard.confirmWindowSelection",
     kind: "local",
     label: "Confirm Clipboard Selection",

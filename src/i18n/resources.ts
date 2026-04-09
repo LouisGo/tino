@@ -371,6 +371,7 @@ export const enUSResources = defineLocaleSchema({
         actionHeader: "Action",
         shortcutHeader: "Shortcut",
         rows: {
+          openSelectedCapture: "Open the selected item in its native app",
           openActions: "Open actions for the selected item",
           moveBetweenCaptures: "Move through captures",
           jumpToEdges: "Jump to the first or last capture",
@@ -1176,6 +1177,7 @@ export const zhCNResources = {
         actionHeader: "操作",
         shortcutHeader: "快捷键",
         rows: {
+          openSelectedCapture: "用原生应用打开当前选中项",
           openActions: "打开当前选中项的操作菜单",
           moveBetweenCaptures: "在记录之间移动",
           jumpToEdges: "跳到第一条或最后一条记录",

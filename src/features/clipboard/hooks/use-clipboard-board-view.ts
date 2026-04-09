@@ -1,4 +1,10 @@
-import { useDeferredValue, useEffect, useLayoutEffect, useMemo } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 import {
   useInfiniteQuery,
@@ -14,6 +20,10 @@ import {
   matchesFilter,
   matchesSearch,
 } from "@/features/clipboard/lib/clipboard-board";
+import {
+  getClipboardBoardBootstrapSnapshot,
+  subscribeClipboardBoardBootstrap,
+} from "@/features/clipboard/lib/clipboard-query-bootstrap";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import { useScopedT } from "@/i18n";
 import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults";
@@ -29,18 +39,33 @@ export function useClipboardBoardView() {
   const filter = useClipboardBoardStore((state) => state.filter);
   const deferredSearch = useDeferredValue(searchValue);
   const queryClient = useQueryClient();
+  const bootstrap = useSyncExternalStore(
+    subscribeClipboardBoardBootstrap,
+    getClipboardBoardBootstrapSnapshot,
+    getClipboardBoardBootstrapSnapshot,
+  );
   const listQueryKey = useMemo(
     () => queryKeys.clipboardPage(filter, deferredSearch),
     [filter, deferredSearch],
   );
   const summaryQueryKey = queryKeys.clipboardPageSummary();
   const pinnedQueryKey = queryKeys.clipboardPinnedCaptures();
-  const cachedSummaryPage = queryClient.getQueryData<ClipboardPageResult>(summaryQueryKey);
+  const cachedSummaryPage =
+    queryClient.getQueryData<ClipboardPageResult>(summaryQueryKey)
+    ?? bootstrap?.page;
   const cachedPinnedCaptures =
-    queryClient.getQueryData<PinnedClipboardCapture[]>(pinnedQueryKey);
+    queryClient.getQueryData<PinnedClipboardCapture[]>(pinnedQueryKey)
+    ?? bootstrap?.pinnedCaptures;
+  const canUseBootstrapList = filter === "all" && deferredSearch.trim().length === 0;
+  const bootstrapListPage = canUseBootstrapList && bootstrap
+    ? ({
+        pages: [bootstrap.page],
+        pageParams: [0],
+      } satisfies InfiniteData<ClipboardPageResult, number>)
+    : undefined;
   const cachedListPage = queryClient.getQueryData<InfiniteData<ClipboardPageResult, number>>(
     listQueryKey,
-  );
+  ) ?? bootstrapListPage;
 
   const { data: summaryPage } = useQuery({
     queryKey: summaryQueryKey,
@@ -54,7 +79,7 @@ export function useClipboardBoardView() {
     placeholderData: (previousData) => previousData ?? cachedSummaryPage,
   });
 
-  const { data: pinnedCaptures = [] } = useQuery({
+  const { data: pinnedCaptures = cachedPinnedCaptures ?? [] } = useQuery({
     queryKey: pinnedQueryKey,
     queryFn: getPinnedClipboardCaptures,
     staleTime: CLIPBOARD_QUERY_STALE_TIME,
@@ -93,7 +118,7 @@ export function useClipboardBoardView() {
     void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() });
   });
 
-  const pages = data?.pages ?? [];
+  const pages = data?.pages ?? bootstrapListPage?.pages ?? [];
   const captures = pages.flatMap((page) => page.captures);
   const visiblePinnedCaptures = useMemo(
     () =>

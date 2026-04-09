@@ -14,6 +14,7 @@ import { ArrowUp, FolderRoot, LoaderCircle, Sparkles } from "lucide-react";
 
 import { queryKeys } from "@/app/query-keys";
 import { Button } from "@/components/ui/button";
+import { DISABLE_TEXT_INPUT_ASSIST_PROPS } from "@/components/ui/text-input-behavior";
 import { AiWorkInProgressBadge } from "@/features/ai/components/ai-work-in-progress-badge";
 import {
   Select,
@@ -422,6 +423,7 @@ export function DashboardPage() {
                         : tDashboard("chat.placeholder")
                     }
                     className="app-home-input"
+                    {...DISABLE_TEXT_INPUT_ASSIST_PROPS}
                   />
                 </div>
               </div>

@@ -17,7 +17,10 @@ import {
 
 import { useCommand } from "@/core/commands";
 import { FileReferenceTypeIcon } from "@/features/clipboard/components/file-reference-type-icon";
-import { PreviewToolbar } from "@/features/clipboard/components/preview-toolbar";
+import {
+  PreviewToolbar,
+  PreviewToolbarPillButton,
+} from "@/features/clipboard/components/preview-toolbar";
 import {
   getFileReferenceContentTypeLabel,
   isPreviewableFileReference,
@@ -38,6 +41,9 @@ type ClipboardTranslate = (
     values?: Record<string, boolean | Date | null | number | string | undefined>;
   },
 ) => string;
+type ClipboardOpenCapturePayload = {
+  capture?: ClipboardCapture | null;
+};
 
 export function FileReferencePreview({
   capture,
@@ -51,6 +57,10 @@ export function FileReferencePreview({
   toolbarActions?: ReactNode;
 }) {
   const t = useScopedT("clipboard");
+  const openCaptureExternally = useCommand<ClipboardOpenCapturePayload | undefined>(
+    "clipboard.openCaptureExternally",
+    { capture },
+  );
   const model = resolveFileReferencePreviewModel(capture);
   const contentTypeLabel = getFileReferenceContentTypeLabel(model, t);
   const previewSrc = resolveAssetUrl(model.path);
@@ -61,7 +71,7 @@ export function FileReferencePreview({
   const [failedPreviewKey, setFailedPreviewKey] = useState<string | null>(null);
   const mediaLoadFailed = failedPreviewKey === previewStateKey;
   const usesPreviewableLayout = isPreviewableFileReference(model) && !mediaLoadFailed && Boolean(previewSrc);
-  const canOpenInDefaultApp = isTauriRuntime() && !model.fileMissing && Boolean(model.path);
+  const canOpenInDefaultApp = isTauriRuntime() && openCaptureExternally.canExecute;
   const canRevealPath = !model.fileMissing && Boolean(model.path);
   const surfaceClassName = sharedSurface
     ? ""
@@ -118,7 +128,10 @@ function FileReferenceToolbarControls({
   canRevealPath: boolean;
 }) {
   const t = useScopedT("clipboard");
-  const openPathInDefaultApp = useCommand<{ path: string }>("system.openPathInDefaultApp");
+  const openCaptureExternally = useCommand<ClipboardOpenCapturePayload | undefined>(
+    "clipboard.openCaptureExternally",
+    { capture },
+  );
   const revealCaptureAsset = useCommand<{ capture: ClipboardCapture; path: string }>("clipboard.revealCaptureAsset");
   const revealLabel = capture.contentKind === "file"
     ? t("actions.revealFile")
@@ -127,23 +140,21 @@ function FileReferenceToolbarControls({
   return (
     <div className="flex items-center gap-1.5">
       {canOpenInDefaultApp ? (
-        <button
-          type="button"
-          onClick={() => void openPathInDefaultApp.execute({ path: model.path })}
+        <PreviewToolbarPillButton
           aria-label={t("actions.open")}
-          title={t("actions.open")}
           className={cn(
-            "app-preview-inline-action inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
             model.kind === "video" ? "app-kind-text-video" : "app-kind-text-file",
           )}
+          shortcutId="clipboard.openSelectedCapture"
+          // tooltipLabel={t("actions.open")}
+          onClick={() => void openCaptureExternally.execute()}
         >
           {t("actions.open")}
           <ExternalLink className="size-3.5" />
-        </button>
+        </PreviewToolbarPillButton>
       ) : null}
       {canRevealPath ? (
-        <button
-          type="button"
+        <PreviewToolbarPillButton
           onClick={() =>
             void revealCaptureAsset.execute({
               capture,
@@ -152,13 +163,12 @@ function FileReferenceToolbarControls({
           aria-label={revealLabel}
           title={revealLabel}
           className={cn(
-            "app-preview-inline-action inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
             model.kind === "video" ? "app-kind-text-video" : "app-kind-text-file",
           )}
         >
           {revealLabel}
           <FolderOpen className="size-3.5" />
-        </button>
+        </PreviewToolbarPillButton>
       ) : null}
     </div>
   );

@@ -1,5 +1,6 @@
 use crate::app_state::{
-    AppSettings, AppState, CapturePreview, ClipboardPage, ClipboardPageRequest,
+    AppSettings, AppState, CapturePreview, ClipboardBoardBootstrap, ClipboardPage,
+    ClipboardPageRequest,
     ClipboardSourceAppOption, ClipboardWindowTarget, DashboardSnapshot,
     DeleteClipboardCaptureResult, PinnedClipboardCapture, UpdateClipboardPinResult,
 };
@@ -270,6 +271,14 @@ pub fn get_clipboard_page(
     request: ClipboardPageRequest,
 ) -> Result<ClipboardPage, String> {
     state.clipboard_page(request)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_clipboard_board_bootstrap(
+    state: State<'_, AppState>,
+) -> Result<ClipboardBoardBootstrap, String> {
+    state.clipboard_board_bootstrap()
 }
 
 #[tauri::command]

@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { DISABLE_TEXT_INPUT_ASSIST_PROPS } from "@/components/ui/text-input-behavior";
 import { cn } from "@/lib/utils";
 
 const Textarea = React.forwardRef<
@@ -14,6 +15,7 @@ const Textarea = React.forwardRef<
       className,
     )}
     {...props}
+    {...DISABLE_TEXT_INPUT_ASSIST_PROPS}
   />
 ));
 Textarea.displayName = "Textarea";

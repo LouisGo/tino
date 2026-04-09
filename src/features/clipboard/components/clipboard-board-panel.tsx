@@ -672,6 +672,11 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
     shortcutIds: string[];
   }> = [
     {
+      id: "open-selected-capture",
+      description: t("dialogs.shortcuts.rows.openSelectedCapture"),
+      shortcutIds: ["clipboard.openSelectedCapture"],
+    },
+    {
       id: "open-actions",
       description: t("dialogs.shortcuts.rows.openActions"),
       shortcutIds: ["contextMenu.openActiveTarget"],

@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 
-import { Copy, Expand, ImageIcon } from "lucide-react";
+import { Copy, ExternalLink, FolderOpen } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useCommand } from "@/core/commands";
 import { useContextMenu } from "@/core/context-menu";
 import { clipboardCaptureContextMenu } from "@/features/clipboard/clipboard-capture-context-menu";
+import { PreviewToolbarPillButton } from "@/features/clipboard/components/preview-toolbar";
 import {
   captureSourceLabel,
   captureSurfaceClassName,
@@ -39,6 +40,9 @@ type ClipboardTranslate = (
     values?: Record<string, boolean | Date | null | number | string | undefined>;
   },
 ) => string;
+type ClipboardOpenCapturePayload = {
+  capture?: ClipboardCapture | null;
+};
 
 export function ClipboardCaptureDetail({
   capture,
@@ -53,7 +57,11 @@ export function ClipboardCaptureDetail({
 }) {
   const t = useScopedT("clipboard");
   const copyCapture = useCommand<{ capture: ClipboardCapture }>("clipboard.copyCapture");
-  const openImagePreview = useCommand<{ path: string }>("system.openImageInPreview");
+  const openCaptureExternally = useCommand<ClipboardOpenCapturePayload | undefined>(
+    "clipboard.openCaptureExternally",
+    { capture },
+  );
+  const revealCaptureAsset = useCommand<{ capture: ClipboardCapture; path: string }>("clipboard.revealCaptureAsset");
   const { onContextMenu } = useContextMenu(clipboardCaptureContextMenu);
 
   if (!capture) {
@@ -75,6 +83,38 @@ export function ClipboardCaptureDetail({
     </>
   );
 
+  const toolbarControls = capture.contentKind === "image" && capture.assetPath
+    ? (
+        <div className="flex items-center gap-1.5">
+          {openCaptureExternally.canExecute ? (
+            <PreviewToolbarPillButton
+              aria-label={t("actions.openInPreview")}
+              className="app-kind-text-image"
+              shortcutId="clipboard.openSelectedCapture"
+              // tooltipLabel={t("actions.open")}
+              onClick={() => void openCaptureExternally.execute()}
+            >
+              {t("actions.open")}
+              <ExternalLink className="size-3.5" />
+            </PreviewToolbarPillButton>
+          ) : null}
+          <PreviewToolbarPillButton
+            aria-label={t("actions.revealFile")}
+            title={t("actions.revealFile")}
+            className="app-kind-text-image"
+            onClick={() =>
+              void revealCaptureAsset.execute({
+                capture,
+                path: capture.assetPath ?? "",
+              })}
+          >
+            {t("actions.revealFile")}
+            <FolderOpen className="size-3.5" />
+          </PreviewToolbarPillButton>
+        </div>
+      )
+    : undefined;
+
   const toolbarActions = (
     <>
       <TooltipIconButton
@@ -83,22 +123,6 @@ export function ClipboardCaptureDetail({
       >
         <Copy />
       </TooltipIconButton>
-      {capture.contentKind === "image" && capture.assetPath ? (
-        <TooltipIconButton label={t("actions.enlarge")} onClick={onOpenImage}>
-          <Expand />
-        </TooltipIconButton>
-      ) : null}
-      {capture.contentKind === "image" && capture.assetPath ? (
-        <TooltipIconButton
-          label={t("actions.openInPreview")}
-          onClick={() =>
-            void openImagePreview.execute({
-              path: capture.assetPath ?? "",
-            })}
-        >
-          <ImageIcon />
-        </TooltipIconButton>
-      ) : null}
     </>
   );
 
@@ -117,6 +141,7 @@ export function ClipboardCaptureDetail({
               onOpenImageOcr={onOpenImageOcr}
               sharedSurface
               toolbarMeta={toolbarMeta}
+              toolbarControls={toolbarControls}
               toolbarActions={toolbarActions}
             />
           </Suspense>

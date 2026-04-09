@@ -17,6 +17,7 @@ import { isTauriRuntime, unwrapTauriResult } from "@/lib/tauri-core";
 import type {
   AppSettings as RustAppSettings,
   CapturePreview as RustCapturePreview,
+  ClipboardBoardBootstrap as RustClipboardBoardBootstrap,
   ClipboardPage as RustClipboardPage,
   ClipboardSourceAppIconResult as RustClipboardSourceAppIconResult,
   ClipboardSourceAppOption as RustClipboardSourceAppOption,
@@ -27,6 +28,7 @@ import type {
 } from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
+  ClipboardBoardBootstrap,
   ClipboardCapture,
   ClipboardPageRequest,
   ClipboardSourceAppIconResult,
@@ -334,6 +336,15 @@ function normalizeDashboardSnapshot(snapshot: RustDashboardSnapshot): DashboardS
   };
 }
 
+function normalizeClipboardBoardBootstrap(
+  bootstrap: RustClipboardBoardBootstrap,
+): ClipboardBoardBootstrap {
+  return {
+    page: normalizeClipboardPageResult(bootstrap.page),
+    pinnedCaptures: bootstrap.pinnedCaptures.map(normalizePinnedClipboardCapture),
+  };
+}
+
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   if (!isTauriRuntime()) {
     return getMockSnapshot();
@@ -411,6 +422,23 @@ export async function getClipboardPage(
         filter: request.filter ?? null,
       }),
     ),
+  );
+}
+
+export async function getClipboardBoardBootstrap(): Promise<ClipboardBoardBootstrap> {
+  if (!isTauriRuntime()) {
+    return {
+      page: await getClipboardPage({
+        page: 0,
+        pageSize: 40,
+        filter: "all",
+      }),
+      pinnedCaptures: await getPinnedClipboardCaptures(),
+    };
+  }
+
+  return normalizeClipboardBoardBootstrap(
+    await unwrapTauriResult(tauriCommands.getClipboardBoardBootstrap()),
   );
 }
 

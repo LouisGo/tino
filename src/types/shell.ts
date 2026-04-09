@@ -14,6 +14,7 @@ import type {
   BatchDecisionCluster as RustBatchDecisionCluster,
   BatchDecisionReview as RustBatchDecisionReview,
   CapturePreview as RustCapturePreview,
+  ClipboardBoardBootstrap as RustClipboardBoardBootstrap,
   ClipboardPage as RustClipboardPage,
   ClipboardPageRequest as RustClipboardPageRequest,
   ClipboardSourceAppIconResult as RustClipboardSourceAppIconResult,
@@ -48,6 +49,14 @@ export type ClipboardPageSummary = RustClipboardPage["summary"];
 
 export type ClipboardPageResult = Omit<RustClipboardPage, "captures"> & {
   captures: ClipboardCapture[];
+};
+
+export type ClipboardBoardBootstrap = Omit<
+  RustClipboardBoardBootstrap,
+  "page" | "pinnedCaptures"
+> & {
+  page: ClipboardPageResult;
+  pinnedCaptures: PinnedClipboardCapture[];
 };
 
 export type DeleteClipboardCaptureResult = RustDeleteClipboardCaptureResult;

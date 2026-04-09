@@ -1,31 +1,13 @@
 import * as React from "react";
 
+import { DISABLE_TEXT_INPUT_ASSIST_PROPS } from "@/components/ui/text-input-behavior";
 import { cn } from "@/lib/utils";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  (
-    {
-      autoCapitalize = "none",
-      autoComplete = "off",
-      autoCorrect = "off",
-      autoSave = "off",
-      className,
-      spellCheck = false,
-      type,
-      ...props
-    },
-    ref,
-  ) => {
+  ({ className, type, ...props }, ref) => {
     return (
       <input
         ref={ref}
-        autoCapitalize={autoCapitalize}
-        autoComplete={autoComplete}
-        autoCorrect={autoCorrect}
-        autoSave={autoSave}
-        data-1p-ignore="true"
-        data-lpignore="true"
-        spellCheck={spellCheck}
         type={type}
         data-slot="input"
         className={cn(
@@ -33,6 +15,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className,
         )}
         {...props}
+        {...DISABLE_TEXT_INPUT_ASSIST_PROPS}
       />
     );
   },

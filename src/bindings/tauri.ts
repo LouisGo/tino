@@ -10,6 +10,7 @@ export const commands = {
 	applyBatchDecision: (request: ApplyBatchDecisionRequest) => typedError<ApplyBatchDecisionResult, string>(__TAURI_INVOKE("apply_batch_decision", { request })),
 	getDashboardSnapshot: () => typedError<DashboardSnapshot, string>(__TAURI_INVOKE("get_dashboard_snapshot")),
 	getClipboardPage: (request: ClipboardPageRequest) => typedError<ClipboardPage, string>(__TAURI_INVOKE("get_clipboard_page", { request })),
+	getClipboardBoardBootstrap: () => typedError<ClipboardBoardBootstrap, string>(__TAURI_INVOKE("get_clipboard_board_bootstrap")),
 	getPinnedClipboardCaptures: () => typedError<PinnedClipboardCapture[], string>(__TAURI_INVOKE("get_pinned_clipboard_captures")),
 	setClipboardCapturePinned: (request: SetClipboardCapturePinnedRequest) => typedError<UpdateClipboardPinResult, string>(__TAURI_INVOKE("set_clipboard_capture_pinned", { request })),
 	deleteClipboardCapture: (request: DeleteClipboardCaptureRequest) => typedError<DeleteClipboardCaptureResult, string>(__TAURI_INVOKE("delete_clipboard_capture", { request })),
@@ -153,6 +154,11 @@ export type CapturePreview = {
 	imageWidth?: number | null,
 	imageHeight?: number | null,
 	byteSize?: number | null,
+};
+
+export type ClipboardBoardBootstrap = {
+	page: ClipboardPage,
+	pinnedCaptures: PinnedClipboardCapture[],
 };
 
 export type ClipboardPage = {

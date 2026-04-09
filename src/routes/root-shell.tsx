@@ -15,6 +15,19 @@ const ClipboardWindowPage = lazy(async () => {
   };
 });
 
+function ClipboardWindowFallback() {
+  return (
+    <div
+      className="app-panel-window-root h-full"
+      style={{
+        backgroundColor: "color-mix(in oklch, var(--card) 92%, var(--background) 8%)",
+        backgroundImage:
+          "linear-gradient(180deg, color-mix(in oklch, white 10%, transparent), transparent 48%)",
+      }}
+    />
+  );
+}
+
 export function RootShell() {
   useWindowCloseGuard();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -24,7 +37,7 @@ export function RootShell() {
 
   if (isClipboardWindow) {
     return (
-      <Suspense fallback={<div className="h-full bg-transparent" />}>
+      <Suspense fallback={<ClipboardWindowFallback />}>
         <ClipboardWindowPage />
         {/* {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null} */}
       </Suspense>

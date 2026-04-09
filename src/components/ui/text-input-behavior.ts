@@ -1,0 +1,15 @@
+export const DISABLE_TEXT_INPUT_ASSIST_PROPS = {
+  autoCapitalize: "none",
+  autoComplete: "off",
+  autoCorrect: "off",
+  autoSave: "off",
+  spellCheck: false,
+  "data-1p-ignore": "true",
+  "data-bwignore": "true",
+  "data-enable-grammarly": "false",
+  "data-form-type": "other",
+  "data-gramm": "false",
+  "data-gramm_editor": "false",
+  "data-lpignore": "true",
+  "data-ms-editor": "false",
+} as const;
