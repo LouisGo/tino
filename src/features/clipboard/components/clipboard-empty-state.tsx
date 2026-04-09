@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useScopedT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { LoaderCircle, Search, ShieldAlert } from "lucide-react";
 
@@ -17,6 +18,7 @@ export function ClipboardEmptyState({
   tone?: ClipboardEmptyStateTone;
   className?: string;
 }) {
+  const t = useScopedT("clipboard");
   const Icon = tone === "loading" ? LoaderCircle : tone === "error" ? ShieldAlert : Search;
 
   return (
@@ -43,7 +45,7 @@ export function ClipboardEmptyState({
 
       {onRetry ? (
         <Button type="button" variant="outline" className="relative mt-5" onClick={onRetry}>
-          Retry
+          {t("empty.retry")}
         </Button>
       ) : null}
     </div>

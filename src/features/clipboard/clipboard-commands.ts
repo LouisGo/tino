@@ -19,6 +19,7 @@ import {
   setClipboardCapturePinned,
   returnCaptureToPreviousApp,
 } from "@/lib/tauri";
+import { resolveText, tx } from "@/i18n";
 import type {
   ClipboardCapture,
   DeleteClipboardCaptureResult,
@@ -53,6 +54,8 @@ type ClipboardSelectionBoundaryPayload = {
 type ClipboardConfirmSelectionPayload = {
   captureId?: string;
 };
+
+const GENERIC_PASTE_BACK_ERROR = "Clipboard content could not be returned to the previous app.";
 
 function hasOpenClipboardTransientLayer() {
   return (
@@ -291,7 +294,7 @@ export const clipboardCommands = [
         const description =
           error instanceof Error
             ? error.message
-            : "Clipboard content could not be returned to the previous app.";
+            : GENERIC_PASTE_BACK_ERROR;
         const requiresAccessibilityPermission = description.includes(
           "Accessibility permission",
         );
@@ -315,14 +318,33 @@ export const clipboardCommands = [
           return;
         }
 
-        await message(description, {
-          title: requiresPackagedPreviewApp
-            ? "Packaged Preview App Required"
+        const dialogTitle = resolveText(
+          requiresPackagedPreviewApp
+            ? tx("clipboard", "errors.dialogTitles.packagedPreviewRequired")
             : requiresLocalSigning
-              ? "Local Signing Required"
+              ? tx("clipboard", "errors.dialogTitles.localSigningRequired")
               : requiresPreviewReinstall
-                ? "Reinstall Preview App"
-              : "Clipboard Return Failed",
+                ? tx("clipboard", "errors.dialogTitles.reinstallPreviewApp")
+                : tx("clipboard", "errors.dialogTitles.clipboardReturnFailed"),
+        );
+        const dialogBody = resolveText(
+          requiresPackagedPreviewApp
+            ? tx("clipboard", "errors.dialogBodies.packagedPreviewRequired")
+            : requiresLocalSigning
+              ? tx("clipboard", "errors.dialogBodies.localSigningRequired")
+              : requiresPreviewReinstall
+                ? tx("clipboard", "errors.dialogBodies.reinstallPreviewApp")
+                : description && description !== GENERIC_PASTE_BACK_ERROR
+                  ? tx("clipboard", "errors.pasteBackFailedWithDetail", {
+                      values: {
+                        detail: description,
+                      },
+                    })
+                  : tx("clipboard", "errors.pasteBackFailed"),
+        );
+
+        await message(dialogBody, {
+          title: dialogTitle,
           kind:
             requiresPackagedPreviewApp
             || requiresLocalSigning

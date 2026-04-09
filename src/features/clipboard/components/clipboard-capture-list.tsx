@@ -13,6 +13,7 @@ import {
 } from "@/features/clipboard/lib/clipboard-board";
 import { resolveFileReferencePreviewModel } from "@/features/clipboard/lib/file-reference-preview";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
+import { useScopedT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture, ContentKind } from "@/types/shell";
 
@@ -72,6 +73,7 @@ export function ClipboardCaptureList({
   scrollToTopRequest: number;
   viewportResetRequest: number;
 }) {
+  const t = useScopedT("clipboard");
   const [scrollViewport, setScrollViewport] = useState<HTMLDivElement | null>(null);
   const isAutoLoadingRef = useRef(false);
   const suppressSelectedCaptureScrollRef = useRef(false);
@@ -404,7 +406,7 @@ export function ClipboardCaptureList({
 
                 {row.type === "loading" ? (
                   <div className="flex h-8 items-center justify-center px-2 text-[11px]/[14px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-                    Loading older captures...
+                    {t("groups.loadingOlder")}
                   </div>
                 ) : null}
               </div>
@@ -435,6 +437,7 @@ function CaptureListRow({
   onOpenMenu: (element: Element | null, context: ClipboardCapture) => boolean;
   onSelectCapture: () => void;
 }) {
+  const t = useScopedT("clipboard");
   return (
     <div
       data-capture-id={capture.id}
@@ -458,14 +461,14 @@ function CaptureListRow({
 
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] font-medium text-foreground/92">
-            {captureListSummary(capture)}
+            {captureListSummary(capture, t)}
           </p>
         </div>
       </button>
 
       <button
         type="button"
-        aria-label="More actions"
+        aria-label={t("capture.moreActions")}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -485,6 +488,7 @@ function CaptureListRow({
 }
 
 function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
+  const t = useScopedT("clipboard");
   const thumbnailSrc = useClipboardAssetSrc(
     capture.contentKind === "image" || capture.contentKind === "video"
       ? capture.thumbnailPath
@@ -497,8 +501,8 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
         <img
           src={thumbnailSrc}
           alt={capture.preview || (capture.contentKind === "video"
-            ? "Clipboard video thumbnail"
-            : "Clipboard image thumbnail")}
+            ? t("capture.thumbnailAlt.video")
+            : t("capture.thumbnailAlt.image"))}
           loading="lazy"
           decoding="async"
           className="size-full object-cover"

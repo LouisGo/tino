@@ -1,3 +1,4 @@
+import type { TranslationKey } from "@/i18n";
 import type { ClipboardCapture } from "@/types/shell";
 
 export type FileReferencePreviewKind = "image" | "video" | "audio" | "pdf" | "generic";
@@ -15,11 +16,33 @@ export type FileReferenceIconKind =
   | "unknown";
 export type FileReferencePresentation = "previewable" | "generic";
 
+type ClipboardTranslate = (
+  key: TranslationKey<"clipboard">,
+  options?: {
+    defaultValue?: string;
+    values?: Record<string, boolean | Date | null | number | string | undefined>;
+  },
+) => string;
+
+export type FileReferenceContentTypeKey =
+  | "fileTypes.imageFile"
+  | "fileTypes.video"
+  | "fileTypes.audioFile"
+  | "fileTypes.pdfDocument"
+  | "fileTypes.presentation"
+  | "fileTypes.spreadsheet"
+  | "fileTypes.document"
+  | "fileTypes.markdown"
+  | "fileTypes.codeFile"
+  | "fileTypes.package"
+  | "fileTypes.archive"
+  | "fileTypes.unknownFileType";
+
 type FileReferencePreviewStrategy = {
   kind: FileReferencePreviewKind;
   iconKind: FileReferenceIconKind;
   matches: (extension: string) => boolean;
-  contentTypeLabel: string;
+  contentTypeKey: FileReferenceContentTypeKey;
   presentation: FileReferencePresentation;
   inlinePreview: boolean;
   surfaceVariant: "image" | "file";
@@ -33,7 +56,7 @@ export type FileReferencePreviewModel = {
   extension: string;
   extensionLabel: string | null;
   fileMissing: boolean;
-  contentTypeLabel: string;
+  contentTypeKey: FileReferenceContentTypeKey;
   presentation: FileReferencePresentation;
   inlinePreview: boolean;
   surfaceVariant: "image" | "file";
@@ -191,7 +214,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "image",
     iconKind: "image",
     matches: (extension) => IMAGE_EXTENSIONS.has(extension),
-    contentTypeLabel: "Image File",
+    contentTypeKey: "fileTypes.imageFile",
     presentation: "previewable",
     inlinePreview: true,
     surfaceVariant: "image",
@@ -200,7 +223,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "video",
     iconKind: "video",
     matches: (extension) => VIDEO_EXTENSIONS.has(extension),
-    contentTypeLabel: "Video",
+    contentTypeKey: "fileTypes.video",
     presentation: "previewable",
     inlinePreview: true,
     surfaceVariant: "file",
@@ -209,7 +232,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "audio",
     iconKind: "audio",
     matches: (extension) => AUDIO_EXTENSIONS.has(extension),
-    contentTypeLabel: "Audio File",
+    contentTypeKey: "fileTypes.audioFile",
     presentation: "previewable",
     inlinePreview: true,
     surfaceVariant: "file",
@@ -218,7 +241,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "pdf",
     iconKind: "pdf",
     matches: (extension) => extension === "pdf",
-    contentTypeLabel: "PDF Document",
+    contentTypeKey: "fileTypes.pdfDocument",
     presentation: "previewable",
     inlinePreview: true,
     surfaceVariant: "file",
@@ -227,7 +250,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "generic",
     iconKind: "presentation",
     matches: (extension) => PRESENTATION_EXTENSIONS.has(extension),
-    contentTypeLabel: "Presentation",
+    contentTypeKey: "fileTypes.presentation",
     presentation: "generic",
     inlinePreview: false,
     surfaceVariant: "file",
@@ -236,7 +259,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "generic",
     iconKind: "spreadsheet",
     matches: (extension) => SPREADSHEET_EXTENSIONS.has(extension),
-    contentTypeLabel: "Spreadsheet",
+    contentTypeKey: "fileTypes.spreadsheet",
     presentation: "generic",
     inlinePreview: false,
     surfaceVariant: "file",
@@ -245,7 +268,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "generic",
     iconKind: "document",
     matches: (extension) => DOCUMENT_EXTENSIONS.has(extension),
-    contentTypeLabel: "Document",
+    contentTypeKey: "fileTypes.document",
     presentation: "generic",
     inlinePreview: false,
     surfaceVariant: "file",
@@ -254,7 +277,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "generic",
     iconKind: "markdown",
     matches: (extension) => MARKDOWN_EXTENSIONS.has(extension),
-    contentTypeLabel: "Markdown",
+    contentTypeKey: "fileTypes.markdown",
     presentation: "generic",
     inlinePreview: false,
     surfaceVariant: "file",
@@ -263,7 +286,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "generic",
     iconKind: "code",
     matches: (extension) => CODE_EXTENSIONS.has(extension),
-    contentTypeLabel: "Code File",
+    contentTypeKey: "fileTypes.codeFile",
     presentation: "generic",
     inlinePreview: false,
     surfaceVariant: "file",
@@ -272,7 +295,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "generic",
     iconKind: "archive",
     matches: (extension) => PACKAGE_EXTENSIONS.has(extension),
-    contentTypeLabel: "Package",
+    contentTypeKey: "fileTypes.package",
     presentation: "generic",
     inlinePreview: false,
     surfaceVariant: "file",
@@ -281,7 +304,7 @@ const FILE_REFERENCE_PREVIEW_STRATEGIES: FileReferencePreviewStrategy[] = [
     kind: "generic",
     iconKind: "archive",
     matches: (extension) => ARCHIVE_EXTENSIONS.has(extension),
-    contentTypeLabel: "Archive",
+    contentTypeKey: "fileTypes.archive",
     presentation: "generic",
     inlinePreview: false,
     surfaceVariant: "file",
@@ -292,7 +315,7 @@ const GENERIC_FILE_REFERENCE_PREVIEW_STRATEGY: FileReferencePreviewStrategy = {
   kind: "generic",
   iconKind: "unknown",
   matches: () => true,
-  contentTypeLabel: "Unknown File Type",
+  contentTypeKey: "fileTypes.unknownFileType",
   presentation: "generic",
   inlinePreview: false,
   surfaceVariant: "file",
@@ -326,7 +349,7 @@ export function resolveFileReferencePreviewModel(
     extension,
     extensionLabel: extension ? extension.slice(0, 4).toUpperCase() : null,
     fileMissing: Boolean(capture.fileMissing),
-    contentTypeLabel: strategy.contentTypeLabel,
+    contentTypeKey: strategy.contentTypeKey,
     presentation: strategy.presentation,
     inlinePreview: strategy.inlinePreview && !capture.fileMissing && Boolean(path),
     surfaceVariant: strategy.surfaceVariant,
@@ -337,6 +360,13 @@ export function isPreviewableFileReference(
   model: Pick<FileReferencePreviewModel, "presentation" | "inlinePreview" | "fileMissing">,
 ) {
   return model.presentation === "previewable" && model.inlinePreview && !model.fileMissing;
+}
+
+export function getFileReferenceContentTypeLabel(
+  model: Pick<FileReferencePreviewModel, "contentTypeKey">,
+  t: ClipboardTranslate,
+) {
+  return t(model.contentTypeKey);
 }
 
 function resolveFileReferencePreviewStrategy(contentKind: string, extension: string) {

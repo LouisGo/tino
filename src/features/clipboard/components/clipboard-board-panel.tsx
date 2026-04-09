@@ -43,10 +43,10 @@ import {
 import {
   buildClipboardCaptureGroups,
   captureTitle,
-  clipboardFilterOptions,
+  getClipboardFilterOptions,
+  getClipboardFilterOption,
   getDefaultClipboardSelection,
   getDefaultVisibleClipboardSelection,
-  getClipboardFilterOption,
 } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardAccessibilityStore } from "@/features/clipboard/stores/clipboard-accessibility-store";
 import {
@@ -95,6 +95,7 @@ export function ClipboardBoardPanel({
   autoFocusSearch?: boolean;
   searchFocusRequest?: number;
 }) {
+  const t = useScopedT("clipboard");
   const selectedCaptureId = useClipboardBoardStore((state) => state.selectedCaptureId);
   const previewingImageId = useClipboardBoardStore((state) => state.previewingImageId);
   const previewingOcrCaptureId = useClipboardBoardStore((state) => state.previewingOcrCaptureId);
@@ -125,10 +126,11 @@ export function ClipboardBoardPanel({
   const captureGroups = buildClipboardCaptureGroups({
     captures,
     pinnedCaptures,
+    t,
   });
   const oldestPinnedLabel = pinnedCaptures[0]
-    ? captureTitle(pinnedCaptures[0])
-    : "the oldest pinned capture";
+    ? captureTitle(pinnedCaptures[0], t)
+    : t("dialogs.pinLimit.oldestFallback");
   const defaultSelectedCapture = getDefaultClipboardSelection(captures, pinnedCaptures);
   const selectedCapture =
     visibleCaptures.find((capture) => capture.id === selectedCaptureId) ??
@@ -153,12 +155,12 @@ export function ClipboardBoardPanel({
   const renderedSelectedCapture = selectedCapture;
   const resolvedEmptyStateTitle =
     emptyStateTitle ??
-    (isFilteringResults ? "No matching captures" : "Clipboard board is empty");
+    (isFilteringResults ? t("empty.filteredTitle") : t("empty.defaultTitle"));
   const resolvedEmptyStateDescription =
     emptyStateDescription ??
     (isFilteringResults
-      ? "Try clearing the search term or switching the type filter back to all entries."
-      : "Copy text, links, or images on macOS and the recent capture board will populate here.");
+      ? t("empty.filteredDescription")
+      : t("empty.defaultDescription"));
 
   function clearWindowSelectionTipTimeout() {
     if (hideWindowSelectionTipTimeoutRef.current !== null) {
@@ -472,14 +474,17 @@ export function ClipboardBoardPanel({
       >
         <AlertDialogContent className="max-w-[min(25rem,calc(100vw-2rem))]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Replace Oldest Pinned Capture?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialogs.pinLimit.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              You can keep up to 5 pinned captures. Pinning this item will replace "
-              {oldestPinnedLabel}".
+              {t("dialogs.pinLimit.description", {
+                values: {
+                  oldest: oldestPinnedLabel,
+                },
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPinning}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPinning}>{t("dialogs.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={isPinning || !pendingPinCapture}
               onClick={handleConfirmPin}
@@ -487,10 +492,10 @@ export function ClipboardBoardPanel({
               {isPinning ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Pinning...
+                  {t("dialogs.pinLimit.pending")}
                 </>
               ) : (
-                "Replace Oldest"
+                t("dialogs.pinLimit.confirm")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -507,13 +512,13 @@ export function ClipboardBoardPanel({
       >
         <AlertDialogContent className="max-w-[min(25rem,calc(100vw-2rem))]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete This Clipboard Capture?</AlertDialogTitle>
+            <AlertDialogTitle>{t("dialogs.deleteCapture.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the item from clipboard history and the local board cache.
+              {t("dialogs.deleteCapture.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{t("dialogs.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={isDeleting || !pendingDeleteCapture}
               onClick={handleConfirmDelete}
@@ -521,10 +526,10 @@ export function ClipboardBoardPanel({
               {isDeleting ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Deleting...
+                  {t("dialogs.deleteCapture.pending")}
                 </>
               ) : (
-                "Delete Capture"
+                t("dialogs.deleteCapture.confirm")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -608,7 +613,14 @@ function ClipboardWindowSelectionTip({
   targetLabel: string | null;
   visible: boolean;
 }) {
-  const title = targetLabel ? `Paste to ${targetLabel}` : "Paste to previous app";
+  const t = useScopedT("clipboard");
+  const title = targetLabel
+    ? t("window.pasteToTarget", {
+        values: {
+          appName: targetLabel,
+        },
+      })
+    : t("window.pasteToPreviousApp");
 
   return (
     <div
@@ -635,6 +647,7 @@ function ClipboardWindowSelectionTip({
 }
 
 function ClipboardShortcutHelpButton({ onClick }: { onClick: () => void }) {
+  const t = useScopedT("clipboard");
   return (
     <div className="absolute right-4 bottom-4 z-20">
       <Button
@@ -642,7 +655,7 @@ function ClipboardShortcutHelpButton({ onClick }: { onClick: () => void }) {
         variant="outline"
         size="icon"
         className="size-8 rounded-full border-border/60 bg-card/88 text-muted-foreground/88 shadow-[0_12px_28px_color-mix(in_oklch,var(--foreground)_10%,transparent)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-border/75 hover:bg-card hover:text-foreground focus-visible:ring-[2px] focus-visible:ring-ring/24"
-        aria-label="Open clipboard shortcuts"
+        aria-label={t("window.shortcutsButtonAria")}
         onClick={onClick}
       >
         <span className="text-sm font-semibold leading-none">?</span>
@@ -652,6 +665,7 @@ function ClipboardShortcutHelpButton({ onClick }: { onClick: () => void }) {
 }
 
 function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }) {
+  const t = useScopedT("clipboard");
   const shortcutRows: Array<{
     id: string;
     description: string;
@@ -659,12 +673,12 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
   }> = [
     {
       id: "open-actions",
-      description: "Open actions for the selected item",
+      description: t("dialogs.shortcuts.rows.openActions"),
       shortcutIds: ["contextMenu.openActiveTarget"],
     },
     {
       id: "move-between-captures",
-      description: "Move through captures",
+      description: t("dialogs.shortcuts.rows.moveBetweenCaptures"),
       shortcutIds: [
         "clipboard.selectPreviousCapture",
         "clipboard.selectNextCapture",
@@ -672,7 +686,7 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
     },
     {
       id: "jump-to-edges",
-      description: "Jump to the first or last capture",
+      description: t("dialogs.shortcuts.rows.jumpToEdges"),
       shortcutIds: [
         "clipboard.selectFirstCapture",
         "clipboard.selectLastCapture",
@@ -681,13 +695,13 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
     {
       id: "paste",
       description: windowMode
-        ? "Paste the selected item back"
-        : "Paste the selected item back in the floating window",
+        ? t("dialogs.shortcuts.rows.pasteBack")
+        : t("dialogs.shortcuts.rows.pasteFloating"),
       shortcutIds: ["clipboard.confirmWindowSelection"],
     },
     {
       id: "dismiss",
-      description: "Close preview or dismiss the floating window",
+      description: t("dialogs.shortcuts.rows.dismiss"),
       shortcutIds: ["clipboard.dismissWindow"],
     },
   ];
@@ -696,14 +710,14 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
     <div className="grid">
       <div className="border-b border-border/55 bg-[linear-gradient(180deg,color-mix(in_oklch,var(--card)_92%,white_8%),color-mix(in_oklch,var(--card)_86%,var(--background)_14%))] px-4 pt-3.5 pb-3 sm:px-5 sm:pt-4 sm:pb-3.5">
         <AlertDialogTitle className="text-base sm:text-[1.02rem]">
-          Clipboard shortcuts
+          {t("dialogs.shortcuts.title")}
         </AlertDialogTitle>
       </div>
 
       <div className="px-4 pt-2 pb-2.5 sm:px-5 sm:pt-2 sm:pb-3">
         <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-1 py-1 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground/70 uppercase sm:grid">
-          <span>Intro</span>
-          <span>Shortcut</span>
+          <span>{t("dialogs.shortcuts.actionHeader")}</span>
+          <span>{t("dialogs.shortcuts.shortcutHeader")}</span>
         </div>
 
         <div className="divide-y divide-border/45">
@@ -738,7 +752,7 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
 
       <div className="flex justify-end border-t border-border/55 px-4 pt-3 pb-3.5 sm:px-5 sm:pt-3 sm:pb-4">
         <AlertDialogCancel className="h-8 px-3 text-xs">
-          Got it
+          {t("dialogs.gotIt")}
         </AlertDialogCancel>
       </div>
     </div>
@@ -754,6 +768,7 @@ function ClipboardBoardToolbar({
   searchFocusRequest?: number;
   windowMode?: boolean;
 }) {
+  const t = useScopedT("clipboard");
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
   const isFilterSelectOpen = useClipboardBoardStore((state) => state.isFilterSelectOpen);
@@ -764,7 +779,8 @@ function ClipboardBoardToolbar({
   const setFilter = useClipboardBoardStore((state) => state.setFilter);
   const setIsFilterSelectOpen = useClipboardBoardStore((state) => state.setIsFilterSelectOpen);
   const isContextMenuOpen = useContextMenuStore((state) => state.isOpen);
-  const activeFilter = getClipboardFilterOption(filter);
+  const filterOptions = getClipboardFilterOptions(t);
+  const activeFilter = getClipboardFilterOption(filter, t);
   const hasSearchValue = searchValue.trim().length > 0;
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const hasFocusBlockingLayer = hasClipboardFocusBlockingLayer || isContextMenuOpen;
@@ -812,7 +828,7 @@ function ClipboardBoardToolbar({
             ref={searchInputRef}
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Type to filter entries..."
+            placeholder={t("toolbar.searchPlaceholder")}
             data-clipboard-search-input="true"
             autoFocus={autoFocusSearch}
             autoCapitalize="none"
@@ -831,7 +847,7 @@ function ClipboardBoardToolbar({
               type="button"
               onClick={() => setSearchValue("")}
               className="absolute top-1/2 right-2.5 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground/80 transition hover:bg-secondary/70 hover:text-foreground"
-              aria-label="Clear search keyword"
+              aria-label={t("toolbar.clearSearch")}
             >
               <X className="size-3" />
             </button>
@@ -840,7 +856,7 @@ function ClipboardBoardToolbar({
 
         <div className="flex items-center justify-end">
           <div className="relative">
-            <span className="sr-only">Filter capture types</span>
+            <span className="sr-only">{t("toolbar.filterAria")}</span>
             <Select
               open={isFilterSelectOpen}
               value={filter}
@@ -848,7 +864,7 @@ function ClipboardBoardToolbar({
               onValueChange={setFilter}
             >
               <SelectTrigger
-                aria-label="Filter capture types"
+                aria-label={t("toolbar.filterAria")}
                 className="h-10 w-[124px] rounded-[18px] border-border/55 bg-background/70 pl-3.5 text-[13px] shadow-none focus:border-border/70 focus:ring-[2px] focus:ring-ring/18 sm:w-[140px]"
                 style={
                   filter !== "all"
@@ -873,7 +889,7 @@ function ClipboardBoardToolbar({
                 align="end"
                 className="rounded-[18px] border-border/70 bg-card/96 shadow-[0_16px_40px_color-mix(in_oklch,var(--foreground)_12%,transparent)]"
               >
-                {clipboardFilterOptions.map((option) => (
+                {filterOptions.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}

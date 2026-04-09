@@ -3,6 +3,7 @@ import { ClipboardBoardPanel } from "@/features/clipboard/components/clipboard-b
 import { ClipboardBoardSummary } from "@/features/clipboard/components/clipboard-board-summary";
 import type { ClipboardEmptyStateTone } from "@/features/clipboard/components/clipboard-empty-state";
 import { useClipboardBoardView } from "@/features/clipboard/hooks/use-clipboard-board-view";
+import { useScopedT } from "@/i18n";
 
 export function ClipboardBoardFeature({
   showSummary = true,
@@ -18,6 +19,7 @@ export function ClipboardBoardFeature({
   searchFocusRequest?: number;
 }) {
   useShortcutScope("clipboard.panel");
+  const t = useScopedT("clipboard");
   const {
     captures,
     errorMessage,
@@ -56,14 +58,14 @@ export function ClipboardBoardFeature({
         onLoadMore={onLoadMore}
         emptyStateTitle={
           status === "loading"
-            ? "Loading clipboard history"
+            ? t("empty.loadingTitle")
             : status === "error"
-              ? "Clipboard history failed to load"
+              ? t("empty.errorTitle")
               : undefined
         }
         emptyStateDescription={
           status === "loading"
-            ? "The clipboard archive is being read from local storage."
+            ? t("empty.loadingDescription")
             : status === "error"
               ? errorMessage
               : undefined

@@ -18,6 +18,7 @@ import {
   captureReferencePath,
   isFileReferenceKind,
 } from "@/features/clipboard/lib/clipboard-board";
+import { tx } from "@/i18n";
 import { isTauriRuntime } from "@/lib/tauri";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import type { ClipboardCapture } from "@/types/shell";
@@ -25,7 +26,7 @@ import type { ClipboardCapture } from "@/types/shell";
 export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCapture>([
   contextMenuItem({
     key: "copy",
-    label: "Copy Again",
+    label: tx("clipboard", "actions.copyAgain"),
     icon: <Copy className="size-4" />,
     command: {
       id: "clipboard.copyCapture",
@@ -34,7 +35,7 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
   }),
   contextMenuItem({
     key: "open-link",
-    label: "Open Link",
+    label: tx("clipboard", "actions.openLink"),
     icon: <ExternalLink className="size-4" />,
     hidden: (capture) => capture.contentKind !== "link",
     command: {
@@ -46,7 +47,7 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
   }),
   contextMenuItem({
     key: "open-image",
-    label: "Open Image Viewer",
+    label: tx("clipboard", "actions.openImageViewer"),
     icon: <Eye className="size-4" />,
     hidden: (capture) => capture.contentKind !== "image",
     command: {
@@ -56,7 +57,7 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
   }),
   contextMenuItem({
     key: "open-preview",
-    label: "Open In Preview",
+    label: tx("clipboard", "actions.openInPreview"),
     icon: <ImageIcon className="size-4" />,
     hidden: (capture) => capture.contentKind !== "image" || !capture.assetPath,
     command: {
@@ -66,7 +67,7 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
   }),
   contextMenuItem({
     key: "open-file-default-app",
-    label: "Open",
+    label: tx("clipboard", "actions.open"),
     icon: <ExternalLink className="size-4" />,
     hidden: (capture) =>
       !isFileReferenceKind(capture.contentKind)
@@ -80,7 +81,10 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
   }),
   contextMenuItem({
     key: "reveal-asset",
-    label: (capture) => (isFileReferenceKind(capture.contentKind) ? "Reveal File" : "Reveal Asset"),
+    label: (capture) =>
+      isFileReferenceKind(capture.contentKind)
+        ? tx("clipboard", "actions.revealFile")
+        : tx("clipboard", "actions.revealAsset"),
     icon: <FolderOpen className="size-4" />,
     hidden: (capture) =>
       capture.contentKind === "image"
@@ -103,8 +107,8 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
         .getState()
         .pinnedCaptures
         .some((entry) => entry.capture.id === capture.id)
-        ? "Unpin"
-        : "Pin to Top",
+        ? tx("clipboard", "actions.unpin")
+        : tx("clipboard", "actions.pinToTop"),
     icon: (capture) =>
       useClipboardBoardStore
         .getState()
@@ -127,7 +131,7 @@ export const clipboardCaptureContextMenu = createContextMenuRegistry<ClipboardCa
   contextMenuSeparator("clipboard-divider-danger"),
   contextMenuItem({
     key: "delete",
-    label: "Delete Capture",
+    label: tx("clipboard", "actions.deleteCapture"),
     icon: <Trash2 className="size-4" />,
     danger: true,
     command: {

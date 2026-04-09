@@ -4,18 +4,24 @@ import { Copy, Expand, ImageIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useCommand } from "@/core/commands";
 import { useContextMenu } from "@/core/context-menu";
 import { clipboardCaptureContextMenu } from "@/features/clipboard/clipboard-capture-context-menu";
-import { Tooltip } from "@/components/ui/tooltip";
 import {
+  captureSourceLabel,
   captureSurfaceClassName,
   detailRows,
+  formatCaptureStatus,
   formatKindLabel,
   statusVariant,
 } from "@/features/clipboard/lib/clipboard-board";
-import { resolveFileReferencePreviewModel } from "@/features/clipboard/lib/file-reference-preview";
+import {
+  getFileReferenceContentTypeLabel,
+  resolveFileReferencePreviewModel,
+} from "@/features/clipboard/lib/file-reference-preview";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
+import { useScopedT, type TranslationKey } from "@/i18n";
 import { formatRelativeTimestamp } from "@/lib/time";
 import type { ClipboardCapture } from "@/types/shell";
 
@@ -25,6 +31,14 @@ const CaptureDetailPreview = lazy(async () => {
     default: module.CaptureDetailPreview,
   };
 });
+
+type ClipboardTranslate = (
+  key: TranslationKey<"clipboard">,
+  options?: {
+    defaultValue?: string;
+    values?: Record<string, boolean | Date | null | number | string | undefined>;
+  },
+) => string;
 
 export function ClipboardCaptureDetail({
   capture,
@@ -37,6 +51,7 @@ export function ClipboardCaptureDetail({
   onOpenImage: () => void;
   onOpenImageOcr: () => void;
 }) {
+  const t = useScopedT("clipboard");
   const copyCapture = useCommand<{ capture: ClipboardCapture }>("clipboard.copyCapture");
   const openImagePreview = useCommand<{ path: string }>("system.openImageInPreview");
   const { onContextMenu } = useContextMenu(clipboardCaptureContextMenu);
@@ -45,14 +60,14 @@ export function ClipboardCaptureDetail({
     return <div className="min-h-0 flex-1" aria-hidden="true" />;
   }
 
-  const kindLabel = resolveCaptureKindLabel(capture);
+  const kindLabel = resolveCaptureKindLabel(capture, t);
   const toolbarMeta = (
     <>
       <Badge className="px-1.5 py-0.5 text-[10px] font-medium">
         {kindLabel}
       </Badge>
       <Badge variant={statusVariant(capture.status)} className="px-1.5 py-0.5 text-[10px] font-medium">
-        {capture.status}
+        {formatCaptureStatus(capture.status, t)}
       </Badge>
       <span className="shrink-0 text-[9px] text-muted-foreground/76">
         {formatRelativeTimestamp(capture.capturedAt)}
@@ -63,19 +78,19 @@ export function ClipboardCaptureDetail({
   const toolbarActions = (
     <>
       <TooltipIconButton
-        label="Copy Again"
+        label={t("actions.copyAgain")}
         onClick={() => void copyCapture.execute({ capture })}
       >
         <Copy />
       </TooltipIconButton>
       {capture.contentKind === "image" && capture.assetPath ? (
-        <TooltipIconButton label="Enlarge" onClick={onOpenImage}>
+        <TooltipIconButton label={t("actions.enlarge")} onClick={onOpenImage}>
           <Expand />
         </TooltipIconButton>
       ) : null}
       {capture.contentKind === "image" && capture.assetPath ? (
         <TooltipIconButton
-          label="Open in Preview"
+          label={t("actions.openInPreview")}
           onClick={() =>
             void openImagePreview.execute({
               path: capture.assetPath ?? "",
@@ -113,12 +128,15 @@ export function ClipboardCaptureDetail({
   );
 }
 
-function resolveCaptureKindLabel(capture: ClipboardCapture) {
+function resolveCaptureKindLabel(
+  capture: ClipboardCapture,
+  t: ClipboardTranslate,
+) {
   if (capture.contentKind === "file" || capture.contentKind === "video") {
-    return resolveFileReferencePreviewModel(capture).contentTypeLabel;
+    return getFileReferenceContentTypeLabel(resolveFileReferencePreviewModel(capture), t);
   }
 
-  return formatKindLabel(capture.contentKind);
+  return formatKindLabel(capture.contentKind, t);
 }
 
 function TooltipIconButton({
@@ -151,10 +169,12 @@ function TooltipIconButton({
 }
 
 function DetailInformation({ capture }: { capture: ClipboardCapture }) {
-  const rows = detailRows(capture);
+  const t = useScopedT("clipboard");
+  const rows = detailRows(capture, t);
   const visibleRows = rows.slice(0, 6);
   const cells = Array.from({ length: 6 }, (_, index) => visibleRows[index] ?? null);
   const sourceAppIconSrc = useClipboardAssetSrc(capture.sourceAppIconPath);
+  const sourceAppLabel = captureSourceLabel(capture, t);
 
   return (
     <section className="px-2 pb-2 pt-0">
@@ -162,7 +182,7 @@ function DetailInformation({ capture }: { capture: ClipboardCapture }) {
         <div className="app-detail-grid h-[108px]">
           {cells.map((cell, index) => (
             <div
-              key={cell ? cell.label : `empty-${index}`}
+              key={cell ? cell.key : `empty-${index}`}
               className="app-detail-grid-cell min-w-0 px-2.5 py-2"
             >
               {cell ? (
@@ -174,12 +194,16 @@ function DetailInformation({ capture }: { capture: ClipboardCapture }) {
                     className="app-selectable min-w-0 truncate text-[12px] leading-5 text-foreground/80"
                     title={cell.value}
                   >
-                    {cell.label === "Source App" && sourceAppIconSrc ? (
+                    {cell.key === "sourceApp" && sourceAppIconSrc ? (
                       <span className="inline-flex min-w-0 items-center gap-2">
                         <span className="inline-flex size-[18px] shrink-0 overflow-hidden rounded-md bg-card/72 align-middle">
                           <img
                             src={sourceAppIconSrc}
-                            alt={capture.sourceAppName || capture.source || "Source application icon"}
+                            alt={t("capture.detail.sourceAppIconAlt", {
+                              values: {
+                                appName: sourceAppLabel,
+                              },
+                            })}
                             className="size-full object-cover"
                           />
                         </span>

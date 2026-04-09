@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { experimentalBadgeClassName } from "@/components/ui/experimental-badge-classes";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -113,7 +114,7 @@ export function AiSettingsSection({
         </span>
       )}
       badgeVariant="outline"
-      badgeClassName="border-dashed border-amber-500/45 bg-amber-50 text-amber-900 dark:border-amber-300/35 dark:bg-amber-500/12 dark:text-amber-100"
+      badgeClassName={experimentalBadgeClassName()}
       action={(
         <Button type="button" variant="outline" size="sm" onClick={() => addProvider()}>
           {t("provider.list.add")}

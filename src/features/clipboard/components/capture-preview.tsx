@@ -42,16 +42,16 @@ import {
   normalizeHighlightQuery,
 } from "@/features/clipboard/lib/clipboard-preview-highlight";
 import {
+  captureTitle,
   captureSurfaceClassName,
   isFileReferenceKind,
 } from "@/features/clipboard/lib/clipboard-board";
-import { resolveFileReferencePreviewModel } from "@/features/clipboard/lib/file-reference-preview";
 import {
   getExternalLinkTargetFromEventTarget,
   openExternalLink,
   resolveExternalLinkTarget,
 } from "@/lib/external-links";
-import { useScopedT } from "@/i18n";
+import { useScopedT, type TranslationKey } from "@/i18n";
 import { resolvePortalContainer } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
@@ -60,6 +60,13 @@ const MIN_IMAGE_SCALE = 0.8;
 const DEFAULT_IMAGE_SCALE = 1;
 const MAX_IMAGE_SCALE = 6;
 type TextPreviewMode = "preview" | "raw_text" | "raw_rich";
+type ClipboardTranslate = (
+  key: TranslationKey<"clipboard">,
+  options?: {
+    defaultValue?: string;
+    values?: Record<string, boolean | Date | null | number | string | undefined>;
+  },
+) => string;
 
 export function CaptureDetailPreview({
   capture,
@@ -78,6 +85,7 @@ export function CaptureDetailPreview({
   toolbarMeta?: ReactNode;
   toolbarActions?: ReactNode;
 }) {
+  const t = useScopedT("clipboard");
   const tCommon = useScopedT("common");
   const openTarget = useCommand<{ target: string }>("system.openExternalTarget");
   const assetSrc = useClipboardAssetSrc(
@@ -102,7 +110,7 @@ export function CaptureDetailPreview({
               >
                 <img
                   src={assetSrc}
-                  alt={capturePreviewTitle(capture)}
+                  alt={capturePreviewTitle(capture, t)}
                   className="max-h-full w-full rounded-[18px] object-contain"
                 />
               </button>
@@ -125,8 +133,8 @@ export function CaptureDetailPreview({
             </div>
           ) : (
             <PreviewEmptyState
-              title="Image preview unavailable"
-              description="The capture exists, but the local preview asset could not be loaded into the board."
+              title={t("empty.imagePreviewUnavailableTitle")}
+              description={t("empty.imagePreviewUnavailableDescription")}
             />
           )}
         </div>
@@ -148,7 +156,7 @@ export function CaptureDetailPreview({
               onClick={() => void openTarget.execute({ target })}
               className="app-preview-inline-action app-kind-text-link inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium"
             >
-              Open Link
+              {t("preview.linkOpen")}
               <ExternalLink className="size-3.5" />
             </button>
           )}
@@ -158,7 +166,7 @@ export function CaptureDetailPreview({
           <div className="space-y-2.5">
             <div className="space-y-2">
               <p className="app-kind-text-link text-lg font-semibold leading-7">
-                {hostname ?? "Link capture"}
+                {hostname ?? t("preview.titles.linkFallback")}
               </p>
               <p className="app-selectable break-all font-mono text-[13px] leading-6 text-muted-foreground/86">
                 {target}
@@ -206,6 +214,7 @@ function TextCapturePreview({
   toolbarMeta?: ReactNode;
   toolbarActions?: ReactNode;
 }) {
+  const t = useScopedT("clipboard");
   const [mode, setMode] = useState<TextPreviewMode>(() => preferredTextPreviewMode(capture));
   const normalizedMarkdownSource = normalizeMarkdownSource(capture.rawText);
   const normalizedHighlightQuery = normalizeHighlightQuery(highlightQuery);
@@ -217,7 +226,7 @@ function TextCapturePreview({
   const htmlPreview = canRenderHtmlPreview(capture);
   const markdownPreview = canRenderMarkdownPreview(capture);
   const previewKind = markdownPreview ? "markdown" : htmlPreview ? "html" : "text";
-  const tabs = buildTextPreviewTabs(capture, previewKind);
+  const tabs = buildTextPreviewTabs(capture, previewKind, t);
   const showModeToggle = tabs.length > 1;
   const previewScrollKey = `${capture.id}:${mode}:${deferredHighlightQuery}`;
 
@@ -495,9 +504,10 @@ function RawTextPreview({
   tone?: "raw" | "reading";
   className?: string;
 }) {
+  const t = useScopedT("clipboard");
   const highlightedContent = useMemo(
-    () => highlightTextContent(content, highlightQuery, "No raw source available."),
-    [content, highlightQuery],
+    () => highlightTextContent(content, highlightQuery, t("preview.noRawSource")),
+    [content, highlightQuery, t],
   );
 
   return (
@@ -541,6 +551,7 @@ export function CaptureImageLightbox({
   onClose: () => void;
 }) {
   const assetSrc = useClipboardAssetSrc(capture?.assetPath);
+  const t = useScopedT("clipboard");
   useShortcutScope("clipboard.imagePreview", { active: Boolean(capture) });
   const portalContainer = resolvePortalContainer();
 
@@ -560,7 +571,7 @@ export function CaptureImageLightbox({
             variant="outline"
             size="icon"
             className="pointer-events-auto size-10 rounded-full border-white/20 bg-black/45 text-white shadow-none hover:bg-black/60 hover:text-white"
-            aria-label="Close preview"
+            aria-label={t("preview.closePreview")}
             onClick={(event) => {
               event.stopPropagation();
               onClose();
@@ -571,7 +582,7 @@ export function CaptureImageLightbox({
         </div>
         <InteractiveImageViewport
           src={assetSrc}
-          alt={capturePreviewTitle(capture)}
+          alt={capturePreviewTitle(capture, t)}
           width={capture.imageWidth ?? undefined}
           height={capture.imageHeight ?? undefined}
         />
@@ -709,6 +720,7 @@ function InteractiveImageViewport({
   width?: number;
   height?: number;
 }) {
+  const t = useScopedT("clipboard");
   const [displayScale, setDisplayScale] = useState(DEFAULT_IMAGE_SCALE);
 
   return (
@@ -824,8 +836,8 @@ function InteractiveImageViewport({
               onClick={(event) => event.stopPropagation()}
             >
               <PreviewEmptyState
-                title="Image preview unavailable"
-                description="The image asset could not be loaded for enlarged preview."
+                title={t("empty.imagePreviewUnavailableTitle")}
+                description={t("empty.enlargedPreviewUnavailableDescription")}
               />
             </div>
           )}
@@ -879,28 +891,31 @@ function markdownLooksSupported(capture: ClipboardCapture) {
 function buildTextPreviewTabs(
   capture: ClipboardCapture,
   previewKind: "markdown" | "html" | "text",
+  t: ClipboardTranslate,
 ) {
   const tabs: Array<{ mode: TextPreviewMode; label: string }> = [];
 
   if (previewKind === "markdown") {
-    tabs.push({ mode: "preview", label: "Markdown" });
+    tabs.push({ mode: "preview", label: t("preview.tabs.markdown") });
   } else if (previewKind === "html") {
-    tabs.push({ mode: "preview", label: "Rich Text" });
+    tabs.push({ mode: "preview", label: t("preview.tabs.richText") });
   }
 
   if (capture.rawText.trim()) {
-    tabs.push({ mode: "raw_text", label: "Text" });
+    tabs.push({ mode: "raw_text", label: t("preview.tabs.text") });
   }
 
   if (capture.rawRich?.trim()) {
     tabs.push({
       mode: "raw_rich",
-      label: capture.rawRichFormat === "html" ? "HTML" : "Raw Rich",
+      label: capture.rawRichFormat === "html"
+        ? t("preview.tabs.html")
+        : t("preview.tabs.rawRich"),
     });
   }
 
   if (tabs.length === 0) {
-    tabs.push({ mode: "raw_text", label: "Raw" });
+    tabs.push({ mode: "raw_text", label: t("preview.tabs.raw") });
   }
 
   return tabs;
@@ -934,30 +949,11 @@ function normalizeOcrText(input: string | null | undefined) {
   return input?.trim() ?? "";
 }
 
-function capturePreviewTitle(capture: ClipboardCapture) {
-  if (capture.contentKind === "image") {
-    return capture.imageWidth && capture.imageHeight
-      ? `Image (${capture.imageWidth}×${capture.imageHeight})`
-      : capture.preview || "Image capture";
-  }
-
-  if (capture.contentKind === "link") {
-    return capture.preview || capture.linkUrl || "Link capture";
-  }
-
-  if (isFileReferenceKind(capture.contentKind)) {
-    const model = resolveFileReferencePreviewModel(capture);
-    return capture.preview || model.fileName || model.contentTypeLabel;
-  }
-
-  const normalized = (capture.preview || capture.rawText).trim();
-  if (normalized) {
-    return normalized;
-  }
-
-  return capture.contentKind === "rich_text"
-    ? "Formatted text capture"
-    : "Text capture";
+function capturePreviewTitle(
+  capture: ClipboardCapture,
+  t: ClipboardTranslate,
+) {
+  return captureTitle(capture, t);
 }
 
 function extractHostname(target: string) {

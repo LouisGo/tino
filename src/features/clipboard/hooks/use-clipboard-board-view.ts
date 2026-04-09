@@ -1,44 +1,46 @@
-import { useDeferredValue, useEffect, useLayoutEffect, useMemo } from "react"
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo } from "react";
 
 import {
   useInfiniteQuery,
   useQuery,
   useQueryClient,
   type InfiniteData,
-} from "@tanstack/react-query"
+} from "@tanstack/react-query";
 
-import { queryKeys } from "@/app/query-keys"
-import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events"
+import { queryKeys } from "@/app/query-keys";
+import { useClipboardCaptureEvents } from "@/features/clipboard/hooks/use-clipboard-capture-events";
 import {
   getDefaultClipboardSelection,
   matchesFilter,
   matchesSearch,
-} from "@/features/clipboard/lib/clipboard-board"
-import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store"
-import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults"
-import { getClipboardPage, getPinnedClipboardCaptures } from "@/lib/tauri"
-import type { ClipboardPageResult, PinnedClipboardCapture } from "@/types/shell"
+} from "@/features/clipboard/lib/clipboard-board";
+import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
+import { useScopedT } from "@/i18n";
+import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults";
+import { getClipboardPage, getPinnedClipboardCaptures } from "@/lib/tauri";
+import type { ClipboardPageResult, PinnedClipboardCapture } from "@/types/shell";
 
-const CLIPBOARD_PAGE_SIZE = 40
-const CLIPBOARD_QUERY_STALE_TIME = Number.POSITIVE_INFINITY
+const CLIPBOARD_PAGE_SIZE = 40;
+const CLIPBOARD_QUERY_STALE_TIME = Number.POSITIVE_INFINITY;
 
 export function useClipboardBoardView() {
-  const searchValue = useClipboardBoardStore((state) => state.searchValue)
-  const filter = useClipboardBoardStore((state) => state.filter)
-  const deferredSearch = useDeferredValue(searchValue)
-  const queryClient = useQueryClient()
+  const t = useScopedT("clipboard");
+  const searchValue = useClipboardBoardStore((state) => state.searchValue);
+  const filter = useClipboardBoardStore((state) => state.filter);
+  const deferredSearch = useDeferredValue(searchValue);
+  const queryClient = useQueryClient();
   const listQueryKey = useMemo(
     () => queryKeys.clipboardPage(filter, deferredSearch),
     [filter, deferredSearch],
-  )
-  const summaryQueryKey = queryKeys.clipboardPageSummary()
-  const pinnedQueryKey = queryKeys.clipboardPinnedCaptures()
-  const cachedSummaryPage = queryClient.getQueryData<ClipboardPageResult>(summaryQueryKey)
+  );
+  const summaryQueryKey = queryKeys.clipboardPageSummary();
+  const pinnedQueryKey = queryKeys.clipboardPinnedCaptures();
+  const cachedSummaryPage = queryClient.getQueryData<ClipboardPageResult>(summaryQueryKey);
   const cachedPinnedCaptures =
-    queryClient.getQueryData<PinnedClipboardCapture[]>(pinnedQueryKey)
+    queryClient.getQueryData<PinnedClipboardCapture[]>(pinnedQueryKey);
   const cachedListPage = queryClient.getQueryData<InfiniteData<ClipboardPageResult, number>>(
     listQueryKey,
-  )
+  );
 
   const { data: summaryPage } = useQuery({
     queryKey: summaryQueryKey,
@@ -47,17 +49,17 @@ export function useClipboardBoardView() {
         page: 0,
         pageSize: 1,
         filter: "all",
-    }),
+      }),
     staleTime: CLIPBOARD_QUERY_STALE_TIME,
     placeholderData: (previousData) => previousData ?? cachedSummaryPage,
-  })
+  });
 
   const { data: pinnedCaptures = [] } = useQuery({
     queryKey: pinnedQueryKey,
     queryFn: getPinnedClipboardCaptures,
     staleTime: CLIPBOARD_QUERY_STALE_TIME,
     placeholderData: (previousData) => previousData ?? cachedPinnedCaptures,
-  })
+  });
 
   const {
     data,
@@ -82,30 +84,30 @@ export function useClipboardBoardView() {
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: CLIPBOARD_QUERY_STALE_TIME,
     placeholderData: (previousData) => previousData ?? cachedListPage,
-  })
+  });
 
   useClipboardCaptureEvents(() => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageBase() })
-    void queryClient.invalidateQueries({ queryKey: summaryQueryKey, exact: true })
-    void queryClient.invalidateQueries({ queryKey: pinnedQueryKey, exact: true })
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() })
-  })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageBase() });
+    void queryClient.invalidateQueries({ queryKey: summaryQueryKey, exact: true });
+    void queryClient.invalidateQueries({ queryKey: pinnedQueryKey, exact: true });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() });
+  });
 
-  const pages = data?.pages ?? []
-  const captures = pages.flatMap((page) => page.captures)
+  const pages = data?.pages ?? [];
+  const captures = pages.flatMap((page) => page.captures);
   const visiblePinnedCaptures = useMemo(
     () =>
       pinnedCaptures
         .filter(({ capture }) => matchesFilter(capture.contentKind, filter))
-        .filter(({ capture }) => matchesSearch(capture, deferredSearch))
+        .filter(({ capture }) => matchesSearch(capture, deferredSearch, t))
         .map(({ capture }) => capture),
-    [deferredSearch, filter, pinnedCaptures],
-  )
+    [deferredSearch, filter, pinnedCaptures, t],
+  );
   const visibleCaptures = useMemo(
     () => [...visiblePinnedCaptures, ...captures],
     [captures, visiblePinnedCaptures],
-  )
-  const firstPage = pages[0]
+  );
+  const firstPage = pages[0];
   const summary = summaryPage?.summary ?? {
     total: 0,
     text: 0,
@@ -113,63 +115,63 @@ export function useClipboardBoardView() {
     images: 0,
     videos: 0,
     files: 0,
-  }
+  };
   const historyDays =
-    summaryPage?.historyDays ?? firstPage?.historyDays ?? DEFAULT_CLIPBOARD_HISTORY_DAYS
+    summaryPage?.historyDays ?? firstPage?.historyDays ?? DEFAULT_CLIPBOARD_HISTORY_DAYS;
   const status: "loading" | "error" | "ready" =
-    !firstPage && isPending ? "loading" : !firstPage && isError ? "error" : "ready"
+    !firstPage && isPending ? "loading" : !firstPage && isError ? "error" : "ready";
   const errorMessage =
-    error instanceof Error ? error.message : "Clipboard history could not be loaded."
+    error instanceof Error ? error.message : t("errors.historyLoadFailed");
 
   useLayoutEffect(() => {
-    const store = useClipboardBoardStore.getState()
-    store.setPinnedCaptures(pinnedCaptures)
-    store.setVisibleCaptures(visibleCaptures)
-    const preferredSelectedCaptureId = store.preferredSelectedCaptureId
+    const store = useClipboardBoardStore.getState();
+    store.setPinnedCaptures(pinnedCaptures);
+    store.setVisibleCaptures(visibleCaptures);
+    const preferredSelectedCaptureId = store.preferredSelectedCaptureId;
     const defaultCaptureId =
-      getDefaultClipboardSelection(captures, visiblePinnedCaptures)?.id ?? null
+      getDefaultClipboardSelection(captures, visiblePinnedCaptures)?.id ?? null;
 
     if (visibleCaptures.length === 0) {
       if (
         store.selectedCaptureId !== null
         && preferredSelectedCaptureId === null
       ) {
-        store.setSelectedCaptureId(null)
+        store.setSelectedCaptureId(null);
       }
-      return
+      return;
     }
 
     if (preferredSelectedCaptureId) {
       const preferredCapture = visibleCaptures.find(
         (capture) => capture.id === preferredSelectedCaptureId,
-      )
+      );
 
       if (preferredCapture) {
         if (store.selectedCaptureId !== preferredCapture.id) {
-          store.setSelectedCaptureId(preferredCapture.id)
+          store.setSelectedCaptureId(preferredCapture.id);
         }
-        store.setPreferredSelectedCaptureId(null)
-        return
+        store.setPreferredSelectedCaptureId(null);
+        return;
       }
 
-      return
+      return;
     }
 
     if (
       !store.selectedCaptureId
       || !visibleCaptures.some((capture) => capture.id === store.selectedCaptureId)
     ) {
-      store.setSelectedCaptureId(defaultCaptureId)
+      store.setSelectedCaptureId(defaultCaptureId);
     }
-  }, [captures, pinnedCaptures, visibleCaptures, visiblePinnedCaptures])
+  }, [captures, pinnedCaptures, visibleCaptures, visiblePinnedCaptures]);
 
   useEffect(
     () => () => {
-      useClipboardBoardStore.getState().setPinnedCaptures([])
-      useClipboardBoardStore.getState().setVisibleCaptures([])
+      useClipboardBoardStore.getState().setPinnedCaptures([]);
+      useClipboardBoardStore.getState().setVisibleCaptures([]);
     },
     [],
-  )
+  );
 
   return {
     captures,
@@ -183,5 +185,5 @@ export function useClipboardBoardView() {
     onRetry: status === "error" ? () => void refetch() : undefined,
     status,
     summary,
-  }
+  };
 }

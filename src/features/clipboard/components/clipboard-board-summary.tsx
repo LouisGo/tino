@@ -1,10 +1,11 @@
-import { cn } from "@/lib/utils";
-import type { ClipboardPageSummary } from "@/types/shell";
 import {
   summarizeRatio,
   type ClipboardFilter,
 } from "@/features/clipboard/lib/clipboard-board";
 import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
+import { useScopedT } from "@/i18n";
+import { cn } from "@/lib/utils";
+import type { ClipboardPageSummary } from "@/types/shell";
 
 export function ClipboardBoardSummary({
   summary,
@@ -15,56 +16,66 @@ export function ClipboardBoardSummary({
   historyDays: number;
   status?: "loading" | "error" | "ready";
 }) {
+  const t = useScopedT("clipboard");
   const activeFilter = useClipboardBoardStore((state) => state.filter);
   const toggleSummaryFilter = useClipboardBoardStore((state) => state.toggleSummaryFilter);
   const statusLabel =
-    status === "loading" ? "Loading" : status === "error" ? "Read Error" : null;
+    status === "loading"
+      ? t("board.status.loading")
+      : status === "error"
+        ? t("board.status.readError")
+        : null;
+  const waitingHint = t("board.summary.waiting");
   const summaryTiles = [
     {
       filter: "all" as ClipboardFilter,
-      label: "Recent",
+      label: t("filters.all.shortLabel"),
       value: statusLabel ? "..." : summary.total,
       hint:
         status === "loading"
-          ? "Reading recent clipboard history"
+          ? t("board.summary.recentLoadingHint")
           : status === "error"
-            ? "Check runtime logs and retry"
-            : `Within the last ${historyDays} day${historyDays === 1 ? "" : "s"}`,
+            ? t("board.summary.recentErrorHint")
+            : t("board.summary.recentWindow", {
+                values: {
+                  days: historyDays,
+                },
+              }),
       toneClass: "app-summary-tone-recent",
     },
     {
       filter: "text" as ClipboardFilter,
-      label: "Text",
+      label: t("filters.text.shortLabel"),
       value: statusLabel ? "..." : summary.text,
-      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.text, summary.total),
+      hint: statusLabel ? waitingHint : summarizeRatio(summary.text, summary.total, t),
       toneClass: "app-summary-tone-text",
     },
     {
       filter: "link" as ClipboardFilter,
-      label: "Links",
+      label: t("filters.link.shortLabel"),
       value: statusLabel ? "..." : summary.links,
-      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.links, summary.total),
+      hint: statusLabel ? waitingHint : summarizeRatio(summary.links, summary.total, t),
       toneClass: "app-summary-tone-links",
     },
     {
       filter: "image" as ClipboardFilter,
-      label: "Images",
+      label: t("filters.image.shortLabel"),
       value: statusLabel ? "..." : summary.images,
-      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.images, summary.total),
+      hint: statusLabel ? waitingHint : summarizeRatio(summary.images, summary.total, t),
       toneClass: "app-summary-tone-images",
     },
     {
       filter: "video" as ClipboardFilter,
-      label: "Videos",
+      label: t("filters.video.shortLabel"),
       value: statusLabel ? "..." : summary.videos,
-      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.videos, summary.total),
+      hint: statusLabel ? waitingHint : summarizeRatio(summary.videos, summary.total, t),
       toneClass: "app-summary-tone-videos",
     },
     {
       filter: "file" as ClipboardFilter,
-      label: "Files",
+      label: t("filters.file.shortLabel"),
       value: statusLabel ? "..." : summary.files,
-      hint: statusLabel ? "Waiting for summary" : summarizeRatio(summary.files, summary.total),
+      hint: statusLabel ? waitingHint : summarizeRatio(summary.files, summary.total, t),
       toneClass: "app-summary-tone-files",
     },
   ] as const;
@@ -74,10 +85,15 @@ export function ClipboardBoardSummary({
       <div className="app-hero-clipboard px-3 py-3 sm:px-4 sm:py-3.5">
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-[11px] font-semibold tracking-[0.16em] text-primary uppercase sm:text-xs">
-            Clipboard Board
+            {t("board.title")}
           </p>
           <p className="rounded-full border border-border/80 bg-surface-elevated px-2.5 py-0.5 text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-            {statusLabel ?? `${summary.total} Captures`}
+            {statusLabel
+              ?? t("board.status.captureCount", {
+                values: {
+                  count: summary.total,
+                },
+              })}
           </p>
         </div>
 
@@ -114,6 +130,8 @@ function SummaryTile({
   active: boolean;
   onClick: () => void;
 }) {
+  const t = useScopedT("clipboard");
+
   return (
     <button
       type="button"
@@ -138,7 +156,7 @@ function SummaryTile({
               : "border-transparent bg-transparent text-transparent",
           )}
         >
-          Active
+          {t("board.summary.active")}
         </span>
       </div>
       <p className="mt-1 text-[1.4rem] font-semibold leading-none tracking-tight sm:text-[1.55rem]">

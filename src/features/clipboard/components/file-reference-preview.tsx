@@ -19,16 +19,25 @@ import { useCommand } from "@/core/commands";
 import { FileReferenceTypeIcon } from "@/features/clipboard/components/file-reference-type-icon";
 import { PreviewToolbar } from "@/features/clipboard/components/preview-toolbar";
 import {
+  getFileReferenceContentTypeLabel,
   isPreviewableFileReference,
   resolveFileReferencePreviewModel,
   type FileReferencePreviewKind,
   type FileReferencePreviewModel,
 } from "@/features/clipboard/lib/file-reference-preview";
+import { useScopedT, type TranslationKey } from "@/i18n";
 import { isTauriRuntime, resolveAssetUrl } from "@/lib/tauri";
 import { cn } from "@/lib/utils";
 import type { ClipboardCapture } from "@/types/shell";
 
 type FileReferenceFallbackTone = "default" | "missing" | "failed";
+type ClipboardTranslate = (
+  key: TranslationKey<"clipboard">,
+  options?: {
+    defaultValue?: string;
+    values?: Record<string, boolean | Date | null | number | string | undefined>;
+  },
+) => string;
 
 export function FileReferencePreview({
   capture,
@@ -41,7 +50,9 @@ export function FileReferencePreview({
   toolbarMeta?: ReactNode;
   toolbarActions?: ReactNode;
 }) {
+  const t = useScopedT("clipboard");
   const model = resolveFileReferencePreviewModel(capture);
+  const contentTypeLabel = getFileReferenceContentTypeLabel(model, t);
   const previewSrc = resolveAssetUrl(model.path);
   const thumbnailSrc = capture.contentKind === "video"
     ? resolveAssetUrl(capture.thumbnailPath)
@@ -87,6 +98,7 @@ export function FileReferencePreview({
         <GenericFileReferenceLayout
           capture={capture}
           model={model}
+          contentTypeLabel={contentTypeLabel}
           tone={resolveFallbackTone(model, mediaLoadFailed)}
         />
       )}
@@ -105,8 +117,12 @@ function FileReferenceToolbarControls({
   canOpenInDefaultApp: boolean;
   canRevealPath: boolean;
 }) {
+  const t = useScopedT("clipboard");
   const openPathInDefaultApp = useCommand<{ path: string }>("system.openPathInDefaultApp");
   const revealCaptureAsset = useCommand<{ capture: ClipboardCapture; path: string }>("clipboard.revealCaptureAsset");
+  const revealLabel = capture.contentKind === "file"
+    ? t("actions.revealFile")
+    : t("actions.revealAsset");
 
   return (
     <div className="flex items-center gap-1.5">
@@ -114,12 +130,14 @@ function FileReferenceToolbarControls({
         <button
           type="button"
           onClick={() => void openPathInDefaultApp.execute({ path: model.path })}
+          aria-label={t("actions.open")}
+          title={t("actions.open")}
           className={cn(
             "app-preview-inline-action inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
             model.kind === "video" ? "app-kind-text-video" : "app-kind-text-file",
           )}
         >
-          Open
+          {t("actions.open")}
           <ExternalLink className="size-3.5" />
         </button>
       ) : null}
@@ -131,12 +149,14 @@ function FileReferenceToolbarControls({
               capture,
               path: model.path,
             })}
+          aria-label={revealLabel}
+          title={revealLabel}
           className={cn(
             "app-preview-inline-action inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
             model.kind === "video" ? "app-kind-text-video" : "app-kind-text-file",
           )}
         >
-          Reveal
+          {revealLabel}
           <FolderOpen className="size-3.5" />
         </button>
       ) : null}
@@ -185,13 +205,14 @@ function FileReferenceInlineStage({
   thumbnailSrc?: string | null;
   onPreviewError: () => void;
 }) {
+  const t = useScopedT("clipboard");
   switch (model.kind) {
     case "image":
       return (
         <div className="flex size-full items-center justify-center p-3">
           <img
             src={previewSrc}
-            alt={capture.preview || model.fileName || "Image file preview"}
+            alt={capture.preview || model.fileName || t("preview.file.imagePreviewAlt")}
             className="max-h-full max-w-full rounded-[18px] object-contain"
             onError={onPreviewError}
           />
@@ -203,7 +224,7 @@ function FileReferenceInlineStage({
           key={`${previewSrc}:${thumbnailSrc ?? ""}`}
           previewSrc={previewSrc}
           posterSrc={thumbnailSrc}
-          title={capture.preview || model.fileName || "Video preview"}
+          title={capture.preview || model.fileName || t("preview.file.videoPreviewTitle")}
           onPreviewError={onPreviewError}
         />
       );
@@ -216,10 +237,10 @@ function FileReferenceInlineStage({
             </div>
             <div className="space-y-1.5">
               <p className="text-base font-semibold text-foreground/90">
-                {capture.preview || model.fileName || "Audio file"}
+                {capture.preview || model.fileName || t("preview.file.audioFallbackTitle")}
               </p>
               <p className="text-[11px] leading-5 text-muted-foreground/76">
-                This local audio file plays inline from its saved path.
+                {t("preview.file.audioHint")}
               </p>
             </div>
             <audio
@@ -236,7 +257,11 @@ function FileReferenceInlineStage({
       return (
         <div className="size-full bg-white">
           <iframe
-            title={`${model.fileName || "PDF document"} preview`}
+            title={t("preview.file.pdfFrameTitle", {
+              values: {
+                name: model.fileName || t("fileTypes.pdfDocument"),
+              },
+            })}
             src={`${previewSrc}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
             className="size-full bg-white"
           />
@@ -258,6 +283,7 @@ function VideoReferenceStage({
   title: string;
   onPreviewError: () => void;
 }) {
+  const t = useScopedT("clipboard");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -340,7 +366,7 @@ function VideoReferenceStage({
           type="button"
           onClick={togglePlayback}
           className="absolute inset-0 m-auto inline-flex size-[4.5rem] items-center justify-center rounded-full bg-black/56 text-white shadow-[0_24px_48px_rgba(0,0,0,0.38)] transition hover:bg-black/64"
-          aria-label="Play video"
+          aria-label={t("preview.video.play")}
         >
           <Play className="ml-1 size-8 fill-current" />
         </button>
@@ -352,7 +378,7 @@ function VideoReferenceStage({
             type="button"
             onClick={togglePlayback}
             className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/16"
-            aria-label={isPlaying ? "Pause video" : "Play video"}
+            aria-label={isPlaying ? t("preview.video.pause") : t("preview.video.play")}
           >
             {isPlaying ? <Pause className="size-4 fill-current" /> : <Play className="ml-0.5 size-4 fill-current" />}
           </button>
@@ -361,7 +387,7 @@ function VideoReferenceStage({
             type="button"
             onClick={handleProgressClick}
             className="relative h-2.5 min-w-0 flex-1 rounded-full bg-white/16"
-            aria-label="Seek video"
+            aria-label={t("preview.video.seek")}
           >
             <span
               className="absolute inset-y-0 left-0 rounded-full bg-white/82"
@@ -373,7 +399,7 @@ function VideoReferenceStage({
             type="button"
             onClick={toggleMute}
             className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/16"
-            aria-label={isMuted ? "Unmute video" : "Mute video"}
+            aria-label={isMuted ? t("preview.video.unmute") : t("preview.video.mute")}
           >
             {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
           </button>
@@ -386,12 +412,15 @@ function VideoReferenceStage({
 function GenericFileReferenceLayout({
   capture,
   model,
+  contentTypeLabel,
   tone,
 }: {
   capture: ClipboardCapture;
   model: FileReferencePreviewModel;
+  contentTypeLabel: string;
   tone: FileReferenceFallbackTone;
 }) {
+  const t = useScopedT("clipboard");
   return (
     <div className="flex min-h-0 flex-1 px-3 pb-3 pt-2">
       <div className="flex h-full min-h-0 w-full items-start overflow-auto rounded-[22px] border border-dashed border-border/65 bg-card/48 p-5">
@@ -411,19 +440,19 @@ function GenericFileReferenceLayout({
 
           <div className="space-y-2.5">
             <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-              {model.contentTypeLabel}
+              {contentTypeLabel}
             </p>
             <p className="break-all text-lg font-semibold leading-7 text-foreground/92">
-              {capture.preview || model.fileName || "File reference"}
+              {capture.preview || model.fileName || t("preview.file.referenceFallbackTitle")}
             </p>
             <p className="max-w-[26rem] text-sm leading-6 text-muted-foreground/80">
-              {genericLayoutDescription(tone, model)}
+              {genericLayoutDescription(tone, model, t, contentTypeLabel)}
             </p>
           </div>
 
           {tone === "missing" ? (
             <ReferenceWarning>
-              The original file is no longer available at its saved path. This history entry stays visible, but open and reveal actions are disabled.
+              {t("preview.file.missingWarning")}
             </ReferenceWarning>
           ) : null}
         </div>
@@ -464,41 +493,47 @@ function previewStageShellClassName(kind: FileReferencePreviewKind) {
 
 function genericLayoutDescription(
   tone: FileReferenceFallbackTone,
-  model: Pick<FileReferencePreviewModel, "contentTypeLabel" | "iconKind">,
+  model: Pick<FileReferencePreviewModel, "iconKind">,
+  t: ClipboardTranslate,
+  contentTypeLabel: string,
 ) {
   if (tone === "missing") {
-    return "The original local file is no longer available from its saved path.";
+    return t("preview.file.descriptions.missing");
   }
 
   if (tone === "failed") {
-    return "This file cannot be previewed inline right now. Reveal the original file to inspect it.";
+    return t("preview.file.descriptions.failed");
   }
 
   switch (model.iconKind) {
     case "image":
-      return "This image is stored as a local file reference.";
+      return t("preview.file.descriptions.image");
     case "video":
-      return "This video is stored as a local file reference.";
+      return t("preview.file.descriptions.video");
     case "audio":
-      return "This audio file is stored as a local file reference.";
+      return t("preview.file.descriptions.audio");
     case "pdf":
-      return "This document is stored as a local file reference.";
+      return t("preview.file.descriptions.pdf");
     case "presentation":
-      return "This presentation is stored as a local file reference.";
+      return t("preview.file.descriptions.presentation");
     case "spreadsheet":
-      return "This spreadsheet is stored as a local file reference.";
+      return t("preview.file.descriptions.spreadsheet");
     case "document":
-      return "This document is stored as a local file reference.";
+      return t("preview.file.descriptions.document");
     case "markdown":
-      return "This Markdown file is stored as a local file reference.";
+      return t("preview.file.descriptions.markdown");
     case "code":
-      return "This code file is stored as a local file reference.";
+      return t("preview.file.descriptions.code");
     case "archive":
-      return `This ${model.contentTypeLabel.toLowerCase()} is stored as a local file reference.`;
+      return t("preview.file.descriptions.archive", {
+        values: {
+          type: contentTypeLabel,
+        },
+      });
     case "unknown":
-      return "Tino could not identify this file type yet. Reveal the original file to inspect it.";
+      return t("preview.file.descriptions.unknown");
     default:
-      return "This file type does not have an inline preview yet. Reveal the original file to inspect it.";
+      return t("preview.file.descriptions.default");
   }
 }
 

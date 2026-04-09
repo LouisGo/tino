@@ -1,6 +1,8 @@
 import dayjs from "dayjs";
 
+import type { TranslationKey } from "@/i18n";
 import {
+  getFileReferenceContentTypeLabel,
   getFileReferencePath,
   isFileReferenceContentKind,
   resolveFileReferencePreviewModel,
@@ -24,47 +26,90 @@ export type ClipboardFilterOption = {
   accentColor: string;
 };
 
-export const clipboardFilterOptions: ClipboardFilterOption[] = [
+export type ClipboardDetailRow = {
+  key:
+    | "sourceApp"
+    | "contentType"
+    | "path"
+    | "availability"
+    | "characters"
+    | "words"
+    | "dimensions"
+    | "imageSize"
+    | "url"
+    | "host"
+    | "captured"
+    | "bundleId";
+  label: string;
+  value: string;
+};
+
+type ClipboardTranslate = (
+  key: TranslationKey<"clipboard">,
+  options?: {
+    defaultValue?: string;
+    values?: Record<string, boolean | Date | null | number | string | undefined>;
+  },
+) => string;
+
+type ClipboardFilterOptionSpec = {
+  value: ClipboardFilter;
+  labelKey: TranslationKey<"clipboard">;
+  shortLabelKey: TranslationKey<"clipboard">;
+  accentColor: string;
+};
+
+const clipboardFilterOptionSpecs: ClipboardFilterOptionSpec[] = [
   {
     value: "all",
-    label: "All Types",
-    shortLabel: "Recent",
+    labelKey: "filters.all.label",
+    shortLabelKey: "filters.all.shortLabel",
     accentColor: "var(--muted-foreground)",
   },
   {
     value: "text",
-    label: "Text",
-    shortLabel: "Text",
+    labelKey: "filters.text.label",
+    shortLabelKey: "filters.text.shortLabel",
     accentColor: "var(--clipboard-kind-text)",
   },
   {
     value: "image",
-    label: "Images",
-    shortLabel: "Images",
+    labelKey: "filters.image.label",
+    shortLabelKey: "filters.image.shortLabel",
     accentColor: "var(--clipboard-kind-image)",
   },
   {
     value: "video",
-    label: "Videos",
-    shortLabel: "Videos",
+    labelKey: "filters.video.label",
+    shortLabelKey: "filters.video.shortLabel",
     accentColor: "var(--clipboard-kind-video)",
   },
   {
     value: "link",
-    label: "Links",
-    shortLabel: "Links",
+    labelKey: "filters.link.label",
+    shortLabelKey: "filters.link.shortLabel",
     accentColor: "var(--clipboard-kind-link)",
   },
   {
     value: "file",
-    label: "Files",
-    shortLabel: "Files",
+    labelKey: "filters.file.label",
+    shortLabelKey: "filters.file.shortLabel",
     accentColor: "var(--clipboard-kind-file)",
   },
 ];
 
-export function getClipboardFilterOption(filter: ClipboardFilter) {
-  return clipboardFilterOptions.find((option) => option.value === filter) ?? clipboardFilterOptions[0];
+export function getClipboardFilterOptions(t: ClipboardTranslate): ClipboardFilterOption[] {
+  return clipboardFilterOptionSpecs.map((option) => ({
+    value: option.value,
+    label: t(option.labelKey),
+    shortLabel: t(option.shortLabelKey),
+    accentColor: option.accentColor,
+  }));
+}
+
+export function getClipboardFilterOption(filter: ClipboardFilter, t: ClipboardTranslate) {
+  const options = getClipboardFilterOptions(t);
+  return options.find((option) => option.value === filter) ?? options[0];
 }
 
 export function buildClipboardSummary(captures: ClipboardCapture[]) {
@@ -85,12 +130,16 @@ export function buildClipboardSummary(captures: ClipboardCapture[]) {
   };
 }
 
-export function summarizeRatio(value: number, total: number) {
+export function summarizeRatio(value: number, total: number, t: ClipboardTranslate) {
   if (total <= 0) {
-    return "No captures yet";
+    return t("board.summary.noCapturesYet");
   }
 
-  return `${Math.round((value / total) * 100)}% of recent`;
+  return t("board.summary.percentOfRecent", {
+    values: {
+      percent: Math.round((value / total) * 100),
+    },
+  });
 }
 
 export function matchesFilter(contentKind: ContentKind, filter: ClipboardFilter) {
@@ -105,7 +154,11 @@ export function matchesFilter(contentKind: ContentKind, filter: ClipboardFilter)
   return contentKind === filter;
 }
 
-export function matchesSearch(capture: ClipboardCapture, searchValue: string) {
+export function matchesSearch(
+  capture: ClipboardCapture,
+  searchValue: string,
+  t: ClipboardTranslate,
+) {
   const normalizedSearch = searchValue.trim().toLowerCase();
 
   if (!normalizedSearch) {
@@ -113,10 +166,10 @@ export function matchesSearch(capture: ClipboardCapture, searchValue: string) {
   }
 
   return [
-    captureSourceLabel(capture),
+    captureSourceLabel(capture, t),
     capture.sourceAppBundleId ?? "",
-    captureTitle(capture),
-    captureSubtitle(capture),
+    captureTitle(capture, t),
+    captureSubtitle(capture, t),
     capture.rawText,
     capture.ocrText ?? "",
     capture.linkUrl ?? "",
@@ -138,20 +191,25 @@ export function captureReferencePath(capture: ClipboardCapture) {
   return getFileReferencePath(capture);
 }
 
-export function captureTitle(capture: ClipboardCapture) {
+export function captureTitle(capture: ClipboardCapture, t: ClipboardTranslate) {
   if (capture.contentKind === "image") {
     return capture.imageWidth && capture.imageHeight
-      ? `Image (${capture.imageWidth}×${capture.imageHeight})`
-      : capture.preview || "Image capture";
+      ? t("preview.titles.imageWithDimensions", {
+          values: {
+            height: capture.imageHeight,
+            width: capture.imageWidth,
+          },
+        })
+      : capture.preview || t("preview.titles.imageFallback");
   }
 
   if (capture.contentKind === "link") {
-    return capture.preview || capture.linkUrl || "Link capture";
+    return capture.preview || capture.linkUrl || t("preview.titles.linkFallback");
   }
 
   if (isFileReferenceKind(capture.contentKind)) {
     const model = resolveFileReferencePreviewModel(capture);
-    return capture.preview || model.fileName || model.contentTypeLabel;
+    return capture.preview || model.fileName || getFileReferenceContentTypeLabel(model, t);
   }
 
   const normalized = (capture.preview || capture.rawText).trim();
@@ -160,13 +218,13 @@ export function captureTitle(capture: ClipboardCapture) {
   }
 
   return capture.contentKind === "rich_text"
-    ? "Formatted text capture"
-    : "Text capture";
+    ? t("preview.titles.formattedTextFallback")
+    : t("preview.titles.textFallback");
 }
 
-export function captureSubtitle(capture: ClipboardCapture) {
+export function captureSubtitle(capture: ClipboardCapture, t: ClipboardTranslate) {
   if (capture.contentKind === "link") {
-    return extractHostname(capture.linkUrl ?? capture.rawText) ?? "Link capture";
+    return extractHostname(capture.linkUrl ?? capture.rawText) ?? t("preview.titles.linkFallback");
   }
 
   if (capture.contentKind === "image") {
@@ -181,7 +239,7 @@ export function captureSubtitle(capture: ClipboardCapture) {
   }
 
   if (isFileReferenceKind(capture.contentKind)) {
-    return buildFileReferenceSubtitle(capture);
+    return buildFileReferenceSubtitle(capture, t);
   }
 
   if (capture.secondaryPreview?.trim()) {
@@ -192,18 +250,23 @@ export function captureSubtitle(capture: ClipboardCapture) {
     ? capture.rawText.split("\n").filter((line) => line.trim().length > 0).length
     : 0;
 
-  return `${Math.max(lineCount, 1)} line${lineCount === 1 ? "" : "s"} · ${capture.rawText.length} chars`;
+  return t("capture.detail.linesAndChars", {
+    values: {
+      chars: capture.rawText.length,
+      lines: Math.max(lineCount, 1),
+    },
+  });
 }
 
-export function captureListSummary(capture: ClipboardCapture) {
-  return captureTitle(capture);
+export function captureListSummary(capture: ClipboardCapture, t: ClipboardTranslate) {
+  return captureTitle(capture, t);
 }
 
-export function captureSourceLabel(capture: ClipboardCapture) {
-  return capture.sourceAppName?.trim() || capture.sourceAppBundleId?.trim() || "Unknown";
+export function captureSourceLabel(capture: ClipboardCapture, t: ClipboardTranslate) {
+  return capture.sourceAppName?.trim() || capture.sourceAppBundleId?.trim() || t("capture.sourceUnknown");
 }
 
-export function groupCapturesByDay(captures: ClipboardCapture[]) {
+export function groupCapturesByDay(captures: ClipboardCapture[], t: ClipboardTranslate) {
   const groups = new Map<string, ClipboardCaptureGroup>();
 
   for (const capture of captures) {
@@ -217,7 +280,7 @@ export function groupCapturesByDay(captures: ClipboardCapture[]) {
 
     groups.set(key, {
       key,
-      label: formatCaptureGroupLabel(capture.capturedAt),
+      label: formatCaptureGroupLabel(capture.capturedAt, t),
       kind: "day",
       captures: [capture],
     });
@@ -229,11 +292,13 @@ export function groupCapturesByDay(captures: ClipboardCapture[]) {
 export function buildClipboardCaptureGroups({
   captures,
   pinnedCaptures,
+  t,
 }: {
   captures: ClipboardCapture[];
   pinnedCaptures: ClipboardCapture[];
+  t: ClipboardTranslate;
 }) {
-  const groups = groupCapturesByDay(captures);
+  const groups = groupCapturesByDay(captures, t);
 
   if (pinnedCaptures.length === 0) {
     return groups;
@@ -242,7 +307,7 @@ export function buildClipboardCaptureGroups({
   return [
     {
       key: "pinned",
-      label: "Pinned",
+      label: t("groups.pinned"),
       kind: "pinned" as const,
       captures: pinnedCaptures,
     },
@@ -270,22 +335,36 @@ export function getDefaultVisibleClipboardSelection(
   );
 }
 
-export function formatKindLabel(contentKind: ContentKind) {
+export function formatKindLabel(contentKind: ContentKind, t: ClipboardTranslate) {
   switch (contentKind) {
     case "plain_text":
-      return "Text";
+      return t("capture.kinds.text");
     case "rich_text":
-      return "Rich Text";
+      return t("capture.kinds.richText");
     case "link":
-      return "Link";
+      return t("capture.kinds.link");
     case "image":
-      return "Image";
+      return t("capture.kinds.image");
     case "video":
-      return "Video";
+      return t("capture.kinds.video");
     case "file":
-      return "File";
+      return t("capture.kinds.file");
     default:
       return contentKind;
+  }
+}
+
+export function formatCaptureStatus(
+  status: ClipboardCapture["status"],
+  t: ClipboardTranslate,
+) {
+  switch (status) {
+    case "archived":
+      return t("capture.status.archived");
+    case "filtered":
+      return t("capture.status.filtered");
+    default:
+      return status;
   }
 }
 
@@ -324,44 +403,47 @@ export function statusVariant(status: ClipboardCapture["status"]) {
   }
 }
 
-export function detailRows(capture: ClipboardCapture) {
-  const rows = [
-    { label: "Source App", value: captureSourceLabel(capture) },
-    { label: "Content type", value: detailContentType(capture) },
+export function detailRows(capture: ClipboardCapture, t: ClipboardTranslate): ClipboardDetailRow[] {
+  const rows: ClipboardDetailRow[] = [
+    { key: "sourceApp", label: t("capture.detail.sourceApp"), value: captureSourceLabel(capture, t) },
+    { key: "contentType", label: t("capture.detail.contentType"), value: detailContentType(capture, t) },
   ];
 
   if (isFileReferenceKind(capture.contentKind)) {
     const path = captureReferencePath(capture);
     if (path) {
-      rows.push({ label: "Path", value: path });
+      rows.push({ key: "path", label: t("capture.detail.path"), value: path });
     }
 
     if (capture.fileMissing) {
       rows.push({
-        label: "Availability",
-        value: "Original file unavailable",
+        key: "availability",
+        label: t("capture.detail.availability"),
+        value: t("capture.detail.unavailableValue"),
       });
     }
   }
 
   if (isTextKind(capture.contentKind)) {
     rows.push(
-      { label: "Characters", value: `${capture.rawText.length}` },
-      { label: "Words", value: `${countWords(capture.rawText)}` },
+      { key: "characters", label: t("capture.detail.characters"), value: `${capture.rawText.length}` },
+      { key: "words", label: t("capture.detail.words"), value: `${countWords(capture.rawText)}` },
     );
   }
 
   if (capture.contentKind === "image") {
     if (capture.imageWidth && capture.imageHeight) {
       rows.push({
-        label: "Dimensions",
+        key: "dimensions",
+        label: t("capture.detail.dimensions"),
         value: `${capture.imageWidth}×${capture.imageHeight}`,
       });
     }
 
     if (capture.byteSize) {
       rows.push({
-        label: "Image size",
+        key: "imageSize",
+        label: t("capture.detail.imageSize"),
         value: formatBytes(capture.byteSize),
       });
     }
@@ -369,26 +451,33 @@ export function detailRows(capture: ClipboardCapture) {
 
   if (capture.contentKind === "link") {
     rows.push({
-      label: "URL",
+      key: "url",
+      label: t("capture.detail.url"),
       value: capture.linkUrl ?? capture.rawText,
     });
 
     const hostname = extractHostname(capture.linkUrl ?? capture.rawText);
     if (hostname) {
       rows.push({
-        label: "Host",
+        key: "host",
+        label: t("capture.detail.host"),
         value: hostname,
       });
     }
   }
 
   rows.push({
-    label: "Captured",
+    key: "captured",
+    label: t("capture.detail.captured"),
     value: formatRelativeTimestamp(capture.capturedAt),
   });
 
   if (capture.sourceAppBundleId && !isFileReferenceKind(capture.contentKind)) {
-    rows.push({ label: "Bundle ID", value: capture.sourceAppBundleId });
+    rows.push({
+      key: "bundleId",
+      label: t("capture.detail.bundleId"),
+      value: capture.sourceAppBundleId,
+    });
   }
 
   return rows;
@@ -440,41 +529,41 @@ export function extractHostname(url: string) {
   }
 }
 
-function formatCaptureGroupLabel(input: string) {
+function formatCaptureGroupLabel(input: string, t: ClipboardTranslate) {
   const value = dayjs(input);
   const today = dayjs();
 
   if (value.isSame(today, "day")) {
-    return "Today";
+    return t("groups.today");
   }
 
   if (value.isSame(today.subtract(1, "day"), "day")) {
-    return "Yesterday";
+    return t("groups.yesterday");
   }
 
   return value.format("YYYY-MM-DD");
 }
 
-function detailContentType(capture: ClipboardCapture) {
+function detailContentType(capture: ClipboardCapture, t: ClipboardTranslate) {
   if (isFileReferenceKind(capture.contentKind)) {
-    return resolveFileReferencePreviewModel(capture).contentTypeLabel;
+    return getFileReferenceContentTypeLabel(resolveFileReferencePreviewModel(capture), t);
   }
 
   switch (capture.contentKind) {
     case "rich_text":
-      return "Text (Formatted)";
+      return t("capture.detail.richTextValue");
     case "plain_text":
-      return "Text";
+      return t("capture.kinds.text");
     case "link":
-      return "Link";
+      return t("capture.kinds.link");
     case "image":
-      return "Image";
+      return t("capture.kinds.image");
     case "video":
-      return "Video";
+      return t("capture.kinds.video");
     case "file":
-      return "File";
+      return t("capture.kinds.file");
     default:
-      return formatKindLabel(capture.contentKind);
+      return formatKindLabel(capture.contentKind, t);
   }
 }
 
@@ -490,7 +579,7 @@ function countWords(input: string) {
   return matches?.length ?? 0;
 }
 
-function buildFileReferenceSubtitle(capture: ClipboardCapture) {
+function buildFileReferenceSubtitle(capture: ClipboardCapture, t: ClipboardTranslate) {
   const model = resolveFileReferencePreviewModel(capture);
   const parts: string[] = [];
 
@@ -508,7 +597,7 @@ function buildFileReferenceSubtitle(capture: ClipboardCapture) {
   }
 
   if (capture.fileMissing) {
-    parts.push("Unavailable");
+    parts.push(t("capture.detail.unavailableShort"));
   }
 
   return parts.join(" · ");
