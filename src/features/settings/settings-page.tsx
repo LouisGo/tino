@@ -4,11 +4,10 @@ import { useEffect, useMemo } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 import { AiSettingsSection } from "@/features/settings/components/ai-settings-section";
-import { AppearanceSettingsSection } from "@/features/settings/components/appearance-settings-section";
-import { AutomationSettingsSection } from "@/features/settings/components/automation-settings-section";
-import { ShortcutSettingsSection } from "@/features/settings/components/shortcut-settings-section";
+import { AppSettingsSection } from "@/features/settings/components/app-settings-section";
+import { ArchiveSettingsSection } from "@/features/settings/components/archive-settings-section";
+import { ClipboardSettingsSection } from "@/features/settings/components/clipboard-settings-section";
 import { SettingsStickyTabs } from "@/features/settings/components/settings-sticky-tabs";
-import { WorkspaceSettingsSection } from "@/features/settings/components/workspace-settings-section";
 import { useSettingsController } from "@/features/settings/hooks/use-settings-controller";
 import { useRuntimeProviderForm } from "@/features/settings/hooks/use-runtime-provider-form";
 import { useSettingsLayout } from "@/features/settings/hooks/use-settings-layout";
@@ -63,7 +62,24 @@ export function SettingsPage() {
       return;
     }
 
-    scrollToSection(hashSectionId, { behavior: "auto" });
+    let timeoutId = 0;
+    let frameId = 0;
+
+    const runScroll = () => {
+      scrollToSection(hashSectionId, { behavior: "auto" });
+      timeoutId = window.setTimeout(() => {
+        scrollToSection(hashSectionId, { behavior: "auto" });
+      }, 180);
+    };
+
+    frameId = window.requestAnimationFrame(runScroll);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [hashSectionId, scrollToSection, scrollViewport]);
   usePendingSettingsPersistence({
     getCurrentDraft: () => settingsDraftRef.current,
@@ -129,10 +145,16 @@ export function SettingsPage() {
           ref={setScrollViewport}
           className="app-scroll-area min-h-0 flex-1 overflow-y-auto pr-1 pt-3 sm:pr-2"
         >
-          <div className="space-y-10 pb-8">
-            <WorkspaceSettingsSection
+          <div className="space-y-8 pb-8">
+            <ClipboardSettingsSection
+              captureEnabled={captureEnabled}
+              onToggleCapture={handleToggleCapture}
               settingsDraft={settingsDraft}
               patchSettingsDraft={patchSettingsDraft}
+            />
+
+            <ArchiveSettingsSection
+              settingsDraft={settingsDraft}
               onPickKnowledgeRoot={handlePickKnowledgeRoot}
               onRevealKnowledgeRoot={handleRevealKnowledgeRoot}
             />
@@ -142,27 +164,19 @@ export function SettingsPage() {
               settingsDraft={settingsDraft}
             />
 
-            <AppearanceSettingsSection
+            <AppSettingsSection
+              autostartEnabled={autostartEnabled}
               localePreference={settingsDraft.localePreference}
               mode={mode}
               onLocalePreferenceChange={handleLocalePreferenceChange}
-              themeName={themeName}
+              onOpenLogs={handleOpenLogs}
+              onShortcutOverridesChange={handleShortcutOverridesChange}
+              onToggleAutostart={handleToggleAutostart}
+              overrides={settingsDraft.shortcutOverrides}
               setMode={setMode}
               setThemeName={setThemeName}
-            />
-
-            <AutomationSettingsSection
-              autostartEnabled={autostartEnabled}
-              captureEnabled={captureEnabled}
+              themeName={themeName}
               toggleAutostartPending={toggleAutostartMutation.isPending}
-              onToggleCapture={handleToggleCapture}
-              onToggleAutostart={handleToggleAutostart}
-              onOpenLogs={handleOpenLogs}
-            />
-
-            <ShortcutSettingsSection
-              overrides={settingsDraft.shortcutOverrides}
-              onChange={handleShortcutOverridesChange}
             />
           </div>
         </div>

@@ -5,6 +5,30 @@ import type { SettingsSectionId } from "@/features/settings/settings-sections";
 const DEFAULT_SCROLL_OFFSET = 148;
 const PROGRAMMATIC_SCROLL_IDLE_MS = 160;
 
+function resolveSectionScrollTop(
+  element: HTMLElement,
+  scrollViewport: HTMLElement,
+  scrollOffset: number,
+) {
+  let offsetTop = 0;
+  let current: HTMLElement | null = element;
+
+  while (current && current !== scrollViewport) {
+    offsetTop += current.offsetTop;
+    current = current.offsetParent as HTMLElement | null;
+  }
+
+  if (current === scrollViewport) {
+    return Math.max(0, offsetTop - scrollOffset);
+  }
+
+  const viewportTop = scrollViewport.getBoundingClientRect().top;
+  return Math.max(
+    0,
+    element.getBoundingClientRect().top - viewportTop + scrollViewport.scrollTop - scrollOffset,
+  );
+}
+
 function resolveActiveSection(
   sectionIds: readonly SettingsSectionId[],
   scrollViewport: HTMLElement,
@@ -195,13 +219,7 @@ export function useSettingsScrollSpy(
       }
 
       setActiveSectionId(sectionId);
-      const viewportTop = scrollViewport.getBoundingClientRect().top;
-      const top =
-        element.getBoundingClientRect().top
-        - viewportTop
-        + scrollViewport.scrollTop
-        - scrollOffset;
-      const nextTop = Math.max(0, top);
+      const nextTop = resolveSectionScrollTop(element, scrollViewport, scrollOffset);
 
       syncActiveSection(sectionId);
 

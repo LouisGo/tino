@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 
 import {
-  buildDefaultRuntimeProviderName,
+  buildLocalizedRuntimeProviderName,
   createRuntimeProviderProfileDraft,
   getDefaultRuntimeProviderBaseUrlForVendor,
   getRuntimeProviderFormValues,
@@ -18,6 +18,7 @@ import {
   validateRuntimeProviderApiKey,
   validateRuntimeProviderBaseUrl,
 } from "@/features/settings/lib/runtime-provider";
+import { useScopedT } from "@/i18n";
 import type {
   RuntimeProviderProfile,
   RuntimeProviderVendor,
@@ -31,7 +32,9 @@ export function useRuntimeProviderForm({
   patchSettingsDraft: (value: Partial<SettingsDraft>) => void;
   settingsDraft: SettingsDraft;
 }) {
+  const t = useScopedT("settings");
   const providerProfiles = settingsDraft.runtimeProviderProfiles;
+  const providerNameLabel = t("provider.name.generatedLabel");
   const activeProvider = useMemo(
     () => resolveActiveRuntimeProvider(settingsDraft),
     [settingsDraft],
@@ -103,7 +106,10 @@ export function useRuntimeProviderForm({
       return null;
     }
 
-    const fallbackName = buildDefaultRuntimeProviderName(selectedProviderIndex + 1);
+    const fallbackName = buildLocalizedRuntimeProviderName(
+      selectedProviderIndex + 1,
+      providerNameLabel,
+    );
     const nextVendor = normalizeRuntimeProviderVendor(form.state.values.vendor);
     const currentBaseUrl = form.state.values.baseUrl.trim();
     const previousDefaultBaseUrl = getDefaultRuntimeProviderBaseUrlForVendor(selectedProvider.vendor);
@@ -129,7 +135,13 @@ export function useRuntimeProviderForm({
 
     form.reset(getRuntimeProviderFormValues(nextProfile));
     return nextProfile;
-  }, [form, selectedProvider, selectedProviderIndex, updateProviderProfile]);
+  }, [
+    form,
+    providerNameLabel,
+    selectedProvider,
+    selectedProviderIndex,
+    updateProviderProfile,
+  ]);
 
   const commitName = useCallback(
     (value: string) => {
@@ -139,7 +151,7 @@ export function useRuntimeProviderForm({
 
       const normalizedValue = normalizeRuntimeProviderName(
         value,
-        buildDefaultRuntimeProviderName(selectedProviderIndex + 1),
+        buildLocalizedRuntimeProviderName(selectedProviderIndex + 1, providerNameLabel),
       );
       updateProviderProfile({
         ...selectedProvider,
@@ -152,7 +164,13 @@ export function useRuntimeProviderForm({
 
       return true;
     },
-    [form, selectedProvider, selectedProviderIndex, updateProviderProfile],
+    [
+      form,
+      providerNameLabel,
+      selectedProvider,
+      selectedProviderIndex,
+      updateProviderProfile,
+    ],
   );
 
   const commitVendor = useCallback(
@@ -289,7 +307,10 @@ export function useRuntimeProviderForm({
   const addProvider = useCallback(() => {
     commitSelectedProvider();
 
-    const nextProfile = createRuntimeProviderProfileDraft(providerProfiles.length + 1);
+    const nextProfile = createRuntimeProviderProfileDraft(
+      providerProfiles.length + 1,
+      providerNameLabel,
+    );
     patchSettingsDraft({
       runtimeProviderProfiles: [...providerProfiles, nextProfile],
       activeRuntimeProviderId:
@@ -300,6 +321,7 @@ export function useRuntimeProviderForm({
   }, [
     commitSelectedProvider,
     patchSettingsDraft,
+    providerNameLabel,
     providerProfiles,
     settingsDraft.activeRuntimeProviderId,
   ]);

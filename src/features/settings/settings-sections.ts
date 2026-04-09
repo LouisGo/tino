@@ -1,9 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Clipboard,
   FolderRoot,
-  Keyboard,
-  Palette,
-  Rocket,
+  Settings2,
   Sparkles,
 } from "lucide-react";
 
@@ -20,11 +19,19 @@ type SettingsSectionBase = {
 
 export const settingsSections = [
   {
-    id: "workspace",
-    label: tx("settings", "sections.workspace.label"),
-    title: tx("settings", "sections.workspace.title"),
-    eyebrow: tx("settings", "sections.workspace.eyebrow"),
-    description: tx("settings", "sections.workspace.description"),
+    id: "clipboard",
+    label: tx("settings", "sections.clipboard.label"),
+    title: tx("settings", "sections.clipboard.title"),
+    eyebrow: tx("settings", "sections.clipboard.eyebrow"),
+    description: tx("settings", "sections.clipboard.description"),
+    icon: Clipboard,
+  },
+  {
+    id: "archive",
+    label: tx("settings", "sections.archive.label"),
+    title: tx("settings", "sections.archive.title"),
+    eyebrow: tx("settings", "sections.archive.eyebrow"),
+    description: tx("settings", "sections.archive.description"),
     icon: FolderRoot,
   },
   {
@@ -36,28 +43,12 @@ export const settingsSections = [
     icon: Sparkles,
   },
   {
-    id: "appearance",
-    label: tx("settings", "sections.appearance.label"),
-    title: tx("settings", "sections.appearance.title"),
-    eyebrow: tx("settings", "sections.appearance.eyebrow"),
-    description: tx("settings", "sections.appearance.description"),
-    icon: Palette,
-  },
-  {
-    id: "automation",
-    label: tx("settings", "sections.automation.label"),
-    title: tx("settings", "sections.automation.title"),
-    eyebrow: tx("settings", "sections.automation.eyebrow"),
-    description: tx("settings", "sections.automation.description"),
-    icon: Rocket,
-  },
-  {
-    id: "shortcuts",
-    label: tx("settings", "sections.shortcuts.label"),
-    title: tx("settings", "sections.shortcuts.title"),
-    eyebrow: tx("settings", "sections.shortcuts.eyebrow"),
-    description: tx("settings", "sections.shortcuts.description"),
-    icon: Keyboard,
+    id: "app",
+    label: tx("settings", "sections.app.label"),
+    title: tx("settings", "sections.app.title"),
+    eyebrow: tx("settings", "sections.app.eyebrow"),
+    description: tx("settings", "sections.app.description"),
+    icon: Settings2,
   },
 ] as const satisfies readonly SettingsSectionBase[];
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { ShieldCheck, Trash2 } from "lucide-react";
+import { ChevronDown, ShieldCheck, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -33,6 +33,7 @@ import {
   maskRuntimeProviderApiKey,
   normalizeRuntimeProviderVendor,
   runtimeProviderVendors,
+  type RuntimeProviderValidationErrorKey,
   validateRuntimeProviderApiKey,
   validateRuntimeProviderBaseUrl,
   validateRuntimeProviderModel,
@@ -60,19 +61,11 @@ export function AiSettingsSection({
   runtimeProviderForm: RuntimeProviderFormController;
   settingsDraft: SettingsDraft;
 }) {
-  const section = settingsSections[1];
+  const section = settingsSections.find((item) => item.id === "ai") ?? settingsSections[0];
   const t = useScopedT("settings");
   const [providerPendingDelete, setProviderPendingDelete] =
     useState<RuntimeProviderProfile | null>(null);
   const activeProvider = runtimeProviderForm.activeProvider;
-  const activeProviderAccess = activeProvider
-    ? resolveProviderAccessConfig(activeProvider)
-    : null;
-  const badge = activeProviderAccess?.isConfigured
-    ? t("provider.status.ready")
-    : activeProvider?.apiKey.trim()
-      ? t("provider.status.incomplete")
-      : t("provider.status.apiKeyNeeded");
   const {
     addProvider,
     canDeleteProvider,
@@ -113,9 +106,16 @@ export function AiSettingsSection({
   return (
     <SettingsSection
       section={section}
-      badge={badge}
+      badge={(
+        <span className="inline-flex items-center gap-1.5">
+          <span aria-hidden="true">🚧</span>
+          <span>{t("badges.experimental")}</span>
+        </span>
+      )}
+      badgeVariant="outline"
+      badgeClassName="border-dashed border-amber-500/45 bg-amber-50 text-amber-900 dark:border-amber-300/35 dark:bg-amber-500/12 dark:text-amber-100"
       action={(
-        <Button type="button" variant="outline" onClick={() => addProvider()}>
+        <Button type="button" variant="outline" size="sm" onClick={() => addProvider()}>
           {t("provider.list.add")}
         </Button>
       )}
@@ -124,7 +124,7 @@ export function AiSettingsSection({
         <SettingsPanelBody>
           <SettingField
             label={t("provider.list.label")}
-            description={t("provider.list.description")}
+            info={t("provider.list.description")}
           >
             <div className="space-y-3">
               {orderedProviderProfiles.map((profile) => {
@@ -233,12 +233,14 @@ export function AiSettingsSection({
               const message = getFieldMessage(field.state.meta.errors, {
                 fallback: t("provider.name.hint"),
                 shouldShowError: field.state.meta.isBlurred,
+                translate: (key) => t(key),
               });
 
               return (
                 <SettingField
                   htmlFor="provider-name"
                   label={t("provider.name.label")}
+                  info={t("provider.name.description")}
                 >
                   <div className="max-w-[420px] space-y-2">
                     <Input
@@ -281,12 +283,14 @@ export function AiSettingsSection({
               const message = getFieldMessage(field.state.meta.errors, {
                 fallback: t("provider.vendor.hint"),
                 shouldShowError: field.state.meta.isTouched,
+                translate: (key) => t(key),
               });
 
               return (
                 <SettingField
                   htmlFor="provider-vendor"
                   label={t("provider.vendor.label")}
+                  info={t("provider.vendor.description")}
                 >
                   <div className="max-w-[420px] space-y-2">
                     <Select
@@ -310,7 +314,7 @@ export function AiSettingsSection({
                             <div className="flex min-w-0 flex-col">
                               <span>{option.label}</span>
                               <span className="text-xs font-normal opacity-80">
-                                {option.description}
+                                {t(option.descriptionKey)}
                               </span>
                             </div>
                           </SelectItem>
@@ -319,156 +323,6 @@ export function AiSettingsSection({
                     </Select>
                     <p
                       id="provider-vendor-message"
-                      className={cn(
-                        "text-xs leading-5",
-                        message.tone === "error"
-                          ? "text-destructive"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {message.text}
-                    </p>
-                  </div>
-                </SettingField>
-              );
-            }}
-          </form.Field>
-
-          <form.Field
-            name="baseUrl"
-            validators={{
-              onChange: ({ value }) => validateRuntimeProviderBaseUrl(value),
-              onBlur: ({ value }) => validateRuntimeProviderBaseUrl(value),
-            }}
-          >
-            {(field) => {
-              const message = getFieldMessage(field.state.meta.errors, {
-                fallback: t("provider.baseUrl.hint"),
-                shouldShowError: field.state.meta.isBlurred,
-              });
-
-              return (
-                <SettingField
-                  htmlFor="provider-base-url"
-                  label={t("provider.baseUrl.label")}
-                >
-                  <div className="max-w-[420px] space-y-2">
-                    <Input
-                      id="provider-base-url"
-                      value={field.state.value}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      onBlur={() => {
-                        field.handleBlur();
-                        commitBaseUrl(field.state.value);
-                      }}
-                      placeholder={providerBaseUrlPlaceholder}
-                      aria-invalid={message.tone === "error"}
-                      aria-describedby="provider-base-url-message"
-                      spellCheck={false}
-                    />
-                    <p
-                      id="provider-base-url-message"
-                      className={cn(
-                        "text-xs leading-5",
-                        message.tone === "error"
-                          ? "text-destructive"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {message.text}
-                    </p>
-                  </div>
-                </SettingField>
-              );
-            }}
-          </form.Field>
-
-          <form.Field
-            name="model"
-            validators={{
-              onChange: ({ value }) => validateRuntimeProviderModel(value),
-              onBlur: ({ value }) => validateRuntimeProviderModel(value),
-            }}
-          >
-            {(field) => {
-              const message = getFieldMessage(field.state.meta.errors, {
-                fallback: t("provider.model.hint", {
-                  values: {
-                    model: providerDefaultModelLabel,
-                  },
-                }),
-                shouldShowError: field.state.meta.isBlurred,
-              });
-
-              return (
-                <SettingField
-                  htmlFor="provider-model"
-                  label={t("provider.model.label")}
-                  description={t("provider.model.description")}
-                >
-                  <div className="max-w-[420px] space-y-2">
-                    <Select
-                      value={field.state.value || defaultModelOverrideSelectValue}
-                      onValueChange={(value) => {
-                        const nextValue =
-                          value === defaultModelOverrideSelectValue
-                            ? commitModel("")
-                            : commitModel(value);
-                        field.handleChange(nextValue);
-                        field.handleBlur();
-                      }}
-                    >
-                      <SelectTrigger
-                        id="provider-model"
-                        aria-label={t("provider.model.label")}
-                        aria-invalid={message.tone === "error"}
-                        aria-describedby="provider-model-message"
-                      >
-                        <SelectValue
-                          placeholder={t("provider.model.placeholder", {
-                            values: {
-                              model: providerDefaultModelLabel,
-                            },
-                          })}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem
-                          value={defaultModelOverrideSelectValue}
-                          textValue={t("provider.model.defaultOptionLabel")}
-                        >
-                          <div className="flex min-w-0 flex-col">
-                            <span>{t("provider.model.defaultOptionLabel")}</span>
-                            <span className="text-xs font-normal opacity-80">
-                              {t("provider.model.defaultOptionHint", {
-                                values: {
-                                  model: providerDefaultModelLabel,
-                                },
-                              })}
-                            </span>
-                          </div>
-                        </SelectItem>
-
-                        {providerModelOptions.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            textValue={option.label}
-                          >
-                            <div className="flex min-w-0 flex-col">
-                              <span>{option.label}</span>
-                              {option.description ? (
-                                <span className="text-xs font-normal opacity-80">
-                                  {option.description}
-                                </span>
-                              ) : null}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p
-                      id="provider-model-message"
                       className={cn(
                         "text-xs leading-5",
                         message.tone === "error"
@@ -498,12 +352,14 @@ export function AiSettingsSection({
                   ? t("provider.apiKey.maskedValue", { values: { key: maskedKey } })
                   : t("provider.apiKey.hint"),
                 shouldShowError: field.state.meta.isBlurred,
+                translate: (key) => t(key),
               });
 
               return (
                 <SettingField
                   htmlFor="provider-api-key"
                   label={t("provider.apiKey.label")}
+                  info={t("provider.apiKey.description")}
                   action={(
                     <Badge variant="secondary" className="inline-flex items-center gap-1.5">
                       <ShieldCheck className="size-3.5" />
@@ -545,18 +401,191 @@ export function AiSettingsSection({
             }}
           </form.Field>
 
-          <RuntimeProviderTestPanel providerConfig={form.state.values} />
+          <div className="border-t border-border/70">
+            <details className="group">
+              <summary className="cursor-pointer list-none px-4 py-3 [&::-webkit-details-marker]:hidden">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      {t("provider.advanced.label")}
+                    </span>
+                    <ChevronDown className="size-4 text-muted-foreground" />
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {t("provider.advanced.summary")}
+                  </span>
+                </div>
+              </summary>
 
-          {selectedProvider && selectedProvider.id !== settingsDraft.activeRuntimeProviderId ? (
-            <div className="px-4 pb-4 text-xs leading-5 text-muted-foreground">
-              {t("provider.test.inactiveHint", {
-                values: {
-                  active: activeProvider?.name ?? "",
-                  editing: selectedProvider.name,
-                },
-              })}
-            </div>
-          ) : null}
+              <div className="border-t border-border/70">
+                <form.Field
+                  name="baseUrl"
+                  validators={{
+                    onChange: ({ value }) => validateRuntimeProviderBaseUrl(value),
+                    onBlur: ({ value }) => validateRuntimeProviderBaseUrl(value),
+                  }}
+                >
+                  {(field) => {
+                    const message = getFieldMessage(field.state.meta.errors, {
+                      fallback: t("provider.baseUrl.hint"),
+                      shouldShowError: field.state.meta.isBlurred,
+                      translate: (key) => t(key),
+                    });
+
+                    return (
+                      <SettingField
+                        htmlFor="provider-base-url"
+                        label={t("provider.baseUrl.label")}
+                        info={t("provider.baseUrl.description")}
+                      >
+                        <div className="max-w-[420px] space-y-2">
+                          <Input
+                            id="provider-base-url"
+                            value={field.state.value}
+                            onChange={(event) => field.handleChange(event.target.value)}
+                            onBlur={() => {
+                              field.handleBlur();
+                              commitBaseUrl(field.state.value);
+                            }}
+                            placeholder={providerBaseUrlPlaceholder}
+                            aria-invalid={message.tone === "error"}
+                            aria-describedby="provider-base-url-message"
+                            spellCheck={false}
+                          />
+                          <p
+                            id="provider-base-url-message"
+                            className={cn(
+                              "text-xs leading-5",
+                              message.tone === "error"
+                                ? "text-destructive"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {message.text}
+                          </p>
+                        </div>
+                      </SettingField>
+                    );
+                  }}
+                </form.Field>
+
+                <form.Field
+                  name="model"
+                  validators={{
+                    onChange: ({ value }) => validateRuntimeProviderModel(value),
+                    onBlur: ({ value }) => validateRuntimeProviderModel(value),
+                  }}
+                >
+                  {(field) => {
+                    const message = getFieldMessage(field.state.meta.errors, {
+                      fallback: t("provider.model.hint", {
+                        values: {
+                          model: providerDefaultModelLabel,
+                        },
+                      }),
+                      shouldShowError: field.state.meta.isBlurred,
+                      translate: (key) => t(key),
+                    });
+
+                    return (
+                      <SettingField
+                        htmlFor="provider-model"
+                        label={t("provider.model.label")}
+                        info={t("provider.model.description")}
+                      >
+                        <div className="max-w-[420px] space-y-2">
+                          <Select
+                            value={field.state.value || defaultModelOverrideSelectValue}
+                            onValueChange={(value) => {
+                              const nextValue =
+                                value === defaultModelOverrideSelectValue
+                                  ? commitModel("")
+                                  : commitModel(value);
+                              field.handleChange(nextValue);
+                              field.handleBlur();
+                            }}
+                          >
+                            <SelectTrigger
+                              id="provider-model"
+                              aria-label={t("provider.model.label")}
+                              aria-invalid={message.tone === "error"}
+                              aria-describedby="provider-model-message"
+                            >
+                              <SelectValue
+                                placeholder={t("provider.model.placeholder", {
+                                  values: {
+                                    model: providerDefaultModelLabel,
+                                  },
+                                })}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem
+                                value={defaultModelOverrideSelectValue}
+                                textValue={t("provider.model.defaultOptionLabel")}
+                              >
+                                <div className="flex min-w-0 flex-col">
+                                  <span>{t("provider.model.defaultOptionLabel")}</span>
+                                  <span className="text-xs font-normal opacity-80">
+                                    {t("provider.model.defaultOptionHint", {
+                                      values: {
+                                        model: providerDefaultModelLabel,
+                                      },
+                                    })}
+                                  </span>
+                                </div>
+                              </SelectItem>
+
+                              {providerModelOptions.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                  textValue={option.label}
+                                >
+                                  <div className="flex min-w-0 flex-col">
+                                    <span>{option.label}</span>
+                                    {option.descriptionKey ? (
+                                      <span className="text-xs font-normal opacity-80">
+                                        {t(option.descriptionKey)}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p
+                            id="provider-model-message"
+                            className={cn(
+                              "text-xs leading-5",
+                              message.tone === "error"
+                                ? "text-destructive"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {message.text}
+                          </p>
+                        </div>
+                      </SettingField>
+                    );
+                  }}
+                </form.Field>
+
+                <RuntimeProviderTestPanel providerConfig={form.state.values} />
+
+                {selectedProvider && selectedProvider.id !== settingsDraft.activeRuntimeProviderId ? (
+                  <div className="px-4 pb-4 text-xs leading-5 text-muted-foreground">
+                    {t("provider.test.inactiveHint", {
+                      values: {
+                        active: activeProvider?.name ?? "",
+                        editing: selectedProvider.name,
+                      },
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            </details>
+          </div>
         </SettingsPanelBody>
       </SettingsPanel>
 
@@ -607,9 +636,11 @@ function getFieldMessage(
   {
     fallback,
     shouldShowError,
+    translate,
   }: {
     fallback: string;
     shouldShowError: boolean;
+    translate: (key: RuntimeProviderValidationErrorKey) => string;
   },
 ) {
   if (!shouldShowError) {
@@ -628,7 +659,13 @@ function getFieldMessage(
   }
 
   return {
-    text: firstError,
+    text: isRuntimeProviderValidationErrorKey(firstError) ? translate(firstError) : firstError,
     tone: "error" as const,
   };
+}
+
+function isRuntimeProviderValidationErrorKey(
+  value: string,
+): value is RuntimeProviderValidationErrorKey {
+  return value.startsWith("provider.validation.");
 }

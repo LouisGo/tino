@@ -10,8 +10,28 @@ export const defaultOpenAiRuntimeModel = "gpt-5.4";
 export const defaultDeepSeekRuntimeModel = "deepseek-chat";
 export const defaultRuntimeProviderVendor = "openai" as const satisfies RuntimeProviderVendor;
 
+export type RuntimeProviderValidationErrorKey =
+  | "provider.validation.nameRequired"
+  | "provider.validation.vendorUnsupported"
+  | "provider.validation.baseUrlInvalid"
+  | "provider.validation.baseUrlHttpsOnly"
+  | "provider.validation.baseUrlCredentialsNotAllowed"
+  | "provider.validation.modelWhitespace"
+  | "provider.validation.apiKeyWhitespace"
+  | "provider.validation.apiKeyTooShort";
+
+type RuntimeProviderVendorDescriptionKey =
+  | "provider.vendor.options.openai.description"
+  | "provider.vendor.options.deepseek.description";
+
+type RuntimeProviderModelDescriptionKey =
+  | "provider.model.options.gpt54.description"
+  | "provider.model.options.gpt54Mini.description"
+  | "provider.model.options.deepseekChat.description"
+  | "provider.model.options.deepseekReasoner.description";
+
 export type RuntimeProviderModelOption = {
-  description: string;
+  descriptionKey?: RuntimeProviderModelDescriptionKey;
   label: string;
   value: string;
   vendor: RuntimeProviderVendor;
@@ -21,30 +41,30 @@ export const runtimeProviderVendors = [
   {
     value: "openai",
     label: "OpenAI",
-    description: "GPT-family endpoints and OpenAI-compatible relays.",
+    descriptionKey: "provider.vendor.options.openai.description",
   },
   {
     value: "deepseek",
     label: "DeepSeek",
-    description: "DeepSeek direct endpoints or compatible DeepSeek relays.",
+    descriptionKey: "provider.vendor.options.deepseek.description",
   },
 ] as const satisfies readonly {
   value: RuntimeProviderVendor;
   label: string;
-  description: string;
+  descriptionKey: RuntimeProviderVendorDescriptionKey;
 }[];
 
 const openAiRuntimeProviderModels: RuntimeProviderModelOption[] = [
   {
     value: "gpt-5.4",
     label: "GPT-5.4",
-    description: "Higher-capability GPT model.",
+    descriptionKey: "provider.model.options.gpt54.description",
     vendor: "openai",
   },
   {
     value: "gpt-5.4-mini",
     label: "GPT-5.4 mini",
-    description: "Faster GPT-5.4 variant.",
+    descriptionKey: "provider.model.options.gpt54Mini.description",
     vendor: "openai",
   },
 ] satisfies RuntimeProviderModelOption[];
@@ -53,13 +73,13 @@ const deepSeekRuntimeProviderModels: RuntimeProviderModelOption[] = [
   {
     value: "deepseek-chat",
     label: "DeepSeek Chat",
-    description: "Default DeepSeek model for general work.",
+    descriptionKey: "provider.model.options.deepseekChat.description",
     vendor: "deepseek",
   },
   {
     value: "deepseek-reasoner",
     label: "DeepSeek Reasoner",
-    description: "Reasoning-focused DeepSeek model.",
+    descriptionKey: "provider.model.options.deepseekReasoner.description",
     vendor: "deepseek",
   },
 ] satisfies RuntimeProviderModelOption[];
@@ -118,7 +138,6 @@ export function getRuntimeProviderModelOptions(
     options.push({
       value: trimmedModel,
       label: trimmedModel,
-      description: "",
       vendor,
     });
   }
@@ -193,13 +212,20 @@ export function resolveActiveRuntimeProvider(
 }
 
 export function buildDefaultRuntimeProviderName(index: number) {
-  return `Provider ${index}`;
+  return buildLocalizedRuntimeProviderName(index, "Provider");
 }
 
-export function createRuntimeProviderProfileDraft(index: number): RuntimeProviderProfile {
+export function buildLocalizedRuntimeProviderName(index: number, label: string) {
+  return `${label} ${index}`;
+}
+
+export function createRuntimeProviderProfileDraft(
+  index: number,
+  label = "Provider",
+): RuntimeProviderProfile {
   return {
     id: generateRuntimeProviderProfileId(),
-    name: buildDefaultRuntimeProviderName(index),
+    name: buildLocalizedRuntimeProviderName(index, label),
     vendor: defaultRuntimeProviderVendor,
     baseUrl: getDefaultRuntimeProviderBaseUrlForVendor(defaultRuntimeProviderVendor),
     apiKey: "",
@@ -219,7 +245,7 @@ export function validateRuntimeProviderName(value: string) {
     return undefined;
   }
 
-  return "Enter a provider name.";
+  return "provider.validation.nameRequired" satisfies RuntimeProviderValidationErrorKey;
 }
 
 export function normalizeRuntimeProviderName(value: string, fallback: string) {
@@ -232,7 +258,7 @@ export function validateRuntimeProviderVendor(value: string) {
     return undefined;
   }
 
-  return "Choose a supported vendor.";
+  return "provider.validation.vendorUnsupported" satisfies RuntimeProviderValidationErrorKey;
 }
 
 export function validateRuntimeProviderBaseUrl(value: string) {
@@ -246,15 +272,15 @@ export function validateRuntimeProviderBaseUrl(value: string) {
   try {
     parsedUrl = new URL(trimmedValue);
   } catch {
-    return "Enter a valid URL.";
+    return "provider.validation.baseUrlInvalid" satisfies RuntimeProviderValidationErrorKey;
   }
 
   if (parsedUrl.protocol !== "https:") {
-    return "Use an https:// endpoint.";
+    return "provider.validation.baseUrlHttpsOnly" satisfies RuntimeProviderValidationErrorKey;
   }
 
   if (parsedUrl.username || parsedUrl.password) {
-    return "Do not include credentials in Base URL.";
+    return "provider.validation.baseUrlCredentialsNotAllowed" satisfies RuntimeProviderValidationErrorKey;
   }
 
   return undefined;
@@ -276,7 +302,7 @@ export function validateRuntimeProviderModel(value: string) {
   }
 
   if (/\s/.test(trimmedValue)) {
-    return "Model id cannot contain spaces or line breaks.";
+    return "provider.validation.modelWhitespace" satisfies RuntimeProviderValidationErrorKey;
   }
 
   return undefined;
@@ -294,11 +320,11 @@ export function validateRuntimeProviderApiKey(value: string) {
   }
 
   if (/\s/.test(trimmedValue)) {
-    return "API key cannot contain spaces or line breaks.";
+    return "provider.validation.apiKeyWhitespace" satisfies RuntimeProviderValidationErrorKey;
   }
 
   if (trimmedValue.length < 12) {
-    return "API key looks too short.";
+    return "provider.validation.apiKeyTooShort" satisfies RuntimeProviderValidationErrorKey;
   }
 
   return undefined;

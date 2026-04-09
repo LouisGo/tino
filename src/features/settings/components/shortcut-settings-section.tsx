@@ -5,7 +5,7 @@ import { Pause, RotateCcw, Slash, SquarePen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Kbd } from "@/components/ui/kbd";
 import { useShortcutManager } from "@/core/shortcuts";
-import { tx, useScopedT } from "@/i18n";
+import { tx, useLocale, useScopedT } from "@/i18n";
 import {
   formatShortcutAccelerator,
   isModifierOnlyKey,
@@ -32,8 +32,28 @@ export function ShortcutSettingsSection({
   onChange: (nextOverrides: ShortcutOverrideRecord) => void;
   overrides: ShortcutOverrideRecord;
 }) {
+  const section = settingsSections.find((item) => item.id === "app") ?? settingsSections[0];
+
+  return (
+    <SettingsSection
+      section={section}
+      badge={tx("settings", "badges.appliesInstantly")}
+    >
+      <ShortcutSettingsPanel onChange={onChange} overrides={overrides} />
+    </SettingsSection>
+  );
+}
+
+export function ShortcutSettingsPanel({
+  onChange,
+  overrides,
+}: {
+  onChange: (nextOverrides: ShortcutOverrideRecord) => void;
+  overrides: ShortcutOverrideRecord;
+}) {
   const manager = useShortcutManager();
   const t = useScopedT("settings");
+  const { locale } = useLocale();
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<ShortcutFeedback>(null);
 
@@ -70,7 +90,11 @@ export function ShortcutSettingsSection({
 
       if (conflicts.length > 0) {
         setFeedback({
-          message: `Already used by ${conflicts.map((item) => item.label).join(", ")}. Choose another key or restore the other shortcut.`,
+          message: t("shortcuts.messages.conflict", {
+            values: {
+              labels: conflicts.map((item) => item.label).join(locale === "zh-CN" ? "、" : ", "),
+            },
+          }),
           shortcutId: shortcut.id,
           tone: "error",
         });
@@ -81,7 +105,7 @@ export function ShortcutSettingsSection({
       setFeedback(null);
       setRecordingId(null);
     },
-    [manager, onChange, overrides],
+    [locale, manager, onChange, overrides, t],
   );
 
   const restoreShortcutDefault = useCallback(
@@ -131,8 +155,7 @@ export function ShortcutSettingsSection({
       if (!accelerator) {
         if (isModifierOnlyKey(event.key)) {
           setFeedback({
-            message:
-              "Modifier keys are only prefixes. Keep holding them, then press a main key.",
+            message: t("shortcuts.messages.modifierOnly"),
             shortcutId: recordingShortcut.id,
             tone: "info",
           });
@@ -161,7 +184,7 @@ export function ShortcutSettingsSection({
 
       setRecordingId(null);
       setFeedback({
-        message: "Recording cancelled.",
+        message: t("shortcuts.messages.cancelled"),
         shortcutId: recordingShortcut.id,
         tone: "info",
       });
@@ -170,7 +193,7 @@ export function ShortcutSettingsSection({
     const handleWindowBlur = () => {
       setRecordingId(null);
       setFeedback({
-        message: "Recording cancelled because the window lost focus.",
+        message: t("shortcuts.messages.cancelledOnBlur"),
         shortcutId: recordingShortcut.id,
         tone: "info",
       });
@@ -185,52 +208,47 @@ export function ShortcutSettingsSection({
       window.removeEventListener("pointerdown", handlePointerDown, true);
       window.removeEventListener("blur", handleWindowBlur);
     };
-  }, [recordingShortcut, updateShortcutOverride]);
+  }, [recordingShortcut, t, updateShortcutOverride]);
 
   return (
-    <SettingsSection
-      section={settingsSections[4]}
-      badge={tx("settings", "badges.appliesInstantly")}
-      action={customizedCount > 0
-        ? (
-            <SettingsIconButton
-              label={t("actions.restoreAllShortcuts")}
-              onClick={restoreAllShortcuts}
-            >
-              <RotateCcw className="size-4" />
-            </SettingsIconButton>
-          )
-        : null}
-    >
-      <div className="space-y-3">
-        <ShortcutGroup
-          editable
-          feedback={feedback}
-          label="System-global"
-          note="Applies everywhere and saves immediately."
-          onDisable={updateShortcutOverride}
-          onRestore={restoreShortcutDefault}
-          onToggleRecord={setRecordingId}
-          overrides={overrides}
-          platform={manager.platform}
-          recordingId={recordingId}
-          shortcuts={groupedShortcuts.global}
-        />
-        <ShortcutGroup
-          editable={false}
-          feedback={feedback}
-          label="In-app"
-          note="Read-only reference."
-          onDisable={updateShortcutOverride}
-          onRestore={restoreShortcutDefault}
-          onToggleRecord={setRecordingId}
-          overrides={overrides}
-          platform={manager.platform}
-          recordingId={recordingId}
-          shortcuts={groupedShortcuts.local}
-        />
-      </div>
-    </SettingsSection>
+    <div className="space-y-3">
+      {customizedCount > 0 ? (
+        <div className="flex justify-end">
+          <SettingsIconButton
+            label={t("actions.restoreAllShortcuts")}
+            onClick={restoreAllShortcuts}
+          >
+            <RotateCcw className="size-4" />
+          </SettingsIconButton>
+        </div>
+      ) : null}
+      <ShortcutGroup
+        editable
+        feedback={feedback}
+        label={t("shortcuts.groups.global.label")}
+        note={t("shortcuts.groups.global.note")}
+        onDisable={updateShortcutOverride}
+        onRestore={restoreShortcutDefault}
+        onToggleRecord={setRecordingId}
+        overrides={overrides}
+        platform={manager.platform}
+        recordingId={recordingId}
+        shortcuts={groupedShortcuts.global}
+      />
+      <ShortcutGroup
+        editable={false}
+        feedback={feedback}
+        label={t("shortcuts.groups.local.label")}
+        note={t("shortcuts.groups.local.note")}
+        onDisable={updateShortcutOverride}
+        onRestore={restoreShortcutDefault}
+        onToggleRecord={setRecordingId}
+        overrides={overrides}
+        platform={manager.platform}
+        recordingId={recordingId}
+        shortcuts={groupedShortcuts.local}
+      />
+    </div>
   );
 }
 
@@ -259,6 +277,9 @@ function ShortcutGroup({
   recordingId: string | null;
   shortcuts: ResolvedShortcutDefinition[];
 }) {
+  const t = useScopedT("settings");
+  const tCommon = useScopedT("common");
+
   if (shortcuts.length === 0) {
     return null;
   }
@@ -290,10 +311,10 @@ function ShortcutGroup({
                 <div className="min-w-[180px] flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-medium text-foreground">{shortcut.label}</p>
-                    {isRecording ? <Badge variant="warning">Recording</Badge> : null}
-                    {isCustomized ? <Badge>Custom</Badge> : null}
-                    {isDisabled ? <Badge variant="secondary">Off</Badge> : null}
-                    {!editable ? <Badge variant="outline">Read only</Badge> : null}
+                    {isRecording ? <Badge variant="warning">{t("shortcuts.badges.recording")}</Badge> : null}
+                    {isCustomized ? <Badge>{t("shortcuts.badges.custom")}</Badge> : null}
+                    {isDisabled ? <Badge variant="secondary">{t("shortcuts.badges.off")}</Badge> : null}
+                    {!editable ? <Badge variant="outline">{t("shortcuts.badges.readOnly")}</Badge> : null}
                   </div>
                 </div>
 
@@ -301,13 +322,13 @@ function ShortcutGroup({
                   {currentKeys.length > 0 ? (
                     <Kbd keys={currentKeys} />
                   ) : (
-                    <span className="text-sm text-muted-foreground">Unassigned</span>
+                    <span className="text-sm text-muted-foreground">{tCommon("labels.unassigned")}</span>
                   )}
 
                   {editable ? (
                     <>
                       <SettingsIconButton
-                        label={isRecording ? "Stop recording" : "Record shortcut"}
+                        label={isRecording ? t("shortcuts.actions.stopRecording") : t("shortcuts.actions.record")}
                         onClick={() => onToggleRecord(isRecording ? null : shortcut.id)}
                         variant={isRecording ? "secondary" : "outline"}
                         buttonProps={{
@@ -322,24 +343,24 @@ function ShortcutGroup({
                         )}
                       </SettingsIconButton>
                       <SettingsIconButton
-                        label="Disable shortcut"
+                        label={t("shortcuts.actions.disable")}
                         onClick={() => onDisable(shortcut, null)}
                       >
                         <Slash className="size-4" />
                       </SettingsIconButton>
                       {isCustomized ? (
                         <SettingsIconButton
-                          label="Restore Default"
+                          label={t("shortcuts.actions.restoreDefault")}
                           tooltipContent={
                             defaultKeys.length > 0 ? (
                               <span className="inline-flex items-center gap-2">
-                                <span>Restore Default</span>
+                                <span>{t("shortcuts.actions.restoreDefault")}</span>
                                 <span className="inline-flex align-middle">
                                   <Kbd keys={defaultKeys} />
                                 </span>
                               </span>
                             ) : (
-                              "Restore Default"
+                              t("shortcuts.actions.restoreDefault")
                             )
                           }
                           onClick={() => onRestore(shortcut.id)}
@@ -361,7 +382,7 @@ function ShortcutGroup({
                 </p>
               ) : editable && isRecording ? (
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Listening for the next shortcut. Press `Esc` to cancel.
+                  {t("shortcuts.messages.listening")}
                 </p>
               ) : null}
             </div>

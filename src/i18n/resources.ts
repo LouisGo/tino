@@ -50,6 +50,7 @@ export const enUSResources = defineLocaleSchema({
     appName: "Tino",
     actions: {
       close: "Close",
+      moreInfo: "More info",
       open: "Open",
       refresh: "Refresh",
       restoreAll: "Restore all",
@@ -319,11 +320,11 @@ export const enUSResources = defineLocaleSchema({
     appearance: {
       language: {
         currentValue: "Currently using {{locale}}.",
-        description: "Switch immediately between English and Simplified Chinese.",
+        description: "Switch the interface language immediately.",
         label: "Language",
       },
       mode: {
-        description: "Light, dark, or system.",
+        description: "Light, dark, or follow the system setting.",
         label: "Appearance mode",
         options: {
           dark: "Dark",
@@ -333,19 +334,103 @@ export const enUSResources = defineLocaleSchema({
       },
       palette: {
         active: "Active",
-        description: "Shell color system.",
+        description: "Application color theme.",
         label: "Palette",
+        options: {
+          ocean: "Ocean",
+          tino: "Tino",
+        },
+      },
+    },
+    archive: {
+      root: {
+        info: "Tino writes daily archives and AI output under this folder.",
+        label: "Archive folder",
+        pick: "Pick folder",
+        placeholder: "~/tino-inbox",
+        reveal: "Reveal",
+      },
+    },
+    app: {
+      launchAtLogin: {
+        disabled: "Disabled",
+        enabled: "Enabled",
+        info: "Controls whether Tino starts automatically after sign-in.",
+        label: "Launch at login",
+        toggle: "Toggle",
+        updating: "Updating",
+      },
+      logs: {
+        info: "Open the runtime log directory for diagnostics.",
+        label: "Logs",
+        open: "Open logs",
+      },
+      shortcuts: {
+        label: "Shortcuts",
+        summary: "Global and in-app bindings",
       },
     },
     badges: {
       appliesInstantly: "Applies instantly",
+      configured: "Configured",
+      experimental: "Experimental",
+      needsAttention: "Needs attention",
+      paused: "Paused",
+      running: "Running",
+    },
+    clipboard: {
+      capture: {
+        pause: "Pause capture",
+        resume: "Resume capture",
+      },
+      keywords: {
+        info: "Semicolon-separated keywords. Matching is case-insensitive, and skipped captures",
+        label: "Ignored keywords",
+        placeholder: "password; verification code; internal only",
+      },
+      retention: {
+        info: "Applies only to the clipboard board cache in app data. It does not prune long-lived Markdown assets.",
+        label: "History retention",
+        options: {
+          fourteenDays: {
+            label: "14 days",
+            tone: "Maximum",
+          },
+          oneDay: {
+            label: "1 day",
+            tone: "Tight",
+          },
+          sevenDays: {
+            label: "7 days",
+            tone: "Extended",
+          },
+          threeDays: {
+            label: "3 days",
+            tone: "Balanced",
+          },
+        },
+      },
+      sourceApps: {
+        empty: "No ignored apps yet.",
+        info: "Search installed apps inline. will ignored captures from these apps",
+        label: "Ignored apps",
+        loadError: "Failed to load installed apps.",
+        loading: "Loading installed apps...",
+        noMatch: "No apps matched this search.",
+        remove: "Remove {{appName}} from ignored apps",
+        searchPlaceholder: "Search apps...",
+      },
     },
     navigation: {
       sectionsAriaLabel: "Settings sections",
     },
     provider: {
+      advanced: {
+        label: "Advanced",
+        summary: "Base URL, model, connectivity test",
+      },
       apiKey: {
-        description: "Saved locally with this provider profile.",
+        description: "Saved locally with this service profile.",
         hint: "Paste the API key for this account.",
         label: "API key",
         maskedValue: "Current key: {{key}}",
@@ -353,9 +438,9 @@ export const enUSResources = defineLocaleSchema({
         privateBadge: "Private",
       },
       current: {
-        description: "Background AI runs and /ai live review follow this default provider.",
-        label: "Default runtime",
-        missing: "No default provider selected",
+        description: "Background AI runs and /ai review use this default profile.",
+        label: "Default service",
+        missing: "No default profile selected",
       },
       baseUrl: {
         description: "Use the vendor default or a compatible relay endpoint.",
@@ -365,38 +450,61 @@ export const enUSResources = defineLocaleSchema({
       delete: {
         cancel: "Cancel",
         confirm: "Delete",
-        description: "Remove {{name}} ({{vendor}}) from the saved provider list?",
-        title: "Delete provider",
+        description: "Remove {{name}} ({{vendor}}) from saved profiles?",
+        title: "Delete profile",
       },
       list: {
-        add: "Add provider",
+        add: "Add profile",
         currentActive: "Default",
-        delete: "Delete provider",
+        delete: "Delete profile",
         description: "Save multiple accounts or relays, then choose which one background AI uses by default.",
         edit: "Edit",
         editing: "Editing",
-        keepOneHint: "Keep at least one saved provider slot. Clear its fields if you want to disable AI for now.",
-        label: "Saved providers",
+        keepOneHint: "Keep at least one saved profile. Clear its fields if you want to disable AI for now.",
+        label: "Saved profiles",
         useNow: "Use default",
       },
       model: {
         defaultOptionHint: "Use {{model}} unless Home switches models manually.",
         defaultOptionLabel: "Vendor default",
-        description: "Sets the default model for this provider.",
+        description: "Sets the default model for this profile.",
         hint: "Default is {{model}}. Home can still switch models temporarily.",
         label: "Default model override",
+        options: {
+          deepseekChat: {
+            description: "Default DeepSeek model for general work.",
+          },
+          deepseekReasoner: {
+            description: "Reasoning-focused DeepSeek model.",
+          },
+          gpt54: {
+            description: "Higher-capability GPT model.",
+          },
+          gpt54Mini: {
+            description: "Faster GPT-5.4 variant.",
+          },
+        },
         placeholder: "Default: {{model}}",
       },
       name: {
-        description: "Shown as the provider group label in Home.",
-        hint: "Give this provider a short name.",
-        label: "Provider name",
+        description: "Shown as the profile group label in Home.",
+        generatedLabel: "Profile",
+        hint: "Give this profile a short name.",
+        label: "Profile name",
         placeholder: "Provider 1",
       },
       vendor: {
         description: "Choose the vendor behind this profile.",
         hint: "Pick the vendor first. Base URL and model override are optional.",
         label: "Vendor",
+        options: {
+          deepseek: {
+            description: "DeepSeek direct endpoints or compatible DeepSeek relays.",
+          },
+          openai: {
+            description: "OpenAI official endpoints or OpenAI-compatible relays.",
+          },
+        },
         placeholder: "Select vendor",
       },
       status: {
@@ -405,10 +513,24 @@ export const enUSResources = defineLocaleSchema({
         ready: "Ready",
       },
       test: {
-        description: "Run a quick connectivity check and only show the result.",
+        description: "Run a lightweight connectivity check for the current profile.",
         disabledBody: "Fill in Base URL and API key first.",
+        errors: {
+          apiKeyRequired: "API key is required before testing.",
+          baseUrlRequired: "Base URL is required before testing.",
+          fetchUnavailable: "The current runtime cannot send provider requests right now.",
+          incompleteResponse: "The provider finished early before returning a complete response.",
+          modelUnavailable: "{{host}} does not currently provide model “{{model}}”. Try another model or profile.",
+          nonJsonResponse: "The provider returned a non-JSON response, not an OpenAI-compatible API payload.",
+          nonJsonResponseWithV1Hint:
+            "The provider returned a non-JSON response. If this is a relay, try a Base URL ending in /v1.",
+          requestBlocked:
+            "The request was blocked before a response arrived. In webview/browser mode, this is usually a CORS or relay preflight issue.",
+          timeout:
+            "The response timed out before a complete result arrived. Check the network or try another endpoint.",
+        },
         idleBody: "Runs one simple connectivity check for this profile.",
-        label: "Live provider test",
+        label: "Connectivity test",
         pendingBody: "Testing connection...",
         run: "Run test",
         running: "Running...",
@@ -416,37 +538,72 @@ export const enUSResources = defineLocaleSchema({
         inactiveHint: "Testing {{editing}} only. Click “Use default” if you also want background AI and /ai to use it instead of {{active}}.",
         unknownError: "The provider returned an unknown error.",
       },
+      validation: {
+        apiKeyTooShort: "API key looks too short.",
+        apiKeyWhitespace: "API key cannot contain spaces or line breaks.",
+        baseUrlCredentialsNotAllowed: "Do not include credentials in Base URL.",
+        baseUrlHttpsOnly: "Use an https:// endpoint.",
+        baseUrlInvalid: "Enter a valid URL.",
+        modelWhitespace: "Model id cannot contain spaces or line breaks.",
+        nameRequired: "Enter a profile name.",
+        vendorUnsupported: "Choose a supported vendor.",
+      },
+    },
+    shortcuts: {
+      actions: {
+        disable: "Disable shortcut",
+        record: "Record shortcut",
+        restoreDefault: "Restore default",
+        stopRecording: "Stop recording",
+      },
+      badges: {
+        custom: "Custom",
+        off: "Off",
+        readOnly: "Read only",
+        recording: "Recording",
+      },
+      groups: {
+        global: {
+          label: "System-wide",
+          note: "Works outside the app and saves immediately.",
+        },
+        local: {
+          label: "In app",
+          note: "Reference only.",
+        },
+      },
+      messages: {
+        cancelled: "Recording cancelled.",
+        cancelledOnBlur: "Recording cancelled because the window lost focus.",
+        conflict: "Already used by {{labels}}. Choose another shortcut or restore the other one first.",
+        listening: "Listening for the next shortcut. Press `Esc` to cancel.",
+        modifierOnly: "Modifier keys cannot be used on their own. Hold them and press one main key.",
+      },
     },
     sections: {
       ai: {
-        description: "Manage saved providers and choose the default runtime for background AI.",
-        eyebrow: "AI Runtime",
+        description: "Optional provider setup for live review and future background AI.",
+        eyebrow: "Processing",
         label: "AI",
-        title: "Provider Profiles",
+        title: "AI",
       },
-      appearance: {
-        description: "Choose the mode and palette for the shell.",
-        eyebrow: "Live Preview",
-        label: "Appearance",
-        title: "Theme & shell look",
+      app: {
+        description: "Shell preferences, launch behavior, diagnostics, and shortcut editing.",
+        eyebrow: "Shell",
+        label: "App",
+        title: "App",
       },
-      automation: {
-        description: "Control capture, launch behavior, and logs.",
-        eyebrow: "Runtime Controls",
-        label: "Automation",
-        title: "Automation & diagnostics",
+      archive: {
+        description: "Choose where Tino writes daily archives and downstream outputs.",
+        eyebrow: "Output",
+        label: "Archive",
+        title: "Archive",
       },
-      shortcuts: {
-        description: "Edit global bindings and keep local shortcuts visible.",
-        eyebrow: "Interaction Layer",
-        label: "Shortcuts",
-        title: "Keyboard shortcuts",
-      },
-      workspace: {
-        description: "Set the archive path and the clipboard history window.",
-        eyebrow: "Core Pathing",
-        label: "Workspace",
-        title: "Workspace & storage",
+      clipboard: {
+        description: "Control capture status, clipboard history retention, and ignore rules.",
+        eyebrow: "Input",
+        label: "Clipboard",
+        title: "Clipboard",
       },
     },
   },
@@ -461,6 +618,7 @@ export const zhCNResources = {
     appName: "Tino",
     actions: {
       close: "关闭",
+      moreInfo: "更多信息",
       open: "打开",
       refresh: "刷新",
       restoreAll: "全部恢复",
@@ -729,11 +887,11 @@ export const zhCNResources = {
     appearance: {
       language: {
         currentValue: "当前使用 {{locale}}。",
-        description: "可在英文和简体中文之间立即切换。",
+        description: "立即切换界面语言。",
         label: "语言",
       },
       mode: {
-        description: "浅色、深色或跟随系统。",
+        description: "浅色、深色，或跟随系统。",
         label: "外观模式",
         options: {
           dark: "深色",
@@ -743,120 +901,275 @@ export const zhCNResources = {
       },
       palette: {
         active: "当前使用",
-        description: "应用界面的配色系统。",
+        description: "应用配色方案。",
         label: "色板",
+        options: {
+          ocean: "海洋",
+          tino: "Tino",
+        },
+      },
+    },
+    archive: {
+      root: {
+        info: "Tino 会将 `daily` 归档和后续 AI 输出写入这个目录。",
+        label: "归档目录",
+        pick: "选择目录",
+        placeholder: "~/tino-inbox",
+        reveal: "显示位置",
+      },
+    },
+    app: {
+      launchAtLogin: {
+        disabled: "关闭",
+        enabled: "开启",
+        info: "控制登录后是否自动启动 Tino。",
+        label: "开机启动",
+        toggle: "切换状态",
+        updating: "更新中",
+      },
+      logs: {
+        info: "打开运行日志目录，便于排查问题。",
+        label: "日志",
+        open: "打开日志",
+      },
+      shortcuts: {
+        label: "快捷键",
+        summary: "全局与应用内快捷键",
       },
     },
     badges: {
       appliesInstantly: "即时生效",
+      configured: "已配置",
+      experimental: "试验功能",
+      needsAttention: "待配置",
+      paused: "已暂停",
+      running: "运行中",
+    },
+    clipboard: {
+      capture: {
+        pause: "暂停采集",
+        resume: "恢复采集",
+      },
+      keywords: {
+        info: "用分号分隔关键词。命中后不会采集",
+        label: "忽略关键词",
+        placeholder: "密码；验证码；仅限内部",
+      },
+      retention: {
+        info: "只影响应用数据目录中的剪贴板看板缓存，不会清理 `daily` 等长期保存的 Markdown 文件。",
+        label: "历史保留时长",
+        options: {
+          fourteenDays: {
+            label: "14 天",
+            tone: "最长",
+          },
+          oneDay: {
+            label: "1 天",
+            tone: "最省空间",
+          },
+          sevenDays: {
+            label: "7 天",
+            tone: "较宽松",
+          },
+          threeDays: {
+            label: "3 天",
+            tone: "均衡",
+          },
+        },
+      },
+      sourceApps: {
+        empty: "尚未设置忽略应用。",
+        info: "可直接搜索本机应用，被忽略的应用不会采集",
+        label: "忽略应用",
+        loadError: "加载应用列表失败。",
+        loading: "正在加载应用列表…",
+        noMatch: "没有匹配的应用。",
+        remove: "将 {{appName}} 从忽略应用中移除",
+        searchPlaceholder: "搜索应用名称",
+      },
     },
     navigation: {
-      sectionsAriaLabel: "设置分区",
+      sectionsAriaLabel: "设置导航",
     },
     provider: {
+      advanced: {
+        label: "高级设置",
+        summary: "接口地址、模型、连通性测试",
+      },
       apiKey: {
-        description: "只保存在本地，并跟随这条 provider 配置。",
-        hint: "粘贴这个账号对应的 API Key。",
-        label: "API Key",
+        description: "仅保存在本地，并跟随这条服务配置。",
+        hint: "粘贴这个账号对应的 API 密钥。",
+        label: "API 密钥",
         maskedValue: "当前密钥：{{key}}",
-        placeholder: "粘贴你的 provider key。",
+        placeholder: "粘贴这个服务的 API 密钥",
         privateBadge: "私密",
       },
       current: {
-        description: "后台 AI 和 /ai live review 会跟随这个默认 provider。",
-        label: "默认运行时",
-        missing: "还没有默认 provider",
+        description: "后台 AI 和 /ai 实时复核默认使用这条配置。",
+        label: "默认服务",
+        missing: "尚未设置默认服务",
       },
       baseUrl: {
-        description: "默认用厂商地址，也可以改成兼容中转。",
-        hint: "只有走中转时才需要改。",
-        label: "Base URL",
+        description: "默认使用厂商接口地址，也支持填写兼容中转。",
+        hint: "只有在使用中转或兼容接口时才需要修改。",
+        label: "接口地址",
       },
       delete: {
         cancel: "取消",
         confirm: "删除",
-        description: "要把 {{name}}（{{vendor}}）从已保存的 provider 列表中删除吗？",
-        title: "删除 provider",
+        description: "确定删除已保存的配置“{{name}}”（{{vendor}}）吗？",
+        title: "删除配置",
       },
       list: {
-        add: "新增 provider",
+        add: "新增配置",
         currentActive: "默认项",
-        delete: "删除 provider",
-        description: "把多个账号或中转保存起来，并指定后台 AI 默认使用哪一个。",
+        delete: "删除配置",
+        description: "保存多个账号或中转配置，并指定后台 AI 默认使用哪一个。",
         edit: "编辑",
         editing: "正在编辑",
-        keepOneHint: "至少保留一个 provider 槽位；如果你暂时不想启用 AI，可以直接把里面的字段清空。",
-        label: "已保存 provider",
+        keepOneHint: "至少保留一条服务配置；如果暂时不启用 AI，可以将字段留空。",
+        label: "已保存的服务配置",
         useNow: "设为默认",
       },
       model: {
-        defaultOptionHint: "默认使用 {{model}}；首页手动切换时不会改这里。",
-        defaultOptionLabel: "厂商默认",
-        description: "设置这个 Provider 的默认模型。",
-        hint: "默认会走 {{model}}，但首页仍可临时切换。",
-        label: "Default Model Override",
+        defaultOptionHint: "不单独指定时，沿用 {{model}}。",
+        defaultOptionLabel: "跟随厂商默认",
+        description: "设置这条服务配置默认使用的模型。",
+        hint: "默认会使用 {{model}}；首页临时切换不会回写这里。",
+        label: "默认模型",
+        options: {
+          deepseekChat: {
+            description: "适合通用任务的默认 DeepSeek 模型。",
+          },
+          deepseekReasoner: {
+            description: "偏推理场景的 DeepSeek 模型。",
+          },
+          gpt54: {
+            description: "能力更强的 GPT 模型。",
+          },
+          gpt54Mini: {
+            description: "速度更快的 GPT-5.4 变体。",
+          },
+        },
         placeholder: "默认：{{model}}",
       },
       name: {
-        description: "会显示在首页模型下拉里的 provider 分组标题中。",
-        hint: "给这组配置起一个简短名称。",
-        label: "Provider 名称",
-        placeholder: "Provider 1",
+        description: "会显示在首页模型选择器的服务分组中。",
+        generatedLabel: "配置",
+        hint: "给这条配置起一个简短名称。",
+        label: "配置名称",
+        placeholder: "默认 OpenAI",
       },
       vendor: {
-        description: "选择这条配置对应的厂商。",
-        hint: "先选厂商；Base URL 和模型覆盖都按需填写。",
+        description: "选择这条配置对应的服务厂商。",
+        hint: "先选厂商；接口地址和默认模型按需填写。",
         label: "厂商",
+        options: {
+          deepseek: {
+            description: "DeepSeek 官方接口，或兼容 DeepSeek 的中转服务。",
+          },
+          openai: {
+            description: "OpenAI 官方接口，或兼容 OpenAI 的中转服务。",
+          },
+        },
         placeholder: "选择厂商",
       },
       status: {
-        apiKeyNeeded: "需要 API Key",
-        incomplete: "提供方未完成",
+        apiKeyNeeded: "缺少 API 密钥",
+        incomplete: "配置未完成",
         ready: "已就绪",
       },
       test: {
-        description: "跑一次快速连通性检查，只显示结果。",
-        disabledBody: "请先填好 Base URL 和 API Key。",
+        description: "对当前配置做一次轻量连通性检查。",
+        disabledBody: "请先填写接口地址和 API 密钥。",
+        errors: {
+          apiKeyRequired: "开始测试前需要先填写 API 密钥。",
+          baseUrlRequired: "开始测试前需要先填写接口地址。",
+          fetchUnavailable: "当前运行环境暂时无法发出服务请求。",
+          incompleteResponse: "服务端过早结束，未返回完整响应。",
+          modelUnavailable: "当前 {{host}} 暂不提供模型“{{model}}”，请尝试更换模型或配置。",
+          nonJsonResponse: "服务端返回的不是 JSON，无法按 OpenAI 兼容接口解析。",
+          nonJsonResponseWithV1Hint:
+            "服务端返回的不是 JSON；如果这是中转服务，请尝试将接口地址补成以 /v1 结尾。",
+          requestBlocked:
+            "请求在拿到响应前就被拦截了；在 webview 或浏览器模式下，这通常是 CORS 或中转预检问题。",
+          timeout: "响应在完整返回前已超时，请检查网络或更换接口地址。",
+        },
         idleBody: "会对当前配置做一次简单的连通性检查。",
-        label: "实时 Provider 测试",
-        pendingBody: "正在测试连接...",
-        run: "运行测试",
-        running: "运行中...",
-        successBody: "连接成功。",
-        inactiveHint: "这次测试只会命中 {{editing}}；如果也要让后台 AI 和 /ai 改用它，而不是 {{active}}，请点上面的“设为默认”。",
-        unknownError: "Provider 返回了未知错误。",
+        label: "连通性测试",
+        pendingBody: "正在测试连接…",
+        run: "开始测试",
+        running: "测试中…",
+        successBody: "连接正常。",
+        inactiveHint: "这次测试只会命中 {{editing}}；如果也希望后台 AI 和 /ai 改用它，而不是 {{active}}，请点上面的“设为默认”。",
+        unknownError: "服务端返回了未知错误。",
+      },
+      validation: {
+        apiKeyTooShort: "API 密钥看起来过短，请再检查一次。",
+        apiKeyWhitespace: "API 密钥不能包含空格或换行。",
+        baseUrlCredentialsNotAllowed: "接口地址中不要包含用户名或密码。",
+        baseUrlHttpsOnly: "接口地址必须以 https:// 开头。",
+        baseUrlInvalid: "请输入有效的 URL。",
+        modelWhitespace: "模型 ID 不能包含空格或换行。",
+        nameRequired: "请输入配置名称。",
+        vendorUnsupported: "请选择支持的厂商。",
+      },
+    },
+    shortcuts: {
+      actions: {
+        disable: "停用快捷键",
+        record: "录入快捷键",
+        restoreDefault: "恢复默认",
+        stopRecording: "停止录入",
+      },
+      badges: {
+        custom: "已自定义",
+        off: "已关闭",
+        readOnly: "只读",
+        recording: "录入中",
+      },
+      groups: {
+        global: {
+          label: "系统级",
+          note: "在系统范围内生效，修改后立即保存。",
+        },
+        local: {
+          label: "应用内",
+          note: "仅作参考，当前不可修改。",
+        },
+      },
+      messages: {
+        cancelled: "已取消录入。",
+        cancelledOnBlur: "窗口失去焦点，已取消录入。",
+        conflict: "已与 {{labels}} 冲突。请更换快捷键，或先恢复对方的默认值。",
+        listening: "等待录入下一组快捷键。按 `Esc` 取消。",
+        modifierOnly: "修饰键不能单独作为快捷键。请继续按住，再配合一个主键。",
       },
     },
     sections: {
       ai: {
-        description: "统一管理已保存 provider，并选择后台 AI 默认使用哪一个。",
-        eyebrow: "AI 运行时",
+        description: "为实时复核和后续后台 AI 预留服务接入配置。",
+        eyebrow: "处理",
         label: "AI",
-        title: "Provider 配置",
+        title: "AI",
       },
-      appearance: {
-        description: "选择应用外观模式和色板。",
-        eyebrow: "实时预览",
-        label: "外观",
-        title: "主题与界面风格",
+      app: {
+        description: "管理应用偏好、开机启动、日志和快捷键。",
+        eyebrow: "应用",
+        label: "应用",
+        title: "应用",
       },
-      automation: {
-        description: "控制采集、开机启动和日志。",
-        eyebrow: "运行时控制",
-        label: "自动化",
-        title: "自动化与诊断",
+      archive: {
+        description: "决定 Tino 将归档与后续输出写入的位置。",
+        eyebrow: "输出",
+        label: "归档",
+        title: "归档",
       },
-      shortcuts: {
-        description: "编辑全局绑定，并保留应用内快捷键参考。",
-        eyebrow: "交互层",
-        label: "快捷键",
-        title: "键盘快捷键",
-      },
-      workspace: {
-        description: "设置归档路径和剪贴板历史窗口。",
-        eyebrow: "核心路径",
-        label: "工作区",
-        title: "工作区与存储",
+      clipboard: {
+        description: "管理采集状态、历史保留时长和忽略规则。",
+        eyebrow: "输入",
+        label: "剪贴板",
+        title: "剪贴板",
       },
     },
   },

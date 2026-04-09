@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderOpen, FolderSearch, Minus } from "lucide-react";
+import { Minus, Pause, Play } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ClipboardSourceAppAvatar } from "@/features/settings/components/clipboard-source-app-avatar";
 import { ClipboardSourceAppCombobox } from "@/features/settings/components/clipboard-source-app-combobox";
-import { SettingsIconButton } from "@/features/settings/components/settings-icon-button";
 import {
   SettingsPanel,
   SettingsPanelBody,
@@ -27,44 +26,23 @@ import {
   getCachedClipboardSourceApps,
 } from "@/features/settings/lib/clipboard-source-app-query";
 import { settingsSections } from "@/features/settings/settings-sections";
+import { useScopedT } from "@/i18n";
 import { getClipboardSourceAppIcons } from "@/lib/tauri";
 import type { SettingsDraft } from "@/types/shell";
 
-const clipboardRetentionOptions = [
-  {
-    value: 1,
-    label: "1 day",
-    description: "Tight",
-  },
-  {
-    value: 3,
-    label: "3 days",
-    description: "Balanced",
-  },
-  {
-    value: 7,
-    label: "7 days",
-    description: "Extended",
-  },
-  {
-    value: 14,
-    label: "14 days",
-    description: "Maximum",
-  },
-] as const;
-
-export function WorkspaceSettingsSection({
-  onPickKnowledgeRoot,
-  onRevealKnowledgeRoot,
+export function ClipboardSettingsSection({
+  captureEnabled,
+  onToggleCapture,
   patchSettingsDraft,
   settingsDraft,
 }: {
-  onPickKnowledgeRoot: () => Promise<void>;
-  onRevealKnowledgeRoot: () => Promise<void>;
+  captureEnabled: boolean;
+  onToggleCapture: () => void;
   patchSettingsDraft: (value: Partial<SettingsDraft>) => void;
   settingsDraft: SettingsDraft;
 }) {
-  const section = settingsSections[0];
+  const section = settingsSections.find((item) => item.id === "clipboard") ?? settingsSections[0];
+  const t = useScopedT("settings");
   const queryClient = useQueryClient();
   const [keywordInputDraft, setKeywordInputDraft] = useState<string | null>(null);
   const pendingSourceAppIconPathsRef = useRef(new Set<string>());
@@ -95,6 +73,31 @@ export function WorkspaceSettingsSection({
         ]),
       ),
     [sourceAppOptions],
+  );
+  const retentionOptions = useMemo(
+    () => [
+      {
+        value: 1,
+        label: t("clipboard.retention.options.oneDay.label"),
+        tone: t("clipboard.retention.options.oneDay.tone"),
+      },
+      {
+        value: 3,
+        label: t("clipboard.retention.options.threeDays.label"),
+        tone: t("clipboard.retention.options.threeDays.tone"),
+      },
+      {
+        value: 7,
+        label: t("clipboard.retention.options.sevenDays.label"),
+        tone: t("clipboard.retention.options.sevenDays.tone"),
+      },
+      {
+        value: 14,
+        label: t("clipboard.retention.options.fourteenDays.label"),
+        tone: t("clipboard.retention.options.fourteenDays.tone"),
+      },
+    ],
+    [t],
   );
   const duplicateSelectedAppNames = useMemo(() => {
     const counts = new Map<string, number>();
@@ -220,47 +223,22 @@ export function WorkspaceSettingsSection({
   return (
     <SettingsSection
       section={section}
-      badge={settingsDraft.knowledgeRoot ? "Configured" : "Needs attention"}
+      badge={captureEnabled ? t("badges.running") : t("badges.paused")}
+      action={(
+        <Button type="button" variant="outline" size="sm" onClick={onToggleCapture}>
+          {captureEnabled ? <Pause /> : <Play />}
+          {captureEnabled ? t("clipboard.capture.pause") : t("clipboard.capture.resume")}
+        </Button>
+      )}
     >
-      <SettingsPanel>
+      <SettingsPanel className="overflow-visible">
         <SettingsPanelBody>
           <SettingField
-            htmlFor="knowledge-root"
-            label="Knowledge root"
-            description="Archive folder."
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                id="knowledge-root"
-                value={settingsDraft.knowledgeRoot}
-                onChange={(event) =>
-                  patchSettingsDraft({ knowledgeRoot: event.target.value })
-                }
-                placeholder="~/tino-inbox"
-                className="min-w-[260px] flex-1"
-              />
-              <SettingsIconButton
-                label="Pick folder"
-                onClick={() => void onPickKnowledgeRoot()}
-              >
-                <FolderSearch />
-              </SettingsIconButton>
-              <SettingsIconButton
-                label="Reveal folder"
-                disabled={!settingsDraft.knowledgeRoot}
-                onClick={() => void onRevealKnowledgeRoot()}
-              >
-                <FolderOpen />
-              </SettingsIconButton>
-            </div>
-          </SettingField>
-
-          <SettingField
-            label="Clipboard cache retention"
-            description="Keep recent clipboard captures available in the board without touching long-lived daily records."
+            label={t("clipboard.retention.label")}
+            info={t("clipboard.retention.info")}
           >
             <div className="flex flex-wrap gap-2">
-              {clipboardRetentionOptions.map((option) => {
+              {retentionOptions.map((option) => {
                 const active = settingsDraft.clipboardHistoryDays === option.value;
 
                 return (
@@ -282,7 +260,7 @@ export function WorkspaceSettingsSection({
                         {option.label}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {option.description}
+                        {option.tone}
                       </p>
                     </div>
                   </button>
@@ -292,16 +270,11 @@ export function WorkspaceSettingsSection({
           </SettingField>
 
           <SettingField
-            label="Excluded source apps"
-            action={
-              settingsDraft.clipboardExcludedSourceApps.length ? (
-                <Badge variant="secondary">
-                  {settingsDraft.clipboardExcludedSourceApps.length} app
-                  {settingsDraft.clipboardExcludedSourceApps.length > 1 ? "s" : ""}
-                </Badge>
-              ) : undefined
-            }
-            description="Search installed apps inline. Runtime matching still uses the captured bundle ID, and excluded captures continue to write filter logs."
+            label={t("clipboard.sourceApps.label")}
+            info={t("clipboard.sourceApps.info")}
+            action={settingsDraft.clipboardExcludedSourceApps.length > 0
+              ? <Badge variant="secondary">{settingsDraft.clipboardExcludedSourceApps.length}</Badge>
+              : undefined}
           >
             <div className="space-y-4">
               <ClipboardSourceAppCombobox
@@ -322,7 +295,7 @@ export function WorkspaceSettingsSection({
                   sourceAppsQuery.error instanceof Error
                     ? sourceAppsQuery.error.message
                     : sourceAppsQuery.error
-                      ? "Failed to load installed apps."
+                      ? t("clipboard.sourceApps.loadError")
                       : null
                 }
                 options={sourceAppOptions}
@@ -339,7 +312,7 @@ export function WorkspaceSettingsSection({
 
               {selectedSourceApps.length === 0 ? (
                 <div className="rounded-[24px] border border-dashed border-border/70 px-4 py-5 text-sm text-muted-foreground">
-                  No source apps are excluded.
+                  {t("clipboard.sourceApps.empty")}
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-[24px] border border-border/70 bg-surface-panel shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
@@ -371,7 +344,9 @@ export function WorkspaceSettingsSection({
                           </div>
                           <button
                             type="button"
-                            aria-label={`Remove ${app.appName} from excluded apps`}
+                            aria-label={t("clipboard.sourceApps.remove", {
+                              values: { appName: app.appName },
+                            })}
                             onClick={() =>
                               patchSettingsDraft({
                                 clipboardExcludedSourceApps: removeClipboardSourceAppRule(
@@ -395,40 +370,29 @@ export function WorkspaceSettingsSection({
 
           <SettingField
             htmlFor="clipboard-excluded-keywords"
-            label="Excluded keywords"
-            action={
-              settingsDraft.clipboardExcludedKeywords.length ? (
-                <Badge variant="secondary">
-                  {settingsDraft.clipboardExcludedKeywords.length} keyword
-                  {settingsDraft.clipboardExcludedKeywords.length > 1 ? "s" : ""}
-                </Badge>
-              ) : undefined
-            }
-            description="Use `;` to separate keywords. If the captured raw text contains any keyword, that capture is skipped and logged."
+            label={t("clipboard.keywords.label")}
+            info={t("clipboard.keywords.info")}
+            action={settingsDraft.clipboardExcludedKeywords.length > 0
+              ? <Badge variant="secondary">{settingsDraft.clipboardExcludedKeywords.length}</Badge>
+              : undefined}
           >
-            <div className="space-y-2">
-              <Textarea
-                id="clipboard-excluded-keywords"
-                value={keywordInput}
-                onChange={(event) => {
-                  const nextInput = event.target.value;
-                  setKeywordInputDraft(nextInput);
-                  patchSettingsDraft({
-                    clipboardExcludedKeywords:
-                      parseClipboardExcludedKeywordsInput(nextInput),
-                  });
-                }}
-                onBlur={() => {
-                  setKeywordInputDraft(null);
-                }}
-                placeholder="password; verification code; internal only"
-                className="min-h-24"
-              />
-              <p className="text-xs text-muted-foreground">
-                Matching is case-insensitive and runs against the raw clipboard text before the
-                capture is archived.
-              </p>
-            </div>
+            <Textarea
+              id="clipboard-excluded-keywords"
+              value={keywordInput}
+              onChange={(event) => {
+                const nextInput = event.target.value;
+                setKeywordInputDraft(nextInput);
+                patchSettingsDraft({
+                  clipboardExcludedKeywords:
+                    parseClipboardExcludedKeywordsInput(nextInput),
+                });
+              }}
+              onBlur={() => {
+                setKeywordInputDraft(null);
+              }}
+              placeholder={t("clipboard.keywords.placeholder")}
+              className="min-h-24"
+            />
           </SettingField>
         </SettingsPanelBody>
       </SettingsPanel>

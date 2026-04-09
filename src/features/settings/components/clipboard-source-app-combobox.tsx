@@ -5,6 +5,7 @@ import { ChevronDown, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ClipboardSourceAppAvatar } from "@/features/settings/components/clipboard-source-app-avatar";
 import { matchesClipboardSourceAppSearch } from "@/features/settings/lib/clipboard-filter-settings";
+import { useScopedT } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { ClipboardSourceAppOption } from "@/types/shell";
 
@@ -25,6 +26,7 @@ export function ClipboardSourceAppCombobox({
   options: ClipboardSourceAppOption[];
   selectedBundleIds: Set<string>;
 }) {
+  const t = useScopedT("settings");
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -133,7 +135,10 @@ export function ClipboardSourceAppCombobox({
   };
 
   return (
-    <div ref={rootRef} className="relative">
+    <div
+      ref={rootRef}
+      className={cn("relative", dropdownVisible ? "z-20" : "z-0")}
+    >
       <div className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 z-[1] size-3.5 -translate-y-1/2 text-muted-foreground/70" />
         <Input
@@ -188,8 +193,8 @@ export function ClipboardSourceAppCombobox({
               setIsOpen(false);
             }
           }}
-          placeholder="Search apps..."
-          className="h-10 rounded-[18px] border-border/70 bg-surface-panel pl-9 pr-9 text-[12px] shadow-[0_14px_36px_rgba(15,23,42,0.08)]"
+          placeholder={t("clipboard.sourceApps.searchPlaceholder")}
+          className="h-10 rounded-[16px] border-border/70 bg-background pl-9 pr-9 text-sm shadow-none"
         />
         <ChevronDown
           className={cn(
@@ -200,7 +205,7 @@ export function ClipboardSourceAppCombobox({
       </div>
 
       {dropdownVisible ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-30 overflow-hidden rounded-[20px] border border-border/70 bg-[color:color-mix(in_oklch,var(--card)_94%,transparent)] shadow-[0_22px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl">
+        <div className="absolute left-0 right-0 top-[calc(100%+0.55rem)] z-50 overflow-hidden rounded-[18px] border border-border/70 bg-background shadow-[0_18px_42px_rgba(15,23,42,0.14)]">
           <div
             id={listboxId}
             role="listbox"
@@ -212,11 +217,11 @@ export function ClipboardSourceAppCombobox({
               </p>
             ) : isLoading ? (
               <p className="px-2.5 py-4 text-xs text-muted-foreground">
-                Loading installed apps...
+                {t("clipboard.sourceApps.loading")}
               </p>
             ) : filteredOptions.length === 0 ? (
               <p className="px-2.5 py-4 text-xs text-muted-foreground">
-                No apps matched this search.
+                {t("clipboard.sourceApps.noMatch")}
               </p>
             ) : (
               <div className="space-y-1">

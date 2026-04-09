@@ -24,11 +24,76 @@ export function RuntimeProviderTestPanel({
   });
 
   const canRun = providerAccess.isConfigured;
+  const resolveErrorMessage = () => {
+    if (!(testMutation.error instanceof Error)) {
+      return t("provider.test.unknownError");
+    }
+
+    const message = testMutation.error.message;
+    const modelUnavailableMatch = message.match(
+      /^Model "(.+)" is not currently available on (.+)\. Try another model or provider\.$/,
+    );
+
+    if (message === "Base URL is required.") {
+      return t("provider.test.errors.baseUrlRequired");
+    }
+
+    if (message === "API key is required.") {
+      return t("provider.test.errors.apiKeyRequired");
+    }
+
+    if (
+      message
+      === "Provider stream stalled or exceeded the configured timeout before a complete response arrived."
+    ) {
+      return t("provider.test.errors.timeout");
+    }
+
+    if (modelUnavailableMatch) {
+      return t("provider.test.errors.modelUnavailable", {
+        values: {
+          host: modelUnavailableMatch[2] ?? "",
+          model: modelUnavailableMatch[1] ?? "",
+        },
+      });
+    }
+
+    if (
+      message
+      === "Provider request was blocked before a response arrived. This is usually a CORS or relay preflight issue in webview/browser mode."
+    ) {
+      return t("provider.test.errors.requestBlocked");
+    }
+
+    if (
+      message
+      === "Provider returned a non-JSON response instead of an OpenAI-compatible API payload."
+    ) {
+      return t("provider.test.errors.nonJsonResponse");
+    }
+
+    if (
+      message
+      === "Provider returned a non-JSON response instead of an OpenAI-compatible API payload. Try using a Base URL that ends with /v1 if your relay follows the OpenAI path layout."
+    ) {
+      return t("provider.test.errors.nonJsonResponseWithV1Hint");
+    }
+
+    if (message === "Global fetch is unavailable in the current runtime.") {
+      return t("provider.test.errors.fetchUnavailable");
+    }
+
+    if (message === "Provider stream completed without a final step.") {
+      return t("provider.test.errors.incompleteResponse");
+    }
+
+    return message;
+  };
 
   return (
     <SettingField
       label={t("provider.test.label")}
-      description={t("provider.test.description")}
+      info={t("provider.test.description")}
     >
       <div className="max-w-[720px]">
         <div
@@ -71,9 +136,7 @@ export function RuntimeProviderTestPanel({
               <div className="flex items-start gap-2 rounded-2xl border border-destructive/20 bg-destructive/8 px-3 py-2.5 text-destructive">
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
                 <p className="[overflow-wrap:anywhere] whitespace-pre-wrap">
-                  {testMutation.error instanceof Error
-                    ? testMutation.error.message
-                    : t("provider.test.unknownError")}
+                  {resolveErrorMessage()}
                 </p>
               </div>
             ) : testMutation.isSuccess ? (
