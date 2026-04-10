@@ -101,6 +101,24 @@ pub struct ClipboardPageRequest {
     pub filter: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardReplayRequest {
+    pub capture_id: Option<String>,
+    pub content_kind: String,
+    pub raw_text: String,
+    pub raw_rich: Option<String>,
+    pub raw_rich_format: Option<String>,
+    pub link_url: Option<String>,
+    pub asset_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardReturnResult {
+    pub pasted: bool,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct CaptureRecord {

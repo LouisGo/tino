@@ -1,10 +1,6 @@
 use chrono::{DateTime, Duration, FixedOffset, Local};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::VecDeque,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::VecDeque, fs, path::Path};
 use uuid::Uuid;
 
 use crate::backend::clipboard_history::legacy::enforce_clipboard_retention;
@@ -18,7 +14,8 @@ use crate::clipboard::{
 };
 use crate::storage::capture_history_store::CaptureHistoryUpsert;
 use crate::storage::knowledge_root::{
-    batches_dir_path, ensure_knowledge_root_layout, queue_file_path, runtime_file_path,
+    batch_file_path, batches_dir_path, ensure_knowledge_root_layout, queue_file_path,
+    runtime_file_path,
 };
 
 use super::{
@@ -251,10 +248,6 @@ pub(super) fn count_ready_batches(knowledge_root: &Path) -> Result<usize, String
 
 pub(super) fn parse_captured_at(captured_at: &str) -> Result<DateTime<FixedOffset>, String> {
     DateTime::parse_from_rfc3339(captured_at).map_err(|error| error.to_string())
-}
-
-pub(super) fn batch_file_path(knowledge_root: &Path, batch_id: &str) -> PathBuf {
-    batches_dir_path(knowledge_root).join(format!("{batch_id}.json"))
 }
 
 pub(super) fn hydrate_runtime_preview_assets(

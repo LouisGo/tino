@@ -29,6 +29,10 @@ pub(crate) fn batches_dir_path(knowledge_root: &Path) -> PathBuf {
     knowledge_root.join("_system").join(BATCHES_DIR_NAME)
 }
 
+pub(crate) fn batch_file_path(knowledge_root: &Path, batch_id: &str) -> PathBuf {
+    batches_dir_path(knowledge_root).join(format!("{batch_id}.json"))
+}
+
 pub(crate) fn ensure_knowledge_root_layout(knowledge_root: &Path) -> Result<(), String> {
     fs::create_dir_all(knowledge_root.join("daily")).map_err(|error| error.to_string())?;
     fs::create_dir_all(knowledge_root.join("_system")).map_err(|error| error.to_string())?;
