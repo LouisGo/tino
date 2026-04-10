@@ -1,4 +1,5 @@
-use crate::app_state::{AppState, BatchPromotionSummary, CaptureProcessingResult, CaptureRecord};
+use crate::app_state::{AppState, BatchPromotionSummary, CaptureProcessingResult};
+use crate::clipboard::types::CaptureRecord;
 
 #[cfg(target_os = "macos")]
 use {

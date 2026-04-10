@@ -3,12 +3,12 @@ use std::path::Path;
 use log::warn;
 
 use crate::{
-    app_state::{
+    backend::clipboard_history::legacy::{
         append_clipboard_history_entry, delete_clipboard_history_entry,
         promote_clipboard_history_entry, update_clipboard_history_ocr_text,
-        upsert_capture_history_store, CapturePreview, DeleteClipboardCaptureResult,
     },
     backend::clipboard_history::migration::reconcile_capture_history_store,
+    clipboard::types::{CapturePreview, DeleteClipboardCaptureResult},
     storage::capture_history_store::{CaptureHistoryStore, CaptureHistoryUpsert},
 };
 
@@ -132,4 +132,11 @@ pub(crate) fn update_capture_ocr_text_with_fallback(
     };
 
     Ok(updated_history || updated_store)
+}
+
+fn upsert_capture_history_store(
+    clipboard_cache_root: &Path,
+    capture: &CaptureHistoryUpsert,
+) -> Result<(), String> {
+    CaptureHistoryStore::new(clipboard_cache_root)?.upsert_capture(capture)
 }

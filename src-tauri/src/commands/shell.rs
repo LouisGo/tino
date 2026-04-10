@@ -1,8 +1,8 @@
-use crate::app_state::{
-    AppSettings, AppState, CapturePreview, ClipboardBoardBootstrap, ClipboardPage,
-    ClipboardPageRequest,
-    ClipboardSourceAppOption, ClipboardWindowTarget, DashboardSnapshot,
-    DeleteClipboardCaptureResult, PinnedClipboardCapture, UpdateClipboardPinResult,
+use crate::app_state::{AppSettings, AppState, ClipboardSourceAppOption, DashboardSnapshot};
+use crate::clipboard::types::{
+    CapturePreview, ClipboardBoardBootstrap, ClipboardPage, ClipboardPageRequest,
+    ClipboardWindowTarget, DeleteClipboardCaptureResult, PinnedClipboardCapture,
+    UpdateClipboardPinResult,
 };
 use log::info;
 use serde::{Deserialize, Serialize};

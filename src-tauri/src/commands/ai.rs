@@ -1,4 +1,6 @@
-use crate::app_state::{ensure_knowledge_root_layout, AppState, CaptureRecord};
+use crate::app_state::AppState;
+use crate::clipboard::types::CaptureRecord;
+use crate::storage::knowledge_root::ensure_knowledge_root_layout;
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use specta::Type;

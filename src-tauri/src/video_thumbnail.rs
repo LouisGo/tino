@@ -1,9 +1,5 @@
 #[cfg(target_os = "macos")]
-use objc2::{
-    exception::catch as catch_objc_exception,
-    rc::autoreleasepool,
-    AnyThread,
-};
+use objc2::{exception::catch as catch_objc_exception, rc::autoreleasepool, AnyThread};
 #[cfg(target_os = "macos")]
 use objc2_app_kit::{NSBitmapImageFileType, NSBitmapImageRep};
 #[cfg(target_os = "macos")]
@@ -44,7 +40,8 @@ pub fn generate_video_thumbnail_png(
             }
             .map_err(ns_error_message)?;
 
-            let bitmap_rep = NSBitmapImageRep::initWithCGImage(NSBitmapImageRep::alloc(), &cg_image);
+            let bitmap_rep =
+                NSBitmapImageRep::initWithCGImage(NSBitmapImageRep::alloc(), &cg_image);
             let properties = NSDictionary::new();
             let Some(png_data) = (unsafe {
                 bitmap_rep
@@ -65,7 +62,9 @@ pub fn generate_video_thumbnail_png(
     match result {
         Ok(value) => value,
         Err(Some(exception)) => Err(exception.to_string()),
-        Err(None) => Err("AVFoundation thumbnail extraction raised an unknown Objective-C exception".to_string()),
+        Err(None) => Err(
+            "AVFoundation thumbnail extraction raised an unknown Objective-C exception".to_string(),
+        ),
     }
 }
 

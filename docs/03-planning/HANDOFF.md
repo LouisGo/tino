@@ -1,6 +1,6 @@
 # Tino Handoff
 
-> 最后更新：2026-04-09
+> 最后更新：2026-04-10
 > 当前基线提交：`395ef47` + workspace multi-provider runtime changes
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
@@ -48,6 +48,7 @@
 - `CaptureRecord`
 - `daily/*.md` 原始归档
 - clipboard panel 最近历史保留窗口（当前缓存已落到 app data；`clipboard-cache/clipboard/*.jsonl` + `clipboard-cache/tino.db` + `clipboard-cache/app-icons/` 不裁剪 `daily` / `topics` / `_inbox` / 持久化附件）
+- clipboard history 边界已收口：`backend/clipboard_history/read.rs` 负责 sqlite 读取边界与 fallback；`backend/clipboard_history/write.rs` 负责 sqlite 写入边界与 fallback；`backend/clipboard_history/legacy.rs` 负责 JSONL + retention 内核；`app_state/runtime.rs` 仅保留编排调用
 - clipboard board 启动时会由 Rust 预热首屏 `summary + pinned + page 0` bootstrap；只要本地已有历史，应用重启后不应再先落入空白 loading 再回填
 - settings 页已支持 clipboard 过滤规则：可按来源应用 `bundle id` 黑名单和关键词排除剪贴板捕获；被排除内容仍会写入 `_system/filters.log` 结构化日志，便于调试
 - 主窗口首次可见时会主动预热 macOS `Accessibility` 授权，尽量把剪贴板回填所需的打扰前置到应用打开阶段；授权后仍需重启当前 app 副本
@@ -107,6 +108,7 @@
 
 - clipboard history 是输入插件缓存，不是长期知识真相源
 - clipboard retention 只作用于 app data 下的 clipboard panel / history query 缓存层
+- app_state 不直接持有 clipboard history 的 JSONL retention/file-IO 内核，统一由 `backend/clipboard_history/legacy.rs` 提供能力
 - 来源应用图标缓存也属于 clipboard 插件 UI 缓存，放 app data，不写入长期 Markdown 资产
 - `daily/` 只做原始归档
 - `daily/` / `topics/` / `_inbox/` / 已持久化附件应视为长期知识资产，不应被 clipboard retention 误删

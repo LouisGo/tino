@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use crate::{
-    app_state::{capture_preview_to_history_upsert, load_capture_history_entries_legacy},
+    backend::clipboard_history::legacy::{
+        capture_preview_to_history_upsert, load_capture_history_entries_legacy,
+    },
     storage::capture_history_store::CaptureHistoryStore,
 };
 
@@ -20,12 +22,14 @@ pub(crate) fn reconcile_capture_history_store(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{Duration, Local};
     use std::{fs, path::PathBuf};
     use uuid::Uuid;
 
     use crate::{
-        app_state::{append_clipboard_history_entry, ensure_knowledge_root_layout, CapturePreview},
-        storage::capture_history_store::CaptureHistoryQuery,
+        backend::clipboard_history::legacy::append_clipboard_history_entry,
+        clipboard::types::CapturePreview, storage::capture_history_store::CaptureHistoryQuery,
+        storage::knowledge_root::ensure_knowledge_root_layout,
     };
     fn unique_root() -> PathBuf {
         std::env::temp_dir().join(format!(
@@ -64,11 +68,9 @@ mod tests {
     fn reconcile_capture_history_store_is_idempotent_for_same_legacy_entries() {
         let root = unique_root();
         ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
-        append_clipboard_history_entry(
-            &root,
-            &sample_preview("cap_1", "2026-04-06T12:00:00+08:00"),
-        )
-        .expect("preview should append");
+        let captured_at = (Local::now().fixed_offset() - Duration::minutes(1)).to_rfc3339();
+        append_clipboard_history_entry(&root, &sample_preview("cap_1", &captured_at))
+            .expect("preview should append");
 
         reconcile_capture_history_store(&root, 3).expect("first reconcile should succeed");
         reconcile_capture_history_store(&root, 3).expect("second reconcile should succeed");

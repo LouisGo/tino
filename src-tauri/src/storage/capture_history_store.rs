@@ -58,9 +58,6 @@ pub struct CaptureHistoryEntry {
     pub image_width: Option<u32>,
     pub image_height: Option<u32>,
     pub byte_size: Option<u64>,
-    pub hash: Option<String>,
-    pub created_at: String,
-    pub updated_at: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -280,10 +277,7 @@ impl CaptureHistoryStore {
                     thumbnail_path,
                     image_width,
                     image_height,
-                    byte_size,
-                    hash,
-                    created_at,
-                    updated_at
+                    byte_size
                 FROM capture_history
                 WHERE captured_at_epoch_ms >= ?1
                   AND status IN ('archived', 'queued')
@@ -801,10 +795,7 @@ fn query_filtered_captures(
             thumbnail_path,
             image_width,
             image_height,
-            byte_size,
-            hash,
-            created_at,
-            updated_at
+            byte_size
         FROM capture_history
         WHERE {where_sql}
         ORDER BY captured_at_epoch_ms DESC, captured_at DESC, id DESC
@@ -897,9 +888,6 @@ fn map_capture_history_entry_row(row: &Row<'_>) -> rusqlite::Result<CaptureHisto
         image_width: row.get(17)?,
         image_height: row.get(18)?,
         byte_size: row.get(19)?,
-        hash: row.get(20)?,
-        created_at: row.get(21)?,
-        updated_at: row.get(22)?,
     })
 }
 
@@ -1070,7 +1058,6 @@ mod tests {
         assert_eq!(result.summary.links, 0);
         assert_eq!(result.captures.len(), 1);
         assert_eq!(result.captures[0].id, "cap_text");
-        assert_eq!(result.captures[0].hash.as_deref(), Some("hash-cap_text"));
 
         let _ = fs::remove_dir_all(root);
     }

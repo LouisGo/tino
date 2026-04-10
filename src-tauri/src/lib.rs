@@ -2,6 +2,7 @@ mod app_idle;
 mod app_state;
 mod backend;
 mod capture;
+mod clipboard;
 mod commands;
 pub mod ipc_schema;
 mod locale;
@@ -14,9 +15,10 @@ mod video_thumbnail;
 mod vision_ocr;
 mod window_state;
 
-use app_state::{AppState, ClipboardWindowTarget};
+use app_state::AppState;
 #[cfg(target_os = "macos")]
 use block2::RcBlock;
+use clipboard::types::ClipboardWindowTarget;
 #[cfg(target_os = "macos")]
 use libc::pid_t;
 use locale::localized_shell_strings;
