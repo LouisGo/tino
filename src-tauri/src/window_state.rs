@@ -61,14 +61,18 @@ pub(crate) fn load_window_state_store(app: &AppHandle) -> PersistedWindowStateSt
     let Some(path) = window_state_path(app) else {
         return PersistedWindowStateStore::default();
     };
-    let Ok(raw) = fs::read_to_string(path) else {
+    let Ok(raw) = fs::read_to_string(&path) else {
+        log::warn!("failed to read window state from {}", path.display());
         return PersistedWindowStateStore::default();
     };
 
-    serde_json::from_str::<PersistedWindowStateFile>(&raw)
-        .ok()
-        .map(Into::into)
-        .unwrap_or_default()
+    match serde_json::from_str::<PersistedWindowStateFile>(&raw) {
+        Ok(file) => file.into(),
+        Err(error) => {
+            log::warn!("failed to parse window state: {}", error);
+            PersistedWindowStateStore::default()
+        }
+    }
 }
 
 pub(crate) fn save_window_state_store(app: &AppHandle, store: &PersistedWindowStateStore) {
@@ -77,11 +81,23 @@ pub(crate) fn save_window_state_store(app: &AppHandle, store: &PersistedWindowSt
     };
 
     if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
+        if let Err(error) = fs::create_dir_all(parent) {
+            log::warn!("failed to create window state directory: {}", error);
+            return;
+        }
     }
 
-    if let Ok(raw) = serde_json::to_string_pretty(store) {
-        let _ = fs::write(path, raw);
+    let Ok(raw) = serde_json::to_string_pretty(store) else {
+        log::warn!("failed to serialize window state");
+        return;
+    };
+
+    if let Err(error) = fs::write(&path, raw) {
+        log::warn!(
+            "failed to write window state to {}: {}",
+            path.display(),
+            error
+        );
     }
 }
 

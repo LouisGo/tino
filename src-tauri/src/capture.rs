@@ -338,6 +338,13 @@ fn run_macos_clipboard_watcher(state: AppState) {
 
                 match read_capture_record(detected_at) {
                     Ok(Some(capture)) => match state.process_capture(&capture) {
+                        Ok(CaptureProcessingResult::Paused) => {
+                            let _ = state.set_watch_running();
+                            info!(
+                                "ignored clipboard capture {} while capture is paused",
+                                capture.id
+                            );
+                        }
                         Ok(CaptureProcessingResult::Archived { path }) => {
                             let _ = state.set_watch_running();
                             info!(

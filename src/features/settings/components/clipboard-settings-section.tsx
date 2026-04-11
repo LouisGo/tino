@@ -31,12 +31,10 @@ import { getClipboardSourceAppIcons } from "@/lib/tauri";
 import type { SettingsDraft } from "@/types/shell";
 
 export function ClipboardSettingsSection({
-  captureEnabled,
   onToggleCapture,
   patchSettingsDraft,
   settingsDraft,
 }: {
-  captureEnabled: boolean;
   onToggleCapture: () => void;
   patchSettingsDraft: (value: Partial<SettingsDraft>) => void;
   settingsDraft: SettingsDraft;
@@ -92,9 +90,9 @@ export function ClipboardSettingsSection({
         tone: t("clipboard.retention.options.sevenDays.tone"),
       },
       {
-        value: 14,
-        label: t("clipboard.retention.options.fourteenDays.label"),
-        tone: t("clipboard.retention.options.fourteenDays.tone"),
+        value: 90,
+        label: t("clipboard.retention.options.ninetyDays.label"),
+        tone: t("clipboard.retention.options.ninetyDays.tone"),
       },
     ],
     [t],
@@ -223,11 +221,13 @@ export function ClipboardSettingsSection({
   return (
     <SettingsSection
       section={section}
-      badge={captureEnabled ? t("badges.running") : t("badges.paused")}
+      badge={settingsDraft.clipboardCaptureEnabled ? t("badges.running") : t("badges.paused")}
       action={(
         <Button type="button" variant="outline" size="sm" onClick={onToggleCapture}>
-          {captureEnabled ? <Pause /> : <Play />}
-          {captureEnabled ? t("clipboard.capture.pause") : t("clipboard.capture.resume")}
+          {settingsDraft.clipboardCaptureEnabled ? <Pause /> : <Play />}
+          {settingsDraft.clipboardCaptureEnabled
+            ? t("clipboard.capture.pause")
+            : t("clipboard.capture.resume")}
         </Button>
       )}
     >

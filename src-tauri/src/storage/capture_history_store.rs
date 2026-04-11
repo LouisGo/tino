@@ -8,6 +8,8 @@ use std::{
 use chrono::{DateTime, Duration, FixedOffset, Local};
 use rusqlite::{params, params_from_iter, types::Value, Connection, OptionalExtension, Row};
 
+use crate::backend::clipboard_history::search::parse_clipboard_history_search;
+
 const SQLITE_FILE_NAME: &str = "tino.db";
 const CAPTURE_HISTORY_SCHEMA_VERSION: i32 = 4;
 
@@ -825,11 +827,18 @@ fn build_where_clause(
     search: &str,
     filter: &str,
 ) -> (String, Vec<Value>) {
+    let parsed_search = parse_clipboard_history_search(search);
     let mut clauses = vec![
         "captured_at_epoch_ms >= ?".to_string(),
         "status IN ('archived', 'queued')".to_string(),
     ];
-    let mut params = vec![Value::Integer(history_cutoff_epoch_ms(history_days))];
+    let effective_cutoff_epoch_ms = parsed_search
+        .captured_after_epoch_ms
+        .map(|captured_after_epoch_ms| {
+            history_cutoff_epoch_ms(history_days).max(captured_after_epoch_ms)
+        })
+        .unwrap_or_else(|| history_cutoff_epoch_ms(history_days));
+    let mut params = vec![Value::Integer(effective_cutoff_epoch_ms)];
 
     if !excluded_capture_ids.is_empty() {
         let placeholders = (0..excluded_capture_ids.len())
@@ -840,15 +849,35 @@ fn build_where_clause(
         params.extend(excluded_capture_ids.iter().cloned().map(Value::Text));
     }
 
-    let normalized_search = search.trim().to_ascii_lowercase();
-    if !normalized_search.is_empty() {
+    for term in &parsed_search.raw_text_terms {
         clauses.push(
             "LOWER(source || ' ' || COALESCE(source_app_name, '') || ' ' || COALESCE(source_app_bundle_id, '') || ' ' || preview || ' ' || COALESCE(secondary_preview, '') || ' ' || raw_text || ' ' || COALESCE(ocr_text, '') || ' ' || COALESCE(link_url, '')) LIKE ?".into(),
         );
-        params.push(Value::Text(format!("%{normalized_search}%")));
+        params.push(Value::Text(format!("%{term}%")));
     }
 
-    match filter.trim().to_ascii_lowercase().as_str() {
+    for term in &parsed_search.source_terms {
+        clauses.push(
+            "LOWER(source || ' ' || COALESCE(source_app_name, '') || ' ' || COALESCE(source_app_bundle_id, '')) LIKE ?".into(),
+        );
+        params.push(Value::Text(format!("%{term}%")));
+    }
+
+    for term in &parsed_search.bundle_terms {
+        clauses.push("LOWER(COALESCE(source_app_bundle_id, '')) LIKE ?".into());
+        params.push(Value::Text(format!("%{term}%")));
+    }
+
+    if let Some(structured_filter) = parsed_search.content_kind_filter.as_deref() {
+        append_content_kind_filter_clause(structured_filter, &mut clauses);
+    }
+    append_content_kind_filter_clause(filter.trim().to_ascii_lowercase().as_str(), &mut clauses);
+
+    (clauses.join(" AND "), params)
+}
+
+fn append_content_kind_filter_clause(filter: &str, clauses: &mut Vec<String>) {
+    match filter {
         "text" => clauses.push("content_kind IN ('plain_text', 'rich_text')".into()),
         "link" => clauses.push("content_kind = 'link'".into()),
         "image" => clauses.push("content_kind = 'image'".into()),
@@ -856,8 +885,6 @@ fn build_where_clause(
         "file" => clauses.push("content_kind = 'file'".into()),
         _ => {}
     }
-
-    (clauses.join(" AND "), params)
 }
 
 fn checkpoint_and_vacuum(connection: &Connection) -> Result<(), String> {
@@ -1140,6 +1167,72 @@ mod tests {
             result.captures[0].ocr_text.as_deref(),
             Some("Launch checklist")
         );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn query_page_supports_structured_search_keywords() {
+        let root = unique_root();
+        let store = CaptureHistoryStore::new(&root).expect("store should initialize");
+        let now = Local::now().fixed_offset();
+        let mut safari_image = sample_upsert_at(
+            "cap_safari_image",
+            "image",
+            "archived",
+            "quarterly roadmap",
+            (now - Duration::days(2)).to_rfc3339(),
+        );
+        safari_image.source_app_name = Some("Safari".into());
+        safari_image.source_app_bundle_id = Some("com.apple.Safari".into());
+        safari_image.ocr_text = Some("Launch checklist".into());
+
+        let mut finder_file = sample_upsert_at(
+            "cap_finder_file",
+            "file",
+            "archived",
+            "launch assets",
+            (now - Duration::days(2)).to_rfc3339(),
+        );
+        finder_file.source_app_name = Some("Finder".into());
+        finder_file.source_app_bundle_id = Some("com.apple.finder".into());
+
+        let mut old_safari_image = sample_upsert_at(
+            "cap_old_safari_image",
+            "image",
+            "archived",
+            "quarterly roadmap",
+            (now - Duration::days(31)).to_rfc3339(),
+        );
+        old_safari_image.source_app_name = Some("Safari".into());
+        old_safari_image.source_app_bundle_id = Some("com.apple.Safari".into());
+
+        store
+            .upsert_capture(&safari_image)
+            .expect("safari image should insert");
+        store
+            .upsert_capture(&finder_file)
+            .expect("finder file should insert");
+        store
+            .upsert_capture(&old_safari_image)
+            .expect("old safari image should insert");
+
+        let result = store
+            .query_page(&CaptureHistoryQuery {
+                history_days: 90,
+                excluded_capture_ids: Vec::new(),
+                search: r#"launch app:safari date:30d type:image"#.into(),
+                filter: "all".into(),
+                page: 0,
+                page_size: 20,
+            })
+            .expect("query should succeed");
+
+        assert_eq!(result.total, 1);
+        assert_eq!(result.summary.total, 1);
+        assert_eq!(result.summary.images, 1);
+        assert_eq!(result.captures.len(), 1);
+        assert_eq!(result.captures[0].id, "cap_safari_image");
 
         let _ = fs::remove_dir_all(root);
     }

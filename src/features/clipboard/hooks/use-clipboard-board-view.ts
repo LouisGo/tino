@@ -3,6 +3,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useSyncExternalStore,
 } from "react";
 
@@ -37,7 +38,9 @@ export function useClipboardBoardView() {
   const t = useScopedT("clipboard");
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
+  const requestListScrollToTop = useClipboardBoardStore((state) => state.requestListScrollToTop);
   const deferredSearch = useDeferredValue(searchValue);
+  const searchInteractionHydratedRef = useRef(false);
   const queryClient = useQueryClient();
   const bootstrap = useSyncExternalStore(
     subscribeClipboardBoardBootstrap,
@@ -124,9 +127,9 @@ export function useClipboardBoardView() {
     () =>
       pinnedCaptures
         .filter(({ capture }) => matchesFilter(capture.contentKind, filter))
-        .filter(({ capture }) => matchesSearch(capture, deferredSearch, t))
+        .filter(({ capture }) => matchesSearch(capture, searchValue, t))
         .map(({ capture }) => capture),
-    [deferredSearch, filter, pinnedCaptures, t],
+    [filter, pinnedCaptures, searchValue, t],
   );
   const visibleCaptures = useMemo(
     () => [...visiblePinnedCaptures, ...captures],
@@ -197,6 +200,15 @@ export function useClipboardBoardView() {
     },
     [],
   );
+
+  useEffect(() => {
+    if (!searchInteractionHydratedRef.current) {
+      searchInteractionHydratedRef.current = true;
+      return;
+    }
+
+    requestListScrollToTop();
+  }, [filter, requestListScrollToTop, searchValue]);
 
   return {
     captures,

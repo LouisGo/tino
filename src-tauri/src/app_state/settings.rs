@@ -15,10 +15,15 @@ use crate::runtime_provider::{
 
 const DEFAULT_CLIPBOARD_HISTORY_DAYS: u16 = 7;
 const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
-const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 14;
+const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 90;
+const DEFAULT_CLIPBOARD_CAPTURE_ENABLED: bool = true;
 
 fn default_clipboard_history_days() -> u16 {
     DEFAULT_CLIPBOARD_HISTORY_DAYS
+}
+
+fn default_clipboard_capture_enabled() -> bool {
+    DEFAULT_CLIPBOARD_CAPTURE_ENABLED
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
@@ -54,6 +59,8 @@ pub struct AppSettings {
     pub locale_preference: AppLocalePreference,
     #[serde(default = "default_clipboard_history_days")]
     pub clipboard_history_days: u16,
+    #[serde(default = "default_clipboard_capture_enabled")]
+    pub clipboard_capture_enabled: bool,
     #[serde(default)]
     pub clipboard_excluded_source_apps: Vec<ClipboardSourceAppRule>,
     #[serde(default)]
@@ -73,6 +80,7 @@ impl AppSettings {
             active_runtime_provider_id,
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: DEFAULT_CLIPBOARD_HISTORY_DAYS,
+            clipboard_capture_enabled: DEFAULT_CLIPBOARD_CAPTURE_ENABLED,
             clipboard_excluded_source_apps: Vec::new(),
             clipboard_excluded_keywords: Vec::new(),
             shortcut_overrides: BTreeMap::new(),
@@ -131,20 +139,17 @@ impl AppSettings {
         PathBuf::from(&self.knowledge_root)
     }
 
-    pub fn active_runtime_provider(&self) -> &RuntimeProviderProfile {
-        let default_provider = self
-            .runtime_provider_profiles
-            .first()
-            .expect("runtime provider profiles should never be empty after normalization");
-
+    pub fn active_runtime_provider(&self) -> Option<&RuntimeProviderProfile> {
         self.runtime_provider_profiles
             .iter()
             .find(|profile| profile.id == self.active_runtime_provider_id)
-            .unwrap_or(default_provider)
+            .or_else(|| self.runtime_provider_profiles.first())
     }
 
     pub(super) fn ai_enabled(&self) -> bool {
-        self.active_runtime_provider().is_configured()
+        self.active_runtime_provider()
+            .map(|provider| provider.is_configured())
+            .unwrap_or(false)
     }
 }
 
@@ -162,6 +167,8 @@ struct LegacyAppSettings {
     pub locale_preference: AppLocalePreference,
     #[serde(default = "default_clipboard_history_days")]
     pub clipboard_history_days: u16,
+    #[serde(default = "default_clipboard_capture_enabled")]
+    pub clipboard_capture_enabled: bool,
     #[serde(default)]
     pub clipboard_excluded_source_apps: Vec<ClipboardSourceAppRule>,
     #[serde(default)]
@@ -184,6 +191,7 @@ impl LegacyAppSettings {
         settings.active_runtime_provider_id = settings.runtime_provider_profiles[0].id.clone();
         settings.locale_preference = self.locale_preference;
         settings.clipboard_history_days = self.clipboard_history_days;
+        settings.clipboard_capture_enabled = self.clipboard_capture_enabled;
         settings.clipboard_excluded_source_apps = self.clipboard_excluded_source_apps;
         settings.clipboard_excluded_keywords = self.clipboard_excluded_keywords;
         settings.shortcut_overrides = self.shortcut_overrides;
@@ -225,6 +233,8 @@ struct LegacyManagedAppSettings {
     pub locale_preference: AppLocalePreference,
     #[serde(default = "default_clipboard_history_days")]
     pub clipboard_history_days: u16,
+    #[serde(default = "default_clipboard_capture_enabled")]
+    pub clipboard_capture_enabled: bool,
     #[serde(default)]
     pub clipboard_excluded_source_apps: Vec<ClipboardSourceAppRule>,
     #[serde(default)]
@@ -245,6 +255,7 @@ impl LegacyManagedAppSettings {
             active_runtime_provider_id: self.active_runtime_provider_id,
             locale_preference: self.locale_preference,
             clipboard_history_days: self.clipboard_history_days,
+            clipboard_capture_enabled: self.clipboard_capture_enabled,
             clipboard_excluded_source_apps: self.clipboard_excluded_source_apps,
             clipboard_excluded_keywords: self.clipboard_excluded_keywords,
             shortcut_overrides: self.shortcut_overrides,

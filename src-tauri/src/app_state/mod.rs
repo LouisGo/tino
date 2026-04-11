@@ -8,7 +8,7 @@ use specta::Type;
 use std::sync::atomic::AtomicBool;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    fs,
+    fs, mem,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
@@ -100,6 +100,7 @@ pub struct DashboardSnapshot {
 
 #[derive(Debug)]
 pub enum CaptureProcessingResult {
+    Paused,
     Archived { path: PathBuf },
     Queued { path: PathBuf, queue_depth: usize },
     Filtered { reason: String },
@@ -179,7 +180,9 @@ impl AppState {
 
         let queue_state = ensure_queue_state(&knowledge_root)?;
         let mut runtime = load_runtime_state(&knowledge_root)?;
-        let runtime_recent_captures = runtime.recent_captures.iter().cloned().collect::<Vec<_>>();
+        let runtime_recent_captures: Vec<_> = mem::take(&mut runtime.recent_captures)
+            .into_iter()
+            .collect();
         reconcile_clipboard_history_legacy(
             &clipboard_cache_dir,
             settings.clipboard_history_days,
@@ -190,7 +193,6 @@ impl AppState {
         {
             warn!("failed to reconcile sqlite capture history store on startup: {error}");
         }
-        runtime.recent_captures.clear();
         hydrate_runtime_preview_assets(&knowledge_root, &mut runtime)?;
         runtime.watch_status = STARTING_WATCH_STATUS.into();
         runtime.last_error = None;
@@ -348,7 +350,9 @@ impl AppState {
         )?;
         let queue_state = ensure_queue_state(&knowledge_root)?;
         let mut runtime = load_runtime_state(&knowledge_root)?;
-        let runtime_recent_captures = runtime.recent_captures.iter().cloned().collect::<Vec<_>>();
+        let runtime_recent_captures: Vec<_> = mem::take(&mut runtime.recent_captures)
+            .into_iter()
+            .collect();
         reconcile_clipboard_history_legacy(
             &self.shared.clipboard_cache_dir,
             normalized.clipboard_history_days,
@@ -362,7 +366,6 @@ impl AppState {
                 "failed to reconcile sqlite capture history store after settings change: {error}"
             );
         }
-        runtime.recent_captures.clear();
         hydrate_runtime_preview_assets(&knowledge_root, &mut runtime)?;
         runtime.watch_status = self.current_watch_status();
         runtime.last_error = self.current_last_error();
@@ -396,18 +399,36 @@ impl AppState {
     }
 
     pub fn dashboard_snapshot(&self, app: &AppHandle) -> Result<DashboardSnapshot, String> {
-        let (settings, runtime, app_data_dir, app_log_dir) = {
+        let (
+            locale,
+            ai_enabled,
+            watch_status,
+            queue_depth,
+            ready_batch_count,
+            last_error,
+            last_batch_reason,
+            knowledge_root,
+            clipboard_history_days,
+            default_knowledge_root,
+        ) = {
             let state = self.lock_state()?;
             (
-                state.settings.clone(),
-                state.runtime.clone(),
-                self.shared.app_data_dir.display().to_string(),
-                self.shared.app_log_dir.display().to_string(),
+                state.settings.locale_preference.resolved(),
+                state.settings.ai_enabled(),
+                state.runtime.watch_status.clone(),
+                state.runtime.queue_depth,
+                state.runtime.ready_batch_count,
+                state.runtime.last_error.clone(),
+                state.runtime.last_batch_reason.clone(),
+                state.settings.knowledge_root_path(),
+                state.settings.clipboard_history_days,
+                state.settings.knowledge_root.clone(),
             )
         };
-        let locale = settings.locale_preference.resolved();
+        let app_data_dir = self.shared.app_data_dir.display().to_string();
+        let app_log_dir = self.shared.app_log_dir.display().to_string();
         let watch_status = match locale {
-            crate::locale::AppLocale::ZhCn => match runtime.watch_status.as_str() {
+            crate::locale::AppLocale::ZhCn => match watch_status.as_str() {
                 RUNNING_WATCH_STATUS => "Rust 剪贴板轮询器运行中".to_string(),
                 STARTING_WATCH_STATUS => "Rust 剪贴板轮询器启动中".to_string(),
                 "Rust clipboard poller retrying" => "Rust 剪贴板轮询器重试中".to_string(),
@@ -416,38 +437,38 @@ impl AppState {
                 }
                 other => other.to_string(),
             },
-            crate::locale::AppLocale::EnUs => runtime.watch_status.clone(),
+            crate::locale::AppLocale::EnUs => watch_status,
         };
         let queue_state = match locale {
             crate::locale::AppLocale::ZhCn => {
-                if settings.ai_enabled() {
+                if ai_enabled {
                     format!(
                         "AI 队列待处理 {} · 就绪批次 {}",
-                        runtime.queue_depth, runtime.ready_batch_count
+                        queue_depth, ready_batch_count
                     )
                 } else {
                     format!(
                         "AI 队列已暂停，待处理 {} · 就绪批次 {}，等待完成提供方配置",
-                        runtime.queue_depth, runtime.ready_batch_count
+                        queue_depth, ready_batch_count
                     )
                 }
             }
             crate::locale::AppLocale::EnUs => {
-                if settings.ai_enabled() {
+                if ai_enabled {
                     format!(
                         "AI queue pending {} · ready batches {}",
-                        runtime.queue_depth, runtime.ready_batch_count
+                        queue_depth, ready_batch_count
                     )
                 } else {
                     format!(
                         "AI queue paused with {} pending · ready batches {} until provider setup completes",
-                        runtime.queue_depth, runtime.ready_batch_count
+                        queue_depth, ready_batch_count
                     )
                 }
             }
         };
 
-        let batch_state = match (&runtime.last_batch_reason, locale) {
+        let batch_state = match (&last_batch_reason, locale) {
             (Some(reason), crate::locale::AppLocale::ZhCn) => {
                 let localized_reason = match reason.as_str() {
                     "capture_count" => "按采集条数触发",
@@ -462,9 +483,9 @@ impl AppState {
             (None, _) => String::new(),
         };
         let recent_captures = load_recent_clipboard_captures(
-            &settings.knowledge_root_path(),
+            &knowledge_root,
             &self.shared.clipboard_cache_dir,
-            settings.clipboard_history_days,
+            clipboard_history_days,
             3,
         )?;
 
@@ -475,7 +496,7 @@ impl AppState {
             app_env: runtime_profile::app_env().into(),
             data_channel: runtime_profile::data_channel().into(),
             os: std::env::consts::OS.into(),
-            default_knowledge_root: settings.knowledge_root.clone(),
+            default_knowledge_root,
             app_data_dir,
             app_log_dir,
             queue_policy: match locale {
@@ -486,7 +507,7 @@ impl AppState {
                     "20 captures or 10 minutes · exact-match dedupe in 5 minutes".into()
                 }
             },
-            capture_mode: match (&runtime.last_error, locale) {
+            capture_mode: match (&last_error, locale) {
                 (Some(error), crate::locale::AppLocale::ZhCn) => format!(
                     "{} · {}{} · 最近错误：{}",
                     watch_status, queue_state, batch_state, error
@@ -626,6 +647,10 @@ impl AppState {
         capture: &CaptureRecord,
     ) -> Result<CaptureProcessingResult, String> {
         let settings = self.current_settings()?;
+        if !settings.clipboard_capture_enabled {
+            return Ok(CaptureProcessingResult::Paused);
+        }
+
         let knowledge_root = settings.knowledge_root_path();
         let captured_at = parse_captured_at(&capture.captured_at)?;
         let mut stored_capture = capture.clone();
@@ -1019,6 +1044,8 @@ mod tests {
     #[test]
     fn app_settings_normalized_dedupes_clipboard_filter_rules() {
         let mut settings = sample_settings();
+        settings.clipboard_history_days = 365;
+        settings.clipboard_capture_enabled = false;
         settings.clipboard_excluded_source_apps = vec![
             ClipboardSourceAppRule {
                 bundle_id: " com.apple.Safari ".into(),
@@ -1041,6 +1068,8 @@ mod tests {
 
         let normalized = settings.normalized(&unique_root());
 
+        assert_eq!(normalized.clipboard_history_days, 90);
+        assert!(!normalized.clipboard_capture_enabled);
         assert_eq!(normalized.clipboard_excluded_source_apps.len(), 2);
         assert_eq!(
             normalized.clipboard_excluded_source_apps[0].bundle_id,

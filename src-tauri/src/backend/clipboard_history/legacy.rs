@@ -9,6 +9,10 @@ use std::{
 };
 
 use crate::{
+    backend::clipboard_history::search::{
+        matches_clipboard_history_search, matches_content_kind_filter,
+        parse_clipboard_history_search,
+    },
     clipboard::{
         preview::{
             hydrate_capture_preview_assets, normalize_ocr_text, should_persist_capture_history,
@@ -36,12 +40,8 @@ pub(crate) fn query_clipboard_history_page_legacy(
         .unwrap_or("all")
         .trim()
         .to_ascii_lowercase();
-    let search = request
-        .search
-        .as_deref()
-        .unwrap_or("")
-        .trim()
-        .to_ascii_lowercase();
+    let search = request.search.as_deref().unwrap_or("").trim();
+    let search_query = parse_clipboard_history_search(search);
     let start = page.saturating_mul(page_size);
     let end = start.saturating_add(page_size);
     let mut captures = Vec::new();
@@ -64,7 +64,7 @@ pub(crate) fn query_clipboard_history_page_legacy(
             return Ok(());
         }
 
-        if !matches_clipboard_search(capture, &search) {
+        if !matches_clipboard_history_search(capture, &search_query) {
             return Ok(());
         }
 
@@ -492,35 +492,7 @@ fn prune_capture_history_store_days(
 }
 
 fn matches_clipboard_filter(capture: &CapturePreview, filter: &str) -> bool {
-    match filter {
-        "all" | "" => true,
-        "text" => matches!(capture.content_kind.as_str(), "plain_text" | "rich_text"),
-        "link" => capture.content_kind == "link",
-        "image" => capture.content_kind == "image",
-        "video" => capture.content_kind == "video",
-        "file" => capture.content_kind == "file",
-        _ => true,
-    }
-}
-
-fn matches_clipboard_search(capture: &CapturePreview, search: &str) -> bool {
-    if search.is_empty() {
-        return true;
-    }
-
-    [
-        capture.source.as_str(),
-        capture.source_app_name.as_deref().unwrap_or_default(),
-        capture.source_app_bundle_id.as_deref().unwrap_or_default(),
-        capture.preview.as_str(),
-        capture.secondary_preview.as_deref().unwrap_or_default(),
-        capture.raw_text.as_str(),
-        capture.ocr_text.as_deref().unwrap_or_default(),
-        capture.link_url.as_deref().unwrap_or_default(),
-    ]
-    .join(" ")
-    .to_ascii_lowercase()
-    .contains(search)
+    matches_content_kind_filter(&capture.content_kind, filter)
 }
 
 fn visit_clipboard_history_entries<F>(

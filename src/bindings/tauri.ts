@@ -83,6 +83,7 @@ export type AppSettings = {
 	activeRuntimeProviderId: string,
 	localePreference?: AppLocalePreference,
 	clipboardHistoryDays?: number,
+	clipboardCaptureEnabled?: boolean,
 	clipboardExcludedSourceApps?: ClipboardSourceAppRule[],
 	clipboardExcludedKeywords?: string[],
 	shortcutOverrides?: { [key in string]: AppShortcutOverride },

@@ -81,6 +81,7 @@ const mockSettings: SettingsDraft = {
   activeRuntimeProviderId: "provider_mock_primary",
   localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: DEFAULT_CLIPBOARD_HISTORY_DAYS,
+  clipboardCaptureEnabled: true,
   clipboardExcludedSourceApps: [],
   clipboardExcludedKeywords: [],
   shortcutOverrides: {},
@@ -299,6 +300,7 @@ function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
     activeRuntimeProviderId: settings.activeRuntimeProviderId,
     localePreference: normalizeAppLocalePreference(settings.localePreference),
     clipboardHistoryDays: settings.clipboardHistoryDays ?? DEFAULT_CLIPBOARD_HISTORY_DAYS,
+    clipboardCaptureEnabled: settings.clipboardCaptureEnabled ?? true,
     clipboardExcludedSourceApps:
       (settings.clipboardExcludedSourceApps ?? []).map(normalizeClipboardSourceAppRule),
     clipboardExcludedKeywords: settings.clipboardExcludedKeywords ?? [],

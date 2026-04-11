@@ -387,7 +387,7 @@ export const enUSResources = defineLocaleSchema({
       shortcutsButtonAria: "Open clipboard shortcuts",
     },
     toolbar: {
-      searchPlaceholder: "Search clipboard history",
+      searchPlaceholder: "Search history or use app:/date:/type:",
       clearSearch: "Clear search",
       filterAria: "Filter capture types",
     },
@@ -632,8 +632,8 @@ export const enUSResources = defineLocaleSchema({
         info: "Applies only to the clipboard board cache in app data. It does not prune long-lived Markdown assets.",
         label: "History retention",
         options: {
-          fourteenDays: {
-            label: "14 days",
+          ninetyDays: {
+            label: "90 days",
             tone: "Maximum",
           },
           oneDay: {
@@ -1193,7 +1193,7 @@ export const zhCNResources = {
       shortcutsButtonAria: "打开剪贴板快捷键说明",
     },
     toolbar: {
-      searchPlaceholder: "搜索剪贴板记录",
+      searchPlaceholder: "搜索记录，也支持 app:/date:/type:",
       clearSearch: "清空搜索",
       filterAria: "按类型筛选记录",
     },
@@ -1438,8 +1438,8 @@ export const zhCNResources = {
         info: "只影响应用数据目录中的剪贴板看板缓存，不会清理 `daily` 等长期保存的 Markdown 文件。",
         label: "历史保留时长",
         options: {
-          fourteenDays: {
-            label: "14 天",
+          ninetyDays: {
+            label: "90 天",
             tone: "最长",
           },
           oneDay: {

@@ -1,7 +1,7 @@
 # Tino Handoff
 
-> 最后更新：2026-04-10
-> 当前基线提交：`395ef47` + workspace multi-provider runtime changes
+> 最后更新：2026-04-11
+> 当前基线提交：`8ac3f7f` + workspace clipboard capture/search changes
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
 
@@ -49,6 +49,9 @@
 - `daily/*.md` 原始归档
 - clipboard panel 最近历史保留窗口（当前缓存已落到 app data；`clipboard-cache/clipboard/*.jsonl` + `clipboard-cache/tino.db` + `clipboard-cache/app-icons/` 不裁剪 `daily` / `topics` / `_inbox` / 持久化附件）
 - clipboard history 边界已收口：`backend/clipboard_history/read.rs` 负责 sqlite 读取边界与 fallback；`backend/clipboard_history/write.rs` 负责 sqlite 写入边界与 fallback；`backend/clipboard_history/legacy.rs` 负责 JSONL + retention 内核；`app_state/runtime.rs` 仅保留编排调用
+- settings 页的“暂停采集”已接成真实 Rust 持久化能力；暂停时 watcher 继续轮询，但新复制内容不进 `daily` / history cache / queue / AI，重启后状态保持一致
+- clipboard history retention 上限已从 `14 天`提到 `90 天`；现有设置档位为 `1 / 3 / 7 / 90`
+- clipboard board 搜索框已支持关键词式搜索；除普通文本外，可用 `app:` / `source:`、`bundle:`、`date:`、`type:` 在单个输入框里做组合检索，sqlite 与 JSONL fallback 语义保持一致
 - clipboard replay / paste-back Rust 边界已收口：`commands/shell.rs` 对这条链路只保留 IPC adapter；`clipboard/source_apps.rs` 负责来源应用发现与图标缓存；`clipboard/replay/` 目录模块已拆分为 `mod.rs` 编排、`pasteboard.rs`、`authorization.rs`、`focus.rs`
 - clipboard board 启动时会由 Rust 预热首屏 `summary + pinned + page 0` bootstrap；只要本地已有历史，应用重启后不应再先落入空白 loading 再回填
 - settings 页已支持 clipboard 过滤规则：可按来源应用 `bundle id` 黑名单和关键词排除剪贴板捕获；被排除内容仍会写入 `_system/filters.log` 结构化日志，便于调试

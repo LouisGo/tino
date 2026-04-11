@@ -52,6 +52,14 @@ type ClipboardTranslate = (
   },
 ) => string;
 
+type ClipboardSearchQuery = {
+  rawTextTerms: string[];
+  sourceTerms: string[];
+  bundleTerms: string[];
+  contentKindFilter: ClipboardFilter | null;
+  capturedAfterEpochMs: number | null;
+};
+
 type ClipboardFilterOptionSpec = {
   value: ClipboardFilter;
   labelKey: TranslationKey<"clipboard">;
@@ -159,13 +167,21 @@ export function matchesSearch(
   searchValue: string,
   t: ClipboardTranslate,
 ) {
-  const normalizedSearch = searchValue.trim().toLowerCase();
+  const query = parseClipboardSearchQuery(searchValue);
 
-  if (!normalizedSearch) {
-    return true;
+  if (query.contentKindFilter && !matchesFilter(capture.contentKind, query.contentKindFilter)) {
+    return false;
   }
 
-  return [
+  if (query.capturedAfterEpochMs !== null) {
+    const capturedAtEpochMs = dayjs(capture.capturedAt).valueOf();
+    if (!Number.isFinite(capturedAtEpochMs) || capturedAtEpochMs < query.capturedAfterEpochMs) {
+      return false;
+    }
+  }
+
+  const haystack = [
+    capture.source,
     captureSourceLabel(capture, t),
     capture.sourceAppBundleId ?? "",
     captureTitle(capture, t),
@@ -175,12 +191,197 @@ export function matchesSearch(
     capture.linkUrl ?? "",
   ]
     .join(" ")
-    .toLowerCase()
-    .includes(normalizedSearch);
+    .toLowerCase();
+  const sourceHaystack = [
+    capture.source,
+    captureSourceLabel(capture, t),
+    capture.sourceAppBundleId ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+  const bundleHaystack = (capture.sourceAppBundleId ?? "").toLowerCase();
+
+  return query.rawTextTerms.every((term) => haystack.includes(term))
+    && query.sourceTerms.every((term) => sourceHaystack.includes(term))
+    && query.bundleTerms.every((term) => bundleHaystack.includes(term));
 }
 
 export function isTextKind(contentKind: ContentKind) {
   return contentKind === "plain_text" || contentKind === "rich_text";
+}
+
+function parseClipboardSearchQuery(searchValue: string): ClipboardSearchQuery {
+  const query: ClipboardSearchQuery = {
+    rawTextTerms: [],
+    sourceTerms: [],
+    bundleTerms: [],
+    contentKindFilter: null,
+    capturedAfterEpochMs: null,
+  };
+
+  for (const token of tokenizeClipboardSearch(searchValue)) {
+    const normalizedToken = normalizeClipboardSearchValue(token);
+    if (!normalizedToken) {
+      continue;
+    }
+
+    const delimiterIndex = token.indexOf(":");
+    if (delimiterIndex > 0) {
+      const key = normalizeClipboardSearchValue(token.slice(0, delimiterIndex));
+      const rawValue = token.slice(delimiterIndex + 1);
+      const normalizedValue = normalizeClipboardSearchValue(rawValue);
+
+      if (!normalizedValue) {
+        continue;
+      }
+
+      switch (key) {
+        case "app":
+        case "source":
+        case "src":
+        case "来源":
+        case "应用":
+          query.sourceTerms.push(normalizedValue);
+          continue;
+        case "bundle":
+        case "bundleid":
+        case "bid":
+        case "包名":
+          query.bundleTerms.push(normalizedValue);
+          continue;
+        case "type":
+        case "kind":
+        case "类型": {
+          const filter = normalizeClipboardSearchFilter(normalizedValue);
+          if (filter) {
+            query.contentKindFilter = filter;
+            continue;
+          }
+          break;
+        }
+        case "date":
+        case "day":
+        case "日期": {
+          const cutoff = normalizeClipboardSearchDate(normalizedValue);
+          if (cutoff !== null) {
+            query.capturedAfterEpochMs = cutoff;
+            continue;
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    query.rawTextTerms.push(normalizedToken);
+  }
+
+  return query;
+}
+
+function tokenizeClipboardSearch(searchValue: string) {
+  const tokens: string[] = [];
+  let current = "";
+  let quoteDelimiter: '"' | "'" | null = null;
+
+  for (const char of searchValue) {
+    if (quoteDelimiter) {
+      if (char === quoteDelimiter) {
+        quoteDelimiter = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quoteDelimiter = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current.trim()) {
+        tokens.push(current.trim());
+      }
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    tokens.push(current.trim());
+  }
+
+  return tokens;
+}
+
+function normalizeClipboardSearchValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeClipboardSearchFilter(value: string): ClipboardFilter | null {
+  switch (value) {
+    case "all":
+    case "全部":
+      return "all";
+    case "text":
+    case "texts":
+    case "plain_text":
+    case "rich_text":
+    case "文本":
+    case "富文本":
+      return "text";
+    case "link":
+    case "links":
+    case "url":
+    case "urls":
+    case "链接":
+      return "link";
+    case "image":
+    case "images":
+    case "img":
+    case "图片":
+      return "image";
+    case "video":
+    case "videos":
+    case "视频":
+      return "video";
+    case "file":
+    case "files":
+    case "文件":
+      return "file";
+    default:
+      return null;
+  }
+}
+
+function normalizeClipboardSearchDate(value: string) {
+  switch (value) {
+    case "today":
+    case "今日":
+    case "今天":
+      return dayjs().startOf("day").valueOf();
+    case "7d":
+    case "7day":
+    case "7days":
+    case "7天":
+      return dayjs().subtract(7, "day").valueOf();
+    case "30d":
+    case "30day":
+    case "30days":
+    case "30天":
+      return dayjs().subtract(30, "day").valueOf();
+    case "90d":
+    case "90day":
+    case "90days":
+    case "90天":
+      return dayjs().subtract(90, "day").valueOf();
+    default:
+      return null;
+  }
 }
 
 export function isFileReferenceKind(contentKind: ContentKind) {

@@ -24,14 +24,12 @@ export function SettingsPage() {
   const hash = useRouterState({ select: (state) => state.location.hash });
   const {
     autostartEnabled,
-    captureEnabled,
     hasPendingChanges,
     isSavingSettings,
     mode,
     patchSettingsDraft,
     persistedSettings,
     saveSettingsDraft,
-    setCaptureEnabled,
     setMode,
     setThemeName,
     settingsDraft,
@@ -99,11 +97,9 @@ export function SettingsPage() {
     handleToggleCapture,
   } = useSettingsSectionActions({
     autostartEnabled,
-    captureEnabled,
     getCurrentDraft: () => settingsDraftRef.current,
     patchSettingsDraft,
     saveSettingsDraft,
-    setCaptureEnabled,
     settingsDraft,
     toggleAutostart: (enabled) => toggleAutostartMutation.mutateAsync(enabled),
   });
@@ -147,7 +143,6 @@ export function SettingsPage() {
         >
           <div className="space-y-8 pb-8">
             <ClipboardSettingsSection
-              captureEnabled={captureEnabled}
               onToggleCapture={handleToggleCapture}
               settingsDraft={settingsDraft}
               patchSettingsDraft={patchSettingsDraft}

@@ -53,9 +53,7 @@ function serializeSettingsDraft(settings: SettingsDraft) {
 
 export function useSettingsController() {
   const queryClient = useQueryClient();
-  const captureEnabled = useAppShellStore((state) => state.captureEnabled);
   const patchSettingsDraft = useAppShellStore((state) => state.patchSettingsDraft);
-  const setCaptureEnabled = useAppShellStore((state) => state.setCaptureEnabled);
   const setSettingsDraft = useAppShellStore((state) => state.setSettingsDraft);
   const settingsDraft = useAppShellStore((state) => state.settingsDraft);
   const mode = useThemeStore((state) => state.mode);
@@ -207,14 +205,12 @@ export function useSettingsController() {
 
   return {
     autostartEnabled,
-    captureEnabled,
     hasPendingChanges,
     isSavingSettings,
     mode,
     patchSettingsDraft,
     persistedSettings,
     saveSettingsDraft,
-    setCaptureEnabled,
     setMode,
     setThemeName,
     settingsDraft,

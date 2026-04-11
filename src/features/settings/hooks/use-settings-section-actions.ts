@@ -14,22 +14,18 @@ const logger = createRendererLogger("settings.actions")
 
 type UseSettingsSectionActionsOptions = {
   autostartEnabled: boolean
-  captureEnabled: boolean
   getCurrentDraft: () => SettingsDraft
   patchSettingsDraft: (value: Partial<SettingsDraft>) => void
   saveSettingsDraft: (draft: SettingsDraft) => Promise<void>
-  setCaptureEnabled: (value: boolean) => void
   settingsDraft: SettingsDraft
   toggleAutostart: (enabled: boolean) => Promise<unknown>
 }
 
 export function useSettingsSectionActions({
   autostartEnabled,
-  captureEnabled,
   getCurrentDraft,
   patchSettingsDraft,
   saveSettingsDraft,
-  setCaptureEnabled,
   settingsDraft,
   toggleAutostart,
 }: UseSettingsSectionActionsOptions) {
@@ -65,8 +61,18 @@ export function useSettingsSectionActions({
   )
 
   const handleToggleCapture = useCallback(() => {
-    setCaptureEnabled(!captureEnabled)
-  }, [captureEnabled, setCaptureEnabled])
+    const currentDraft = getCurrentDraft()
+    const nextDraft = {
+      ...currentDraft,
+      clipboardCaptureEnabled: !currentDraft.clipboardCaptureEnabled,
+    }
+
+    patchSettingsDraft({ clipboardCaptureEnabled: nextDraft.clipboardCaptureEnabled })
+
+    void saveSettingsDraft(nextDraft).catch((error) => {
+      logger.error("Failed to persist clipboard capture state", error)
+    })
+  }, [getCurrentDraft, patchSettingsDraft, saveSettingsDraft])
 
   const handleToggleAutostart = useCallback(async () => {
     await toggleAutostart(!autostartEnabled)

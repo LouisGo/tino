@@ -83,12 +83,7 @@ fn query_capture_history_page_from_store(
         .unwrap_or("all")
         .trim()
         .to_ascii_lowercase();
-    let search = request
-        .search
-        .as_deref()
-        .unwrap_or("")
-        .trim()
-        .to_ascii_lowercase();
+    let search = request.search.as_deref().unwrap_or("").trim().to_string();
     let mut excluded_ids = excluded_capture_ids.iter().cloned().collect::<Vec<_>>();
     excluded_ids.sort();
 
