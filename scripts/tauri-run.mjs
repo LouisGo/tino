@@ -492,6 +492,30 @@ async function buildMacZip(bundleMetadata) {
   ], { cwd: bundleParentDir });
 }
 
+async function revealInstallableMacBundle(bundleMetadata) {
+  if (!bundleMetadata || process.platform !== "darwin" || !isProductionBuild) {
+    return;
+  }
+
+  const { bundlePath } = bundleMetadata;
+  if (!existsSync(bundlePath)) {
+    console.warn(`[tauri-run] Skipped Finder reveal because ${bundlePath} was not found.`);
+    return;
+  }
+
+  console.log(
+    `[tauri-run] Revealing the installable app bundle in Finder: ${bundlePath}`,
+  );
+
+  try {
+    await runProcess("open", ["-R", bundlePath]);
+  } catch (error) {
+    console.warn(
+      `[tauri-run] Failed to reveal the installable app bundle in Finder: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 child.on("exit", async (code, signal) => {
   if (signal) {
     if (effectiveConfig.cleanupDir) {
@@ -513,6 +537,7 @@ child.on("exit", async (code, signal) => {
     const bundleMetadata = await resignMacBundle();
     await rebuildMacDmg(bundleMetadata);
     await buildMacZip(bundleMetadata);
+    await revealInstallableMacBundle(bundleMetadata);
     if (effectiveConfig.cleanupDir) {
       rmSync(effectiveConfig.cleanupDir, { recursive: true, force: true });
     }

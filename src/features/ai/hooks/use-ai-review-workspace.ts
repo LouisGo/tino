@@ -265,9 +265,15 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
         runtimeState: result.runtimeState,
         persistedOutputCount: result.persistedOutputs.length,
       })
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.aiBatchPayload(nextReview.batchId),
-      })
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.aiBatchSummaries(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.aiBatchPayload(nextReview.batchId),
+          exact: true,
+        }),
+      ])
     },
     onError: (error) => {
       setFeedbackOpen(true)

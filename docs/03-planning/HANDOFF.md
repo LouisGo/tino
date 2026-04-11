@@ -156,6 +156,12 @@ pnpm mock:ai-review run --profile preview --count 20
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
+打 production 包时额外注意：
+
+- `pnpm tauri:build:prod` 只生成正式产物，不会安装到 `/Applications`；当前会在 Finder 自动揭示 `src-tauri/target/release/bundle/macos/Tino.app`
+- `pnpm tauri:build-install:prod` 才会把正式包安装到 `/Applications/Tino.app`
+- 不要把“从 `.dmg` 挂载卷里直接运行”当成已安装
+
 ## 8. 维护规则
 
 每次阶段变化，至少更新：

@@ -106,6 +106,16 @@ export function AiReviewPage() {
 
   const currentPayload = payloadQuery.data
 
+  async function handleRefresh() {
+    await batchesQuery.refetch()
+
+    if (!selectedBatchId) {
+      return
+    }
+
+    await payloadQuery.refetch()
+  }
+
   return (
     <div className="app-scroll-area h-full overflow-y-auto">
       <div className="app-page-shell relative pb-[calc(var(--app-page-padding-block)+1rem)]">
@@ -150,8 +160,7 @@ export function AiReviewPage() {
                     size="sm"
                     className="rounded-full"
                     onClick={() => {
-                      void batchesQuery.refetch()
-                      void payloadQuery.refetch()
+                      void handleRefresh()
                     }}
                     disabled={batchesQuery.isFetching || payloadQuery.isFetching}
                   >
