@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -9,6 +9,37 @@ export default defineConfig({
   clearScreen: false,
   resolve: {
     tsconfigPaths: true,
+  },
+  test: {
+    environment: "jsdom",
+    environmentOptions: {
+      jsdom: {
+        url: "http://localhost/",
+      },
+    },
+    setupFiles: ["./src/test/setup.ts"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: [
+      "src/bindings/**",
+      "src-tauri/**",
+    ],
+    passWithNoTests: false,
+    clearMocks: true,
+    restoreMocks: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      reportsDirectory: "./coverage/vitest",
+      exclude: [
+        "src/bindings/**",
+        "src/test/**",
+        "src/**/*.d.ts",
+        "src/**/vite-env.d.ts",
+        "src/main.tsx",
+        "src/router.tsx",
+        "src/routes/**",
+      ],
+    },
   },
   server: {
     port: 1420,
