@@ -347,6 +347,7 @@ function normalizeClipboardSearchFilter(value: string): ClipboardFilter | null {
       return "image";
     case "video":
     case "videos":
+    case "影片":
     case "视频":
       return "video";
     case "file":
