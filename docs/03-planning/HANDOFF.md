@@ -51,6 +51,8 @@
 - clipboard history 边界已收口：`backend/clipboard_history/read.rs` 负责 sqlite 读取边界与 fallback；`backend/clipboard_history/write.rs` 负责 sqlite 写入边界与 fallback；`backend/clipboard_history/legacy.rs` 负责 JSONL + retention 内核；`app_state/runtime.rs` 仅保留编排调用
 - settings 页的“暂停采集”已接成真实 Rust 持久化能力；暂停时 watcher 继续轮询，但新复制内容不进 `daily` / history cache / queue / AI，重启后状态保持一致
 - renderer 侧 app settings 已按“`persisted settings` 运行态真相源 + `settings draft` 设置页编辑态”分层；成功的设置写入会先落 Rust 持久化，再通过 renderer 内串行写队列 + Tauri IPC 广播到主窗口与 clipboard 小窗，避免双向同步遗漏与并发写覆盖
+- 后续 IPC/状态同步优化的冻结目标已明确为：`Query` / `State Command` / `Action Command` / `Subscription` 四类模型；当前 settings 跨窗口同步仍是 renderer 广播，尚未完全收敛到 Rust authoritative emit
+- 第一批主链路重同步 shell command 已改为 `async command + spawn_blocking`：当前至少 `get_dashboard_snapshot`、`get_clipboard_page`、`get_clipboard_board_bootstrap`、`get_pinned_clipboard_captures`、`save_app_settings` 不再把其阻塞工作停留在 Tauri 主线程
 - clipboard history retention 上限已从 `14 天`提到 `90 天`；现有设置档位为 `1 / 3 / 7 / 90`。设置项现在表示 clipboard history 的查询/展示窗口，切换时不会立即物理删除 90 天内缓存；超过 90 天的缓存仍会在启动、设置保存和定期维护时被真正清理
 - clipboard board 搜索框已支持关键词式搜索；除普通文本外，可用 `app:` / `source:`、`bundle:`、`date:`、`type:` 在单个输入框里做组合检索，sqlite 与 JSONL fallback 语义保持一致
 - clipboard replay / paste-back Rust 边界已收口：`commands/shell.rs` 对这条链路只保留 IPC adapter；`clipboard/source_apps.rs` 负责来源应用发现与图标缓存；`clipboard/replay/` 目录模块已拆分为 `mod.rs` 编排、`pasteboard.rs`、`authorization.rs`、`focus.rs`

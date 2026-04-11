@@ -58,6 +58,16 @@ Prefer principle over exact folder names. `feature`, `service`, `platform`, `sto
 
 If a type crosses the Rust <-> Renderer boundary, follow the Rust IPC flow in `AGENTS.md`. Do not recreate Rust-owned IPC shapes manually in TypeScript.
 
+## IPC API Model
+
+- Classify renderer-facing IPC as `Query`, `State Command`, `Action Command`, or `Subscription`.
+- `Query`: read-only snapshot APIs. Prefer `async command`; move heavy blocking work off the main thread.
+- `State Command`: user intent that changes trusted state. Rust is the authority; commit first, then emit typed change events. Renderer may optimistically update, but must reconcile from Rust.
+- `Action Command`: immediate side effects such as window control, paste-back, reveal/open actions. Keep request/response semantics; do not force optimistic updates onto these.
+- `Subscription`: Rust-owned typed events for ongoing state sync. Events should carry enough scope metadata such as `revision`, `reason`, or `affected domain`.
+- Do not treat events as the only source of truth for cold start or remount. Pair subscriptions with snapshot queries.
+- Do not let renderer-broadcast become the authority for cross-window persisted state.
+
 ## Anti-Patterns
 
 - using `commands/*.rs` as a place to "just finish the feature first"

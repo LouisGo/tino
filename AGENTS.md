@@ -35,6 +35,16 @@ Use this whenever a renderer-facing type crosses the Rust <-> renderer boundary.
 5. Run `pnpm gen:bindings`.
 6. Only after bindings are generated, write or update renderer code that consumes the new type.
 
+## IPC API Semantics
+
+- Model renderer-facing IPC as `Query`, `State Command`, `Action Command`, or `Subscription`.
+- `Query`: read-only snapshots. Prefer `async command`. Heavy blocking work must not stay on the Tauri main thread.
+- `State Command`: trusted state writes. Rust is the authority, and Rust should emit the authoritative persisted-state change event after commit.
+- `Action Command`: immediate side effects such as window control, paste-back, or reveal/open actions. Keep request/response semantics.
+- `Subscription`: Rust-owned typed events for ongoing sync. Do not use subscriptions as the only source of truth for cold start or remount; pair them with snapshot queries.
+- Do not let renderer-broadcast become the authority for cross-window persisted state.
+- Main thread is for window/event-loop work and main-thread-only OS APIs. Async I/O belongs on the runtime; blocking or CPU-heavy work belongs on `spawn_blocking` or a dedicated thread pool.
+
 ## Rust-Owned Types
 
 These must originate in Rust and flow through generated bindings:

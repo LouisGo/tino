@@ -19,6 +19,11 @@ Choose the smallest valid context set. This skill is a router, not a second sour
 - Rust/Tauri IPC, commands, DTOs, events, `specta`, generated bindings, or renderer-facing Rust types:
   Read `AGENTS.md`.
   Add `docs/03-planning/技术冻结记录.md` only if the task may change ownership, batching, persistence, or AI/runtime boundaries.
+- IPC performance, sync semantics, cross-window state consistency, or “should this be query / command / subscription”:
+  Read `AGENTS.md`.
+  Read `.agents/skills/tino-rust-boundaries/SKILL.md`.
+  Read `docs/03-planning/技术冻结记录.md`.
+  Add `docs/03-planning/HANDOFF.md` only if you need current implementation gaps versus the target IPC model.
 - `/ai` page, hidden intervention semantics, `applyBatchDecision`, live batch, queue/batches/reviews, empty-state debugging, or mock injection:
   Read `.agents/skills/tino-ai-review-phase1/SKILL.md`.
 - AI runtime layering, provider-vs-runtime split, workflow design, phase sequencing, or persistence planning:
