@@ -1,4 +1,4 @@
-use super::AppState;
+use super::{settings::clipboard_history_storage_retention_days, AppState};
 use std::path::PathBuf;
 
 use crate::backend::clipboard_history::write::update_capture_ocr_text_with_fallback;
@@ -265,10 +265,9 @@ impl AppState {
         &self,
         limit: usize,
     ) -> Result<Vec<(String, PathBuf)>, String> {
-        let settings = self.current_settings()?;
         let store = CaptureHistoryStore::new(&self.shared.clipboard_cache_dir)?;
         let page = store.query_page(&CaptureHistoryQuery {
-            history_days: settings.clipboard_history_days,
+            history_days: clipboard_history_storage_retention_days(),
             excluded_capture_ids: Vec::new(),
             search: String::new(),
             filter: "image".into(),
@@ -308,10 +307,9 @@ impl AppState {
             return Ok(false);
         }
 
-        let history_days = self.current_settings()?.clipboard_history_days;
         let changed = update_capture_ocr_text_with_fallback(
             &self.shared.clipboard_cache_dir,
-            history_days,
+            clipboard_history_storage_retention_days(),
             normalized_capture_id,
             &normalized_ocr_text,
         )?;

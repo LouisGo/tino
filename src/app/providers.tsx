@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useQuery } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, type AnyRouter } from "@tanstack/react-router";
 import { I18nextProvider } from "react-i18next";
@@ -22,11 +21,18 @@ import {
   syncLocalePreference,
 } from "@/i18n";
 import { queryClient } from "@/app/query-client";
+import { resetClipboardCapturePauseGuideDismissed } from "@/features/clipboard/lib/clipboard-capture-pause-guide";
 import { useClipboardAccessibilityPermissionFlow } from "@/features/clipboard/hooks/use-clipboard-accessibility-permission-flow";
 import {
   preloadClipboardSourceAppIcons,
   preloadClipboardSourceApps,
 } from "@/features/settings/lib/clipboard-source-app-query";
+import {
+  APP_SETTINGS_CHANGED_EVENT,
+  applyIncomingAppSettingsChange,
+  isAppSettingsChangeFromCurrentWindow,
+  type AppSettingsChangedPayload,
+} from "@/lib/app-settings-sync";
 import {
   applyTheme,
   getInitialThemePreference,
@@ -35,9 +41,12 @@ import {
   THEME_PREFERENCE_CHANGED_EVENT,
   type ThemePreference,
 } from "@/lib/theme";
-import { getAppSettings, isTauriRuntime, reportAppActivity } from "@/lib/tauri";
+import {
+  isTauriRuntime,
+  reportAppActivity,
+} from "@/lib/tauri";
 import { preloadNonCriticalRouteChunks } from "@/router";
-import { useAppShellStore } from "@/stores/app-shell-store";
+import { usePersistedAppSettings } from "@/hooks/use-persisted-app-settings";
 import { useThemeStore } from "@/stores/theme-store";
 import type { AppLocalePreference } from "@/types/shell";
 
@@ -62,18 +71,10 @@ function AppShellRuntime({ router }: AppProvidersProps) {
   useClipboardAccessibilityPermissionFlow();
   const mode = useThemeStore((state) => state.mode);
   const themeName = useThemeStore((state) => state.themeName);
-  const setSettingsDraft = useAppShellStore((state) => state.setSettingsDraft);
-  const shortcutOverrides = useAppShellStore((state) => state.settingsDraft.shortcutOverrides);
-  const sanitizedShortcutOverrides = filterConfigurableShortcutOverrides(shortcutOverrides);
   const suppressThemeBroadcastRef = useRef(false);
-  const hydratedSettingsRef = useRef(false);
   const hydratedLocaleRef = useRef(false);
-  const { data: settings } = useQuery({
-    queryKey: ["app-settings"],
-    queryFn: getAppSettings,
-    staleTime: Number.POSITIVE_INFINITY,
-    placeholderData: (previousData) => previousData,
-  });
+  const { data: settings } = usePersistedAppSettings();
+  const sanitizedShortcutOverrides = filterConfigurableShortcutOverrides(settings?.shortcutOverrides);
 
   useEffect(() => {
     applyTheme({ mode, themeName });
@@ -229,15 +230,6 @@ function AppShellRuntime({ router }: AppProvidersProps) {
   }, []);
 
   useEffect(() => {
-    if (!settings || hydratedSettingsRef.current) {
-      return;
-    }
-
-    hydratedSettingsRef.current = true;
-    setSettingsDraft(settings);
-  }, [setSettingsDraft, settings]);
-
-  useEffect(() => {
     if (!settings) {
       return;
     }
@@ -287,6 +279,32 @@ function AppShellRuntime({ router }: AppProvidersProps) {
     return () => {
       window.removeEventListener("storage", handleStorage);
       unlistenLocaleSync?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    let unlistenAppSettingsSync: null | (() => void) = null;
+
+    void listen<AppSettingsChangedPayload>(APP_SETTINGS_CHANGED_EVENT, ({ payload }) => {
+      if (isAppSettingsChangeFromCurrentWindow(payload)) {
+        return;
+      }
+
+      if (payload.saved.clipboardCaptureEnabled) {
+        resetClipboardCapturePauseGuideDismissed();
+      }
+
+      applyIncomingAppSettingsChange(queryClient, payload);
+    }).then((dispose) => {
+      unlistenAppSettingsSync = dispose;
+    });
+
+    return () => {
+      unlistenAppSettingsSync?.();
     };
   }, []);
 

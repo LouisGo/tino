@@ -4,7 +4,7 @@ import { defaultAppLocalePreference } from "@/i18n";
 import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults";
 import type { SettingsDraft } from "@/types/shell";
 
-type AppShellState = {
+type SettingsDraftState = {
   settingsDraft: SettingsDraft;
   setSettingsDraft: (value: SettingsDraft) => void;
   patchSettingsDraft: (value: Partial<SettingsDraft>) => void;
@@ -22,7 +22,7 @@ const initialSettingsDraft: SettingsDraft = {
   shortcutOverrides: {},
 };
 
-export const useAppShellStore = create<AppShellState>((set) => ({
+export const useSettingsDraftStore = create<SettingsDraftState>((set) => ({
   settingsDraft: initialSettingsDraft,
   setSettingsDraft: (value) => set({ settingsDraft: value }),
   patchSettingsDraft: (value) =>

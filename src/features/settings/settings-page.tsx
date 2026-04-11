@@ -94,7 +94,6 @@ export function SettingsPage() {
     handleRevealKnowledgeRoot,
     handleShortcutOverridesChange,
     handleToggleAutostart,
-    handleToggleCapture,
   } = useSettingsSectionActions({
     autostartEnabled,
     getCurrentDraft: () => settingsDraftRef.current,
@@ -143,7 +142,6 @@ export function SettingsPage() {
         >
           <div className="space-y-8 pb-8">
             <ClipboardSettingsSection
-              onToggleCapture={handleToggleCapture}
               settingsDraft={settingsDraft}
               patchSettingsDraft={patchSettingsDraft}
             />

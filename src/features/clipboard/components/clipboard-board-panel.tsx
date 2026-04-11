@@ -32,6 +32,7 @@ import {
   CaptureImageLightbox,
   CaptureOcrLightbox,
 } from "@/features/clipboard/components/capture-preview";
+import { ClipboardBoardCornerAction } from "@/features/clipboard/components/clipboard-board-corner-action";
 import {
   ClipboardCaptureList,
 } from "@/features/clipboard/components/clipboard-capture-list";
@@ -441,7 +442,7 @@ export function ClipboardBoardPanel({
           />
         ) : null}
 
-        <ClipboardShortcutHelpButton onClick={() => setIsShortcutHelpOpen(true)} />
+        <ClipboardBoardCornerAction onOpenShortcuts={() => setIsShortcutHelpOpen(true)} />
       </section>
 
       <CaptureImageLightbox
@@ -642,24 +643,6 @@ function ClipboardWindowSelectionTip({
           size="lg"
         />
       </div>
-    </div>
-  );
-}
-
-function ClipboardShortcutHelpButton({ onClick }: { onClick: () => void }) {
-  const t = useScopedT("clipboard");
-  return (
-    <div className="absolute right-4 bottom-4 z-20">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="size-8 rounded-full border-border/60 bg-card/88 text-muted-foreground/88 shadow-[0_12px_28px_color-mix(in_oklch,var(--foreground)_10%,transparent)] backdrop-blur-md transition hover:-translate-y-0.5 hover:border-border/75 hover:bg-card hover:text-foreground focus-visible:ring-[2px] focus-visible:ring-ring/24"
-        aria-label={t("window.shortcutsButtonAria")}
-        onClick={onClick}
-      >
-        <span className="text-sm font-semibold leading-none">?</span>
-      </Button>
     </div>
   );
 }

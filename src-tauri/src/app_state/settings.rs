@@ -15,7 +15,7 @@ use crate::runtime_provider::{
 
 const DEFAULT_CLIPBOARD_HISTORY_DAYS: u16 = 7;
 const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
-const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 90;
+pub(crate) const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 90;
 const DEFAULT_CLIPBOARD_CAPTURE_ENABLED: bool = true;
 
 fn default_clipboard_history_days() -> u16 {
@@ -24,6 +24,10 @@ fn default_clipboard_history_days() -> u16 {
 
 fn default_clipboard_capture_enabled() -> bool {
     DEFAULT_CLIPBOARD_CAPTURE_ENABLED
+}
+
+pub(crate) fn clipboard_history_storage_retention_days() -> u16 {
+    MAX_CLIPBOARD_HISTORY_DAYS
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]

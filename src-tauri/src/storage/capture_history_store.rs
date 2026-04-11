@@ -1363,6 +1363,54 @@ mod tests {
     }
 
     #[test]
+    fn query_page_respects_one_three_seven_and_ninety_day_windows() {
+        let root = unique_root();
+        let store = CaptureHistoryStore::new(&root).expect("store should initialize");
+        let now = Local::now().fixed_offset();
+
+        let captures = [
+            ("cap_12h", now - Duration::hours(12)),
+            ("cap_2d", now - Duration::days(2)),
+            ("cap_6d", now - Duration::days(6)),
+            ("cap_30d", now - Duration::days(30)),
+            ("cap_91d", now - Duration::days(91)),
+        ];
+
+        for (id, captured_at) in captures {
+            store
+                .upsert_capture(&sample_upsert_at(
+                    id,
+                    "plain_text",
+                    "archived",
+                    id,
+                    captured_at.to_rfc3339(),
+                ))
+                .expect("capture should insert");
+        }
+
+        let query_total = |history_days| {
+            store
+                .query_page(&CaptureHistoryQuery {
+                    history_days,
+                    excluded_capture_ids: Vec::new(),
+                    search: String::new(),
+                    filter: "all".into(),
+                    page: 0,
+                    page_size: 20,
+                })
+                .expect("query should succeed")
+                .total
+        };
+
+        assert_eq!(query_total(1), 1);
+        assert_eq!(query_total(3), 2);
+        assert_eq!(query_total(7), 3);
+        assert_eq!(query_total(90), 4);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn delete_before_capture_timestamp_removes_only_expired_rows() {
         let root = unique_root();
         let store = CaptureHistoryStore::new(&root).expect("store should initialize");

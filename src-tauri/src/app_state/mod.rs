@@ -56,6 +56,7 @@ use settings::load_settings;
 pub use settings::{AppSettings, ClipboardSourceAppOption};
 #[cfg(test)]
 use settings::{AppShortcutOverride, ClipboardSourceAppRule};
+use settings::clipboard_history_storage_retention_days;
 use shortcuts::sync_app_global_shortcuts;
 #[cfg(test)]
 use shortcuts::{
@@ -176,7 +177,10 @@ impl AppState {
         let settings = load_settings(&settings_path, &default_knowledge_root)?;
         let knowledge_root = settings.knowledge_root_path();
         ensure_knowledge_root_layout(&knowledge_root)?;
-        enforce_clipboard_retention(&clipboard_cache_dir, settings.clipboard_history_days)?;
+        enforce_clipboard_retention(
+            &clipboard_cache_dir,
+            clipboard_history_storage_retention_days(),
+        )?;
 
         let queue_state = ensure_queue_state(&knowledge_root)?;
         let mut runtime = load_runtime_state(&knowledge_root)?;
@@ -185,11 +189,14 @@ impl AppState {
             .collect();
         reconcile_clipboard_history_legacy(
             &clipboard_cache_dir,
-            settings.clipboard_history_days,
+            clipboard_history_storage_retention_days(),
             &runtime_recent_captures,
         )?;
         if let Err(error) =
-            reconcile_capture_history_store(&clipboard_cache_dir, settings.clipboard_history_days)
+            reconcile_capture_history_store(
+                &clipboard_cache_dir,
+                clipboard_history_storage_retention_days(),
+            )
         {
             warn!("failed to reconcile sqlite capture history store on startup: {error}");
         }
@@ -346,7 +353,7 @@ impl AppState {
         let knowledge_root = normalized.knowledge_root_path();
         enforce_clipboard_retention(
             &self.shared.clipboard_cache_dir,
-            normalized.clipboard_history_days,
+            clipboard_history_storage_retention_days(),
         )?;
         let queue_state = ensure_queue_state(&knowledge_root)?;
         let mut runtime = load_runtime_state(&knowledge_root)?;
@@ -355,12 +362,12 @@ impl AppState {
             .collect();
         reconcile_clipboard_history_legacy(
             &self.shared.clipboard_cache_dir,
-            normalized.clipboard_history_days,
+            clipboard_history_storage_retention_days(),
             &runtime_recent_captures,
         )?;
         if let Err(error) = reconcile_capture_history_store(
             &self.shared.clipboard_cache_dir,
-            normalized.clipboard_history_days,
+            clipboard_history_storage_retention_days(),
         ) {
             warn!(
                 "failed to reconcile sqlite capture history store after settings change: {error}"
@@ -620,10 +627,9 @@ impl AppState {
             return Err("capture id is required".into());
         }
 
-        let settings = self.current_settings()?;
         let result = delete_capture_with_fallback(
             &self.shared.clipboard_cache_dir,
-            settings.clipboard_history_days,
+            clipboard_history_storage_retention_days(),
             normalized_id,
         )?;
         let removed_from_pinned =
@@ -1237,6 +1243,88 @@ mod tests {
             load_capture_history_entries_legacy(&root, 7).expect("remaining history should load");
         assert_eq!(remaining.len(), 1);
         assert_eq!(remaining[0].id, "cap_retained");
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn clipboard_history_window_filters_without_pruning_ninety_day_cache() {
+        let root = unique_root();
+        ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
+
+        let captured_at = relative_captured_at(Duration::days(30));
+        let history_path =
+            clipboard_history_file_path(&root, &captured_at).expect("history path should build");
+        append_clipboard_history_entry(&root, &sample_preview("cap_30d", &captured_at))
+            .expect("preview should append");
+        reconcile_capture_history_store(&root, clipboard_history_storage_retention_days())
+            .expect("sqlite reconcile should succeed");
+
+        let one_day_page = query_clipboard_history_page(
+            &root,
+            &root,
+            1,
+            &HashSet::new(),
+            &ClipboardPageRequest {
+                page: 0,
+                page_size: 20,
+                search: None,
+                filter: None,
+            },
+        )
+        .expect("1-day query should succeed");
+        assert_eq!(one_day_page.total, 0);
+        assert!(
+            history_path.exists(),
+            "switching to a shorter window should not physically prune retained cache entries",
+        );
+
+        let ninety_day_page = query_clipboard_history_page(
+            &root,
+            &root,
+            90,
+            &HashSet::new(),
+            &ClipboardPageRequest {
+                page: 0,
+                page_size: 20,
+                search: None,
+                filter: None,
+            },
+        )
+        .expect("90-day query should succeed");
+        assert_eq!(ninety_day_page.total, 1);
+        assert_eq!(ninety_day_page.captures[0].id, "cap_30d");
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn clipboard_storage_retention_prunes_only_entries_older_than_ninety_days() {
+        let root = unique_root();
+        ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
+
+        let expired = sample_preview(
+            "cap_91d",
+            &relative_captured_at(Duration::days(91) + Duration::minutes(1)),
+        );
+        let retained = sample_preview(
+            "cap_89d",
+            &relative_captured_at(Duration::days(89)),
+        );
+
+        append_clipboard_history_entry(&root, &expired).expect("expired preview should append");
+        append_clipboard_history_entry(&root, &retained).expect("retained preview should append");
+
+        enforce_clipboard_retention(&root, clipboard_history_storage_retention_days())
+            .expect("90-day retention should succeed");
+
+        let remaining = load_capture_history_entries_legacy(
+            &root,
+            clipboard_history_storage_retention_days(),
+        )
+        .expect("remaining history should load");
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, "cap_89d");
 
         let _ = fs::remove_dir_all(root);
     }

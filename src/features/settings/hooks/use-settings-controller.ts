@@ -1,31 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
-import PQueue from "p-queue";
-import {
-  useIsMutating,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useIsMutating } from "@tanstack/react-query";
 
 import { queryKeys } from "@/app/query-keys";
 import { filterConfigurableShortcutOverrides } from "@/app/shortcuts";
-import {
-  getAppSettings,
-  saveAppSettings,
-} from "@/lib/tauri";
 import { createRendererLogger } from "@/lib/logger";
 import { useAutostartSetting } from "@/features/settings/hooks/use-autostart-setting";
-import { useAppShellStore } from "@/stores/app-shell-store";
+import { usePersistAppSettingsMutation } from "@/hooks/use-persist-app-settings-mutation";
+import { usePersistedAppSettings } from "@/hooks/use-persisted-app-settings";
+import { useSettingsDraftStore } from "@/features/settings/stores/settings-draft-store";
 import { useThemeStore } from "@/stores/theme-store";
 import type { SettingsDraft, ShortcutOverrideRecord } from "@/types/shell";
 
 const logger = createRendererLogger("settings.controller");
-
-type SaveSettingsMutationResult = {
-  requestedDraft: SettingsDraft;
-  saved: SettingsDraft;
-};
 
 function sanitizeShortcutOverrides(overrides: ShortcutOverrideRecord) {
   return filterConfigurableShortcutOverrides(overrides);
@@ -52,10 +39,9 @@ function serializeSettingsDraft(settings: SettingsDraft) {
 }
 
 export function useSettingsController() {
-  const queryClient = useQueryClient();
-  const patchSettingsDraft = useAppShellStore((state) => state.patchSettingsDraft);
-  const setSettingsDraft = useAppShellStore((state) => state.setSettingsDraft);
-  const settingsDraft = useAppShellStore((state) => state.settingsDraft);
+  const patchSettingsDraft = useSettingsDraftStore((state) => state.patchSettingsDraft);
+  const setSettingsDraft = useSettingsDraftStore((state) => state.setSettingsDraft);
+  const settingsDraft = useSettingsDraftStore((state) => state.settingsDraft);
   const mode = useThemeStore((state) => state.mode);
   const setMode = useThemeStore((state) => state.setMode);
   const setThemeName = useThemeStore((state) => state.setThemeName);
@@ -64,137 +50,22 @@ export function useSettingsController() {
   const { autostartEnabled, toggleAutostartMutation } = useAutostartSetting();
   const hydrated = useRef(false);
   const settingsDraftRef = useRef(settingsDraft);
-  const latestRequestedDraftKeyRef = useRef<string | null>(null);
-  const lastSettledSettingsRef = useRef<SettingsDraft | null>(null);
-  const settingsSaveQueueRef = useRef<PQueue | null>(null);
-
-  if (settingsSaveQueueRef.current === null) {
-    settingsSaveQueueRef.current = new PQueue({
-      concurrency: 1,
-    });
-  }
+  const saveSettingsMutation = usePersistAppSettingsMutation({
+    onError: (error) => {
+      logger.error("Failed to persist settings", error);
+    },
+  });
 
   useEffect(() => {
     settingsDraftRef.current = settingsDraft;
   }, [settingsDraft]);
 
-  const { data: settings } = useQuery({
-    queryKey: queryKeys.appSettings(),
-    queryFn: getAppSettings,
-    staleTime: Number.POSITIVE_INFINITY,
-    placeholderData: (previousData) => previousData,
-  });
+  const { data: settings } = usePersistedAppSettings();
 
   const persistedSettings = useMemo(
     () => (settings ? sanitizeSettingsDraft(settings) : null),
     [settings],
   );
-  const isSavingSettings = useIsMutating({
-    mutationKey: queryKeys.appSettingsSave(),
-  }) > 0;
-
-  useEffect(() => {
-    if (!persistedSettings || hydrated.current) {
-      return;
-    }
-
-    hydrated.current = true;
-    setSettingsDraft(persistedSettings);
-  }, [persistedSettings, setSettingsDraft]);
-
-  useEffect(() => {
-    if (!persistedSettings) {
-      return;
-    }
-
-    lastSettledSettingsRef.current = persistedSettings;
-  }, [persistedSettings]);
-
-  const persistSavedSettings = useCallback(
-    async (saved: SettingsDraft, expectedDraft: SettingsDraft) => {
-      const sanitizedSaved = sanitizeSettingsDraft(saved);
-      const expectedSerialized = serializeSettingsDraft(expectedDraft);
-
-      lastSettledSettingsRef.current = sanitizedSaved;
-
-      if (latestRequestedDraftKeyRef.current === expectedSerialized) {
-        queryClient.setQueryData(queryKeys.appSettings(), sanitizedSaved);
-      }
-
-      if (
-        serializeSettingsDraft(settingsDraftRef.current) === expectedSerialized
-      ) {
-        setSettingsDraft(sanitizedSaved);
-      }
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageBase() }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageSummary() }),
-      ]);
-    },
-    [queryClient, setSettingsDraft],
-  );
-
-  const saveSettingsMutation = useMutation({
-    mutationKey: queryKeys.appSettingsSave(),
-    mutationFn: async (draft: SettingsDraft): Promise<SaveSettingsMutationResult> =>
-      settingsSaveQueueRef.current!.add(async () => {
-        const sanitizedDraft = sanitizeSettingsDraft(draft);
-        const saved = await saveAppSettings(sanitizedDraft);
-
-        return {
-          requestedDraft: sanitizedDraft,
-          saved,
-        };
-      }),
-    onMutate: async (draft) => {
-      const sanitizedDraft = sanitizeSettingsDraft(draft);
-      const serializedDraft = serializeSettingsDraft(sanitizedDraft);
-
-      latestRequestedDraftKeyRef.current = serializedDraft;
-      await queryClient.cancelQueries({ queryKey: queryKeys.appSettings() });
-      queryClient.setQueryData(queryKeys.appSettings(), sanitizedDraft);
-
-      return {
-        serializedDraft,
-      };
-    },
-    onError: (error, draft, context) => {
-      logger.error("Failed to persist settings", error);
-
-      const serializedDraft = context?.serializedDraft
-        ?? serializeSettingsDraft(sanitizeSettingsDraft(draft));
-
-      if (latestRequestedDraftKeyRef.current !== serializedDraft) {
-        return;
-      }
-
-      const fallbackSettings = lastSettledSettingsRef.current;
-      if (fallbackSettings) {
-        queryClient.setQueryData(queryKeys.appSettings(), fallbackSettings);
-
-        if (
-          serializeSettingsDraft(settingsDraftRef.current) === serializedDraft
-        ) {
-          setSettingsDraft(fallbackSettings);
-        }
-      }
-
-      void queryClient.invalidateQueries({ queryKey: queryKeys.appSettings() });
-    },
-    onSuccess: async ({ requestedDraft, saved }) => {
-      await persistSavedSettings(saved, requestedDraft);
-    },
-  });
-
-  const saveSettingsDraft = useCallback(
-    async (draft: SettingsDraft) => {
-      await saveSettingsMutation.mutateAsync(sanitizeSettingsDraft(draft));
-    },
-    [saveSettingsMutation],
-  );
-
   const hasPendingChanges = useMemo(() => {
     if (!persistedSettings) {
       return false;
@@ -202,6 +73,32 @@ export function useSettingsController() {
 
     return serializeSettingsDraft(settingsDraft) !== serializeSettingsDraft(persistedSettings);
   }, [persistedSettings, settingsDraft]);
+  const isSavingSettings = useIsMutating({
+    mutationKey: queryKeys.appSettingsSave(),
+  }) > 0;
+
+  useEffect(() => {
+    if (!persistedSettings) {
+      return;
+    }
+
+    if (!hydrated.current) {
+      hydrated.current = true;
+      setSettingsDraft(persistedSettings);
+      return;
+    }
+
+    if (!hasPendingChanges) {
+      setSettingsDraft(persistedSettings);
+    }
+  }, [hasPendingChanges, persistedSettings, setSettingsDraft]);
+
+  const saveSettingsDraft = useCallback(
+    async (draft: SettingsDraft) => {
+      await saveSettingsMutation.mutateAsync(sanitizeSettingsDraft(draft));
+    },
+    [saveSettingsMutation],
+  );
 
   return {
     autostartEnabled,

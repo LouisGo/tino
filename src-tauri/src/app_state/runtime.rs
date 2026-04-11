@@ -19,8 +19,9 @@ use crate::storage::knowledge_root::{
 };
 
 use super::{
-    write_json_file, AppState, BatchPromotionSummary, BATCH_TRIGGER_MAX_WAIT_MINUTES,
-    BATCH_TRIGGER_SIZE, DEDUP_WINDOW_MINUTES, RUNNING_WATCH_STATUS, STARTING_WATCH_STATUS,
+    settings::clipboard_history_storage_retention_days, write_json_file, AppState,
+    BatchPromotionSummary, BATCH_TRIGGER_MAX_WAIT_MINUTES, BATCH_TRIGGER_SIZE,
+    DEDUP_WINDOW_MINUTES, RUNNING_WATCH_STATUS, STARTING_WATCH_STATUS,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -322,7 +323,7 @@ impl AppState {
 
         enforce_clipboard_retention(
             &self.shared.clipboard_cache_dir,
-            settings.clipboard_history_days,
+            clipboard_history_storage_retention_days(),
         )?;
 
         let knowledge_root = settings.knowledge_root_path();
@@ -510,7 +511,7 @@ impl AppState {
         let knowledge_root = settings.knowledge_root_path();
         let promoted = promote_capture_reuse_with_fallback(
             &self.shared.clipboard_cache_dir,
-            settings.clipboard_history_days,
+            clipboard_history_storage_retention_days(),
             capture_id,
             &capture.hash,
             &capture.captured_at,
@@ -553,9 +554,8 @@ impl AppState {
         queue_depth: usize,
         captured_at: &DateTime<FixedOffset>,
     ) -> Result<(), String> {
-        let (preview, history_upsert, history_days) = {
+        let (preview, history_upsert) = {
             let mut state = self.lock_state()?;
-            let history_days = state.settings.clipboard_history_days;
             prune_recent_hashes(&mut state.runtime.recent_hashes, captured_at);
 
             if let Some(accepted_hash) = accepted_hash {
@@ -571,13 +571,13 @@ impl AppState {
             state.runtime.recent_captures.clear();
             let preview = build_capture_preview(capture, status);
             let history_upsert = build_capture_history_upsert(capture, &preview);
-            (preview, history_upsert, history_days)
+            (preview, history_upsert)
         };
 
         if should_persist_capture_history(status) {
             persist_capture_preview(
                 &self.shared.clipboard_cache_dir,
-                history_days,
+                clipboard_history_storage_retention_days(),
                 &preview,
                 &history_upsert,
             )?;

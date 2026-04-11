@@ -48,31 +48,25 @@ export function useSettingsSectionActions({
 
   const handleLocalePreferenceChange = useCallback(
     async (localePreference: AppLocalePreference) => {
+      const previousLocalePreference = getCurrentDraft().localePreference
       const nextDraft = {
         ...getCurrentDraft(),
         localePreference,
       }
 
       patchSettingsDraft({ localePreference })
-      await syncLocalePreference(localePreference)
-      await saveSettingsDraft(nextDraft)
+      await syncLocalePreference(localePreference, { persist: false })
+
+      try {
+        await saveSettingsDraft(nextDraft)
+      } catch (error) {
+        patchSettingsDraft({ localePreference: previousLocalePreference })
+        await syncLocalePreference(previousLocalePreference, { persist: false })
+        throw error
+      }
     },
     [getCurrentDraft, patchSettingsDraft, saveSettingsDraft],
   )
-
-  const handleToggleCapture = useCallback(() => {
-    const currentDraft = getCurrentDraft()
-    const nextDraft = {
-      ...currentDraft,
-      clipboardCaptureEnabled: !currentDraft.clipboardCaptureEnabled,
-    }
-
-    patchSettingsDraft({ clipboardCaptureEnabled: nextDraft.clipboardCaptureEnabled })
-
-    void saveSettingsDraft(nextDraft).catch((error) => {
-      logger.error("Failed to persist clipboard capture state", error)
-    })
-  }, [getCurrentDraft, patchSettingsDraft, saveSettingsDraft])
 
   const handleToggleAutostart = useCallback(async () => {
     await toggleAutostart(!autostartEnabled)
@@ -109,6 +103,5 @@ export function useSettingsSectionActions({
     handleRevealKnowledgeRoot,
     handleShortcutOverridesChange,
     handleToggleAutostart,
-    handleToggleCapture,
   }
 }

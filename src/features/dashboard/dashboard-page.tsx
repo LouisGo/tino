@@ -45,9 +45,9 @@ import {
   resolveActiveRuntimeProvider,
   resolveRuntimeProviderEffectiveModel,
 } from "@/features/settings/lib/runtime-provider";
+import { usePersistedAppSettings } from "@/hooks/use-persisted-app-settings";
 import { useScopedT } from "@/i18n";
 import {
-  getAppSettings,
   getDashboardSnapshot,
   isTauriRuntime,
 } from "@/lib/tauri";
@@ -76,12 +76,7 @@ export function DashboardPage() {
     staleTime: 2 * 60 * 1_000,
     placeholderData: (previousData) => previousData,
   });
-  const settingsQuery = useQuery({
-    queryKey: queryKeys.appSettings(),
-    queryFn: getAppSettings,
-    staleTime: 2 * 60 * 1_000,
-    placeholderData: (previousData) => previousData,
-  });
+  const settingsQuery = usePersistedAppSettings();
   const {
     attachments,
     canAddAttachments,

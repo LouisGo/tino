@@ -1,8 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Minus, Pause, Play } from "lucide-react";
+import {
+  LoaderCircle,
+  Minus,
+  Pause,
+  Play,
+} from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,17 +40,16 @@ import {
   clipboardSourceAppsQueryOptions,
   getCachedClipboardSourceApps,
 } from "@/features/settings/lib/clipboard-source-app-query";
+import { useClipboardCaptureControl } from "@/hooks/use-clipboard-capture-control";
 import { settingsSections } from "@/features/settings/settings-sections";
 import { useScopedT } from "@/i18n";
 import { getClipboardSourceAppIcons } from "@/lib/tauri";
 import type { SettingsDraft } from "@/types/shell";
 
 export function ClipboardSettingsSection({
-  onToggleCapture,
   patchSettingsDraft,
   settingsDraft,
 }: {
-  onToggleCapture: () => void;
   patchSettingsDraft: (value: Partial<SettingsDraft>) => void;
   settingsDraft: SettingsDraft;
 }) {
@@ -48,6 +62,11 @@ export function ClipboardSettingsSection({
   const sourceAppIconQueueRef = useRef<string[]>([]);
   const sourceAppIconPumpActiveRef = useRef(false);
   const sourceAppIconPumpTimerRef = useRef<number | null>(null);
+  const [isPauseConfirmOpen, setIsPauseConfirmOpen] = useState(false);
+  const {
+    isPending: isCaptureUpdatePending,
+    setClipboardCaptureEnabled,
+  } = useClipboardCaptureControl();
   const sourceAppsQuery = useQuery({
     ...clipboardSourceAppsQueryOptions(queryClient),
     placeholderData: (previousData) => previousData,
@@ -219,20 +238,36 @@ export function ClipboardSettingsSection({
   }, [enqueueSourceAppIcons, selectedSourceApps]);
 
   return (
-    <SettingsSection
-      section={section}
-      badge={settingsDraft.clipboardCaptureEnabled ? t("badges.running") : t("badges.paused")}
-      action={(
-        <Button type="button" variant="outline" size="sm" onClick={onToggleCapture}>
-          {settingsDraft.clipboardCaptureEnabled ? <Pause /> : <Play />}
-          {settingsDraft.clipboardCaptureEnabled
-            ? t("clipboard.capture.pause")
-            : t("clipboard.capture.resume")}
-        </Button>
-      )}
-    >
-      <SettingsPanel className="overflow-visible">
-        <SettingsPanelBody>
+    <>
+      <SettingsSection
+        section={section}
+        badge={settingsDraft.clipboardCaptureEnabled ? t("badges.running") : t("badges.paused")}
+        action={(
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isCaptureUpdatePending}
+            onClick={() => {
+              if (settingsDraft.clipboardCaptureEnabled) {
+                setIsPauseConfirmOpen(true);
+                return;
+              }
+
+              void setClipboardCaptureEnabled(true).catch(() => {});
+            }}
+          >
+            {isCaptureUpdatePending ? <LoaderCircle className="animate-spin" /> : (
+              settingsDraft.clipboardCaptureEnabled ? <Pause /> : <Play />
+            )}
+            {settingsDraft.clipboardCaptureEnabled
+              ? t("clipboard.capture.pause")
+              : t("clipboard.capture.resume")}
+          </Button>
+        )}
+      >
+        <SettingsPanel className="overflow-visible">
+          <SettingsPanelBody>
           <SettingField
             label={t("clipboard.retention.label")}
             info={t("clipboard.retention.info")}
@@ -394,8 +429,52 @@ export function ClipboardSettingsSection({
               className="min-h-24"
             />
           </SettingField>
-        </SettingsPanelBody>
-      </SettingsPanel>
-    </SettingsSection>
+          </SettingsPanelBody>
+        </SettingsPanel>
+      </SettingsSection>
+
+      <AlertDialog
+        open={isPauseConfirmOpen}
+        onOpenChange={(open) => {
+          if (!isCaptureUpdatePending) {
+            setIsPauseConfirmOpen(open);
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-[min(25rem,calc(100vw-2rem))]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("clipboard.capture.confirmPause.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("clipboard.capture.confirmPause.description")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCaptureUpdatePending}>
+              {t("clipboard.capture.confirmPause.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isCaptureUpdatePending}
+              onClick={(event) => {
+                event.preventDefault();
+                void setClipboardCaptureEnabled(false)
+                  .then(() => {
+                    setIsPauseConfirmOpen(false);
+                  })
+                  .catch(() => {});
+              }}
+            >
+              {isCaptureUpdatePending ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" />
+                  {t("clipboard.capture.confirmPause.pending")}
+                </>
+              ) : (
+                t("clipboard.capture.confirmPause.confirm")
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

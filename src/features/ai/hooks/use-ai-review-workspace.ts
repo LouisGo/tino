@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { queryKeys } from "@/app/query-keys"
 import type { FloatingFeedbackStatus } from "@/components/feedback/floating-feedback-card"
@@ -15,8 +15,8 @@ import {
   type LiveBatchReviewProgress,
 } from "@/features/ai/runtime/live-batch-review"
 import { resolveActiveRuntimeProvider } from "@/features/settings/lib/runtime-provider"
+import { usePersistedAppSettings } from "@/hooks/use-persisted-app-settings"
 import { createRendererLogger } from "@/lib/logger"
-import { getAppSettings } from "@/lib/tauri"
 import { applyBatchDecision } from "@/lib/tauri-ai"
 import type {
   AiBatchPayload,
@@ -69,12 +69,7 @@ export function useAiReviewWorkspace(payload: AiBatchPayload) {
   const [submitResult, setSubmitResult] = useState<ApplyBatchDecisionResult | null>(null)
   const isPreviewBatch = isMockAiBatchId(payload.batch.id)
 
-  const settingsQuery = useQuery({
-    queryKey: queryKeys.appSettings(),
-    queryFn: getAppSettings,
-    staleTime: Number.POSITIVE_INFINITY,
-    placeholderData: (previousData) => previousData,
-  })
+  const settingsQuery = usePersistedAppSettings()
 
   const activeProvider = settingsQuery.data
     ? resolveActiveRuntimeProvider(settingsQuery.data)

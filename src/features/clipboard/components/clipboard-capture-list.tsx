@@ -137,6 +137,23 @@ export function ClipboardCaptureList({
 
     return nextIndexMap;
   }, [rows]);
+  const selectedRowIndex = selectedCaptureId
+    ? captureRowIndexById.get(selectedCaptureId) ?? null
+    : null;
+  const firstCaptureRowIndex = useMemo(
+    () => rows.findIndex((row) => row.type === "capture"),
+    [rows],
+  );
+  const selectedRow = selectedRowIndex === null ? null : rows[selectedRowIndex];
+  const shouldRevealPinnedGroupHeader =
+    selectedRow?.type === "capture"
+    && selectedRow.isGroupFirst
+    && selectedRow.groupKind === "pinned";
+  const selectedScrollTargetIndex = selectedRowIndex === null
+    ? null
+    : shouldRevealPinnedGroupHeader
+      ? Math.max(0, selectedRowIndex - 1)
+      : selectedRowIndex;
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual uses imperative APIs that React Compiler intentionally skips memoizing.
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
@@ -244,12 +261,7 @@ export function ClipboardCaptureList({
   }, [scrollToTopRequest, scrollViewport]);
 
   useLayoutEffect(() => {
-    if (!scrollViewport || !selectedCaptureId) {
-      return;
-    }
-
-    const selectedRowIndex = captureRowIndexById.get(selectedCaptureId);
-    if (selectedRowIndex === undefined) {
+    if (!scrollViewport || !selectedCaptureId || selectedRowIndex === null) {
       return;
     }
 
@@ -258,14 +270,7 @@ export function ClipboardCaptureList({
       return;
     }
 
-    const selectedRow = rows[selectedRowIndex];
-    const firstCaptureRowIndex = rows.findIndex((row) => row.type === "capture");
-    const shouldRevealGroupHeader =
-      selectedRow?.type === "capture"
-      && selectedRow.isGroupFirst
-      && selectedRow.groupKind === "pinned";
-
-    if (shouldRevealGroupHeader && selectedRowIndex === firstCaptureRowIndex) {
+    if (shouldRevealPinnedGroupHeader && selectedRowIndex === firstCaptureRowIndex) {
       scrollViewport.scrollTo({
         top: 0,
         behavior: "auto",
@@ -273,13 +278,22 @@ export function ClipboardCaptureList({
       return;
     }
 
-    rowVirtualizer.scrollToIndex(
-      shouldRevealGroupHeader ? Math.max(0, selectedRowIndex - 1) : selectedRowIndex,
-      {
-        align: shouldRevealGroupHeader ? "start" : "auto",
-      },
-    );
-  }, [captureRowIndexById, rowVirtualizer, rows, scrollViewport, selectedCaptureId]);
+    if (selectedScrollTargetIndex === null) {
+      return;
+    }
+
+    rowVirtualizer.scrollToIndex(selectedScrollTargetIndex, {
+      align: shouldRevealPinnedGroupHeader ? "start" : "auto",
+    });
+  }, [
+    firstCaptureRowIndex,
+    rowVirtualizer,
+    scrollViewport,
+    selectedCaptureId,
+    selectedRowIndex,
+    selectedScrollTargetIndex,
+    shouldRevealPinnedGroupHeader,
+  ]);
 
   useActiveContextMenuTarget({
     active: selectedCapture !== null,

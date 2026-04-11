@@ -80,6 +80,8 @@ export function useClipboardBoardView() {
       }),
     staleTime: CLIPBOARD_QUERY_STALE_TIME,
     placeholderData: (previousData) => previousData ?? cachedSummaryPage,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
   });
 
   const { data: pinnedCaptures = cachedPinnedCaptures ?? [] } = useQuery({
@@ -87,6 +89,8 @@ export function useClipboardBoardView() {
     queryFn: getPinnedClipboardCaptures,
     staleTime: CLIPBOARD_QUERY_STALE_TIME,
     placeholderData: (previousData) => previousData ?? cachedPinnedCaptures,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
   });
 
   const {
@@ -112,6 +116,8 @@ export function useClipboardBoardView() {
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: CLIPBOARD_QUERY_STALE_TIME,
     placeholderData: (previousData) => previousData ?? cachedListPage,
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
   });
 
   useClipboardCaptureEvents(() => {

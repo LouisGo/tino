@@ -385,6 +385,14 @@ export const enUSResources = defineLocaleSchema({
       pasteToTarget: "Paste to {{appName}}",
       pasteToPreviousApp: "Paste to previous app",
       shortcutsButtonAria: "Open clipboard shortcuts",
+      pauseStatusButtonAria: "Open paused capture status",
+      capturePaused: {
+        title: "Capture is paused",
+        description: "Tino is not collecting new clipboard items right now. Resume here whenever you want capture to start again.",
+        resume: "Resume capture",
+        pending: "Resuming...",
+        dismiss: "Dismiss paused capture tip",
+      },
     },
     toolbar: {
       searchPlaceholder: "Search history or use app:/date:/type:",
@@ -622,6 +630,13 @@ export const enUSResources = defineLocaleSchema({
       capture: {
         pause: "Pause capture",
         resume: "Resume capture",
+        confirmPause: {
+          title: "Pause clipboard capture?",
+          description: "New clipboard items will stop being collected until you resume capture from Settings or the clipboard page.",
+          cancel: "Cancel",
+          confirm: "Pause capture",
+          pending: "Pausing...",
+        },
       },
       keywords: {
         info: "Semicolon-separated keywords. Matching is case-insensitive, and skipped captures",
@@ -629,7 +644,7 @@ export const enUSResources = defineLocaleSchema({
         placeholder: "password; verification code; internal only",
       },
       retention: {
-        info: "Applies only to the clipboard board cache in app data. It does not prune long-lived Markdown assets.",
+        info: "Controls how much clipboard history is shown in app data. Older cached entries can be restored when you expand the window again, while cache older than 90 days is cleaned up automatically. It does not prune long-lived Markdown assets.",
         label: "History retention",
         options: {
           ninetyDays: {
@@ -1191,6 +1206,14 @@ export const zhCNResources = {
       pasteToTarget: "回填到 {{appName}}",
       pasteToPreviousApp: "回填到上一个应用",
       shortcutsButtonAria: "打开剪贴板快捷键说明",
+      pauseStatusButtonAria: "打开暂停采集状态提示",
+      capturePaused: {
+        title: "当前已暂停采集",
+        description: "Tino 暂时不会继续采集新的剪贴板内容。你可以直接在这里恢复采集。",
+        resume: "恢复采集",
+        pending: "正在恢复...",
+        dismiss: "关闭暂停采集提示",
+      },
     },
     toolbar: {
       searchPlaceholder: "搜索记录，也支持 app:/date:/type:",
@@ -1428,6 +1451,13 @@ export const zhCNResources = {
       capture: {
         pause: "暂停采集",
         resume: "恢复采集",
+        confirmPause: {
+          title: "暂停剪贴板采集？",
+          description: "暂停后，新的剪贴板内容将不会继续采集。你可以稍后在设置页或剪贴板页面直接恢复。",
+          cancel: "取消",
+          confirm: "暂停采集",
+          pending: "正在暂停...",
+        },
       },
       keywords: {
         info: "用分号分隔关键词。命中后不会采集",
@@ -1435,7 +1465,7 @@ export const zhCNResources = {
         placeholder: "密码；验证码；仅限内部",
       },
       retention: {
-        info: "只影响应用数据目录中的剪贴板看板缓存，不会清理 `daily` 等长期保存的 Markdown 文件。",
+        info: "控制剪贴板历史的可见窗口。缩短时长只会暂时隐藏更早的缓存，重新调大后仍可恢复；超过 90 天的缓存会自动清理，不会影响 `daily` 等长期保存的 Markdown 文件。",
         label: "历史保留时长",
         options: {
           ninetyDays: {
