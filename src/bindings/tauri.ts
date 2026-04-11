@@ -4,10 +4,10 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	listReadyAiBatches: () => typedError<AiBatchSummary[], string>(__TAURI_INVOKE("list_ready_ai_batches")),
-	getAiBatchPayload: (batchId: string) => typedError<AiBatchPayload, string>(__TAURI_INVOKE("get_ai_batch_payload", { batchId })),
-	getTopicIndexEntries: () => typedError<TopicIndexEntry[], string>(__TAURI_INVOKE("get_topic_index_entries")),
-	applyBatchDecision: (request: ApplyBatchDecisionRequest) => typedError<ApplyBatchDecisionResult, string>(__TAURI_INVOKE("apply_batch_decision", { request })),
+	listReadyAiBatches: () => typedError<AiBatchSummary[], IpcError>(__TAURI_INVOKE("list_ready_ai_batches")),
+	getAiBatchPayload: (batchId: string) => typedError<AiBatchPayload, IpcError>(__TAURI_INVOKE("get_ai_batch_payload", { batchId })),
+	getTopicIndexEntries: () => typedError<TopicIndexEntry[], IpcError>(__TAURI_INVOKE("get_topic_index_entries")),
+	applyBatchDecision: (request: ApplyBatchDecisionRequest) => typedError<ApplyBatchDecisionResult, IpcError>(__TAURI_INVOKE("apply_batch_decision", { request })),
 	getDashboardSnapshot: () => typedError<DashboardSnapshot, string>(__TAURI_INVOKE("get_dashboard_snapshot")),
 	getClipboardPage: (request: ClipboardPageRequest) => typedError<ClipboardPage, string>(__TAURI_INVOKE("get_clipboard_page", { request })),
 	getClipboardBoardBootstrap: () => typedError<ClipboardBoardBootstrap, string>(__TAURI_INVOKE("get_clipboard_board_bootstrap")),
@@ -24,10 +24,10 @@ export const commands = {
 	getClipboardWindowTargetAppName: () => typedError<string | null, string>(__TAURI_INVOKE("get_clipboard_window_target_app_name")),
 	getLogDirectory: () => typedError<string, string>(__TAURI_INVOKE("get_log_directory")),
 	openInPreview: (path: string) => typedError<null, string>(__TAURI_INVOKE("open_in_preview", { path })),
-	copyCaptureToClipboard: (capture: ClipboardReplayRequest) => typedError<null, string>(__TAURI_INVOKE("copy_capture_to_clipboard", { capture })),
-	returnCaptureToPreviousApp: (capture: ClipboardReplayRequest) => typedError<ClipboardReturnResult, string>(__TAURI_INVOKE("return_capture_to_previous_app", { capture })),
+	copyCaptureToClipboard: (capture: ClipboardReplayRequest) => typedError<null, IpcError>(__TAURI_INVOKE("copy_capture_to_clipboard", { capture })),
+	returnCaptureToPreviousApp: (capture: ClipboardReplayRequest) => typedError<ClipboardReturnResult, IpcError>(__TAURI_INVOKE("return_capture_to_previous_app", { capture })),
 	getAccessibilityPermissionStatus: () => __TAURI_INVOKE<boolean>("get_accessibility_permission_status"),
-	openAccessibilitySettings: () => typedError<null, string>(__TAURI_INVOKE("open_accessibility_settings")),
+	openAccessibilitySettings: () => typedError<null, IpcError>(__TAURI_INVOKE("open_accessibility_settings")),
 	requestAppRestart: () => typedError<null, string>(__TAURI_INVOKE("request_app_restart")),
 	revealInFileManager: (path: string) => typedError<null, string>(__TAURI_INVOKE("reveal_in_file_manager", { path })),
 };
@@ -245,6 +245,14 @@ export type DeleteClipboardCaptureResult = {
 	removedFromPinned: boolean,
 	deleted: boolean,
 };
+
+export type IpcError = {
+	code: IpcErrorCode,
+	message: string,
+	details: string | null,
+};
+
+export type IpcErrorCode = "validation_error" | "state_conflict" | "not_found" | "permission_required" | "packaged_app_required" | "local_signing_required" | "signature_invalid" | "io_error" | "platform_error" | "internal_error";
 
 export type PersistedKnowledgeDestination = "topic" | "inbox" | "discard";
 

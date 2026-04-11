@@ -1,4 +1,5 @@
 use crate::clipboard::types::ClipboardWindowTarget;
+use crate::error::{AppError, AppResult};
 
 #[cfg(target_os = "macos")]
 use {
@@ -217,13 +218,13 @@ pub(super) fn wait_for_target_focus_state(pid: pid_t) -> TargetFocusState {
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn post_command_v() -> Result<(), String> {
+pub(super) fn post_command_v() -> AppResult<()> {
     let source = CGEventSource::new(CGEventSourceStateID::HIDSystemState)
-        .ok_or_else(|| "failed to create keyboard event source".to_string())?;
+        .ok_or_else(|| AppError::platform("failed to create keyboard event source"))?;
     let key_down = CGEvent::new_keyboard_event(Some(&source), KEYCODE_V, true)
-        .ok_or_else(|| "failed to create paste key-down event".to_string())?;
+        .ok_or_else(|| AppError::platform("failed to create paste key-down event"))?;
     let key_up = CGEvent::new_keyboard_event(Some(&source), KEYCODE_V, false)
-        .ok_or_else(|| "failed to create paste key-up event".to_string())?;
+        .ok_or_else(|| AppError::platform("failed to create paste key-up event"))?;
 
     CGEvent::set_flags(Some(&key_down), CGEventFlags::MaskCommand);
     CGEvent::set_flags(Some(&key_up), CGEventFlags::MaskCommand);

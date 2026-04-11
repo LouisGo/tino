@@ -3,6 +3,7 @@
 use crate::{
     app_state::AppState,
     clipboard::types::{ClipboardReplayRequest, ClipboardReturnResult},
+    error::{AppError, AppResult},
 };
 use tauri::AppHandle;
 
@@ -31,7 +32,7 @@ use {
 pub(crate) fn copy_capture_to_clipboard(
     state: &AppState,
     capture: &ClipboardReplayRequest,
-) -> Result<(), String> {
+) -> AppResult<()> {
     #[cfg(target_os = "macos")]
     {
         return write_capture_to_pasteboard(state, capture);
@@ -41,7 +42,9 @@ pub(crate) fn copy_capture_to_clipboard(
     {
         let _ = state;
         let _ = capture;
-        Err("Clipboard replay is only supported on macOS".into())
+        Err(AppError::platform(
+            "Clipboard replay is only supported on macOS",
+        ))
     }
 }
 
@@ -49,10 +52,10 @@ pub(crate) fn return_capture_to_previous_app(
     app: &AppHandle,
     state: &AppState,
     capture: &ClipboardReplayRequest,
-) -> Result<ClipboardReturnResult, String> {
+) -> AppResult<ClipboardReturnResult> {
     #[cfg(target_os = "macos")]
     {
-        let Some(target) = state.clipboard_window_target()? else {
+        let Some(target) = state.clipboard_window_target().map_err(AppError::from)? else {
             log::warn!("clipboard return skipped because no previous app target was recorded");
             return Ok(ClipboardReturnResult { pasted: false });
         };
@@ -75,10 +78,10 @@ pub(crate) fn return_capture_to_previous_app(
                 "clipboard return skipped because the current runtime is not a packaged app bundle: {}",
                 authorization_target
             );
-            return Err(format!(
+            return Err(AppError::packaged_app_required(format!(
                 "Tino paste back requires the packaged Preview app. The current process is the unbundled development runtime at {} launched by `pnpm tauri dev`, and macOS cannot grant Accessibility permission to that copy from System Settings. Build/install and run the Preview app instead.",
                 authorization_target
-            ));
+            )));
         }
 
         if let Some(signature_issue) = current_app_bundle_signature_issue(&app.config().identifier)
@@ -87,17 +90,16 @@ pub(crate) fn return_capture_to_previous_app(
                 "clipboard return skipped because the current app bundle signature is invalid: {}",
                 signature_issue
             );
-            return Err(signature_issue);
+            return Err(AppError::signature_invalid(signature_issue));
         }
 
         if current_app_uses_adhoc_signature().unwrap_or(false) && !is_accessibility_trusted() {
             log::warn!(
                 "clipboard return skipped because the current app is still ad-hoc signed, so Accessibility trust will not stick across rebuilds"
             );
-            return Err(
+            return Err(AppError::local_signing_required(
                 "Tino Preview is still using ad-hoc macOS signing. Accessibility permission can reset after every rebuild for ad-hoc signed apps, so repeating the authorization flow is not a stable fix. Set up local signing with `pnpm macos:setup-local-signing`, rebuild/install the app, then grant Accessibility once for that rebuilt copy."
-                    .into(),
-            );
+            ));
         }
 
         if !is_accessibility_trusted() {
@@ -110,11 +112,11 @@ pub(crate) fn return_capture_to_previous_app(
                 target_name,
                 authorization_target
             );
-            return Err(format!(
+            return Err(AppError::permission_required(format!(
                 "Tino needs macOS Accessibility permission before it can paste back into {}. Make sure you enabled the same app copy that is currently running: {}. After you turn that checkbox on in System Settings, fully quit and reopen that same Tino app before trying again. On some Macs the permission does not take effect until the app is restarted.",
                 target_name,
                 authorization_target
-            ));
+            )));
         }
 
         if let Some(window) = app.get_webview_window("clipboard") {
@@ -126,7 +128,7 @@ pub(crate) fn return_capture_to_previous_app(
                 "clipboard return failed because the previous app could not be reactivated for {}",
                 target_name
             );
-            return Err("failed to reactivate the previous app".into());
+            return Err(AppError::platform("failed to reactivate the previous app"));
         }
 
         let target_pid = application.processIdentifier();
@@ -158,7 +160,9 @@ pub(crate) fn return_capture_to_previous_app(
         let _ = app;
         let _ = state;
         let _ = capture;
-        Err("Clipboard return is only supported on macOS".into())
+        Err(AppError::platform(
+            "Clipboard return is only supported on macOS",
+        ))
     }
 }
 
@@ -166,7 +170,7 @@ pub(crate) fn accessibility_permission_status() -> bool {
     authorization::is_accessibility_trusted()
 }
 
-pub(crate) fn open_accessibility_settings() -> Result<(), String> {
+pub(crate) fn open_accessibility_settings() -> AppResult<()> {
     authorization::open_accessibility_settings_impl()
 }
 
@@ -174,9 +178,11 @@ pub(crate) fn open_accessibility_settings() -> Result<(), String> {
 fn write_capture_to_pasteboard(
     state: &AppState,
     capture: &ClipboardReplayRequest,
-) -> Result<(), String> {
+) -> AppResult<()> {
     let replay_timestamp = Local::now().to_rfc3339();
     let replay_hash = copy_capture_to_clipboard_macos(capture)?;
-    state.register_replay_hash(replay_hash, replay_timestamp, capture.capture_id.clone())?;
+    state
+        .register_replay_hash(replay_hash, replay_timestamp, capture.capture_id.clone())
+        .map_err(AppError::from)?;
     Ok(())
 }

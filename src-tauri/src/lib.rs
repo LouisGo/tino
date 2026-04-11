@@ -4,6 +4,7 @@ mod backend;
 mod capture;
 mod clipboard;
 mod commands;
+mod error;
 pub mod ipc_schema;
 mod locale;
 mod native_window_macos;

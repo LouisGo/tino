@@ -8,6 +8,7 @@ use crate::clipboard::{
     replay,
     source_apps::{self, ClipboardSourceAppIconResult},
 };
+use crate::error::{IpcError, IpcResult};
 use serde::Deserialize;
 use specta::Type;
 use std::{path::Path, process::Command};
@@ -183,8 +184,8 @@ pub fn open_in_preview(path: String) -> Result<(), String> {
 pub fn copy_capture_to_clipboard(
     state: State<'_, AppState>,
     capture: ClipboardReplayRequest,
-) -> Result<(), String> {
-    replay::copy_capture_to_clipboard(state.inner(), &capture)
+) -> IpcResult<()> {
+    replay::copy_capture_to_clipboard(state.inner(), &capture).map_err(IpcError::from)
 }
 
 #[tauri::command]
@@ -193,8 +194,8 @@ pub fn return_capture_to_previous_app(
     app: AppHandle,
     state: State<'_, AppState>,
     capture: ClipboardReplayRequest,
-) -> Result<ClipboardReturnResult, String> {
-    replay::return_capture_to_previous_app(&app, state.inner(), &capture)
+) -> IpcResult<ClipboardReturnResult> {
+    replay::return_capture_to_previous_app(&app, state.inner(), &capture).map_err(IpcError::from)
 }
 
 #[tauri::command]
@@ -205,8 +206,8 @@ pub fn get_accessibility_permission_status() -> bool {
 
 #[tauri::command]
 #[specta::specta]
-pub fn open_accessibility_settings() -> Result<(), String> {
-    replay::open_accessibility_settings()
+pub fn open_accessibility_settings() -> IpcResult<()> {
+    replay::open_accessibility_settings().map_err(IpcError::from)
 }
 
 #[tauri::command]

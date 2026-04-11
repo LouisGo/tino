@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::clipboard::types::CaptureRecord;
+use crate::error::{AppError, AppResult, IpcError, IpcResult};
 use crate::storage::knowledge_root::ensure_knowledge_root_layout;
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
@@ -7,6 +8,7 @@ use specta::Type;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
+    io::ErrorKind,
     path::{Path, PathBuf},
 };
 use tauri::State;
@@ -204,8 +206,12 @@ struct StoredBatchFile {
 
 #[tauri::command]
 #[specta::specta]
-pub fn list_ready_ai_batches(state: State<'_, AppState>) -> Result<Vec<AiBatchSummary>, String> {
-    let knowledge_root = state.current_settings()?.knowledge_root_path();
+pub fn list_ready_ai_batches(state: State<'_, AppState>) -> IpcResult<Vec<AiBatchSummary>> {
+    let knowledge_root = state
+        .current_settings()
+        .map_err(AppError::from)
+        .map_err(IpcError::from)?
+        .knowledge_root_path();
     let mut summaries = load_stored_batches(&knowledge_root)?
         .into_iter()
         .filter(|batch| {
@@ -226,8 +232,12 @@ pub fn list_ready_ai_batches(state: State<'_, AppState>) -> Result<Vec<AiBatchSu
 pub fn get_ai_batch_payload(
     state: State<'_, AppState>,
     batch_id: String,
-) -> Result<AiBatchPayload, String> {
-    let knowledge_root = state.current_settings()?.knowledge_root_path();
+) -> IpcResult<AiBatchPayload> {
+    let knowledge_root = state
+        .current_settings()
+        .map_err(AppError::from)
+        .map_err(IpcError::from)?
+        .knowledge_root_path();
     let stored_batch = load_stored_batch(&knowledge_root, &batch_id)?;
 
     Ok(AiBatchPayload {
@@ -243,9 +253,13 @@ pub fn get_ai_batch_payload(
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_topic_index_entries(state: State<'_, AppState>) -> Result<Vec<TopicIndexEntry>, String> {
-    let knowledge_root = state.current_settings()?.knowledge_root_path();
-    load_topic_index_entries(&knowledge_root)
+pub fn get_topic_index_entries(state: State<'_, AppState>) -> IpcResult<Vec<TopicIndexEntry>> {
+    let knowledge_root = state
+        .current_settings()
+        .map_err(AppError::from)
+        .map_err(IpcError::from)?
+        .knowledge_root_path();
+    load_topic_index_entries(&knowledge_root).map_err(IpcError::from)
 }
 
 #[tauri::command]
@@ -253,46 +267,64 @@ pub fn get_topic_index_entries(state: State<'_, AppState>) -> Result<Vec<TopicIn
 pub fn apply_batch_decision(
     state: State<'_, AppState>,
     request: ApplyBatchDecisionRequest,
-) -> Result<ApplyBatchDecisionResult, String> {
+) -> IpcResult<ApplyBatchDecisionResult> {
     let batch_id = request.batch_id.trim();
     if batch_id.is_empty() {
-        return Err("batchId is required".into());
+        return Err(IpcError::from(AppError::validation("batchId is required")));
     }
 
-    let knowledge_root = state.current_settings()?.knowledge_root_path();
+    let knowledge_root = state
+        .current_settings()
+        .map_err(AppError::from)
+        .map_err(IpcError::from)?
+        .knowledge_root_path();
     let mut stored_batch = load_stored_batch(&knowledge_root, batch_id)?;
     if !matches!(
         map_batch_runtime_state(&stored_batch.status),
         AiBatchRuntimeState::Ready
     ) {
-        return Err("batch is no longer ready for review".into());
+        return Err(IpcError::from(AppError::state_conflict(
+            "batch is no longer ready for review",
+        )));
     }
 
     if request.review.batch_id != batch_id {
-        return Err("review.batchId must match batchId".into());
+        return Err(IpcError::from(AppError::validation(
+            "review.batchId must match batchId",
+        )));
     }
 
     let review_id = request.review.review_id.trim();
     if review_id.is_empty() {
-        return Err("review.reviewId is required".into());
+        return Err(IpcError::from(AppError::validation(
+            "review.reviewId is required",
+        )));
     }
 
     if request.feedback.batch_id != batch_id {
-        return Err("feedback.batchId must match batchId".into());
+        return Err(IpcError::from(AppError::validation(
+            "feedback.batchId must match batchId",
+        )));
     }
 
     if request.feedback.review_id != request.review.review_id {
-        return Err("feedback.reviewId must match review.reviewId".into());
+        return Err(IpcError::from(AppError::validation(
+            "feedback.reviewId must match review.reviewId",
+        )));
     }
 
     let submitted_at = request.feedback.submitted_at.trim();
     if submitted_at.is_empty() {
-        return Err("feedback.submittedAt is required".into());
+        return Err(IpcError::from(AppError::validation(
+            "feedback.submittedAt is required",
+        )));
     }
     parse_rfc3339_timestamp(submitted_at)?;
 
     if request.review.clusters.is_empty() {
-        return Err("review.clusters must not be empty".into());
+        return Err(IpcError::from(AppError::validation(
+            "review.clusters must not be empty",
+        )));
     }
 
     let mut assigned_source_ids = BTreeSet::new();
@@ -306,36 +338,43 @@ pub fn apply_batch_decision(
     for cluster in &request.review.clusters {
         let cluster_id = cluster.cluster_id.trim();
         if cluster_id.is_empty() {
-            return Err("review.clusters[*].clusterId is required".into());
+            return Err(IpcError::from(AppError::validation(
+                "review.clusters[*].clusterId is required",
+            )));
         }
 
         if !cluster_ids.insert(cluster_id.to_string()) {
-            return Err(format!("duplicate clusterId: {cluster_id}"));
+            return Err(IpcError::from(AppError::validation(format!(
+                "duplicate clusterId: {cluster_id}"
+            ))));
         }
 
         if !(0.0..=1.0).contains(&cluster.confidence) {
-            return Err(format!(
+            return Err(IpcError::from(AppError::validation(format!(
                 "cluster {} has confidence outside the allowed range",
                 cluster.cluster_id
-            ));
+            ))));
         }
 
         if cluster.source_ids.is_empty() {
-            return Err(format!(
+            return Err(IpcError::from(AppError::validation(format!(
                 "cluster {} must reference at least one sourceId",
                 cluster.cluster_id
-            ));
+            ))));
         }
 
         if cluster.title.trim().is_empty() {
-            return Err(format!("cluster {} title is required", cluster.cluster_id));
+            return Err(IpcError::from(AppError::validation(format!(
+                "cluster {} title is required",
+                cluster.cluster_id
+            ))));
         }
 
         if cluster.summary.trim().is_empty() {
-            return Err(format!(
+            return Err(IpcError::from(AppError::validation(format!(
                 "cluster {} summary is required",
                 cluster.cluster_id
-            ));
+            ))));
         }
 
         if cluster.key_points.is_empty()
@@ -344,40 +383,44 @@ pub fn apply_batch_decision(
                 .iter()
                 .any(|value| value.trim().is_empty())
         {
-            return Err(format!(
+            return Err(IpcError::from(AppError::validation(format!(
                 "cluster {} must contain at least one non-empty key point",
                 cluster.cluster_id
-            ));
+            ))));
         }
 
         for source_id in &cluster.source_ids {
             if !batch_source_ids.contains(source_id) {
-                return Err(format!(
+                return Err(IpcError::from(AppError::validation(format!(
                     "cluster {} contains sourceId not present in batch: {}",
                     cluster.cluster_id, source_id
-                ));
+                ))));
             }
 
             if !assigned_source_ids.insert(source_id.clone()) {
-                return Err(format!(
+                return Err(IpcError::from(AppError::validation(format!(
                     "sourceId {} was assigned to more than one cluster",
                     source_id
-                ));
+                ))));
             }
         }
     }
 
     for edited_cluster_id in &request.feedback.edited_cluster_ids {
         if !cluster_ids.contains(edited_cluster_id) {
-            return Err(format!(
+            return Err(IpcError::from(AppError::validation(format!(
                 "feedback.editedClusterIds contains unknown clusterId: {}",
                 edited_cluster_id
-            ));
+            ))));
         }
     }
 
-    ensure_knowledge_root_layout(&knowledge_root)?;
-    let saved_at = crate::format_system_time_rfc3339(std::time::SystemTime::now())?;
+    ensure_knowledge_root_layout(&knowledge_root)
+        .map_err(AppError::from)
+        .map_err(IpcError::from)?;
+    let saved_at = crate::format_system_time_rfc3339(std::time::SystemTime::now())
+        .map_err(AppError::from)
+        .map_err(IpcError::from)?;
     let review_submission = PersistedReviewSubmission {
         saved_at: saved_at.clone(),
         batch_id: batch_id.to_string(),
@@ -410,7 +453,10 @@ pub fn apply_batch_decision(
 
     stored_batch.status = "persisted".into();
     write_json_file(&batch_file_path(&knowledge_root, batch_id), &stored_batch)?;
-    state.run_periodic_maintenance()?;
+    state
+        .run_periodic_maintenance()
+        .map_err(AppError::from)
+        .map_err(IpcError::from)?;
 
     Ok(ApplyBatchDecisionResult {
         batch_id: batch_id.to_string(),
@@ -494,38 +540,49 @@ fn map_batch_runtime_state(status: &str) -> AiBatchRuntimeState {
     }
 }
 
-fn load_stored_batches(knowledge_root: &Path) -> Result<Vec<StoredBatchFile>, String> {
+fn load_stored_batches(knowledge_root: &Path) -> AppResult<Vec<StoredBatchFile>> {
     let batches_dir = knowledge_root.join("_system").join("batches");
     if !batches_dir.exists() {
         return Ok(Vec::new());
     }
 
     let mut batches = Vec::new();
-    for entry in fs::read_dir(batches_dir).map_err(|error| error.to_string())? {
-        let entry = entry.map_err(|error| error.to_string())?;
+    for entry in fs::read_dir(&batches_dir)
+        .map_err(|error| AppError::io("failed to read AI batch directory", error))?
+    {
+        let entry = entry
+            .map_err(|error| AppError::io("failed to read AI batch directory entry", error))?;
         let path = entry.path();
         if path.extension().and_then(|value| value.to_str()) != Some("json") {
             continue;
         }
 
-        let bytes = fs::read(path).map_err(|error| error.to_string())?;
-        let batch =
-            serde_json::from_slice::<StoredBatchFile>(&bytes).map_err(|error| error.to_string())?;
+        let bytes = fs::read(&path)
+            .map_err(|error| AppError::io("failed to read stored AI batch file", error))?;
+        let batch = serde_json::from_slice::<StoredBatchFile>(&bytes)
+            .map_err(|error| AppError::json("failed to parse stored AI batch file", error))?;
         batches.push(batch);
     }
 
     Ok(batches)
 }
 
-fn load_stored_batch(knowledge_root: &Path, batch_id: &str) -> Result<StoredBatchFile, String> {
+fn load_stored_batch(knowledge_root: &Path, batch_id: &str) -> AppResult<StoredBatchFile> {
     let normalized_id = batch_id.trim();
     if normalized_id.is_empty() {
-        return Err("batchId is required".into());
+        return Err(AppError::validation("batchId is required"));
     }
 
     let path = batch_file_path(knowledge_root, normalized_id);
-    let bytes = fs::read(path).map_err(|error| error.to_string())?;
-    serde_json::from_slice::<StoredBatchFile>(&bytes).map_err(|error| error.to_string())
+    let bytes = fs::read(&path).map_err(|error| {
+        if error.kind() == ErrorKind::NotFound {
+            AppError::not_found(format!("batch {normalized_id} was not found"))
+        } else {
+            AppError::io("failed to read stored AI batch file", error)
+        }
+    })?;
+    serde_json::from_slice::<StoredBatchFile>(&bytes)
+        .map_err(|error| AppError::json("failed to parse stored AI batch file", error))
 }
 
 fn batch_file_path(knowledge_root: &Path, batch_id: &str) -> PathBuf {
@@ -548,30 +605,35 @@ fn topic_file_path(knowledge_root: &Path, topic_slug: &str) -> PathBuf {
         .join(format!("{topic_slug}.md"))
 }
 
-fn inbox_file_path(knowledge_root: &Path, submitted_at: &str) -> Result<PathBuf, String> {
+fn inbox_file_path(knowledge_root: &Path, submitted_at: &str) -> AppResult<PathBuf> {
     let timestamp = parse_rfc3339_timestamp(submitted_at)?;
     let date = timestamp.format("%Y-%m-%d").to_string();
     Ok(knowledge_root.join("_inbox").join(format!("{date}.md")))
 }
 
-fn write_json_file<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
+fn write_json_file<T: Serialize>(path: &Path, value: &T) -> AppResult<()> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        fs::create_dir_all(parent)
+            .map_err(|error| AppError::io("failed to create AI output directory", error))?;
     }
 
-    let bytes = serde_json::to_vec_pretty(value).map_err(|error| error.to_string())?;
-    fs::write(path, bytes).map_err(|error| error.to_string())
+    let bytes = serde_json::to_vec_pretty(value)
+        .map_err(|error| AppError::json("failed to serialize AI output file", error))?;
+    fs::write(path, bytes).map_err(|error| AppError::io("failed to write AI output file", error))
 }
 
-fn load_topic_index_entries(knowledge_root: &Path) -> Result<Vec<TopicIndexEntry>, String> {
+fn load_topic_index_entries(knowledge_root: &Path) -> AppResult<Vec<TopicIndexEntry>> {
     let topics_dir = knowledge_root.join("topics");
     if !topics_dir.exists() {
         return Ok(Vec::new());
     }
 
     let mut entries = Vec::new();
-    for entry in fs::read_dir(topics_dir).map_err(|error| error.to_string())? {
-        let entry = entry.map_err(|error| error.to_string())?;
+    for entry in fs::read_dir(&topics_dir)
+        .map_err(|error| AppError::io("failed to read topics directory", error))?
+    {
+        let entry =
+            entry.map_err(|error| AppError::io("failed to read topics directory entry", error))?;
         let path = entry.path();
         if path.extension().and_then(|value| value.to_str()) != Some("md") {
             continue;
@@ -580,11 +642,14 @@ fn load_topic_index_entries(knowledge_root: &Path) -> Result<Vec<TopicIndexEntry
         let Some(topic_slug) = path.file_stem().and_then(|value| value.to_str()) else {
             continue;
         };
-        let content = fs::read_to_string(&path).map_err(|error| error.to_string())?;
+        let content = fs::read_to_string(&path)
+            .map_err(|error| AppError::io("failed to read topic markdown file", error))?;
         let topic_name = parse_topic_name(&content).unwrap_or_else(|| topic_slug.replace('-', " "));
         let topic_summary =
             parse_topic_summary(&content).unwrap_or_else(|| "Topic summary unavailable.".into());
-        let metadata = path.metadata().map_err(|error| error.to_string())?;
+        let metadata = path
+            .metadata()
+            .map_err(|error| AppError::io("failed to inspect topic markdown file", error))?;
         let last_updated_at = metadata
             .modified()
             .ok()
@@ -611,7 +676,7 @@ fn persist_review_outputs(
     review: &BatchDecisionReview,
     feedback: &ReviewFeedbackRecord,
     saved_at: &str,
-) -> Result<Vec<PersistedKnowledgeOutput>, String> {
+) -> AppResult<Vec<PersistedKnowledgeOutput>> {
     let captures_by_id = stored_batch
         .captures
         .iter()
@@ -625,10 +690,10 @@ fn persist_review_outputs(
             .iter()
             .map(|source_id| {
                 captures_by_id.get(source_id).copied().ok_or_else(|| {
-                    format!(
+                    AppError::internal(format!(
                         "cluster {} references missing sourceId {}",
                         cluster.cluster_id, source_id
-                    )
+                    ))
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -782,13 +847,15 @@ fn upsert_topic_markdown_file(
     updated_at: &str,
     section_marker: &str,
     section_markdown: &str,
-) -> Result<(), String> {
+) -> AppResult<()> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        fs::create_dir_all(parent)
+            .map_err(|error| AppError::io("failed to create topic output directory", error))?;
     }
 
     let next_content = if path.exists() {
-        let existing = fs::read_to_string(path).map_err(|error| error.to_string())?;
+        let existing = fs::read_to_string(path)
+            .map_err(|error| AppError::io("failed to read topic markdown file", error))?;
         if existing.contains(section_marker) {
             return Ok(());
         }
@@ -815,7 +882,8 @@ fn upsert_topic_markdown_file(
         )
     };
 
-    fs::write(path, next_content).map_err(|error| error.to_string())
+    fs::write(path, next_content)
+        .map_err(|error| AppError::io("failed to write topic markdown file", error))
 }
 
 fn upsert_inbox_markdown_file(
@@ -824,13 +892,15 @@ fn upsert_inbox_markdown_file(
     updated_at: &str,
     section_marker: &str,
     section_markdown: &str,
-) -> Result<(), String> {
+) -> AppResult<()> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        fs::create_dir_all(parent)
+            .map_err(|error| AppError::io("failed to create inbox output directory", error))?;
     }
 
     let next_content = if path.exists() {
-        let existing = fs::read_to_string(path).map_err(|error| error.to_string())?;
+        let existing = fs::read_to_string(path)
+            .map_err(|error| AppError::io("failed to read inbox markdown file", error))?;
         if existing.contains(section_marker) {
             return Ok(());
         }
@@ -845,7 +915,8 @@ fn upsert_inbox_markdown_file(
         render_inbox_document(day, updated_at, section_markdown)
     };
 
-    fs::write(path, next_content).map_err(|error| error.to_string())
+    fs::write(path, next_content)
+        .map_err(|error| AppError::io("failed to write inbox markdown file", error))
 }
 
 fn merge_markdown_body(existing_body: &str, next_section: &str) -> String {
@@ -1151,9 +1222,9 @@ fn parse_topic_recent_tags(content: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn parse_rfc3339_timestamp(value: &str) -> Result<DateTime<FixedOffset>, String> {
+fn parse_rfc3339_timestamp(value: &str) -> AppResult<DateTime<FixedOffset>> {
     DateTime::parse_from_rfc3339(value.trim())
-        .map_err(|error| format!("invalid RFC3339 timestamp: {error}"))
+        .map_err(|error| AppError::validation(format!("invalid RFC3339 timestamp: {error}")))
 }
 
 fn sanitize_inline_markdown(value: &str) -> String {

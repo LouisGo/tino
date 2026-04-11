@@ -1,4 +1,5 @@
 use crate::clipboard::types::ClipboardReplayRequest;
+use crate::error::{AppError, AppResult};
 
 #[cfg(target_os = "macos")]
 use {
@@ -14,7 +15,7 @@ use {
 #[cfg(target_os = "macos")]
 pub(super) fn copy_capture_to_clipboard_macos(
     capture: &ClipboardReplayRequest,
-) -> Result<String, String> {
+) -> AppResult<String> {
     let pasteboard = NSPasteboard::generalPasteboard();
     pasteboard.clearContents();
 
@@ -24,12 +25,13 @@ pub(super) fn copy_capture_to_clipboard_macos(
                 .asset_path
                 .as_deref()
                 .filter(|value| !value.trim().is_empty())
-                .ok_or_else(|| "image capture is missing assetPath".to_string())?;
-            let image_bytes = fs::read(asset_path).map_err(|error| error.to_string())?;
+                .ok_or_else(|| AppError::validation("image capture is missing assetPath"))?;
+            let image_bytes = fs::read(asset_path)
+                .map_err(|error| AppError::io("failed to read image asset", error))?;
             let data = NSData::from_vec(image_bytes.clone());
 
             if !pasteboard.setData_forType(Some(&data), unsafe { NSPasteboardTypePNG }) {
-                return Err("failed to write image to clipboard".into());
+                return Err(AppError::platform("failed to write image to clipboard"));
             }
 
             let raw_text = if capture.raw_text.trim().is_empty() {
@@ -48,25 +50,26 @@ pub(super) fn copy_capture_to_clipboard_macos(
         "video" | "file" => {
             let file_path = capture.raw_text.trim();
             if file_path.is_empty() {
-                return Err(format!(
+                return Err(AppError::validation(format!(
                     "{} capture is missing a local file path",
                     capture.content_kind
-                ));
+                )));
             }
 
-            let metadata = fs::metadata(file_path).map_err(|error| error.to_string())?;
+            let metadata = fs::metadata(file_path)
+                .map_err(|error| AppError::io("failed to inspect local file", error))?;
             if !metadata.is_file() {
-                return Err(format!("{file_path} is not a file"));
+                return Err(AppError::validation(format!("{file_path} is not a file")));
             }
 
             let file_url = NSURL::fileURLWithPath(&NSString::from_str(file_path));
             let file_url_string = file_url
                 .absoluteString()
-                .ok_or_else(|| "failed to encode file URL".to_string())?;
+                .ok_or_else(|| AppError::platform("failed to encode file URL"))?;
             let plain_path = NSString::from_str(file_path);
 
             if !pasteboard.setString_forType(&file_url_string, unsafe { NSPasteboardTypeFileURL }) {
-                return Err("failed to write file to clipboard".into());
+                return Err(AppError::platform("failed to write file to clipboard"));
             }
 
             let _ = pasteboard.setString_forType(&file_url_string, unsafe { NSPasteboardTypeURL });
@@ -88,7 +91,7 @@ pub(super) fn copy_capture_to_clipboard_macos(
             let string = NSString::from_str(text);
 
             if !pasteboard.setString_forType(&string, unsafe { NSPasteboardTypeString }) {
-                return Err("failed to write link to clipboard".into());
+                return Err(AppError::platform("failed to write link to clipboard"));
             }
 
             Ok(build_capture_hash("link", text, None, None::<&[u8]>))
@@ -96,7 +99,9 @@ pub(super) fn copy_capture_to_clipboard_macos(
         "rich_text" => {
             let plain_text = NSString::from_str(&capture.raw_text);
             if !pasteboard.setString_forType(&plain_text, unsafe { NSPasteboardTypeString }) {
-                return Err("failed to write text fallback to clipboard".into());
+                return Err(AppError::platform(
+                    "failed to write text fallback to clipboard",
+                ));
             }
 
             if let Some(raw_rich) = capture.raw_rich.as_deref() {
@@ -125,7 +130,7 @@ pub(super) fn copy_capture_to_clipboard_macos(
             let string = NSString::from_str(&capture.raw_text);
 
             if !pasteboard.setString_forType(&string, unsafe { NSPasteboardTypeString }) {
-                return Err("failed to write text to clipboard".into());
+                return Err(AppError::platform("failed to write text to clipboard"));
             }
 
             Ok(build_capture_hash(

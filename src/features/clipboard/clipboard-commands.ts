@@ -30,6 +30,7 @@ import {
   setClipboardCapturePinned,
   returnCaptureToPreviousApp,
 } from "@/lib/tauri";
+import { getTauriCommandErrorCode } from "@/lib/tauri-core";
 import { resolveText, tx } from "@/i18n";
 import type {
   ClipboardCapture,
@@ -386,18 +387,21 @@ export const clipboardCommands = [
           error instanceof Error
             ? error.message
             : GENERIC_PASTE_BACK_ERROR;
-        const requiresAccessibilityPermission = description.includes(
-          "Accessibility permission",
-        );
-        const requiresPackagedPreviewApp = description.includes(
-          "packaged Preview app",
-        );
+        const errorCode = getTauriCommandErrorCode(error);
+        const requiresAccessibilityPermission =
+          errorCode === "permission_required"
+          || description.includes("Accessibility permission");
+        const requiresPackagedPreviewApp =
+          errorCode === "packaged_app_required"
+          || description.includes("packaged Preview app");
         const requiresLocalSigning =
-          description.includes("ad-hoc macOS signing")
+          errorCode === "local_signing_required"
+          || description.includes("ad-hoc macOS signing")
           || description.includes("macos:setup-local-signing")
           || description.includes("ad-hoc signed apps");
         const requiresPreviewReinstall =
-          description.includes("wrong macOS signing identifier")
+          errorCode === "signature_invalid"
+          || description.includes("wrong macOS signing identifier")
           || description.includes("invalid macOS bundle signature")
           || description.includes("missing its macOS signature files")
           || description.includes("Reinstall the latest Preview app");

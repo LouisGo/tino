@@ -1,3 +1,5 @@
+use crate::error::{AppError, AppResult};
+
 #[cfg(target_os = "macos")]
 use std::{
     ffi::c_void,
@@ -106,7 +108,7 @@ pub(super) fn current_app_bundle_signature_issue(expected_identifier: &str) -> O
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn current_app_uses_adhoc_signature() -> Result<bool, String> {
+pub(super) fn current_app_uses_adhoc_signature() -> AppResult<bool> {
     let Some(bundle_path) = current_app_bundle_path() else {
         return Ok(false);
     };
@@ -121,19 +123,19 @@ pub(super) fn is_accessibility_trusted() -> bool {
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn open_accessibility_settings_impl() -> Result<(), String> {
+pub(super) fn open_accessibility_settings_impl() -> AppResult<()> {
     request_accessibility_trust_prompt_if_needed();
 
     let status = Command::new("open")
         .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         .status()
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| AppError::io("failed to open Accessibility settings", error))?;
 
     if !status.success() {
-        return Err(format!(
+        return Err(AppError::platform(format!(
             "failed to open Accessibility settings (exit code {})",
             status.code().unwrap_or_default()
-        ));
+        )));
     }
 
     Ok(())
@@ -145,8 +147,10 @@ pub(super) fn is_accessibility_trusted() -> bool {
 }
 
 #[cfg(not(target_os = "macos"))]
-pub(super) fn open_accessibility_settings_impl() -> Result<(), String> {
-    Err("Accessibility settings are only available on macOS".into())
+pub(super) fn open_accessibility_settings_impl() -> AppResult<()> {
+    Err(AppError::platform(
+        "Accessibility settings are only available on macOS",
+    ))
 }
 
 #[cfg(target_os = "macos")]
@@ -160,12 +164,12 @@ fn summarize_codesign_output(output: &[u8]) -> String {
 }
 
 #[cfg(target_os = "macos")]
-fn read_codesign_details(bundle_path: &Path) -> Result<(Option<String>, Option<String>), String> {
+fn read_codesign_details(bundle_path: &Path) -> AppResult<(Option<String>, Option<String>)> {
     let output = Command::new("codesign")
         .args(["-dv", "--verbose=4"])
         .arg(bundle_path)
         .output()
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| AppError::io("failed to inspect macOS signature", error))?;
 
     if !output.status.success() {
         let message = if output.stderr.is_empty() {
@@ -173,7 +177,7 @@ fn read_codesign_details(bundle_path: &Path) -> Result<(Option<String>, Option<S
         } else {
             summarize_codesign_output(&output.stderr)
         };
-        return Err(message);
+        return Err(AppError::platform(message));
     }
 
     let combined = format!(
@@ -197,12 +201,12 @@ fn read_codesign_details(bundle_path: &Path) -> Result<(Option<String>, Option<S
 }
 
 #[cfg(target_os = "macos")]
-fn verify_codesign_bundle(bundle_path: &Path) -> Result<(), String> {
+fn verify_codesign_bundle(bundle_path: &Path) -> AppResult<()> {
     let output = Command::new("codesign")
         .args(["--verify", "--deep", "--strict", "--verbose=4"])
         .arg(bundle_path)
         .output()
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| AppError::io("failed to verify macOS app signature", error))?;
 
     if output.status.success() {
         return Ok(());
@@ -213,7 +217,7 @@ fn verify_codesign_bundle(bundle_path: &Path) -> Result<(), String> {
     } else {
         summarize_codesign_output(&output.stderr)
     };
-    Err(message)
+    Err(AppError::platform(message))
 }
 
 #[cfg(target_os = "macos")]
