@@ -19,8 +19,7 @@ use crate::{
             hydrate_capture_preview_assets, normalize_ocr_text, should_persist_capture_history,
         },
         types::{
-            CapturePreview, ClipboardPage, ClipboardPageRequest, ClipboardPageSummary,
-            LinkMetadata,
+            CapturePreview, ClipboardPage, ClipboardPageRequest, ClipboardPageSummary, LinkMetadata,
         },
     },
     storage::capture_history_store::{CaptureHistoryStore, CaptureHistoryUpsert},
@@ -204,10 +203,9 @@ pub(crate) fn update_clipboard_history_link_metadata(
             .as_deref()
             .map(|link_url| build_link_display_with_metadata(link_url, Some(link_metadata)))
             .unwrap_or_else(|| capture.preview.clone());
-        let next_secondary_preview = capture
-            .link_url
-            .as_deref()
-            .map(|link_url| build_link_secondary_preview(link_url, &capture.raw_text, Some(link_metadata)));
+        let next_secondary_preview = capture.link_url.as_deref().map(|link_url| {
+            build_link_secondary_preview(link_url, &capture.raw_text, Some(link_metadata))
+        });
 
         if capture.link_metadata.as_ref() == Some(link_metadata)
             && capture.preview == next_preview
@@ -570,7 +568,6 @@ fn prune_capture_history_store_days(
 fn matches_clipboard_filter(capture: &CapturePreview, filter: &str) -> bool {
     matches_content_kind_filter(&capture.content_kind, filter)
 }
-
 
 fn visit_clipboard_history_entries<F>(
     clipboard_cache_root: &Path,

@@ -47,8 +47,6 @@ function scheduleClipboardBootstrapPrime() {
 
 scheduleClipboardBootstrapPrime();
 
-document.documentElement.style.backgroundColor = "var(--background)";
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppProviders router={router} />

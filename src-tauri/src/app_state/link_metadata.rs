@@ -53,9 +53,9 @@ impl AppState {
 
     fn process_link_metadata_backfill(&self) {
         let started_at = Instant::now();
-        let candidates = match self.pending_link_metadata_backfill_candidates(
-            LINK_METADATA_BACKFILL_BATCH_SIZE,
-        ) {
+        let candidates = match self
+            .pending_link_metadata_backfill_candidates(LINK_METADATA_BACKFILL_BATCH_SIZE)
+        {
             Ok(candidates) => candidates,
             Err(error) => {
                 warn!("failed to load link metadata backfill candidates: {error}");

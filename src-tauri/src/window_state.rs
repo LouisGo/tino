@@ -1,9 +1,9 @@
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
-const WINDOW_STATE_FILE_NAME: &str = "window-state.json";
+use crate::storage::app_paths::resolve_durable_app_paths;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,10 +51,9 @@ impl From<PersistedWindowStateFile> for PersistedWindowStateStore {
 }
 
 fn window_state_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path()
-        .app_data_dir()
+    resolve_durable_app_paths(app)
         .ok()
-        .map(|dir| dir.join(WINDOW_STATE_FILE_NAME))
+        .map(|paths| paths.window_state_path)
 }
 
 pub(crate) fn load_window_state_store(app: &AppHandle) -> PersistedWindowStateStore {

@@ -4,6 +4,47 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background-color: oklch(0.985 0.01 92);
+      }
+
+      html.dark,
+      html.dark body {
+        background-color: oklch(0.22 0.02 95);
+      }
+
+      #root {
+        min-height: 100%;
+      }
+    </style>
+    <script>
+      (() => {
+        try {
+          const mode = window.localStorage.getItem("tino.theme.mode");
+          const themeName = window.localStorage.getItem("tino.theme.name");
+          const prefersDark = typeof window.matchMedia === "function"
+            && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const resolvedMode = mode === "light"
+            ? "light"
+            : mode === "dark" || prefersDark
+              ? "dark"
+              : "light";
+          const root = document.documentElement;
+
+          root.dataset.theme = themeName === "ocean" ? "ocean" : "tino";
+          root.classList.toggle("dark", resolvedMode === "dark");
+          root.style.colorScheme = resolvedMode;
+        } catch (_) {
+          document.documentElement.style.colorScheme = "light";
+        }
+      })();
+    </script>
     <title>app</title>
   </head>
   <body>

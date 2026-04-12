@@ -8,10 +8,7 @@ use std::{
     collections::{HashMap, HashSet, VecDeque},
     fs, mem,
     path::{Path, PathBuf},
-    sync::{
-        atomic::AtomicBool,
-        Arc, Mutex,
-    },
+    sync::{atomic::AtomicBool, Arc, Mutex},
 };
 use tauri::{AppHandle, Manager};
 use tauri_specta::Event as _;
@@ -51,6 +48,7 @@ use crate::clipboard::types::{
 use crate::error::{AppError, AppResult};
 use crate::ipc_events::{AppSettingsChanged, ClipboardCapturesUpdated};
 use crate::runtime_profile;
+use crate::storage::app_paths::bootstrap_durable_app_storage;
 use crate::storage::knowledge_root::ensure_knowledge_root_layout;
 use runtime::{
     count_ready_batches, enqueue_capture, ensure_queue_state, hydrate_runtime_preview_assets,
@@ -70,7 +68,6 @@ use shortcuts::{
     GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_DEFAULT, GLOBAL_SHORTCUT_TOGGLE_MAIN_WINDOW_ID,
 };
 
-const SETTINGS_FILE_NAME: &str = "settings.json";
 #[cfg(test)]
 const CLIPBOARD_HISTORY_DIR_NAME: &str = "clipboard";
 const BATCH_TRIGGER_SIZE: usize = 20;
@@ -171,10 +168,8 @@ pub struct AppState {
 impl AppState {
     pub fn new(app: &AppHandle) -> Result<Self, String> {
         let home_dir = app.path().home_dir().map_err(|error| error.to_string())?;
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|error| error.to_string())?;
+        let durable_paths = bootstrap_durable_app_storage(app)?;
+        let app_data_dir = durable_paths.data_dir.clone();
         let app_log_dir = app
             .path()
             .app_log_dir()
@@ -184,9 +179,9 @@ impl AppState {
         fs::create_dir_all(&app_log_dir).map_err(|error| error.to_string())?;
 
         let default_knowledge_root = runtime_profile::default_knowledge_root(&home_dir);
-        let clipboard_cache_dir = clipboard_cache_root_path(&app_data_dir);
+        let clipboard_cache_dir = durable_paths.clipboard_cache_dir.clone();
         fs::create_dir_all(&clipboard_cache_dir).map_err(|error| error.to_string())?;
-        let settings_path = app_data_dir.join(SETTINGS_FILE_NAME);
+        let settings_path = durable_paths.settings_path.clone();
         let settings = load_settings(&settings_path, &default_knowledge_root)?;
         let knowledge_root = settings.knowledge_root_path();
         ensure_knowledge_root_layout(&knowledge_root)?;
@@ -920,10 +915,6 @@ fn clipboard_history_file_path(
     let date = captured_at.format("%Y-%m-%d").to_string();
 
     Ok(clipboard_history_dir_path(clipboard_cache_root).join(format!("{date}.jsonl")))
-}
-
-fn clipboard_cache_root_path(app_data_dir: &Path) -> PathBuf {
-    app_data_dir.join("clipboard-cache")
 }
 
 #[cfg(test)]

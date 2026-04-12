@@ -244,14 +244,13 @@ fn build_capture_secondary_preview(capture: &CaptureRecord) -> Option<String> {
                 Some(parts.join(" · "))
             }
         }
-        "link" => capture
-            .link_url
-            .as_deref()
-            .map(|link_url| build_link_secondary_preview(
+        "link" => capture.link_url.as_deref().map(|link_url| {
+            build_link_secondary_preview(
                 link_url,
                 &capture.raw_text,
                 capture.link_metadata.as_ref(),
-            )),
+            )
+        }),
         "video" | "file" => build_file_secondary_preview(&capture.raw_text, capture.byte_size),
         _ => {
             let line_count = capture.raw_text.lines().count().max(1);

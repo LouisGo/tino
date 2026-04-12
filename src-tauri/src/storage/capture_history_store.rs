@@ -763,13 +763,19 @@ fn run_migrations(connection: &Connection) -> Result<(), String> {
 
     if !column_exists(connection, "capture_history", "link_description")? {
         connection
-            .execute("ALTER TABLE capture_history ADD COLUMN link_description TEXT", [])
+            .execute(
+                "ALTER TABLE capture_history ADD COLUMN link_description TEXT",
+                [],
+            )
             .map_err(|error| error.to_string())?;
     }
 
     if !column_exists(connection, "capture_history", "link_icon_path")? {
         connection
-            .execute("ALTER TABLE capture_history ADD COLUMN link_icon_path TEXT", [])
+            .execute(
+                "ALTER TABLE capture_history ADD COLUMN link_icon_path TEXT",
+                [],
+            )
             .map_err(|error| error.to_string())?;
     }
 

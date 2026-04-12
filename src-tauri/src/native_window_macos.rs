@@ -6,8 +6,10 @@ use objc2_app_kit::{
     NSWindowAnimationBehavior, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 #[cfg(target_os = "macos")]
-use objc2_foundation::{NSObject, NSObjectProtocol};
-use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewWindow};
+use objc2_core_graphics::{CGDisplayPixelsHigh, CGMainDisplayID};
+#[cfg(target_os = "macos")]
+use objc2_foundation::{NSObject, NSObjectProtocol, NSPoint, NSSize};
+use tauri::{AppHandle, Manager, WebviewWindow};
 
 use crate::panel_layout::PanelWindowLayout;
 
@@ -114,6 +116,17 @@ fn apply_native_window_configuration(
 }
 
 #[cfg(target_os = "macos")]
+fn tao_top_left_point(x: f64, y: f64) -> NSPoint {
+    NSPoint::new(x, CGDisplayPixelsHigh(CGMainDisplayID()) as f64 - y)
+}
+
+#[cfg(target_os = "macos")]
+fn apply_native_window_bounds(ns_window: &NSWindow, x: f64, y: f64, width: f64, height: f64) {
+    ns_window.setContentSize(NSSize::new(width, height));
+    ns_window.setFrameTopLeftPoint(tao_top_left_point(x, y));
+}
+
+#[cfg(target_os = "macos")]
 fn focus_window_webview_content(window: &WebviewWindow) {
     let label = window.label().to_string();
     let _ = window.with_webview(move |webview| unsafe {
@@ -149,11 +162,7 @@ pub(crate) fn present_native_window(
             if request_focus && ns_window.isVisible() {
                 ns_window.orderOut(None);
             }
-
-            // Let Tauri own global logical positioning so panel placement stays correct on
-            // non-primary displays instead of re-deriving AppKit screen coordinates here.
-            let _ = window.set_size(LogicalSize::new(layout.width, layout.height));
-            let _ = window.set_position(LogicalPosition::new(layout.x, layout.y));
+            apply_native_window_bounds(ns_window, layout.x, layout.y, layout.width, layout.height);
         }
 
         if ns_window.isMiniaturized() {
@@ -216,6 +225,34 @@ pub(crate) fn present_native_window(
     _is_panel: bool,
     _layout: Option<PanelWindowLayout>,
     _request_focus: bool,
+) {
+}
+
+#[cfg(target_os = "macos")]
+pub(crate) fn set_native_window_bounds(
+    window: &WebviewWindow,
+    is_panel: bool,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) {
+    let Some(()) = with_native_window_handles(window, is_panel, |ns_window, ns_panel| {
+        apply_native_window_configuration(ns_window, ns_panel, is_panel);
+        apply_native_window_bounds(ns_window, x, y, width, height);
+    }) else {
+        return;
+    };
+}
+
+#[cfg(not(target_os = "macos"))]
+pub(crate) fn set_native_window_bounds(
+    _window: &WebviewWindow,
+    _is_panel: bool,
+    _x: f64,
+    _y: f64,
+    _width: f64,
+    _height: f64,
 ) {
 }
 

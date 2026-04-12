@@ -181,9 +181,8 @@ function resolveSettingsPath(profile) {
     os.homedir(),
     "Library",
     "Application Support",
-    profile === "production"
-      ? "com.louistation.tino.production"
-      : "com.louistation.tino.preview",
+    "Tino",
+    profile === "production" ? "production" : "shared",
   );
 
   return path.join(appDataDir, "settings.json");

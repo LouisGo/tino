@@ -99,8 +99,8 @@ const mockSnapshot: DashboardSnapshot = {
   os: "browser",
   defaultKnowledgeRoot: mockSettings.knowledgeRoot,
   appDataDir: isProductionDataChannel
-    ? "~/Library/Application Support/com.louistation.tino.production"
-    : "~/Library/Application Support/com.louistation.tino.preview",
+    ? "~/Library/Application Support/Tino/production"
+    : "~/Library/Application Support/Tino/shared",
   appLogDir: isProductionDataChannel
     ? "~/Library/Logs/com.louistation.tino.production"
     : "~/Library/Logs/com.louistation.tino.preview",

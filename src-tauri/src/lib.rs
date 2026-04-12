@@ -41,6 +41,8 @@ use panel_layout::{
 use std::ptr::NonNull;
 #[cfg(target_os = "macos")]
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(target_os = "macos")]
+use std::sync::Mutex;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -49,6 +51,7 @@ use std::{
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    webview::PageLoadEvent,
     AppHandle, Manager, Monitor, PhysicalPosition, PhysicalSize, RunEvent, WebviewUrl,
     WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
@@ -71,6 +74,10 @@ const AX_VALUE_TYPE_CGPOINT: u32 = 1;
 const AX_VALUE_TYPE_CGSIZE: u32 = 2;
 #[cfg(target_os = "macos")]
 static PANEL_WINDOW_TRACKER_INSTALLED: AtomicBool = AtomicBool::new(false);
+#[cfg(target_os = "macos")]
+static INITIAL_MAIN_WINDOW_PRESENTED: AtomicBool = AtomicBool::new(false);
+#[cfg(target_os = "macos")]
+static LAST_EXTERNAL_ACTIVATION_TARGET: Mutex<Option<RecentActivationTarget>> = Mutex::new(None);
 
 pub(crate) fn format_system_time_rfc3339(timestamp: SystemTime) -> Result<String, String> {
     let datetime = chrono::DateTime::<chrono::Utc>::from(timestamp).with_timezone(&chrono::Local);
@@ -101,10 +108,36 @@ struct LogicalWindowFrame {
     y: f64,
 }
 
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PhysicalDisplayFrame {
+    height: u32,
+    width: u32,
+    x: i32,
+    y: i32,
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PhysicalWindowFrame {
+    height: u32,
+    width: u32,
+    x: i32,
+    y: i32,
+}
+
 #[derive(Debug)]
 struct PanelPresentationTarget {
     anchor: Option<LogicalWindowFrame>,
     monitor: Monitor,
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Debug, Clone, Copy)]
+struct RecentActivationTarget {
+    anchor: Option<LogicalWindowFrame>,
+    center_x: f64,
+    center_y: f64,
 }
 
 #[cfg(target_os = "macos")]
@@ -214,6 +247,64 @@ fn logical_display_frame_from_monitor(monitor: &Monitor) -> LogicalDisplayFrame 
         x: position.x,
         y: position.y,
     }
+}
+
+#[cfg(test)]
+fn centered_window_frame_for_display(
+    width: u32,
+    height: u32,
+    display: PhysicalDisplayFrame,
+) -> PhysicalWindowFrame {
+    let width = width.max(1).min(display.width.max(1));
+    let height = height.max(1).min(display.height.max(1));
+    let x = i64::from(display.x) + ((i64::from(display.width) - i64::from(width)).max(0) / 2);
+    let y = i64::from(display.y) + ((i64::from(display.height) - i64::from(height)).max(0) / 2);
+
+    PhysicalWindowFrame {
+        height,
+        width,
+        x: x as i32,
+        y: y as i32,
+    }
+}
+
+#[cfg(test)]
+fn translate_window_frame_to_display(
+    frame: PhysicalWindowFrame,
+    source_display: Option<PhysicalDisplayFrame>,
+    target_display: PhysicalDisplayFrame,
+) -> PhysicalWindowFrame {
+    let width = frame.width.max(1).min(target_display.width.max(1));
+    let height = frame.height.max(1).min(target_display.height.max(1));
+    let mut translated = match source_display {
+        Some(source_display) if source_display != target_display => {
+            let offset_x = i64::from(frame.x) - i64::from(source_display.x);
+            let offset_y = i64::from(frame.y) - i64::from(source_display.y);
+
+            PhysicalWindowFrame {
+                height,
+                width,
+                x: (i64::from(target_display.x) + offset_x) as i32,
+                y: (i64::from(target_display.y) + offset_y) as i32,
+            }
+        }
+        Some(_) => PhysicalWindowFrame {
+            height,
+            width,
+            x: frame.x,
+            y: frame.y,
+        },
+        None => centered_window_frame_for_display(width, height, target_display),
+    };
+
+    let min_x = i64::from(target_display.x);
+    let min_y = i64::from(target_display.y);
+    let max_x = min_x + (i64::from(target_display.width) - i64::from(width)).max(0);
+    let max_y = min_y + (i64::from(target_display.height) - i64::from(height)).max(0);
+
+    translated.x = i64::from(translated.x).clamp(min_x, max_x) as i32;
+    translated.y = i64::from(translated.y).clamp(min_y, max_y) as i32;
+    translated
 }
 
 fn resolve_panel_window_layout(
@@ -334,7 +425,8 @@ fn preferred_panel_target_for_frontmost_window(app: &AppHandle) -> Option<PanelP
         let frontmost = workspace.frontmostApplication()?;
         let current = NSRunningApplication::currentApplication();
         if frontmost.processIdentifier() == current.processIdentifier() {
-            return None;
+            return last_external_activation_target_snapshot()
+                .map(|target| (target.center_x, target.center_y, target.anchor));
         }
 
         if let Some(frame) = focused_window_frame_for_pid(frontmost.processIdentifier()) {
@@ -427,6 +519,13 @@ fn preferred_panel_target(app: &AppHandle) -> Option<PanelPresentationTarget> {
         })
 }
 
+fn preferred_main_window_monitor(app: &AppHandle) -> Option<Monitor> {
+    preferred_panel_target_for_frontmost_window(app)
+        .map(|target| target.monitor)
+        .or_else(|| preferred_monitor_for_cursor(app))
+        .or_else(|| app.primary_monitor().ok().flatten())
+}
+
 fn current_window_monitor(window: &WebviewWindow) -> Option<Monitor> {
     if let Ok(Some(monitor)) = window.current_monitor() {
         return Some(monitor);
@@ -513,6 +612,27 @@ fn resolve_panel_layout_for_target(
     let _ = target.anchor.as_ref();
     resolve_panel_window_layout(spec, &display, persisted)
 }
+
+#[cfg(target_os = "macos")]
+fn set_native_window_bounds(window: &WebviewWindow, x: f64, y: f64, width: f64, height: f64) {
+    let window = window.clone();
+    let app = window.app_handle().clone();
+    let label = window.label().to_string();
+
+    let _ = run_on_main_thread_sync(&app, move || {
+        native_window_macos::set_native_window_bounds(
+            &window,
+            is_panel_window_label(&label),
+            x,
+            y,
+            width,
+            height,
+        );
+    });
+}
+
+#[cfg(not(target_os = "macos"))]
+fn set_native_window_bounds(_window: &WebviewWindow, _x: f64, _y: f64, _width: f64, _height: f64) {}
 
 #[cfg(target_os = "macos")]
 fn configure_native_window(window: &WebviewWindow) {
@@ -681,6 +801,52 @@ fn save_main_window_state(app: &AppHandle) {
     save_window_state_store(app, &store);
 }
 
+fn logical_main_window_frame(window: &WebviewWindow) -> Option<LogicalWindowFrame> {
+    logical_window_frame(window)
+}
+
+fn translate_logical_frame_to_display(
+    frame: LogicalWindowFrame,
+    source_display: Option<LogicalDisplayFrame>,
+    target_display: LogicalDisplayFrame,
+) -> LogicalWindowFrame {
+    let width = frame.width.max(1.0).min(target_display.width.max(1.0));
+    let height = frame.height.max(1.0).min(target_display.height.max(1.0));
+    let mut translated = match source_display {
+        Some(source_display)
+            if source_display.x != target_display.x
+                || source_display.y != target_display.y
+                || source_display.width != target_display.width
+                || source_display.height != target_display.height =>
+        {
+            LogicalWindowFrame {
+                height,
+                width,
+                x: target_display.x + (frame.x - source_display.x),
+                y: target_display.y + (frame.y - source_display.y),
+            }
+        }
+        Some(_) => LogicalWindowFrame {
+            height,
+            width,
+            x: frame.x,
+            y: frame.y,
+        },
+        None => LogicalWindowFrame {
+            height,
+            width,
+            x: target_display.x + ((target_display.width - width).max(0.0) / 2.0),
+            y: target_display.y + ((target_display.height - height).max(0.0) / 2.0),
+        },
+    };
+
+    let max_x = target_display.x + (target_display.width - width).max(0.0);
+    let max_y = target_display.y + (target_display.height - height).max(0.0);
+    translated.x = translated.x.clamp(target_display.x, max_x);
+    translated.y = translated.y.clamp(target_display.y, max_y);
+    translated
+}
+
 fn restore_main_window_state(app: &AppHandle) {
     let Some(state) = load_window_state_store(app).main else {
         return;
@@ -697,11 +863,60 @@ fn restore_main_window_state(app: &AppHandle) {
     }
 }
 
+fn prepare_main_window_for_show(app: &AppHandle, window: &WebviewWindow) {
+    let Some(target_monitor) = preferred_main_window_monitor(app) else {
+        return;
+    };
+    let Some(frame) = logical_main_window_frame(window) else {
+        return;
+    };
+
+    let source_display =
+        current_window_monitor(window).map(|monitor| logical_display_frame_from_monitor(&monitor));
+    let target_display = logical_display_frame_from_monitor(&target_monitor);
+    let translated = translate_logical_frame_to_display(frame, source_display, target_display);
+
+    if translated.x == frame.x
+        && translated.y == frame.y
+        && translated.width == frame.width
+        && translated.height == frame.height
+    {
+        return;
+    }
+
+    let was_maximized = window.is_maximized().unwrap_or(false);
+    if was_maximized {
+        let _ = window.unmaximize();
+    }
+
+    #[cfg(target_os = "macos")]
+    set_native_window_bounds(
+        window,
+        translated.x,
+        translated.y,
+        translated.width,
+        translated.height,
+    );
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = window.set_size(tauri::LogicalSize::new(translated.width, translated.height));
+        let _ = window.set_position(tauri::LogicalPosition::new(translated.x, translated.y));
+    }
+
+    if was_maximized {
+        let _ = window.maximize();
+    }
+}
+
 pub(crate) fn focus_main_window(app: &AppHandle) {
     hide_panel_windows_except(app, None);
 
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
         configure_native_window(&window);
+        if !window.is_visible().unwrap_or(false) {
+            prepare_main_window_for_show(app, &window);
+        }
         focus_native_window(&window, true);
     }
 }
@@ -869,6 +1084,44 @@ fn running_application_from_notification(
 }
 
 #[cfg(target_os = "macos")]
+fn remember_external_activation_target(
+    application: &Retained<NSRunningApplication>,
+) -> Option<RecentActivationTarget> {
+    if let Some(frame) = focused_window_frame_for_pid(application.processIdentifier()) {
+        return Some(RecentActivationTarget {
+            anchor: Some(frame),
+            center_x: frame.x + (frame.width / 2.0),
+            center_y: frame.y + (frame.height / 2.0),
+        });
+    }
+
+    let mtm = MainThreadMarker::new().expect("main thread marker should exist");
+    let screen = NSScreen::mainScreen(mtm)?;
+    let visible_frame = screen.visibleFrame();
+
+    Some(RecentActivationTarget {
+        anchor: None,
+        center_x: visible_frame.origin.x + (visible_frame.size.width / 2.0),
+        center_y: visible_frame.origin.y + (visible_frame.size.height / 2.0),
+    })
+}
+
+#[cfg(target_os = "macos")]
+fn set_last_external_activation_target(target: Option<RecentActivationTarget>) {
+    if let Ok(mut guard) = LAST_EXTERNAL_ACTIVATION_TARGET.lock() {
+        *guard = target;
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn last_external_activation_target_snapshot() -> Option<RecentActivationTarget> {
+    LAST_EXTERNAL_ACTIVATION_TARGET
+        .lock()
+        .ok()
+        .and_then(|guard| *guard)
+}
+
+#[cfg(target_os = "macos")]
 fn install_panel_window_tracker(app: &AppHandle) -> Result<(), String> {
     if PANEL_WINDOW_TRACKER_INSTALLED.swap(true, Ordering::SeqCst) {
         return Ok(());
@@ -886,6 +1139,7 @@ fn install_panel_window_tracker(app: &AppHandle) -> Result<(), String> {
         let Some(target) = non_self_clipboard_window_target(&application, current_pid) else {
             return;
         };
+        set_last_external_activation_target(remember_external_activation_target(&application));
 
         if let Some(state) = app_handle.try_state::<AppState>() {
             if let Err(error) = state.set_last_external_clipboard_window_target(Some(target)) {
@@ -1062,6 +1316,21 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .on_page_load(|webview, payload| {
+            if webview.window().label() != MAIN_WINDOW_LABEL {
+                return;
+            }
+
+            if payload.event() != PageLoadEvent::Finished {
+                return;
+            }
+
+            if INITIAL_MAIN_WINDOW_PRESENTED.swap(true, Ordering::SeqCst) {
+                return;
+            }
+
+            focus_main_window(&webview.window().app_handle());
+        })
         .setup(move |app| {
             setup_specta_builder.mount_events(app);
             prune_expired_logs(app.handle());
@@ -1232,5 +1501,153 @@ mod tests {
         assert_eq!(layout.height, 500.0);
         assert_eq!(layout.x, 2084.0);
         assert_eq!(layout.y, 305.0);
+    }
+
+    #[test]
+    fn translated_main_window_frame_preserves_relative_offset_between_displays() {
+        let source = PhysicalDisplayFrame {
+            x: 0,
+            y: 0,
+            width: 1728,
+            height: 1117,
+        };
+        let target = PhysicalDisplayFrame {
+            x: 1728,
+            y: 0,
+            width: 1512,
+            height: 982,
+        };
+        let frame = PhysicalWindowFrame {
+            x: 164,
+            y: 96,
+            width: 1200,
+            height: 800,
+        };
+
+        let translated = translate_window_frame_to_display(frame, Some(source), target);
+
+        assert_eq!(
+            translated,
+            PhysicalWindowFrame {
+                x: 1892,
+                y: 96,
+                width: 1200,
+                height: 800,
+            }
+        );
+    }
+
+    #[test]
+    fn translated_main_window_frame_recenters_when_source_display_is_unknown() {
+        let target = PhysicalDisplayFrame {
+            x: 1512,
+            y: 64,
+            width: 1512,
+            height: 982,
+        };
+        let frame = PhysicalWindowFrame {
+            x: 0,
+            y: 0,
+            width: 1480,
+            height: 960,
+        };
+
+        let translated = translate_window_frame_to_display(frame, None, target);
+
+        assert_eq!(
+            translated,
+            PhysicalWindowFrame {
+                x: 1528,
+                y: 75,
+                width: 1480,
+                height: 960,
+            }
+        );
+    }
+
+    #[test]
+    fn translated_main_window_frame_is_clamped_inside_target_display() {
+        let source = PhysicalDisplayFrame {
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+        };
+        let target = PhysicalDisplayFrame {
+            x: 1920,
+            y: 0,
+            width: 1280,
+            height: 720,
+        };
+        let frame = PhysicalWindowFrame {
+            x: 900,
+            y: 300,
+            width: 1600,
+            height: 900,
+        };
+
+        let translated = translate_window_frame_to_display(frame, Some(source), target);
+
+        assert_eq!(
+            translated,
+            PhysicalWindowFrame {
+                x: 1920,
+                y: 0,
+                width: 1280,
+                height: 720,
+            }
+        );
+    }
+
+    #[test]
+    fn translated_logical_main_window_frame_preserves_relative_offset_between_displays() {
+        let source = LogicalDisplayFrame {
+            x: 0.0,
+            y: 0.0,
+            width: 1512.0,
+            height: 982.0,
+        };
+        let target = LogicalDisplayFrame {
+            x: 1512.0,
+            y: 0.0,
+            width: 1728.0,
+            height: 1117.0,
+        };
+        let frame = LogicalWindowFrame {
+            x: 120.0,
+            y: 96.0,
+            width: 1280.0,
+            height: 840.0,
+        };
+
+        let translated = translate_logical_frame_to_display(frame, Some(source), target);
+
+        assert_eq!(translated.x, 1632.0);
+        assert_eq!(translated.y, 96.0);
+        assert_eq!(translated.width, 1280.0);
+        assert_eq!(translated.height, 840.0);
+    }
+
+    #[test]
+    fn translated_logical_main_window_frame_recenters_when_source_display_is_unknown() {
+        let target = LogicalDisplayFrame {
+            x: 1728.0,
+            y: 64.0,
+            width: 1512.0,
+            height: 982.0,
+        };
+        let frame = LogicalWindowFrame {
+            x: 0.0,
+            y: 0.0,
+            width: 1480.0,
+            height: 960.0,
+        };
+
+        let translated = translate_logical_frame_to_display(frame, None, target);
+
+        assert_eq!(translated.x, 1744.0);
+        assert_eq!(translated.y, 75.0);
+        assert_eq!(translated.width, 1480.0);
+        assert_eq!(translated.height, 960.0);
     }
 }

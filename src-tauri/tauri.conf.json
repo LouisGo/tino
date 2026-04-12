@@ -20,6 +20,7 @@
         "minWidth": 560,
         "minHeight": 640,
         "center": true,
+        "visible": false,
         "resizable": true,
         "fullscreen": false,
         "titleBarStyle": "Overlay",

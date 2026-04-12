@@ -53,6 +53,11 @@ export function applyTheme({
   root.dataset.theme = themeName;
   root.classList.toggle("dark", resolvedMode === "dark");
   root.style.colorScheme = resolvedMode;
+  root.style.backgroundColor = "var(--background)";
+
+  if (document.body) {
+    document.body.style.backgroundColor = "var(--background)";
+  }
 }
 
 function readStoredThemeMode() {

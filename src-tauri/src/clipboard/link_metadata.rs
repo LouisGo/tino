@@ -28,10 +28,7 @@ const LINK_METADATA_CONNECT_TIMEOUT_SECS: u64 = 2;
 const LINK_METADATA_TITLE_MAX_CHARS: usize = 140;
 const LINK_METADATA_DESCRIPTION_MAX_CHARS: usize = 220;
 
-pub(crate) fn fetch_link_metadata(
-    link_url: &str,
-    clipboard_cache_root: &Path,
-) -> LinkMetadata {
+pub(crate) fn fetch_link_metadata(link_url: &str, clipboard_cache_root: &Path) -> LinkMetadata {
     let fetched_at = now_rfc3339();
     let Some(initial_url) = normalized_fetchable_link_url(link_url) else {
         return skipped_link_metadata(&fetched_at);
@@ -92,10 +89,8 @@ pub(crate) fn fetch_link_metadata(
         .flatten();
 
     let title = normalize_link_text(title.as_deref(), LINK_METADATA_TITLE_MAX_CHARS);
-    let description = normalize_link_text(
-        description.as_deref(),
-        LINK_METADATA_DESCRIPTION_MAX_CHARS,
-    );
+    let description =
+        normalize_link_text(description.as_deref(), LINK_METADATA_DESCRIPTION_MAX_CHARS);
 
     if title.is_some() || description.is_some() || icon_path.is_some() {
         LinkMetadata {
@@ -308,15 +303,16 @@ fn fetch_icon_to_cache(
 
     let mut bytes = Vec::new();
     let mut reader = response.take((LINK_METADATA_ICON_READ_LIMIT_BYTES + 1) as u64);
-    reader.read_to_end(&mut bytes).map_err(|error| error.to_string())?;
+    reader
+        .read_to_end(&mut bytes)
+        .map_err(|error| error.to_string())?;
     if bytes.is_empty() || bytes.len() > LINK_METADATA_ICON_READ_LIMIT_BYTES {
         return Ok(None);
     }
 
     let cache_key = hash_url(final_url.as_str());
-    let icon_path = link_metadata_icon_dir_path(clipboard_cache_root).join(format!(
-        "{cache_key}.{extension}"
-    ));
+    let icon_path =
+        link_metadata_icon_dir_path(clipboard_cache_root).join(format!("{cache_key}.{extension}"));
     if !icon_path.exists() {
         if let Some(parent) = icon_path.parent() {
             fs::create_dir_all(parent).map_err(|error| error.to_string())?;
@@ -428,10 +424,7 @@ fn is_public_ip(ip: IpAddr) -> bool {
 }
 
 fn normalize_link_text(value: Option<&str>, max_chars: usize) -> Option<String> {
-    let normalized = value?
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
+    let normalized = value?.split_whitespace().collect::<Vec<_>>().join(" ");
     let trimmed = normalized.trim();
     if trimmed.is_empty() {
         return None;

@@ -47,7 +47,7 @@
 - Rust 剪贴板轮询
 - `CaptureRecord`
 - `daily/*.md` 原始归档
-- clipboard panel 最近历史保留窗口（当前缓存已落到 app data；`clipboard-cache/clipboard/*.jsonl` + `clipboard-cache/tino.db` + `clipboard-cache/app-icons/` 不裁剪 `daily` / `topics` / `_inbox` / 持久化附件）
+- clipboard panel 最近历史保留窗口（当前已落到稳定 app storage root；macOS 下默认使用 `~/Library/Application Support/Tino/{shared|production}`；`clipboard-cache/clipboard/*.jsonl` + `clipboard-cache/tino.db` + `clipboard-cache/app-icons/` 不裁剪 `daily` / `topics` / `_inbox` / 持久化附件；首次启动会尝试从旧 `com.louistation.tino*` app data 目录迁移）
 - clipboard history 边界已收口：`backend/clipboard_history/read.rs` 负责 sqlite 读取边界与 fallback；`backend/clipboard_history/write.rs` 负责 sqlite 写入边界与 fallback；`backend/clipboard_history/legacy.rs` 负责 JSONL + retention 内核；`app_state/runtime.rs` 仅保留编排调用
 - settings 页的“暂停采集”已接成真实 Rust 持久化能力；暂停时 watcher 继续轮询，但新复制内容不进 `daily` / history cache / queue / AI，重启后状态保持一致
 - renderer 侧 app settings 已按“`persisted settings` 运行态真相源 + `settings draft` 设置页编辑态”分层；成功的设置写入会先落 Rust 持久化，再由 Rust authoritative typed event 广播到主窗口与 clipboard 小窗，避免双向同步遗漏与并发写覆盖
@@ -63,6 +63,7 @@
 - clipboard board 启动时会由 Rust 预热首屏 `summary + pinned + page 0` bootstrap；只要本地已有历史，应用重启后不应再先落入空白 loading 再回填
 - clipboard board 的查询策略现为“事件驱动失效 + 页面挂载重验”双保险，避免窗口或页面未挂载时错过事件后长期停留在旧缓存
 - clipboard 小窗会话的默认高亮现已区分“派生默认选中”和“用户手动选中”；窗口 reset 后若隐藏期间有新 capture 进入，重新打开时应跟随最新的“非 PIN 第一条”，而不是停留在 reset 当下的旧首项
+- macOS 下主窗口与 clipboard 小窗的重新打开路径现在会在显示前先恢复/重定位到当前活动屏，主窗口也改为隐藏创建后再恢复尺寸，避免旧屏闪现、首开尺寸回弹，以及 Dark 主题首帧白底更明显的闪烁
 - renderer 侧快捷键现已补上“interaction policy”场景层：`shortcut` 继续绑定到 `command`，但复杂前端交互面可通过场景 policy 声明自己拥有的按键与是否阻止浏览器默认行为；clipboard 现作为第一批接入场景，把 `Tab / Shift+Tab` 收归为当前选中文本的 preview mode 切换，并补了 `CommandOrControl+F` 聚焦搜索、`CommandOrControl+Shift+F` 打开筛选
 - settings 页已支持 clipboard 过滤规则：可按来源应用 `bundle id` 黑名单和关键词排除剪贴板捕获；被排除内容仍会写入 `_system/filters.log` 结构化日志，便于调试
 - 主窗口首次可见时会主动预热 macOS `Accessibility` 授权，尽量把剪贴板回填所需的打扰前置到应用打开阶段；授权后仍需重启当前 app 副本
