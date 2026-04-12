@@ -537,13 +537,13 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
 
   if (capture.contentKind === "link" && linkIconSrc) {
     return (
-      <div className="relative size-[30px] shrink-0 overflow-hidden rounded-[10px] border border-border/45 bg-background/72">
+      <div className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] border border-border/45 bg-background/72">
         <img
           src={linkIconSrc}
           alt={capture.preview || t("capture.kinds.link")}
           loading="lazy"
           decoding="async"
-          className="size-full object-cover"
+          className="size-[18px] object-contain"
         />
       </div>
     );

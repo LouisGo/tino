@@ -17,6 +17,11 @@ import remarkGfm from "remark-gfm";
 
 import { Tooltip } from "@/components/ui/tooltip";
 import { createRehypeHighlightPlugin } from "@/features/clipboard/lib/clipboard-preview-highlight";
+import {
+  MARKDOWN_SCROLL_SHELL_CLASS,
+  MARKDOWN_TABLE_CLASS,
+  MARKDOWN_TABLE_SCROLL_CLASS,
+} from "@/features/clipboard/lib/clipboard-preview-layout";
 import { useScopedT } from "@/i18n";
 import {
   openExternalLink,
@@ -81,6 +86,7 @@ export function MarkdownTextPreview({
             );
           },
           pre: MarkdownCodeBlock,
+          table: MarkdownTable,
         }}
       >
         {markdown}
@@ -166,10 +172,30 @@ function MarkdownCodeBlock({
             </button>
           </Tooltip>
         </div>
-        <pre {...props} className={cn("app-markdown-code-block__pre", className)}>
+        <pre
+          {...props}
+          className={cn("app-markdown-code-block__pre", MARKDOWN_SCROLL_SHELL_CLASS, className)}
+        >
           {children}
         </pre>
       </div>
+    </div>
+  );
+}
+
+function MarkdownTable({
+  children,
+  className,
+  node,
+  ...props
+}: ComponentPropsWithoutRef<"table"> & { node?: unknown }) {
+  void node;
+
+  return (
+    <div className={cn(MARKDOWN_SCROLL_SHELL_CLASS, MARKDOWN_TABLE_SCROLL_CLASS)}>
+      <table {...props} className={cn(MARKDOWN_TABLE_CLASS, className)}>
+        {children}
+      </table>
     </div>
   );
 }

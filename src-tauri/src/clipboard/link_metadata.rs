@@ -12,6 +12,7 @@ use reqwest::{
     StatusCode,
 };
 use scraper::{Html, Selector};
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use url::{Host, Url};
 
@@ -22,11 +23,76 @@ const LINK_METADATA_USER_AGENT: &str =
     "Mozilla/5.0 (compatible; TinoClipboardLinkPreview/0.1; +https://tino.local)";
 const LINK_METADATA_MAX_REDIRECTS: usize = 4;
 const LINK_METADATA_HTML_READ_LIMIT_BYTES: usize = 256 * 1024;
+const LINK_METADATA_MANIFEST_READ_LIMIT_BYTES: usize = 128 * 1024;
 const LINK_METADATA_ICON_READ_LIMIT_BYTES: usize = 512 * 1024;
 const LINK_METADATA_REQUEST_TIMEOUT_SECS: u64 = 4;
 const LINK_METADATA_CONNECT_TIMEOUT_SECS: u64 = 2;
 const LINK_METADATA_TITLE_MAX_CHARS: usize = 140;
 const LINK_METADATA_DESCRIPTION_MAX_CHARS: usize = 220;
+const LINK_METADATA_PREFERRED_ICON_EDGE_PX: i32 = 32;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IconCandidateKind {
+    HtmlIcon,
+    ManifestIcon,
+    DefaultFavicon,
+    AppleTouchIcon,
+    FluidIcon,
+}
+
+impl IconCandidateKind {
+    fn priority(self) -> i32 {
+        match self {
+            Self::HtmlIcon => 500,
+            Self::ManifestIcon => 430,
+            Self::DefaultFavicon => 400,
+            Self::AppleTouchIcon => 320,
+            Self::FluidIcon => 260,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct IconCandidate {
+    url: Url,
+    kind: IconCandidateKind,
+    max_edge: Option<i32>,
+    scalable: bool,
+    mime_type: Option<String>,
+    priority_adjustment: i32,
+}
+
+impl IconCandidate {
+    fn score(&self) -> i32 {
+        self.kind.priority()
+            + self.priority_adjustment
+            + preferred_icon_size_bonus(self.max_edge, self.scalable)
+            + icon_format_bonus(self.mime_type.as_deref(), &self.url)
+            + icon_path_bonus(&self.url)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct IconSizeHint {
+    max_edge: Option<i32>,
+    scalable: bool,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct WebManifest {
+    icons: Vec<WebManifestIcon>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct WebManifestIcon {
+    src: String,
+    sizes: Option<String>,
+    purpose: Option<String>,
+    #[serde(rename = "type")]
+    mime_type: Option<String>,
+}
 
 pub(crate) fn fetch_link_metadata(link_url: &str, clipboard_cache_root: &Path) -> LinkMetadata {
     let fetched_at = now_rfc3339();
@@ -48,45 +114,42 @@ pub(crate) fn fetch_link_metadata(link_url: &str, clipboard_cache_root: &Path) -
         Err(_) => return failed_link_metadata(&fetched_at),
     };
 
-    let (mut response, final_url) = match send_following_redirects(&client, initial_url) {
-        Ok(result) => result,
-        Err(_) => return failed_link_metadata(&fetched_at),
-    };
-
-    if !response.status().is_success() {
-        return failed_link_metadata(&fetched_at);
-    }
-
-    let content_type = response
-        .headers()
-        .get(CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(|value| value.to_string());
-    let html = if looks_like_html_response(&response, content_type.as_deref()) {
-        read_limited_response_text(&mut response, LINK_METADATA_HTML_READ_LIMIT_BYTES)
-    } else {
-        None
-    };
-
     let mut title = None;
     let mut description = None;
-    let mut icon_url = None;
+    let mut final_url = initial_url.clone();
+    let mut icon_candidates = Vec::new();
 
-    if let Some(html) = html.as_deref() {
-        let document = Html::parse_document(html);
-        title = extract_link_title(&document);
-        description = extract_link_description(&document);
-        icon_url = extract_icon_url(&document, &final_url);
+    if let Ok((mut response, resolved_url)) = send_following_redirects(&client, initial_url) {
+        final_url = resolved_url;
+
+        let content_type = response
+            .headers()
+            .get(CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .map(|value| value.to_string());
+        let html = if response.status().is_success()
+            && looks_like_html_response(&response, content_type.as_deref())
+        {
+            read_limited_response_text(&mut response, LINK_METADATA_HTML_READ_LIMIT_BYTES)
+        } else {
+            None
+        };
+
+        if let Some(html) = html.as_deref() {
+            let document = Html::parse_document(html);
+            title = extract_link_title(&document);
+            description = extract_link_description(&document);
+            icon_candidates.extend(extract_icon_candidates(&document, &final_url));
+
+            if let Some(manifest_url) = extract_manifest_url(&document, &final_url) {
+                icon_candidates.extend(fetch_manifest_icon_candidates(&client, &manifest_url));
+            }
+        }
     }
 
-    if icon_url.is_none() {
-        icon_url = default_favicon_url(&final_url);
-    }
+    icon_candidates.extend(default_icon_candidates(&final_url));
 
-    let icon_path = icon_url
-        .as_ref()
-        .and_then(|icon_url| fetch_icon_to_cache(&client, icon_url, clipboard_cache_root).ok())
-        .flatten();
+    let icon_path = fetch_best_icon_to_cache(&client, icon_candidates, clipboard_cache_root);
 
     let title = normalize_link_text(title.as_deref(), LINK_METADATA_TITLE_MAX_CHARS);
     let description =
@@ -204,44 +267,44 @@ fn extract_meta_content(document: &Html, selector: &str) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-fn extract_icon_url(document: &Html, page_url: &Url) -> Option<Url> {
+fn extract_icon_candidates(document: &Html, page_url: &Url) -> Vec<IconCandidate> {
     let base_url = document_base_url(document, page_url).unwrap_or_else(|| page_url.clone());
-    let selector = Selector::parse("link[rel][href]").ok()?;
+    let Some(selector) = Selector::parse("link[rel][href]").ok() else {
+        return Vec::new();
+    };
 
-    document
+    let mut candidates = document
         .select(&selector)
         .filter_map(|element| {
             let rel = element.value().attr("rel")?.trim().to_ascii_lowercase();
-            if !rel.contains("icon") {
-                return None;
-            }
+            let kind = classify_html_icon_rel(&rel)?;
 
             let href = element.value().attr("href")?.trim();
             if href.is_empty() || href.starts_with("data:") {
                 return None;
             }
 
-            let mut score = if rel.contains("apple-touch-icon") {
-                80
-            } else if rel.contains("shortcut icon") {
-                90
-            } else {
-                100
-            };
-
-            if let Some(area) = element
+            let size_hint = parse_icon_size_hint(element.value().attr("sizes"));
+            let mime_type = element
                 .value()
-                .attr("sizes")
-                .and_then(parse_icon_sizes_area)
-            {
-                score += area.min(4096);
-            }
+                .attr("type")
+                .map(str::trim)
+                .and_then(|value| (!value.is_empty()).then(|| value.to_ascii_lowercase()));
 
-            base_url.join(href).ok().map(|url| (score, url))
+            base_url.join(href).ok().map(|url| IconCandidate {
+                url,
+                kind,
+                max_edge: size_hint.max_edge,
+                scalable: size_hint.scalable,
+                mime_type,
+                priority_adjustment: 0,
+            })
         })
-        .filter(|(_, url)| is_fetchable_remote_url(url))
-        .max_by_key(|(score, _)| *score)
-        .map(|(_, url)| url)
+        .filter(|candidate| is_fetchable_remote_url(&candidate.url))
+        .collect::<Vec<_>>();
+
+    candidates.sort_by_key(|candidate| std::cmp::Reverse(candidate.score()));
+    candidates
 }
 
 fn document_base_url(document: &Html, page_url: &Url) -> Option<Url> {
@@ -258,24 +321,189 @@ fn document_base_url(document: &Html, page_url: &Url) -> Option<Url> {
     page_url.join(href).ok()
 }
 
-fn parse_icon_sizes_area(value: &str) -> Option<i32> {
-    value
+fn extract_manifest_url(document: &Html, page_url: &Url) -> Option<Url> {
+    let base_url = document_base_url(document, page_url).unwrap_or_else(|| page_url.clone());
+    let selector = Selector::parse("link[rel][href]").ok()?;
+
+    document.select(&selector).find_map(|element| {
+        let rel = element.value().attr("rel")?.trim().to_ascii_lowercase();
+        if !rel.split_whitespace().any(|token| token == "manifest") {
+            return None;
+        }
+
+        let href = element.value().attr("href")?.trim();
+        if href.is_empty() || href.starts_with("data:") {
+            return None;
+        }
+
+        let url = base_url.join(href).ok()?;
+        is_fetchable_remote_url(&url).then_some(url)
+    })
+}
+
+fn fetch_manifest_icon_candidates(client: &Client, manifest_url: &Url) -> Vec<IconCandidate> {
+    let Ok((mut response, final_manifest_url)) =
+        send_following_redirects(client, manifest_url.clone())
+    else {
+        return Vec::new();
+    };
+    if !response.status().is_success() {
+        return Vec::new();
+    }
+
+    let manifest_text =
+        read_limited_response_text(&mut response, LINK_METADATA_MANIFEST_READ_LIMIT_BYTES);
+    let Some(manifest) =
+        manifest_text.and_then(|text| serde_json::from_str::<WebManifest>(&text).ok())
+    else {
+        return Vec::new();
+    };
+
+    let mut candidates = manifest
+        .icons
+        .into_iter()
+        .filter_map(|icon| {
+            let src = icon.src.trim();
+            if src.is_empty() || src.starts_with("data:") {
+                return None;
+            }
+
+            let url = final_manifest_url.join(src).ok()?;
+            if !is_fetchable_remote_url(&url) {
+                return None;
+            }
+
+            let size_hint = parse_icon_size_hint(icon.sizes.as_deref());
+            let purpose_penalty = icon
+                .purpose
+                .as_deref()
+                .map(manifest_purpose_penalty)
+                .unwrap_or(0);
+
+            Some(IconCandidate {
+                url,
+                kind: IconCandidateKind::ManifestIcon,
+                max_edge: size_hint.max_edge,
+                scalable: size_hint.scalable,
+                mime_type: icon.mime_type.map(|value| value.to_ascii_lowercase()),
+                priority_adjustment: -purpose_penalty,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    candidates.sort_by_key(|candidate| std::cmp::Reverse(candidate.score()));
+    candidates
+}
+
+fn parse_icon_size_hint(value: Option<&str>) -> IconSizeHint {
+    let Some(value) = value.map(str::trim).filter(|value| !value.is_empty()) else {
+        return IconSizeHint::default();
+    };
+
+    let normalized = value.to_ascii_lowercase();
+    let scalable = normalized
+        .split_whitespace()
+        .any(|part| part.eq_ignore_ascii_case("any"));
+    let max_edge = normalized
         .split_whitespace()
         .filter_map(|part| {
             let (width, height) = part.split_once('x')?;
             let width = width.parse::<i32>().ok()?;
             let height = height.parse::<i32>().ok()?;
-            Some(width.saturating_mul(height))
+            Some(width.max(height))
         })
-        .max()
+        .max();
+
+    IconSizeHint { max_edge, scalable }
 }
 
-fn default_favicon_url(page_url: &Url) -> Option<Url> {
-    let mut favicon_url = page_url.clone();
-    favicon_url.set_path("/favicon.ico");
-    favicon_url.set_query(None);
-    favicon_url.set_fragment(None);
-    is_fetchable_remote_url(&favicon_url).then_some(favicon_url)
+fn classify_html_icon_rel(rel: &str) -> Option<IconCandidateKind> {
+    let normalized = rel.trim().to_ascii_lowercase();
+    if normalized.is_empty() {
+        return None;
+    }
+
+    if normalized.contains("mask-icon") {
+        return None;
+    }
+
+    if normalized.contains("apple-touch-icon") {
+        return Some(IconCandidateKind::AppleTouchIcon);
+    }
+
+    if normalized.contains("fluid-icon") {
+        return Some(IconCandidateKind::FluidIcon);
+    }
+
+    normalized
+        .contains("icon")
+        .then_some(IconCandidateKind::HtmlIcon)
+}
+
+fn manifest_purpose_penalty(value: &str) -> i32 {
+    let normalized = value.trim().to_ascii_lowercase();
+    if normalized.is_empty() || normalized.contains("any") {
+        0
+    } else if normalized.contains("maskable") {
+        24
+    } else {
+        12
+    }
+}
+
+fn default_icon_candidates(page_url: &Url) -> Vec<IconCandidate> {
+    let default_paths = ["/favicon.ico", "/favicon.svg", "/favicon.png"];
+
+    default_paths
+        .into_iter()
+        .filter_map(|path| {
+            let mut icon_url = page_url.clone();
+            icon_url.set_path(path);
+            icon_url.set_query(None);
+            icon_url.set_fragment(None);
+
+            is_fetchable_remote_url(&icon_url).then_some(IconCandidate {
+                url: icon_url,
+                kind: IconCandidateKind::DefaultFavicon,
+                max_edge: None,
+                scalable: path.ends_with(".svg"),
+                mime_type: None,
+                priority_adjustment: 0,
+            })
+        })
+        .collect()
+}
+
+fn fetch_best_icon_to_cache(
+    client: &Client,
+    candidates: Vec<IconCandidate>,
+    clipboard_cache_root: &Path,
+) -> Option<String> {
+    let mut candidates = dedupe_icon_candidates(candidates);
+    candidates.sort_by_key(|candidate| std::cmp::Reverse(candidate.score()));
+
+    for candidate in candidates {
+        if let Ok(Some(icon_path)) =
+            fetch_icon_to_cache(client, &candidate.url, clipboard_cache_root)
+        {
+            return Some(icon_path);
+        }
+    }
+
+    None
+}
+
+fn dedupe_icon_candidates(candidates: Vec<IconCandidate>) -> Vec<IconCandidate> {
+    let mut deduped = Vec::new();
+    let mut seen_urls = std::collections::HashSet::new();
+
+    for candidate in candidates {
+        if seen_urls.insert(candidate.url.to_string()) {
+            deduped.push(candidate);
+        }
+    }
+
+    deduped
 }
 
 fn fetch_icon_to_cache(
@@ -297,9 +525,6 @@ fn fetch_icon_to_cache(
         .get(CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .map(|value| value.to_string());
-    let Some(extension) = infer_icon_extension(content_type.as_deref(), &final_url) else {
-        return Ok(None);
-    };
 
     let mut bytes = Vec::new();
     let mut reader = response.take((LINK_METADATA_ICON_READ_LIMIT_BYTES + 1) as u64);
@@ -309,6 +534,10 @@ fn fetch_icon_to_cache(
     if bytes.is_empty() || bytes.len() > LINK_METADATA_ICON_READ_LIMIT_BYTES {
         return Ok(None);
     }
+
+    let Some(extension) = infer_icon_extension(content_type.as_deref(), &final_url, &bytes) else {
+        return Ok(None);
+    };
 
     let cache_key = hash_url(final_url.as_str());
     let icon_path =
@@ -323,7 +552,11 @@ fn fetch_icon_to_cache(
     Ok(Some(icon_path.display().to_string()))
 }
 
-fn infer_icon_extension(content_type: Option<&str>, final_url: &Url) -> Option<&'static str> {
+fn infer_icon_extension(
+    content_type: Option<&str>,
+    final_url: &Url,
+    bytes: &[u8],
+) -> Option<&'static str> {
     if let Some(content_type) = content_type {
         let normalized = content_type
             .split(';')
@@ -338,10 +571,21 @@ fn infer_icon_extension(content_type: Option<&str>, final_url: &Url) -> Option<&
             "image/gif" => return Some("gif"),
             "image/webp" => return Some("webp"),
             "image/x-icon" | "image/vnd.microsoft.icon" | "image/ico" => return Some("ico"),
+            value if value.contains("html") || value.starts_with("text/") => {
+                return sniff_icon_extension(bytes);
+            }
             _ => {}
         }
     }
 
+    if looks_like_html_bytes(bytes) {
+        return None;
+    }
+
+    sniff_icon_extension(bytes).or_else(|| infer_icon_extension_from_url(final_url))
+}
+
+fn infer_icon_extension_from_url(final_url: &Url) -> Option<&'static str> {
     let path = final_url.path().to_ascii_lowercase();
     if path.ends_with(".png") {
         Some("png")
@@ -357,6 +601,102 @@ fn infer_icon_extension(content_type: Option<&str>, final_url: &Url) -> Option<&
         Some("ico")
     } else {
         None
+    }
+}
+
+fn sniff_icon_extension(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        return Some("png");
+    }
+
+    if bytes.starts_with(&[0x00, 0x00, 0x01, 0x00]) || bytes.starts_with(&[0x00, 0x00, 0x02, 0x00])
+    {
+        return Some("ico");
+    }
+
+    if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        return Some("gif");
+    }
+
+    if bytes.starts_with(&[0xff, 0xd8, 0xff]) {
+        return Some("jpg");
+    }
+
+    if bytes.len() >= 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP" {
+        return Some("webp");
+    }
+
+    let prefix = String::from_utf8_lossy(&bytes[..bytes.len().min(512)]).to_ascii_lowercase();
+    if prefix.contains("<svg") {
+        return Some("svg");
+    }
+
+    None
+}
+
+fn looks_like_html_bytes(bytes: &[u8]) -> bool {
+    let prefix = String::from_utf8_lossy(&bytes[..bytes.len().min(512)]).to_ascii_lowercase();
+    prefix.contains("<html") || prefix.contains("<!doctype html") || prefix.contains("<body")
+}
+
+fn preferred_icon_size_bonus(max_edge: Option<i32>, scalable: bool) -> i32 {
+    if scalable {
+        return 90;
+    }
+
+    let Some(max_edge) = max_edge.filter(|edge| *edge > 0) else {
+        return 45;
+    };
+
+    let distance = (max_edge - LINK_METADATA_PREFERRED_ICON_EDGE_PX)
+        .abs()
+        .min(96);
+    let closeness_bonus = 80 - distance;
+    let oversized_penalty = if max_edge > 96 {
+        ((max_edge - 96) / 4).min(40)
+    } else {
+        0
+    };
+
+    closeness_bonus - oversized_penalty
+}
+
+fn icon_format_bonus(mime_type: Option<&str>, url: &Url) -> i32 {
+    if let Some(mime_type) = mime_type {
+        let normalized = mime_type
+            .split(';')
+            .next()
+            .unwrap_or(mime_type)
+            .trim()
+            .to_ascii_lowercase();
+        match normalized.as_str() {
+            "image/x-icon" | "image/vnd.microsoft.icon" | "image/ico" => return 18,
+            "image/svg+xml" => return 16,
+            "image/png" => return 12,
+            _ => {}
+        }
+    }
+
+    let path = url.path().to_ascii_lowercase();
+    if path.ends_with(".ico") {
+        18
+    } else if path.ends_with(".svg") {
+        16
+    } else if path.ends_with(".png") {
+        12
+    } else {
+        0
+    }
+}
+
+fn icon_path_bonus(url: &Url) -> i32 {
+    let path = url.path().to_ascii_lowercase();
+    if path.ends_with("/favicon.ico") {
+        20
+    } else if path.contains("favicon") {
+        10
+    } else {
+        0
     }
 }
 
@@ -521,11 +861,74 @@ mod tests {
             extract_link_description(&document).as_deref(),
             Some("Plan the next quarter in one place.")
         );
+        let candidates = extract_icon_candidates(&document, &page_url);
+
         assert_eq!(
-            extract_icon_url(&document, &page_url)
-                .map(|url| url.to_string())
+            candidates
+                .first()
+                .map(|candidate| candidate.url.to_string())
                 .as_deref(),
-            Some("https://example.com/apple-touch-icon.png")
+            Some("https://example.com/favicon-32x32.png")
+        );
+    }
+
+    #[test]
+    fn deprioritizes_fluid_and_apple_icons_for_tab_style_selection() {
+        let document = Html::parse_document(
+            r#"
+            <html>
+              <head>
+                <link rel="fluid-icon" href="https://example.com/fluidicon.png" />
+                <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+                <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+              </head>
+            </html>
+            "#,
+        );
+        let page_url = Url::parse("https://example.com/docs").expect("page url should parse");
+
+        let candidates = extract_icon_candidates(&document, &page_url);
+
+        assert_eq!(
+            candidates
+                .first()
+                .map(|candidate| candidate.url.to_string())
+                .as_deref(),
+            Some("https://example.com/favicon.svg")
+        );
+    }
+
+    #[test]
+    fn rejects_html_payloads_even_when_icon_url_looks_valid() {
+        let icon_url =
+            Url::parse("https://example.com/favicon.ico").expect("icon url should parse");
+
+        assert_eq!(
+            infer_icon_extension(
+                Some("text/html; charset=utf-8"),
+                &icon_url,
+                b"<!doctype html><html><body>not an icon</body></html>",
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn defaults_include_common_favicon_paths() {
+        let page_url =
+            Url::parse("https://example.com/products/roadmap").expect("page url should parse");
+        let candidates = default_icon_candidates(&page_url);
+
+        assert_eq!(
+            candidates
+                .into_iter()
+                .map(|candidate| candidate.url.to_string())
+                .collect::<Vec<_>>(),
+            vec![
+                "https://example.com/favicon.ico".to_string(),
+                "https://example.com/favicon.svg".to_string(),
+                "https://example.com/favicon.png".to_string(),
+            ]
         );
     }
 }

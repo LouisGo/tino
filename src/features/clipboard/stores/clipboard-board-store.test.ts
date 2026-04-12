@@ -88,6 +88,37 @@ describe("clipboard board store", () => {
     expect(nextState.listScrollRequest).toBe(9);
   });
 
+  it("closes transient layers without resetting the rest of the board session", () => {
+    useClipboardBoardStore.setState({
+      searchValue: "roadmap",
+      filter: "link",
+      selectedCaptureId: "cap_selected",
+      followsDefaultSelection: false,
+      isFilterSelectOpen: true,
+      isShortcutHelpOpen: true,
+      previewingImageId: "cap_image",
+      previewingOcrCaptureId: "cap_ocr",
+      pendingDeleteCapture: createClipboardCapture({ id: "cap_delete" }),
+      pendingPinCapture: createClipboardCapture({ id: "cap_pin" }),
+      listScrollRequest: 8,
+    });
+
+    useClipboardBoardStore.getState().closeTransientLayers();
+    const nextState = useClipboardBoardStore.getState();
+
+    expect(nextState.searchValue).toBe("roadmap");
+    expect(nextState.filter).toBe("link");
+    expect(nextState.selectedCaptureId).toBe("cap_selected");
+    expect(nextState.followsDefaultSelection).toBe(false);
+    expect(nextState.isFilterSelectOpen).toBe(false);
+    expect(nextState.isShortcutHelpOpen).toBe(false);
+    expect(nextState.previewingImageId).toBeNull();
+    expect(nextState.previewingOcrCaptureId).toBeNull();
+    expect(nextState.pendingDeleteCapture).toBeNull();
+    expect(nextState.pendingPinCapture).toBeNull();
+    expect(nextState.listScrollRequest).toBe(8);
+  });
+
   it("treats the pin dialog as a search focus blocking layer", () => {
     expect(
       selectClipboardSearchFocusBlockingLayer({

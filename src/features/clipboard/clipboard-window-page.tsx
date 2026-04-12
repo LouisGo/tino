@@ -2,10 +2,30 @@ import { useEffect, useState } from "react";
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { useContextMenuStore } from "@/core/context-menu";
 import { useShortcutScope } from "@/core/shortcuts";
 import { ClipboardBoardFeature } from "@/features/clipboard/components/clipboard-board-feature";
 import { hideClipboardWindowForNextOpen } from "@/features/clipboard/lib/clipboard-window-session";
+import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import { isTauriRuntime } from "@/lib/tauri";
+
+const WINDOW_DRAG_REGION_SELECTOR = "[data-window-drag-region='true']";
+const WINDOW_DRAG_EXCLUDED_SELECTOR = [
+  "button",
+  "input",
+  "textarea",
+  "select",
+  "option",
+  "a",
+  "[role='button']",
+  "[contenteditable='true']",
+  ".app-selectable",
+  "img",
+  "svg",
+  "[data-window-drag-disabled='true']",
+  "[data-slot='context-menu-content']",
+  "[role='dialog']",
+].join(", ");
 
 export function ClipboardWindowPage() {
   const [searchFocusRequest, setSearchFocusRequest] = useState(0);
@@ -32,22 +52,6 @@ export function ClipboardWindowPage() {
     const previousRootOverflow = rootStyle?.overflow ?? "";
     const previousRootHeight = rootStyle?.height ?? "";
     const previousRootBackground = rootStyle?.background ?? "";
-    const nonDraggableSelector = [
-      "button",
-      "input",
-      "textarea",
-      "select",
-      "option",
-      "a",
-      "[role='button']",
-      "[contenteditable='true']",
-      ".app-selectable",
-      "img",
-      "svg",
-      "[data-window-drag-disabled='true']",
-      "[data-slot='context-menu-content']",
-      "[role='dialog']",
-    ].join(", ");
 
     htmlStyle.overflow = "hidden";
     htmlStyle.height = "100%";
@@ -72,7 +76,11 @@ export function ClipboardWindowPage() {
         return;
       }
 
-      if (target.closest(nonDraggableSelector)) {
+      if (!target.closest(WINDOW_DRAG_REGION_SELECTOR)) {
+        return;
+      }
+
+      if (target.closest(WINDOW_DRAG_EXCLUDED_SELECTOR)) {
         return;
       }
 
@@ -83,6 +91,8 @@ export function ClipboardWindowPage() {
 
     void currentWindow.onFocusChanged(({ payload: focused }) => {
       if (!focused) {
+        useContextMenuStore.getState().closeMenu();
+        useClipboardBoardStore.getState().closeTransientLayers();
         void hideClipboardWindowForNextOpen(currentWindow);
         return;
       }

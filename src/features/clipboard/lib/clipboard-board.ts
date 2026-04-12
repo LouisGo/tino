@@ -465,11 +465,24 @@ export function captureSubtitle(capture: ClipboardCapture, t: ClipboardTranslate
 }
 
 export function captureListSummary(capture: ClipboardCapture, t: ClipboardTranslate) {
+  if (capture.contentKind === "link") {
+    return buildLinkListSummary(capture);
+  }
+
   return captureTitle(capture, t);
 }
 
 export function captureSourceLabel(capture: ClipboardCapture, t: ClipboardTranslate) {
   return capture.sourceAppName?.trim() || capture.sourceAppBundleId?.trim() || t("capture.sourceUnknown");
+}
+
+function buildLinkListSummary(capture: ClipboardCapture) {
+  const normalized = (capture.linkUrl ?? capture.rawText).trim();
+  if (normalized) {
+    return normalized;
+  }
+
+  return capture.preview.trim();
 }
 
 export function groupCapturesByDay(captures: ClipboardCapture[], t: ClipboardTranslate) {

@@ -460,7 +460,7 @@ export function ClipboardBoardPanel({
         open={isShortcutHelpOpen}
         onOpenChange={setIsShortcutHelpOpen}
       >
-        <AlertDialogContent className="max-w-[min(34rem,calc(100vw-1.5rem))] gap-0 overflow-hidden p-0 sm:p-0">
+        <AlertDialogContent className="flex max-h-[min(36rem,calc(100vh-1.5rem))] max-w-[min(34rem,calc(100vw-1.5rem))] flex-col gap-0 overflow-hidden p-0 sm:p-0">
           <ClipboardShortcutHelpDialogBody windowMode={windowMode} />
         </AlertDialogContent>
       </AlertDialog>
@@ -713,14 +713,14 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
   ];
 
   return (
-    <div className="grid">
-      <div className="border-b border-border/55 bg-[linear-gradient(180deg,color-mix(in_oklch,var(--card)_92%,white_8%),color-mix(in_oklch,var(--card)_86%,var(--background)_14%))] px-4 pt-3.5 pb-3 sm:px-5 sm:pt-4 sm:pb-3.5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 border-b border-border/55 bg-[linear-gradient(180deg,color-mix(in_oklch,var(--card)_92%,white_8%),color-mix(in_oklch,var(--card)_86%,var(--background)_14%))] px-4 pt-3.5 pb-3 sm:px-5 sm:pt-4 sm:pb-3.5">
         <AlertDialogTitle className="text-base sm:text-[1.02rem]">
           {t("dialogs.shortcuts.title")}
         </AlertDialogTitle>
       </div>
 
-      <div className="px-4 pt-2 pb-2.5 sm:px-5 sm:pt-2 sm:pb-3">
+      <div className="app-scroll-area min-h-0 flex-1 overflow-y-auto px-4 pt-2 pb-2.5 sm:px-5 sm:pt-2 sm:pb-3">
         <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-1 py-1 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground/70 uppercase sm:grid">
           <span>{t("dialogs.shortcuts.actionHeader")}</span>
           <span>{t("dialogs.shortcuts.shortcutHeader")}</span>
@@ -756,7 +756,7 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
         </div>
       </div>
 
-      <div className="flex justify-end border-t border-border/55 px-4 pt-3 pb-3.5 sm:px-5 sm:pt-3 sm:pb-4">
+      <div className="shrink-0 flex justify-end border-t border-border/55 px-4 pt-3 pb-3.5 sm:px-5 sm:pt-3 sm:pb-4">
         <AlertDialogCancel className="h-8 px-3 text-xs">
           {t("dialogs.gotIt")}
         </AlertDialogCancel>
@@ -830,7 +830,10 @@ function ClipboardBoardToolbar({
   }, [hasFocusBlockingLayer, windowMode]);
 
   return (
-    <div className="app-board-toolbar border-b border-border/55 px-2.5 py-2.5 sm:px-3 sm:py-2.5">
+    <div
+      data-window-drag-region={windowMode ? "true" : undefined}
+      className="app-board-toolbar border-b border-border/55 px-2.5 py-2.5 sm:px-3 sm:py-2.5"
+    >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:gap-2.5">
         <div className="relative min-w-0">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground/80" />

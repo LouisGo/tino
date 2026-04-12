@@ -7,6 +7,14 @@ export type ThemeMode = (typeof themeModes)[number];
 
 export const themeNames = ["tino", "ocean"] as const;
 export type ThemeName = (typeof themeNames)[number];
+export const windowSurfaceModes = ["opaque", "transparent"] as const;
+export type WindowSurfaceMode = (typeof windowSurfaceModes)[number];
+
+declare global {
+  interface Window {
+    __TINO_WINDOW_SURFACE__?: WindowSurfaceMode;
+  }
+}
 
 export type ThemePreference = {
   mode: ThemeMode;
@@ -36,6 +44,16 @@ export function resolveThemeMode(mode: ThemeMode) {
   return mode;
 }
 
+export function resolveWindowSurfaceMode(): WindowSurfaceMode {
+  if (typeof window === "undefined") {
+    return "opaque";
+  }
+
+  return window.__TINO_WINDOW_SURFACE__ === "transparent"
+    ? "transparent"
+    : "opaque";
+}
+
 export function applyTheme({
   mode,
   themeName,
@@ -49,14 +67,22 @@ export function applyTheme({
 
   const root = document.documentElement;
   const resolvedMode = resolveThemeMode(mode);
+  const windowSurfaceMode = resolveWindowSurfaceMode();
+  const backgroundColor = windowSurfaceMode === "transparent"
+    ? "transparent"
+    : "var(--background)";
 
   root.dataset.theme = themeName;
+  root.dataset.windowSurface = windowSurfaceMode;
   root.classList.toggle("dark", resolvedMode === "dark");
   root.style.colorScheme = resolvedMode;
-  root.style.backgroundColor = "var(--background)";
+  root.style.backgroundColor = backgroundColor;
 
   if (document.body) {
-    document.body.style.backgroundColor = "var(--background)";
+    document.body.style.backgroundColor = backgroundColor;
+    document.body.style.backgroundImage = windowSurfaceMode === "transparent"
+      ? "none"
+      : "";
   }
 }
 

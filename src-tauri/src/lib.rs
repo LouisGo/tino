@@ -66,6 +66,8 @@ const LOG_KEEP_COUNT: usize = 10;
 const LOG_RETENTION_DAYS: u64 = 14;
 const MAIN_WINDOW_LABEL: &str = "main";
 const CLIPBOARD_PANEL_LABEL: &str = "clipboard";
+const TRANSPARENT_WINDOW_SURFACE_INIT_SCRIPT: &str =
+    "window.__TINO_WINDOW_SURFACE__ = 'transparent';";
 #[cfg(target_os = "macos")]
 const AX_ERROR_SUCCESS: i32 = 0;
 #[cfg(target_os = "macos")]
@@ -758,6 +760,10 @@ fn open_panel_window(app: &AppHandle, label: &str) {
             .skip_taskbar(true)
             .shadow(spec.shadow)
             .prevent_overflow();
+
+    if spec.transparent {
+        builder = builder.initialization_script(TRANSPARENT_WINDOW_SURFACE_INIT_SCRIPT);
+    }
 
     if let Some((min_width, min_height)) = spec.min_size {
         builder = builder.min_inner_size(min_width, min_height);

@@ -146,7 +146,12 @@ function resetDocumentState() {
   document.body.innerHTML = "";
   document.documentElement.className = "";
   document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("data-window-surface");
   document.documentElement.style.colorScheme = "";
+  document.documentElement.style.backgroundColor = "";
+  document.body.style.backgroundColor = "";
+  document.body.style.backgroundImage = "";
+  delete window.__TINO_WINDOW_SURFACE__;
 }
 
 installBaseTauriMocks();

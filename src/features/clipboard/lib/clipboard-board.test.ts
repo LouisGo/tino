@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildClipboardCaptureGroups,
+  captureListSummary,
   getDefaultVisibleClipboardSelection,
   matchesSearch,
 } from "@/features/clipboard/lib/clipboard-board";
@@ -96,5 +97,17 @@ describe("clipboard board search and selection semantics", () => {
     });
 
     expect(matchesSearch(capture, "type:影片", t)).toBe(true);
+  });
+
+  it("keeps link rows URL-first even when metadata title is available", () => {
+    const capture = createClipboardCapture({
+      id: "cap_link",
+      contentKind: "link",
+      preview: "DeepSeek",
+      rawText: "https://chat.deepseek.com/sign_in",
+      linkUrl: "https://chat.deepseek.com/sign_in",
+    });
+
+    expect(captureListSummary(capture, t)).toBe("https://chat.deepseek.com/sign_in");
   });
 });

@@ -207,12 +207,20 @@ impl AppState {
             .captures
             .into_iter()
             .filter(|capture| {
-                capture
+                let fetched_at = capture
                     .link_metadata_fetched_at
                     .as_deref()
                     .unwrap_or("")
-                    .trim()
-                    .is_empty()
+                    .trim();
+                let fetch_status = capture
+                    .link_metadata_fetch_status
+                    .as_deref()
+                    .unwrap_or("")
+                    .trim();
+                let icon_path = capture.link_icon_path.as_deref().unwrap_or("").trim();
+
+                fetched_at.is_empty()
+                    || (icon_path.is_empty() && !matches!(fetch_status, "skipped"))
             })
             .filter_map(|capture| {
                 let link_url = capture.link_url?;

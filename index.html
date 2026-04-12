@@ -11,11 +11,16 @@
         height: 100%;
         margin: 0;
         overflow: hidden;
+        background-color: transparent;
+      }
+
+      html[data-window-surface="opaque"],
+      html[data-window-surface="opaque"] body {
         background-color: oklch(0.985 0.01 92);
       }
 
-      html.dark,
-      html.dark body {
+      html.dark[data-window-surface="opaque"],
+      html.dark[data-window-surface="opaque"] body {
         background-color: oklch(0.22 0.02 95);
       }
 
@@ -36,11 +41,21 @@
               ? "dark"
               : "light";
           const root = document.documentElement;
+          const windowSurface = window.__TINO_WINDOW_SURFACE__ === "transparent"
+            ? "transparent"
+            : "opaque";
 
+          root.dataset.windowSurface = windowSurface;
           root.dataset.theme = themeName === "ocean" ? "ocean" : "tino";
           root.classList.toggle("dark", resolvedMode === "dark");
           root.style.colorScheme = resolvedMode;
+          root.style.backgroundColor = windowSurface === "transparent"
+            ? "transparent"
+            : resolvedMode === "dark"
+              ? "oklch(0.22 0.02 95)"
+              : "oklch(0.985 0.01 92)";
         } catch (_) {
+          document.documentElement.dataset.windowSurface = "opaque";
           document.documentElement.style.colorScheme = "light";
         }
       })();

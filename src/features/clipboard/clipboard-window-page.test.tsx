@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import { ShortcutManagerContext } from "@/core/shortcuts/context";
 
 const hideClipboardWindowForNextOpen = vi.fn();
@@ -21,7 +22,12 @@ vi.mock("@/features/clipboard/components/clipboard-board-feature", () => ({
 
     return (
       <div data-testid="clipboard-board-feature">
-        <button type="button">feature-button</button>
+        <div data-window-drag-region="true">
+          <div data-testid="drag-handle">drag-handle</div>
+          <input aria-label="Search Input" />
+          <button type="button">filter-button</button>
+        </div>
+        <div data-testid="content-region">content-region</div>
         <span data-testid="search-focus-request">
           {String(props.searchFocusRequest ?? 0)}
         </span>
@@ -68,6 +74,7 @@ describe("clipboard window page", () => {
     startDragging.mockReset();
     activateScope.mockClear();
     onFocusChanged.mockClear();
+    useClipboardBoardStore.getState().resetState();
   });
 
   it("mounts the clipboard board in window mode and refreshes search focus on window focus", async () => {
@@ -94,10 +101,10 @@ describe("clipboard window page", () => {
     });
   });
 
-  it("hides the clipboard window on blur and starts dragging from non-interactive regions", async () => {
+  it("hides the clipboard window on blur and only starts dragging from the header drag region", async () => {
     const { ClipboardWindowPage } = await import("@/features/clipboard/clipboard-window-page");
 
-    const view = renderWithShortcutManager(<ClipboardWindowPage />);
+    renderWithShortcutManager(<ClipboardWindowPage />);
 
     await waitFor(() => {
       expect(onFocusChanged).toHaveBeenCalledTimes(1);
@@ -109,10 +116,38 @@ describe("clipboard window page", () => {
       expect(hideClipboardWindowForNextOpen).toHaveBeenCalledTimes(1);
     });
 
-    fireEvent.mouseDown(view.container.firstElementChild as Element, { button: 0 });
-    fireEvent.mouseDown(screen.getByRole("button", { name: "feature-button" }), { button: 0 });
+    fireEvent.mouseDown(screen.getByTestId("content-region"), { button: 0 });
+    fireEvent.mouseDown(screen.getByLabelText("Search Input"), { button: 0 });
+    fireEvent.mouseDown(screen.getByRole("button", { name: "filter-button" }), { button: 0 });
+    fireEvent.mouseDown(screen.getByTestId("drag-handle"), { button: 0 });
 
     expect(startDragging).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes transient clipboard layers immediately on blur", async () => {
+    const { ClipboardWindowPage } = await import("@/features/clipboard/clipboard-window-page");
+
+    useClipboardBoardStore.setState({
+      isFilterSelectOpen: true,
+      isShortcutHelpOpen: true,
+      previewingImageId: "cap_image",
+    });
+
+    renderWithShortcutManager(<ClipboardWindowPage />);
+
+    await waitFor(() => {
+      expect(onFocusChanged).toHaveBeenCalledTimes(1);
+    });
+
+    focusChangedHandler?.({ payload: false });
+
+    await waitFor(() => {
+      expect(useClipboardBoardStore.getState()).toMatchObject({
+        isFilterSelectOpen: false,
+        isShortcutHelpOpen: false,
+        previewingImageId: null,
+      });
+    });
   });
 
   it("restores document layout styles when the clipboard window page unmounts", async () => {

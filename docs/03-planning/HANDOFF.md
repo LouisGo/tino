@@ -58,12 +58,12 @@
 - `/ai` 页相关的 batch/topic/review 文件 IO 命令，以及 clipboard 的 pin/delete 写命令，现也已改为 `async command + blocking offload`，继续缩小 renderer 触发后在命令线程上直跑同步文件 IO 的范围
 - clipboard history retention 上限已从 `14 天`提到 `90 天`；现有设置档位为 `1 / 3 / 7 / 90`。设置项现在表示 clipboard history 的查询/展示窗口，切换时不会立即物理删除 90 天内缓存；超过 90 天的缓存仍会在启动、设置保存和定期维护时被真正清理
 - clipboard board 搜索框已支持关键词式搜索；除普通文本外，可用 `app:` / `source:`、`bundle:`、`date:`、`type:` 在单个输入框里做组合检索，sqlite 与 JSONL fallback 语义保持一致
-- clipboard link 现已支持 Rust 侧异步外链 enrich：对 `http/https` 链接会在入 history 后后台抓取站点 `icon/title/description`，成功后回写 clipboard history / pinned / dashboard cache；抓取失败或命中安全跳过规则时继续沿用原有通用 link 展示
+- clipboard link 现已支持 Rust 侧异步外链 enrich：对 `http/https` 链接会在入 history 后后台抓取站点 `icon/title/description`，成功后回写 clipboard history / pinned / dashboard cache；favicon 抓取现已改为“标准 favicon / manifest / 默认 favicon”多候选优先级策略，并在页面 HTML 被站点拦截时继续尝试默认 favicon；clipboard 列表中的 link 行保持 `URL-first` 展示，详情区再展示抓取到的站点标题与描述
 - clipboard replay / paste-back Rust 边界已收口：`commands/shell.rs` 对这条链路只保留 IPC adapter；`clipboard/source_apps.rs` 负责来源应用发现与图标缓存；`clipboard/replay/` 目录模块已拆分为 `mod.rs` 编排、`pasteboard.rs`、`authorization.rs`、`focus.rs`
 - clipboard board 启动时会由 Rust 预热首屏 `summary + pinned + page 0` bootstrap；只要本地已有历史，应用重启后不应再先落入空白 loading 再回填
 - clipboard board 的查询策略现为“事件驱动失效 + 页面挂载重验”双保险，避免窗口或页面未挂载时错过事件后长期停留在旧缓存
 - clipboard 小窗会话的默认高亮现已区分“派生默认选中”和“用户手动选中”；窗口 reset 后若隐藏期间有新 capture 进入，重新打开时应跟随最新的“非 PIN 第一条”，而不是停留在 reset 当下的旧首项
-- macOS 下主窗口与 clipboard 小窗的重新打开路径现在会在显示前先恢复/重定位到当前活动屏，主窗口也改为隐藏创建后再恢复尺寸，避免旧屏闪现、首开尺寸回弹，以及 Dark 主题首帧白底更明显的闪烁
+- macOS 下主窗口与 clipboard 小窗的重新打开路径现在会在显示前先恢复/重定位到当前活动屏，主窗口也改为隐藏创建后再恢复尺寸，避免旧屏闪现、首开尺寸回弹，以及 Dark 主题首帧白底更明显的闪烁；透明 panel 首帧外层背景改按窗口模式分流，不再把主窗口的实体背景误套到 clipboard 小窗外圈
 - renderer 侧快捷键现已补上“interaction policy”场景层：`shortcut` 继续绑定到 `command`，但复杂前端交互面可通过场景 policy 声明自己拥有的按键与是否阻止浏览器默认行为；clipboard 现作为第一批接入场景，把 `Tab / Shift+Tab` 收归为当前选中文本的 preview mode 切换，并补了 `CommandOrControl+F` 聚焦搜索、`CommandOrControl+Shift+F` 打开筛选
 - settings 页已支持 clipboard 过滤规则：可按来源应用 `bundle id` 黑名单和关键词排除剪贴板捕获；被排除内容仍会写入 `_system/filters.log` 结构化日志，便于调试
 - 主窗口首次可见时会主动预热 macOS `Accessibility` 授权，尽量把剪贴板回填所需的打扰前置到应用打开阶段；授权后仍需重启当前 app 副本

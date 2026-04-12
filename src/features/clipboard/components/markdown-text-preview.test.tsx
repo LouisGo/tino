@@ -3,6 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { MarkdownTextPreview } from "@/features/clipboard/components/markdown-text-preview";
+import {
+  MARKDOWN_SCROLL_SHELL_CLASS,
+  MARKDOWN_TABLE_CLASS,
+  MARKDOWN_TABLE_SCROLL_CLASS,
+} from "@/features/clipboard/lib/clipboard-preview-layout";
 
 describe("MarkdownTextPreview", () => {
   it("renders fenced code blocks with syntax highlighting and preserves search highlights", async () => {
@@ -22,6 +27,7 @@ describe("MarkdownTextPreview", () => {
     );
 
     expect(screen.getByText("TypeScript")).toBeInTheDocument();
+    expect(document.querySelector(`pre.${MARKDOWN_SCROLL_SHELL_CLASS}`)).not.toBeNull();
 
     const codeBlock = document.querySelector("code.hljs.language-ts");
 
@@ -40,5 +46,25 @@ describe("MarkdownTextPreview", () => {
       expect(writeText).toHaveBeenCalledWith("const answer = 42;\nconsole.log(answer);\n");
     });
     expect(screen.getByRole("button", { name: "Copied to clipboard" })).toBeInTheDocument();
+  });
+
+  it("wraps markdown tables in a horizontal scroll shell", () => {
+    render(
+      <MarkdownTextPreview
+        markdown={[
+          "| Column | Details |",
+          "| - | - |",
+          "| Left | This row should keep its natural structure in preview. |",
+        ].join("\n")}
+        highlightQuery=""
+      />,
+    );
+
+    const table = screen.getByRole("table");
+    const scrollShell = table.closest(`.${MARKDOWN_TABLE_SCROLL_CLASS}`);
+
+    expect(scrollShell).not.toBeNull();
+    expect(scrollShell).toHaveClass(MARKDOWN_SCROLL_SHELL_CLASS);
+    expect(table).toHaveClass(MARKDOWN_TABLE_CLASS);
   });
 });

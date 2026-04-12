@@ -44,6 +44,7 @@ type ClipboardBoardState = {
   searchInputFocusRequest: number;
   resetState: () => void;
   resetWindowSession: () => void;
+  closeTransientLayers: () => void;
   setSearchValue: (value: string) => void;
   setFilter: (value: ClipboardFilter) => void;
   toggleSummaryFilter: (value: ClipboardFilter) => void;
@@ -96,6 +97,15 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
       ...initialClipboardBoardState,
       listScrollRequest: state.listScrollRequest + 1,
     })),
+  closeTransientLayers: () =>
+    set({
+      isFilterSelectOpen: false,
+      isShortcutHelpOpen: false,
+      previewingImageId: null,
+      previewingOcrCaptureId: null,
+      pendingDeleteCapture: null,
+      pendingPinCapture: null,
+    }),
   setSearchValue: (value) => set({ searchValue: value }),
   setFilter: (value) => set({ filter: value }),
   toggleSummaryFilter: (value) =>

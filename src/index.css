@@ -548,8 +548,17 @@
   }
 
   body {
-    @apply h-full overflow-hidden bg-background text-foreground antialiased;
+    @apply h-full overflow-hidden text-foreground antialiased;
+  }
+
+  html[data-window-surface="opaque"] body {
+    @apply bg-background;
     background-image: var(--gradient-body);
+  }
+
+  html[data-window-surface="transparent"] body {
+    background-color: transparent;
+    background-image: none;
   }
 
   #root {
@@ -3227,8 +3236,11 @@
   .app-markdown-preview ul,
   .app-markdown-preview ol,
   .app-markdown-preview blockquote,
-  .app-markdown-preview pre:not(.app-markdown-code-block__pre),
-  .app-markdown-preview table {
+  .app-markdown-preview pre:not(.app-markdown-code-block__pre) {
+    @apply my-3;
+  }
+
+  .app-markdown-preview .app-markdown-table-scroll {
     @apply my-3;
   }
 
@@ -3249,8 +3261,15 @@
     @apply border-l-4 border-primary/30 pl-4 text-muted-foreground;
   }
 
+  .app-markdown-preview .app-markdown-scroll-shell,
   .app-markdown-preview pre:not(.app-markdown-code-block__pre) {
-    @apply overflow-x-auto rounded-[18px] border border-border/70 bg-background/75 p-4 font-mono text-[13px];
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-gutter: stable both-edges;
+  }
+
+  .app-markdown-preview pre:not(.app-markdown-code-block__pre) {
+    @apply rounded-[18px] border border-border/70 bg-background/75 p-4 font-mono text-[13px];
     word-break: normal;
     overflow-wrap: normal;
   }
@@ -3404,7 +3423,15 @@
   }
 
   .app-markdown-preview table {
-    @apply w-full border-collapse overflow-hidden rounded-[18px] border border-border/70 text-sm;
+    @apply my-0;
+  }
+
+  .app-markdown-preview .app-markdown-table {
+    @apply border-collapse overflow-hidden rounded-[18px] border border-border/70 text-sm;
+    width: max-content;
+    min-width: 100%;
+    max-width: none;
+    table-layout: auto;
   }
 
   .app-markdown-preview th,

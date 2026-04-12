@@ -50,6 +50,7 @@ import {
   highlightTextContent,
   normalizeHighlightQuery,
 } from "@/features/clipboard/lib/clipboard-preview-highlight";
+import { normalizePreviewHtmlLayout } from "@/features/clipboard/lib/clipboard-preview-layout";
 import {
   captureTitle,
   captureSurfaceClassName,
@@ -199,7 +200,7 @@ export function CaptureDetailPreview({
                     <img
                       src={linkIconSrc}
                       alt={linkTitle}
-                      className="size-full object-cover"
+                      className="size-[22px] object-contain"
                     />
                   ) : (
                     <Link2 className="size-5 text-muted-foreground/75" />
@@ -221,9 +222,20 @@ export function CaptureDetailPreview({
                   {linkDescription}
                 </p>
               ) : null}
-              <p className="app-selectable break-all font-mono text-[13px] leading-6 text-muted-foreground/86">
-                {target}
-              </p>
+              {openCaptureExternally.canExecute ? (
+                <button
+                  type="button"
+                  onClick={() => void openCaptureExternally.execute()}
+                  className="app-selectable app-kind-text-link break-all text-left font-mono text-[13px] leading-6 transition hover:underline hover:underline-offset-4 focus-visible:underline focus-visible:underline-offset-4"
+                  title={target}
+                >
+                  {target}
+                </button>
+              ) : (
+                <p className="app-selectable app-kind-text-link break-all font-mono text-[13px] leading-6">
+                  {target}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -489,7 +501,7 @@ function HtmlRichPreview({
     [html],
   );
   const highlightedHtml = useMemo(
-    () => highlightSanitizedHtmlContent(sanitizedHtml, highlightQuery),
+    () => normalizePreviewHtmlLayout(highlightSanitizedHtmlContent(sanitizedHtml, highlightQuery)),
     [highlightQuery, sanitizedHtml],
   );
 
