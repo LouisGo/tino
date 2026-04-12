@@ -12,7 +12,8 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
+use tauri_specta::Event as _;
 #[cfg(test)]
 use uuid::Uuid;
 
@@ -45,6 +46,8 @@ use crate::clipboard::types::{
     ClipboardWindowTarget, DeleteClipboardCaptureResult, PinnedClipboardCapture,
     UpdateClipboardPinResult,
 };
+use crate::error::{AppError, AppResult};
+use crate::ipc_events::{AppSettingsChanged, ClipboardCapturesUpdated};
 use crate::runtime_profile;
 use crate::storage::knowledge_root::ensure_knowledge_root_layout;
 use runtime::{
@@ -52,11 +55,11 @@ use runtime::{
     load_runtime_state, parse_captured_at, queue_depth_for_root, CaptureHashDisposition,
     RecentHashEntry, RuntimeState,
 };
+use settings::clipboard_history_storage_retention_days;
 use settings::load_settings;
 pub use settings::{AppSettings, ClipboardSourceAppOption};
 #[cfg(test)]
 use settings::{AppShortcutOverride, ClipboardSourceAppRule};
-use settings::clipboard_history_storage_retention_days;
 use shortcuts::sync_app_global_shortcuts;
 #[cfg(test)]
 use shortcuts::{
@@ -71,7 +74,6 @@ const CLIPBOARD_HISTORY_DIR_NAME: &str = "clipboard";
 const BATCH_TRIGGER_SIZE: usize = 20;
 const BATCH_TRIGGER_MAX_WAIT_MINUTES: i64 = 10;
 const CLIPBOARD_BOARD_BOOTSTRAP_PAGE_SIZE: usize = 40;
-const CLIPBOARD_CAPTURES_UPDATED_EVENT: &str = "clipboard-captures-updated";
 #[cfg(target_os = "macos")]
 const IMAGE_OCR_MAX_ATTEMPTS: usize = 2;
 #[cfg(target_os = "macos")]
@@ -142,6 +144,7 @@ struct SharedState {
     clipboard_cache_dir: PathBuf,
     app_log_dir: PathBuf,
     settings_path: PathBuf,
+    settings_save_lock: Mutex<()>,
     clipboard_board_bootstrap: Mutex<Option<ClipboardBoardBootstrap>>,
     clipboard_source_apps_cache: Mutex<Option<Vec<ClipboardSourceAppOption>>>,
     clipboard_source_app_icons_cache: Mutex<HashMap<String, Option<String>>>,
@@ -192,12 +195,10 @@ impl AppState {
             clipboard_history_storage_retention_days(),
             &runtime_recent_captures,
         )?;
-        if let Err(error) =
-            reconcile_capture_history_store(
-                &clipboard_cache_dir,
-                clipboard_history_storage_retention_days(),
-            )
-        {
+        if let Err(error) = reconcile_capture_history_store(
+            &clipboard_cache_dir,
+            clipboard_history_storage_retention_days(),
+        ) {
             warn!("failed to reconcile sqlite capture history store on startup: {error}");
         }
         hydrate_runtime_preview_assets(&knowledge_root, &mut runtime)?;
@@ -216,6 +217,7 @@ impl AppState {
                 clipboard_cache_dir,
                 app_log_dir,
                 settings_path,
+                settings_save_lock: Mutex::new(()),
                 clipboard_board_bootstrap: Mutex::new(None),
                 clipboard_source_apps_cache: Mutex::new(None),
                 clipboard_source_app_icons_cache: Mutex::new(HashMap::new()),
@@ -344,19 +346,40 @@ impl AppState {
         sync_app_global_shortcuts(&self.shared.app_handle, None, &settings)
     }
 
-    pub fn save_settings(&self, next: AppSettings) -> Result<AppSettings, String> {
-        let previous_settings = self.current_settings()?;
+    pub fn save_settings(
+        &self,
+        next: AppSettings,
+        source_window_label: Option<String>,
+    ) -> AppResult<AppSettings> {
+        let _save_guard = self
+            .shared
+            .settings_save_lock
+            .lock()
+            .map_err(|_| AppError::internal("settings save lock poisoned"))?;
+        let previous_settings = self.current_settings().map_err(AppError::from)?;
+        if next.revision != previous_settings.revision {
+            return Err(AppError::state_conflict(
+                "settings changed in another window; please retry with the latest state",
+            ));
+        }
+
         let normalized = next.normalized(&self.shared.default_knowledge_root);
-        ensure_knowledge_root_layout(&normalized.knowledge_root_path())?;
-        write_json_file(&self.shared.settings_path, &normalized)?;
+        let next_revision = previous_settings.revision.saturating_add(1);
+        let normalized = AppSettings {
+            revision: next_revision,
+            ..normalized
+        };
+        ensure_knowledge_root_layout(&normalized.knowledge_root_path()).map_err(AppError::from)?;
+        write_json_file(&self.shared.settings_path, &normalized).map_err(AppError::from)?;
 
         let knowledge_root = normalized.knowledge_root_path();
         enforce_clipboard_retention(
             &self.shared.clipboard_cache_dir,
             clipboard_history_storage_retention_days(),
-        )?;
-        let queue_state = ensure_queue_state(&knowledge_root)?;
-        let mut runtime = load_runtime_state(&knowledge_root)?;
+        )
+        .map_err(AppError::from)?;
+        let queue_state = ensure_queue_state(&knowledge_root).map_err(AppError::from)?;
+        let mut runtime = load_runtime_state(&knowledge_root).map_err(AppError::from)?;
         let runtime_recent_captures: Vec<_> = mem::take(&mut runtime.recent_captures)
             .into_iter()
             .collect();
@@ -364,7 +387,8 @@ impl AppState {
             &self.shared.clipboard_cache_dir,
             clipboard_history_storage_retention_days(),
             &runtime_recent_captures,
-        )?;
+        )
+        .map_err(AppError::from)?;
         if let Err(error) = reconcile_capture_history_store(
             &self.shared.clipboard_cache_dir,
             clipboard_history_storage_retention_days(),
@@ -373,11 +397,11 @@ impl AppState {
                 "failed to reconcile sqlite capture history store after settings change: {error}"
             );
         }
-        hydrate_runtime_preview_assets(&knowledge_root, &mut runtime)?;
+        hydrate_runtime_preview_assets(&knowledge_root, &mut runtime).map_err(AppError::from)?;
         runtime.watch_status = self.current_watch_status();
         runtime.last_error = self.current_last_error();
         runtime.queue_depth = queue_state.pending.len();
-        runtime.ready_batch_count = count_ready_batches(&knowledge_root)?;
+        runtime.ready_batch_count = count_ready_batches(&knowledge_root).map_err(AppError::from)?;
         runtime.updated_at = now_rfc3339();
 
         {
@@ -394,12 +418,22 @@ impl AppState {
             warn!("failed to sync app global shortcuts after settings change: {error}");
         }
 
-        self.persist_runtime_snapshot()?;
+        self.persist_runtime_snapshot().map_err(AppError::from)?;
         self.try_refresh_clipboard_board_bootstrap_cache("settings update");
         if previous_settings.clipboard_history_days != normalized.clipboard_history_days
             || previous_settings.knowledge_root != normalized.knowledge_root
         {
             self.request_image_ocr_backfill();
+        }
+
+        if let Err(error) = (AppSettingsChanged {
+            previous: Some(previous_settings),
+            saved: normalized.clone(),
+            source_window_label,
+        })
+        .emit(&self.shared.app_handle)
+        {
+            warn!("failed to emit app settings changed event: {error}");
         }
 
         Ok(normalized)
@@ -606,7 +640,7 @@ impl AppState {
         persist_pinned_clipboard_state(&self.shared.clipboard_cache_dir, &state)?;
 
         if changed {
-            self.emit_clipboard_updated();
+            self.emit_clipboard_updated(ClipboardCapturesUpdated::pins_changed());
         }
 
         Ok(UpdateClipboardPinResult {
@@ -638,7 +672,7 @@ impl AppState {
 
         if deleted {
             self.persist_runtime_snapshot()?;
-            self.emit_clipboard_updated();
+            self.emit_clipboard_updated(ClipboardCapturesUpdated::capture_deleted());
         }
 
         Ok(DeleteClipboardCaptureResult {
@@ -790,12 +824,14 @@ impl AppState {
             .clone())
     }
 
-    fn emit_clipboard_updated(&self) {
-        self.try_refresh_clipboard_board_bootstrap_cache("clipboard update");
-        let _ = self
-            .shared
-            .app_handle
-            .emit(CLIPBOARD_CAPTURES_UPDATED_EVENT, ());
+    fn emit_clipboard_updated(&self, update: ClipboardCapturesUpdated) {
+        if update.refresh_history || update.refresh_pinned {
+            self.try_refresh_clipboard_board_bootstrap_cache("clipboard update");
+        }
+
+        if let Err(error) = update.emit(&self.shared.app_handle) {
+            warn!("failed to emit clipboard captures updated event: {error}");
+        }
     }
 
     fn cached_clipboard_board_bootstrap(&self) -> Result<Option<ClipboardBoardBootstrap>, String> {
@@ -964,6 +1000,13 @@ mod tests {
         AppSettings::defaults(&unique_root())
     }
 
+    #[test]
+    fn app_settings_defaults_revision_to_zero() {
+        let settings = sample_settings();
+
+        assert_eq!(settings.revision, 0);
+    }
+
     fn sample_capture_record(raw_text: &str) -> CaptureRecord {
         CaptureRecord {
             id: "cap_filter".into(),
@@ -1050,6 +1093,7 @@ mod tests {
     #[test]
     fn app_settings_normalized_dedupes_clipboard_filter_rules() {
         let mut settings = sample_settings();
+        settings.revision = 7;
         settings.clipboard_history_days = 365;
         settings.clipboard_capture_enabled = false;
         settings.clipboard_excluded_source_apps = vec![
@@ -1075,6 +1119,7 @@ mod tests {
         let normalized = settings.normalized(&unique_root());
 
         assert_eq!(normalized.clipboard_history_days, 90);
+        assert_eq!(normalized.revision, 7);
         assert!(!normalized.clipboard_capture_enabled);
         assert_eq!(normalized.clipboard_excluded_source_apps.len(), 2);
         assert_eq!(
@@ -1307,10 +1352,7 @@ mod tests {
             "cap_91d",
             &relative_captured_at(Duration::days(91) + Duration::minutes(1)),
         );
-        let retained = sample_preview(
-            "cap_89d",
-            &relative_captured_at(Duration::days(89)),
-        );
+        let retained = sample_preview("cap_89d", &relative_captured_at(Duration::days(89)));
 
         append_clipboard_history_entry(&root, &expired).expect("expired preview should append");
         append_clipboard_history_entry(&root, &retained).expect("retained preview should append");
@@ -1318,11 +1360,9 @@ mod tests {
         enforce_clipboard_retention(&root, clipboard_history_storage_retention_days())
             .expect("90-day retention should succeed");
 
-        let remaining = load_capture_history_entries_legacy(
-            &root,
-            clipboard_history_storage_retention_days(),
-        )
-        .expect("remaining history should load");
+        let remaining =
+            load_capture_history_entries_legacy(&root, clipboard_history_storage_retention_days())
+                .expect("remaining history should load");
         assert_eq!(remaining.len(), 1);
         assert_eq!(remaining[0].id, "cap_89d");
 

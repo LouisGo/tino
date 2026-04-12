@@ -1,7 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { message } from "@tauri-apps/plugin-dialog";
 
-import { queryKeys } from "@/app/query-keys";
 import { defineCommand, type CommandDefinition, type CommandServices } from "@/core/commands";
 import { useContextMenuStore } from "@/core/context-menu/store";
 import {
@@ -13,6 +12,11 @@ import {
   promptForAccessibilityRestart,
   showAccessibilityPermissionDialog,
 } from "@/features/clipboard/lib/accessibility-permission-flow";
+import {
+  clipboardCaptureDeletedUpdate,
+  clipboardPinsChangedUpdate,
+  invalidateClipboardQueriesForUpdate,
+} from "@/features/clipboard/lib/clipboard-capture-sync";
 import { hideClipboardWindowForNextOpen } from "@/features/clipboard/lib/clipboard-window-session";
 import {
   selectClipboardSearchFocusBlockingLayer,
@@ -178,23 +182,6 @@ async function openCaptureExternally(capture: ClipboardCapture) {
   }
 }
 
-async function invalidateClipboardBoardQueries(queryClient: CommandServices["queryClient"]) {
-  await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.clipboardPageBase(),
-    }),
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.clipboardPageSummary(),
-    }),
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.clipboardPinnedCaptures(),
-    }),
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.dashboardSnapshot(),
-    }),
-  ]);
-}
-
 async function executePinCapture(
   capture: ClipboardCapture,
   queryClient: CommandServices["queryClient"],
@@ -210,7 +197,7 @@ async function executePinCapture(
   store.setPreferredSelectedCaptureId(capture.id);
   store.setSelectedCaptureId(capture.id);
   store.requestListScrollToTop();
-  await invalidateClipboardBoardQueries(queryClient);
+  await invalidateClipboardQueriesForUpdate(queryClient, clipboardPinsChangedUpdate);
   return result;
 }
 
@@ -492,7 +479,7 @@ export const clipboardCommands = [
 
       store.setPreferredSelectedCaptureId(capture.id);
       store.setSelectedCaptureId(capture.id);
-      await invalidateClipboardBoardQueries(queryClient);
+      await invalidateClipboardQueriesForUpdate(queryClient, clipboardPinsChangedUpdate);
       return result;
     },
   }),
@@ -527,7 +514,7 @@ export const clipboardCommands = [
       }
 
       useClipboardBoardStore.getState().removeCapture(capture.id);
-      await invalidateClipboardBoardQueries(queryClient);
+      await invalidateClipboardQueriesForUpdate(queryClient, clipboardCaptureDeletedUpdate);
 
       return result;
     },

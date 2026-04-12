@@ -5,6 +5,7 @@ mod capture;
 mod clipboard;
 mod commands;
 mod error;
+mod ipc_events;
 pub mod ipc_schema;
 mod locale;
 mod native_window_macos;
@@ -1038,6 +1039,9 @@ pub fn run() {
     ipc_schema::export_typescript_bindings()
         .expect("failed to export TypeScript bindings from Rust schema");
 
+    let specta_builder = ipc_schema::builder();
+    let setup_specta_builder = specta_builder.clone();
+
     let app = tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -1058,7 +1062,8 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .setup(|app| {
+        .setup(move |app| {
+            setup_specta_builder.mount_events(app);
             prune_expired_logs(app.handle());
 
             if let Ok(log_dir) = app.path().app_log_dir() {
@@ -1120,7 +1125,7 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_http::init())
-        .invoke_handler(ipc_schema::builder().invoke_handler())
+        .invoke_handler(specta_builder.invoke_handler())
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 

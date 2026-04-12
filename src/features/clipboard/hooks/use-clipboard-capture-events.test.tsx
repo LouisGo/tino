@@ -1,4 +1,3 @@
-import { emit } from "@tauri-apps/api/event";
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -10,10 +9,21 @@ describe("useClipboardCaptureEvents", () => {
     const onUpdate = vi.fn();
 
     renderHook(() => useClipboardCaptureEvents(onUpdate));
-    await emit(clipboardCapturesUpdatedEvent);
+    await clipboardCapturesUpdatedEvent.emit({
+      reason: "pinsChanged",
+      refreshHistory: true,
+      refreshPinned: true,
+      refreshDashboard: false,
+    });
 
     await waitFor(() => {
       expect(onUpdate).toHaveBeenCalledTimes(1);
+      expect(onUpdate).toHaveBeenCalledWith({
+        reason: "pinsChanged",
+        refreshHistory: true,
+        refreshPinned: true,
+        refreshDashboard: false,
+      });
     });
   });
 
@@ -26,7 +36,12 @@ describe("useClipboardCaptureEvents", () => {
     });
 
     unmount();
-    await emit(clipboardCapturesUpdatedEvent);
+    await clipboardCapturesUpdatedEvent.emit({
+      reason: "captureDeleted",
+      refreshHistory: true,
+      refreshPinned: true,
+      refreshDashboard: true,
+    });
 
     await waitFor(() => {
       expect(onUpdate).toHaveBeenCalledTimes(0);

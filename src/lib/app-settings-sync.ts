@@ -1,33 +1,10 @@
-import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/app/query-keys";
 import { useSettingsDraftStore } from "@/features/settings/stores/settings-draft-store";
 import { isTauriRuntime } from "@/lib/tauri-core";
-import type { SettingsDraft } from "@/types/shell";
-
-export const APP_SETTINGS_CHANGED_EVENT = "app-settings-changed";
-
-export type AppSettingsChangedPayload = {
-  previous: SettingsDraft | null;
-  saved: SettingsDraft;
-  sourceWindowLabel: string | null;
-};
-
-export async function emitAppSettingsChanged(payload: {
-  previous: SettingsDraft | null;
-  saved: SettingsDraft;
-}) {
-  if (!isTauriRuntime()) {
-    return;
-  }
-
-  await emit<AppSettingsChangedPayload>(APP_SETTINGS_CHANGED_EVENT, {
-    ...payload,
-    sourceWindowLabel: getCurrentWindow().label,
-  });
-}
+import type { AppSettingsChangedPayload, SettingsDraft } from "@/types/shell";
 
 export function isAppSettingsChangeFromCurrentWindow(payload: AppSettingsChangedPayload) {
   if (!isTauriRuntime()) {

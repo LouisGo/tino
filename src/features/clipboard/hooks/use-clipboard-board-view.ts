@@ -21,6 +21,7 @@ import {
   matchesFilter,
   matchesSearch,
 } from "@/features/clipboard/lib/clipboard-board";
+import { invalidateClipboardQueriesForUpdate } from "@/features/clipboard/lib/clipboard-capture-sync";
 import {
   getClipboardBoardBootstrapSnapshot,
   subscribeClipboardBoardBootstrap,
@@ -38,6 +39,9 @@ export function useClipboardBoardView() {
   const t = useScopedT("clipboard");
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
+  const followsDefaultSelection = useClipboardBoardStore(
+    (state) => state.followsDefaultSelection,
+  );
   const requestListScrollToTop = useClipboardBoardStore((state) => state.requestListScrollToTop);
   const deferredSearch = useDeferredValue(searchValue);
   const searchInteractionHydratedRef = useRef(false);
@@ -120,11 +124,8 @@ export function useClipboardBoardView() {
     refetchOnReconnect: "always",
   });
 
-  useClipboardCaptureEvents(() => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageBase() });
-    void queryClient.invalidateQueries({ queryKey: summaryQueryKey, exact: true });
-    void queryClient.invalidateQueries({ queryKey: pinnedQueryKey, exact: true });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() });
+  useClipboardCaptureEvents((payload) => {
+    void invalidateClipboardQueriesForUpdate(queryClient, payload);
   });
 
   const pages = data?.pages ?? bootstrapListPage?.pages ?? [];
@@ -168,9 +169,9 @@ export function useClipboardBoardView() {
     if (visibleCaptures.length === 0) {
       if (
         store.selectedCaptureId !== null
-        && preferredSelectedCaptureId === null
+        || !store.followsDefaultSelection
       ) {
-        store.setSelectedCaptureId(null);
+        store.setDerivedSelectedCaptureId(null);
       }
       return;
     }
@@ -181,7 +182,10 @@ export function useClipboardBoardView() {
       );
 
       if (preferredCapture) {
-        if (store.selectedCaptureId !== preferredCapture.id) {
+        if (
+          store.selectedCaptureId !== preferredCapture.id
+          || store.followsDefaultSelection
+        ) {
           store.setSelectedCaptureId(preferredCapture.id);
         }
         store.setPreferredSelectedCaptureId(null);
@@ -192,12 +196,13 @@ export function useClipboardBoardView() {
     }
 
     if (
-      !store.selectedCaptureId
+      store.followsDefaultSelection
+      || !store.selectedCaptureId
       || !visibleCaptures.some((capture) => capture.id === store.selectedCaptureId)
     ) {
-      store.setSelectedCaptureId(defaultCaptureId);
+      store.setDerivedSelectedCaptureId(defaultCaptureId);
     }
-  }, [captures, pinnedCaptures, visibleCaptures, visiblePinnedCaptures]);
+  }, [captures, followsDefaultSelection, pinnedCaptures, visibleCaptures, visiblePinnedCaptures]);
 
   useEffect(
     () => () => {

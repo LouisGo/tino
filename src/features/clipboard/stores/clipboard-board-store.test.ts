@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   selectClipboardSearchFocusBlockingLayer,
@@ -7,6 +7,10 @@ import {
 import { createClipboardCapture, createPinnedClipboardCapture } from "@/test/factories/clipboard";
 
 describe("clipboard board store", () => {
+  beforeEach(() => {
+    useClipboardBoardStore.getState().resetState();
+  });
+
   it("toggles a summary filter off when the same non-all filter is selected twice", () => {
     const store = useClipboardBoardStore.getState();
 
@@ -23,6 +27,7 @@ describe("clipboard board store", () => {
 
     useClipboardBoardStore.setState({
       selectedCaptureId: capture.id,
+      followsDefaultSelection: false,
       preferredSelectedCaptureId: capture.id,
       previewingImageId: capture.id,
       previewingOcrCaptureId: capture.id,
@@ -40,6 +45,7 @@ describe("clipboard board store", () => {
     const nextState = useClipboardBoardStore.getState();
 
     expect(nextState.selectedCaptureId).toBeNull();
+    expect(nextState.followsDefaultSelection).toBe(true);
     expect(nextState.preferredSelectedCaptureId).toBeNull();
     expect(nextState.previewingImageId).toBeNull();
     expect(nextState.previewingOcrCaptureId).toBeNull();
@@ -54,6 +60,7 @@ describe("clipboard board store", () => {
       searchValue: "roadmap",
       filter: "link",
       selectedCaptureId: "cap_selected",
+      followsDefaultSelection: false,
       preferredSelectedCaptureId: "cap_preferred",
       isFilterSelectOpen: true,
       isShortcutHelpOpen: true,
@@ -68,6 +75,7 @@ describe("clipboard board store", () => {
     expect(nextState.searchValue).toBe("");
     expect(nextState.filter).toBe("all");
     expect(nextState.selectedCaptureId).toBeNull();
+    expect(nextState.followsDefaultSelection).toBe(true);
     expect(nextState.preferredSelectedCaptureId).toBeNull();
     expect(nextState.isFilterSelectOpen).toBe(false);
     expect(nextState.isShortcutHelpOpen).toBe(false);
@@ -87,5 +95,21 @@ describe("clipboard board store", () => {
         pendingPinCapture: createClipboardCapture({ id: "cap_pin" }),
       }),
     ).toBe(true);
+  });
+
+  it("marks manual and derived selection updates differently", () => {
+    const store = useClipboardBoardStore.getState();
+
+    store.setSelectedCaptureId("cap_manual");
+    expect(useClipboardBoardStore.getState()).toMatchObject({
+      selectedCaptureId: "cap_manual",
+      followsDefaultSelection: false,
+    });
+
+    useClipboardBoardStore.getState().setDerivedSelectedCaptureId("cap_default");
+    expect(useClipboardBoardStore.getState()).toMatchObject({
+      selectedCaptureId: "cap_default",
+      followsDefaultSelection: true,
+    });
   });
 });

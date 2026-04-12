@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use crate::backend::clipboard_history::write::update_capture_ocr_text_with_fallback;
 use crate::clipboard::preview::normalize_ocr_text;
+use crate::ipc_events::ClipboardCapturesUpdated;
 
 #[cfg(target_os = "macos")]
 use super::{
@@ -315,7 +316,7 @@ impl AppState {
         )?;
 
         if changed {
-            self.emit_clipboard_updated();
+            self.emit_clipboard_updated(ClipboardCapturesUpdated::ocr_updated());
         }
 
         Ok(changed)

@@ -1,6 +1,6 @@
 # Tino Handoff
 
-> 最后更新：2026-04-11
+> 最后更新：2026-04-12
 > 当前基线提交：`8ac3f7f` + workspace clipboard capture/search changes
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
@@ -50,14 +50,17 @@
 - clipboard panel 最近历史保留窗口（当前缓存已落到 app data；`clipboard-cache/clipboard/*.jsonl` + `clipboard-cache/tino.db` + `clipboard-cache/app-icons/` 不裁剪 `daily` / `topics` / `_inbox` / 持久化附件）
 - clipboard history 边界已收口：`backend/clipboard_history/read.rs` 负责 sqlite 读取边界与 fallback；`backend/clipboard_history/write.rs` 负责 sqlite 写入边界与 fallback；`backend/clipboard_history/legacy.rs` 负责 JSONL + retention 内核；`app_state/runtime.rs` 仅保留编排调用
 - settings 页的“暂停采集”已接成真实 Rust 持久化能力；暂停时 watcher 继续轮询，但新复制内容不进 `daily` / history cache / queue / AI，重启后状态保持一致
-- renderer 侧 app settings 已按“`persisted settings` 运行态真相源 + `settings draft` 设置页编辑态”分层；成功的设置写入会先落 Rust 持久化，再通过 renderer 内串行写队列 + Tauri IPC 广播到主窗口与 clipboard 小窗，避免双向同步遗漏与并发写覆盖
-- 后续 IPC/状态同步优化的冻结目标已明确为：`Query` / `State Command` / `Action Command` / `Subscription` 四类模型；当前 settings 跨窗口同步仍是 renderer 广播，尚未完全收敛到 Rust authoritative emit
+- renderer 侧 app settings 已按“`persisted settings` 运行态真相源 + `settings draft` 设置页编辑态”分层；成功的设置写入会先落 Rust 持久化，再由 Rust authoritative typed event 广播到主窗口与 clipboard 小窗，避免双向同步遗漏与并发写覆盖
+- persisted app settings 现已带 `revision`；Rust 侧设置保存按单写入口串行化，并在提交时做 revision/CAS 校验，避免跨窗口近同时保存时的静默互相覆盖；renderer 侧的函数式 intent 保存会在 `state_conflict` 时自动基于最新 persisted settings 重算一次
+- IPC/状态同步当前继续按 `Query` / `State Command` / `Action Command` / `Subscription` 四类模型收口；settings 跨窗口同步已切到 Rust authoritative emit，clipboard 订阅事件也已升级为 Rust-owned typed payload，并按 `history / pinned / dashboard` 范围收窄前端 invalidation
 - 第一批主链路重同步 shell command 已改为 `async command + spawn_blocking`：当前至少 `get_dashboard_snapshot`、`get_clipboard_page`、`get_clipboard_board_bootstrap`、`get_pinned_clipboard_captures`、`save_app_settings` 不再把其阻塞工作停留在 Tauri 主线程
+- `/ai` 页相关的 batch/topic/review 文件 IO 命令，以及 clipboard 的 pin/delete 写命令，现也已改为 `async command + blocking offload`，继续缩小 renderer 触发后在命令线程上直跑同步文件 IO 的范围
 - clipboard history retention 上限已从 `14 天`提到 `90 天`；现有设置档位为 `1 / 3 / 7 / 90`。设置项现在表示 clipboard history 的查询/展示窗口，切换时不会立即物理删除 90 天内缓存；超过 90 天的缓存仍会在启动、设置保存和定期维护时被真正清理
 - clipboard board 搜索框已支持关键词式搜索；除普通文本外，可用 `app:` / `source:`、`bundle:`、`date:`、`type:` 在单个输入框里做组合检索，sqlite 与 JSONL fallback 语义保持一致
 - clipboard replay / paste-back Rust 边界已收口：`commands/shell.rs` 对这条链路只保留 IPC adapter；`clipboard/source_apps.rs` 负责来源应用发现与图标缓存；`clipboard/replay/` 目录模块已拆分为 `mod.rs` 编排、`pasteboard.rs`、`authorization.rs`、`focus.rs`
 - clipboard board 启动时会由 Rust 预热首屏 `summary + pinned + page 0` bootstrap；只要本地已有历史，应用重启后不应再先落入空白 loading 再回填
 - clipboard board 的查询策略现为“事件驱动失效 + 页面挂载重验”双保险，避免窗口或页面未挂载时错过事件后长期停留在旧缓存
+- clipboard 小窗会话的默认高亮现已区分“派生默认选中”和“用户手动选中”；窗口 reset 后若隐藏期间有新 capture 进入，重新打开时应跟随最新的“非 PIN 第一条”，而不是停留在 reset 当下的旧首项
 - settings 页已支持 clipboard 过滤规则：可按来源应用 `bundle id` 黑名单和关键词排除剪贴板捕获；被排除内容仍会写入 `_system/filters.log` 结构化日志，便于调试
 - 主窗口首次可见时会主动预热 macOS `Accessibility` 授权，尽量把剪贴板回填所需的打扰前置到应用打开阶段；授权后仍需重启当前 app 副本
 - `_system/runtime.json`

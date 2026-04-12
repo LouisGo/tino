@@ -4,7 +4,7 @@ import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 
-import { commands as tauriCommands } from "@/bindings/tauri";
+import { commands as tauriCommands, events as tauriEvents } from "@/bindings/tauri";
 import {
   defaultAppLocalePreference,
   LOCALE_PREFERENCE_CHANGED_EVENT,
@@ -15,9 +15,11 @@ import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults";
 import { appEnv, dataChannel, isProductionDataChannel } from "@/lib/runtime-profile";
 import { isTauriRuntime, unwrapTauriResult } from "@/lib/tauri-core";
 import type {
+  AppSettingsChanged as RustAppSettingsChanged,
   AppSettings as RustAppSettings,
   CapturePreview as RustCapturePreview,
   ClipboardBoardBootstrap as RustClipboardBoardBootstrap,
+  ClipboardCapturesUpdated as RustClipboardCapturesUpdated,
   ClipboardPage as RustClipboardPage,
   ClipboardSourceAppIconResult as RustClipboardSourceAppIconResult,
   ClipboardSourceAppOption as RustClipboardSourceAppOption,
@@ -28,8 +30,10 @@ import type {
 } from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
+  AppSettingsChangedPayload,
   ClipboardBoardBootstrap,
   ClipboardCapture,
+  ClipboardCapturesUpdatedPayload,
   ClipboardPageRequest,
   ClipboardSourceAppIconResult,
   ClipboardSourceAppOption,
@@ -42,8 +46,6 @@ import type {
   SettingsDraft,
   UpdateClipboardPinResult,
 } from "@/types/shell";
-
-export const clipboardCapturesUpdatedEvent = "clipboard-captures-updated";
 
 export { isMacOsTauriRuntime, isTauriRuntime } from "@/lib/tauri-core";
 
@@ -67,6 +69,7 @@ const mockImageAsset = `data:image/svg+xml;utf8,${encodeURIComponent(
 )}`;
 
 const mockSettings: SettingsDraft = {
+  revision: 0,
   knowledgeRoot: isProductionDataChannel ? "~/tino-inbox-production" : "~/tino-inbox-preview",
   runtimeProviderProfiles: [
     {
@@ -294,6 +297,7 @@ function normalizeClipboardSourceAppIconResult(
 
 function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
   return {
+    revision: settings.revision ?? 0,
     knowledgeRoot: settings.knowledgeRoot,
     runtimeProviderProfiles:
       settings.runtimeProviderProfiles.map(normalizeRuntimeProviderProfile),
@@ -346,6 +350,51 @@ function normalizeClipboardBoardBootstrap(
     pinnedCaptures: bootstrap.pinnedCaptures.map(normalizePinnedClipboardCapture),
   };
 }
+
+function normalizeAppSettingsChangedPayload(
+  payload: RustAppSettingsChanged,
+): AppSettingsChangedPayload {
+  return {
+    previous: payload.previous ? normalizeSettingsDraft(payload.previous) : null,
+    saved: normalizeSettingsDraft(payload.saved),
+    sourceWindowLabel: payload.sourceWindowLabel ?? null,
+  };
+}
+
+function normalizeClipboardCapturesUpdatedPayload(
+  payload: RustClipboardCapturesUpdated,
+): ClipboardCapturesUpdatedPayload {
+  return {
+    reason: payload.reason,
+    refreshHistory: payload.refreshHistory,
+    refreshPinned: payload.refreshPinned,
+    refreshDashboard: payload.refreshDashboard,
+  };
+}
+
+export const appSettingsChangedEvent = {
+  listen: (
+    callback: (event: { payload: AppSettingsChangedPayload }) => void | Promise<void>,
+  ) =>
+    tauriEvents.appSettingsChanged.listen((event) =>
+      callback({
+        ...event,
+        payload: normalizeAppSettingsChangedPayload(event.payload),
+      })),
+};
+
+export const clipboardCapturesUpdatedEvent = {
+  listen: (
+    callback: (event: { payload: ClipboardCapturesUpdatedPayload }) => void | Promise<void>,
+  ) =>
+    tauriEvents.clipboardCapturesUpdated.listen((event) =>
+      callback({
+        ...event,
+        payload: normalizeClipboardCapturesUpdatedPayload(event.payload),
+      })),
+  emit: (payload: ClipboardCapturesUpdatedPayload) =>
+    tauriEvents.clipboardCapturesUpdated.emit(payload),
+};
 
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   if (!isTauriRuntime()) {

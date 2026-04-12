@@ -2,14 +2,15 @@ import PQueue from "p-queue";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/app/query-keys";
+import { resetClipboardCapturePauseGuideDismissed } from "@/features/clipboard/lib/clipboard-capture-pause-guide";
 import {
   applyIncomingAppSettingsChange,
-  emitAppSettingsChanged,
 } from "@/lib/app-settings-sync";
 import {
   getAppSettings,
   saveAppSettings,
 } from "@/lib/tauri";
+import { getTauriCommandErrorCode } from "@/lib/tauri-core";
 import type { SettingsDraft } from "@/types/shell";
 
 const appSettingsSaveQueue = new PQueue({
@@ -39,19 +40,38 @@ export function usePersistAppSettingsMutation(options?: {
     mutationKey: queryKeys.appSettingsSave(),
     mutationFn: async (input: PersistAppSettingsInput): Promise<PersistAppSettingsResult> =>
       appSettingsSaveQueue.add(async () => {
+        const persistWithBase = async (
+          previousPersisted: SettingsDraft,
+        ): Promise<PersistAppSettingsResult> => {
+          const requestedDraft = typeof input === "function"
+            ? await input(previousPersisted)
+            : input;
+          const saved = await saveAppSettings(requestedDraft);
+
+          return {
+            previousPersisted,
+            requestedDraft,
+            saved,
+          };
+        };
         const previousPersisted =
           queryClient.getQueryData<SettingsDraft>(queryKeys.appSettings())
           ?? await getAppSettings();
-        const requestedDraft = typeof input === "function"
-          ? await input(previousPersisted)
-          : input;
-        const saved = await saveAppSettings(requestedDraft);
 
-        return {
-          previousPersisted,
-          requestedDraft,
-          saved,
-        };
+        try {
+          return await persistWithBase(previousPersisted);
+        } catch (error) {
+          if (
+            typeof input !== "function"
+            || getTauriCommandErrorCode(error) !== "state_conflict"
+          ) {
+            throw error;
+          }
+
+          const latestPersisted = await getAppSettings();
+          queryClient.setQueryData(queryKeys.appSettings(), latestPersisted);
+          return persistWithBase(latestPersisted);
+        }
       }),
     onError: (error, input) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.appSettings() });
@@ -62,10 +82,11 @@ export function usePersistAppSettingsMutation(options?: {
         previous: result.previousPersisted,
         saved: result.saved,
       });
-      await emitAppSettingsChanged({
-        previous: result.previousPersisted,
-        saved: result.saved,
-      });
+
+      if (result.saved.clipboardCaptureEnabled) {
+        resetClipboardCapturePauseGuideDismissed();
+      }
+
       await options?.onSuccess?.(result, input);
     },
   });

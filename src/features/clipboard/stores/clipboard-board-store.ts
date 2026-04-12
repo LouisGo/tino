@@ -7,6 +7,7 @@ const initialClipboardBoardState = {
   searchValue: "",
   filter: "all" as ClipboardFilter,
   selectedCaptureId: null,
+  followsDefaultSelection: true,
   preferredSelectedCaptureId: null,
   isFilterSelectOpen: false,
   isShortcutHelpOpen: false,
@@ -23,6 +24,7 @@ type ClipboardBoardState = {
   searchValue: string;
   filter: ClipboardFilter;
   selectedCaptureId: string | null;
+  followsDefaultSelection: boolean;
   preferredSelectedCaptureId: string | null;
   isFilterSelectOpen: boolean;
   isShortcutHelpOpen: boolean;
@@ -39,6 +41,7 @@ type ClipboardBoardState = {
   setFilter: (value: ClipboardFilter) => void;
   toggleSummaryFilter: (value: ClipboardFilter) => void;
   setSelectedCaptureId: (value: string | null) => void;
+  setDerivedSelectedCaptureId: (value: string | null) => void;
   setPreferredSelectedCaptureId: (value: string | null) => void;
   setIsFilterSelectOpen: (value: boolean) => void;
   setIsShortcutHelpOpen: (value: boolean) => void;
@@ -87,7 +90,16 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
     set((state) => ({
       filter: value !== "all" && state.filter === value ? "all" : value,
     })),
-  setSelectedCaptureId: (value) => set({ selectedCaptureId: value }),
+  setSelectedCaptureId: (value) =>
+    set({
+      selectedCaptureId: value,
+      followsDefaultSelection: false,
+    }),
+  setDerivedSelectedCaptureId: (value) =>
+    set({
+      selectedCaptureId: value,
+      followsDefaultSelection: true,
+    }),
   setPreferredSelectedCaptureId: (value) => set({ preferredSelectedCaptureId: value }),
   setIsFilterSelectOpen: (value) => set({ isFilterSelectOpen: value }),
   setIsShortcutHelpOpen: (value) => set({ isShortcutHelpOpen: value }),
@@ -105,6 +117,8 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
     set((state) => ({
       selectedCaptureId:
         state.selectedCaptureId === captureId ? null : state.selectedCaptureId,
+      followsDefaultSelection:
+        state.selectedCaptureId === captureId ? true : state.followsDefaultSelection,
       preferredSelectedCaptureId:
         state.preferredSelectedCaptureId === captureId ? null : state.preferredSelectedCaptureId,
       previewingImageId:

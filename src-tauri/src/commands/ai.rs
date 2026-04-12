@@ -1,3 +1,4 @@
+use super::run_blocking_ipc_command;
 use crate::app_state::AppState;
 use crate::clipboard::types::CaptureRecord;
 use crate::error::{AppError, AppResult, IpcError, IpcResult};
@@ -206,7 +207,12 @@ struct StoredBatchFile {
 
 #[tauri::command]
 #[specta::specta]
-pub fn list_ready_ai_batches(state: State<'_, AppState>) -> IpcResult<Vec<AiBatchSummary>> {
+pub async fn list_ready_ai_batches(state: State<'_, AppState>) -> IpcResult<Vec<AiBatchSummary>> {
+    let state = state.inner().clone();
+    run_blocking_ipc_command(move || list_ready_ai_batches_inner(state)).await
+}
+
+fn list_ready_ai_batches_inner(state: AppState) -> IpcResult<Vec<AiBatchSummary>> {
     let knowledge_root = state
         .current_settings()
         .map_err(AppError::from)
@@ -229,10 +235,15 @@ pub fn list_ready_ai_batches(state: State<'_, AppState>) -> IpcResult<Vec<AiBatc
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_ai_batch_payload(
+pub async fn get_ai_batch_payload(
     state: State<'_, AppState>,
     batch_id: String,
 ) -> IpcResult<AiBatchPayload> {
+    let state = state.inner().clone();
+    run_blocking_ipc_command(move || get_ai_batch_payload_inner(state, batch_id)).await
+}
+
+fn get_ai_batch_payload_inner(state: AppState, batch_id: String) -> IpcResult<AiBatchPayload> {
     let knowledge_root = state
         .current_settings()
         .map_err(AppError::from)
@@ -253,7 +264,14 @@ pub fn get_ai_batch_payload(
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_topic_index_entries(state: State<'_, AppState>) -> IpcResult<Vec<TopicIndexEntry>> {
+pub async fn get_topic_index_entries(
+    state: State<'_, AppState>,
+) -> IpcResult<Vec<TopicIndexEntry>> {
+    let state = state.inner().clone();
+    run_blocking_ipc_command(move || get_topic_index_entries_inner(state)).await
+}
+
+fn get_topic_index_entries_inner(state: AppState) -> IpcResult<Vec<TopicIndexEntry>> {
     let knowledge_root = state
         .current_settings()
         .map_err(AppError::from)
@@ -264,8 +282,16 @@ pub fn get_topic_index_entries(state: State<'_, AppState>) -> IpcResult<Vec<Topi
 
 #[tauri::command]
 #[specta::specta]
-pub fn apply_batch_decision(
+pub async fn apply_batch_decision(
     state: State<'_, AppState>,
+    request: ApplyBatchDecisionRequest,
+) -> IpcResult<ApplyBatchDecisionResult> {
+    let state = state.inner().clone();
+    run_blocking_ipc_command(move || apply_batch_decision_inner(state, request)).await
+}
+
+fn apply_batch_decision_inner(
+    state: AppState,
     request: ApplyBatchDecisionRequest,
 ) -> IpcResult<ApplyBatchDecisionResult> {
     let batch_id = request.batch_id.trim();

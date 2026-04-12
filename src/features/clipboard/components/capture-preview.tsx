@@ -10,10 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import DOMPurify from "dompurify";
-import ReactMarkdown from "react-markdown";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
-import rehypeSanitize from "rehype-sanitize";
-import remarkGfm from "remark-gfm";
 
 import {
   Check,
@@ -32,6 +29,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useCommand } from "@/core/commands";
 import { useShortcutScope } from "@/core/shortcuts";
 import { FileReferencePreview } from "@/features/clipboard/components/file-reference-preview";
+import { MarkdownTextPreview } from "@/features/clipboard/components/markdown-text-preview";
 import {
   PreviewToolbar,
   PreviewToolbarPillButton,
@@ -39,7 +37,6 @@ import {
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import {
   PREVIEW_HIGHLIGHT_SELECTOR,
-  createRehypeHighlightPlugin,
   highlightSanitizedHtmlContent,
   highlightTextContent,
   normalizeHighlightQuery,
@@ -52,7 +49,6 @@ import {
 import {
   getExternalLinkTargetFromEventTarget,
   openExternalLink,
-  resolveExternalLinkTarget,
 } from "@/lib/external-links";
 import { useScopedT, type TranslationKey } from "@/i18n";
 import { resolvePortalContainer } from "@/lib/portal";
@@ -449,62 +445,6 @@ function HtmlRichPreview({
       onClick={handleClick}
       dangerouslySetInnerHTML={{ __html: highlightedHtml }}
     />
-  );
-}
-
-function MarkdownTextPreview({
-  markdown,
-  highlightQuery,
-}: {
-  markdown: string;
-  highlightQuery: string;
-}) {
-  const highlightPlugin = useMemo(
-    () => createRehypeHighlightPlugin(highlightQuery),
-    [highlightQuery],
-  );
-  const rehypePlugins = useMemo(
-    () => [rehypeSanitize, highlightPlugin],
-    [highlightPlugin],
-  );
-
-  return (
-    <div className="app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] text-[13px] leading-[1.7]">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={rehypePlugins}
-        components={{
-          a: ({ href, children, ...props }) => {
-            const target = resolveExternalLinkTarget(href ?? "");
-
-            if (!target) {
-              return (
-                <a {...props} href={href}>
-                  {children}
-                </a>
-              );
-            }
-
-            return (
-              <a
-                {...props}
-                href={target}
-                rel="noopener noreferrer"
-                target="_blank"
-                onClick={(event) => {
-                  event.preventDefault();
-                  void openExternalLink(target);
-                }}
-              >
-                {children}
-              </a>
-            );
-          },
-        }}
-      >
-        {markdown}
-      </ReactMarkdown>
-    </div>
   );
 }
 

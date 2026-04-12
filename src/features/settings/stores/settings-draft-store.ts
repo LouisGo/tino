@@ -11,6 +11,7 @@ type SettingsDraftState = {
 };
 
 const initialSettingsDraft: SettingsDraft = {
+  revision: 0,
   knowledgeRoot: "",
   runtimeProviderProfiles: [],
   activeRuntimeProviderId: "",

@@ -12,6 +12,7 @@ use crate::clipboard::{
     preview::hydrate_capture_preview_assets,
     types::{CapturePreview, CaptureRecord},
 };
+use crate::ipc_events::ClipboardCapturesUpdated;
 use crate::storage::capture_history_store::CaptureHistoryUpsert;
 use crate::storage::knowledge_root::{
     batch_file_path, batches_dir_path, ensure_knowledge_root_layout, queue_file_path,
@@ -335,7 +336,7 @@ impl AppState {
         self.update_runtime_batch_metrics(queue_depth, ready_batch_count, None, None)?;
 
         if maintenance_changed {
-            self.emit_clipboard_updated();
+            self.emit_clipboard_updated(ClipboardCapturesUpdated::runtime_state_changed());
         }
 
         Ok(())
@@ -434,7 +435,7 @@ impl AppState {
         }
 
         self.persist_runtime_snapshot()?;
-        self.emit_clipboard_updated();
+        self.emit_clipboard_updated(ClipboardCapturesUpdated::runtime_state_changed());
         Ok(())
     }
 
@@ -449,7 +450,7 @@ impl AppState {
         }
 
         self.persist_runtime_snapshot()?;
-        self.emit_clipboard_updated();
+        self.emit_clipboard_updated(ClipboardCapturesUpdated::runtime_state_changed());
         Ok(())
     }
 
@@ -540,7 +541,7 @@ impl AppState {
         }
 
         self.persist_runtime_snapshot()?;
-        self.emit_clipboard_updated();
+        self.emit_clipboard_updated(ClipboardCapturesUpdated::history_changed());
         Ok(true)
     }
 
@@ -583,7 +584,12 @@ impl AppState {
             )?;
         }
         self.persist_runtime_snapshot()?;
-        self.emit_clipboard_updated();
+        let update = if should_persist_capture_history(status) {
+            ClipboardCapturesUpdated::history_changed()
+        } else {
+            ClipboardCapturesUpdated::runtime_state_changed()
+        };
+        self.emit_clipboard_updated(update);
         Ok(())
     }
 

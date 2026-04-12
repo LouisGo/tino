@@ -28,10 +28,8 @@ import {
   preloadClipboardSourceApps,
 } from "@/features/settings/lib/clipboard-source-app-query";
 import {
-  APP_SETTINGS_CHANGED_EVENT,
   applyIncomingAppSettingsChange,
   isAppSettingsChangeFromCurrentWindow,
-  type AppSettingsChangedPayload,
 } from "@/lib/app-settings-sync";
 import {
   applyTheme,
@@ -42,6 +40,7 @@ import {
   type ThemePreference,
 } from "@/lib/theme";
 import {
+  appSettingsChangedEvent,
   isTauriRuntime,
   reportAppActivity,
 } from "@/lib/tauri";
@@ -289,7 +288,7 @@ function AppShellRuntime({ router }: AppProvidersProps) {
 
     let unlistenAppSettingsSync: null | (() => void) = null;
 
-    void listen<AppSettingsChangedPayload>(APP_SETTINGS_CHANGED_EVENT, ({ payload }) => {
+    void appSettingsChangedEvent.listen(({ payload }) => {
       if (isAppSettingsChangeFromCurrentWindow(payload)) {
         return;
       }

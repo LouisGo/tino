@@ -1,3 +1,4 @@
+use super::run_blocking_command;
 use crate::app_state::{AppSettings, AppState, ClipboardSourceAppOption, DashboardSnapshot};
 use crate::clipboard::types::{
     CapturePreview, ClipboardBoardBootstrap, ClipboardPage, ClipboardPageRequest,
@@ -31,54 +32,63 @@ pub struct SetClipboardCapturePinnedRequest {
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_dashboard_snapshot(
+pub async fn get_dashboard_snapshot(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<DashboardSnapshot, String> {
-    state.dashboard_snapshot(&app)
+    let state = state.inner().clone();
+    run_blocking_command(move || state.dashboard_snapshot(&app)).await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_clipboard_page(
+pub async fn get_clipboard_page(
     state: State<'_, AppState>,
     request: ClipboardPageRequest,
 ) -> Result<ClipboardPage, String> {
-    state.clipboard_page(request)
+    let state = state.inner().clone();
+    run_blocking_command(move || state.clipboard_page(request)).await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_clipboard_board_bootstrap(
+pub async fn get_clipboard_board_bootstrap(
     state: State<'_, AppState>,
 ) -> Result<ClipboardBoardBootstrap, String> {
-    state.clipboard_board_bootstrap()
+    let state = state.inner().clone();
+    run_blocking_command(move || state.clipboard_board_bootstrap()).await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_pinned_clipboard_captures(
+pub async fn get_pinned_clipboard_captures(
     state: State<'_, AppState>,
 ) -> Result<Vec<PinnedClipboardCapture>, String> {
-    state.pinned_clipboard_captures()
+    let state = state.inner().clone();
+    run_blocking_command(move || state.pinned_clipboard_captures()).await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_clipboard_capture_pinned(
+pub async fn set_clipboard_capture_pinned(
     state: State<'_, AppState>,
     request: SetClipboardCapturePinnedRequest,
 ) -> Result<UpdateClipboardPinResult, String> {
-    state.set_clipboard_capture_pinned(request.capture, request.pinned, request.replace_oldest)
+    let state = state.inner().clone();
+    run_blocking_command(move || {
+        state.set_clipboard_capture_pinned(request.capture, request.pinned, request.replace_oldest)
+    })
+    .await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn delete_clipboard_capture(
+pub async fn delete_clipboard_capture(
     state: State<'_, AppState>,
     request: DeleteClipboardCaptureRequest,
 ) -> Result<DeleteClipboardCaptureResult, String> {
-    state.delete_clipboard_capture(request.id)
+    let state = state.inner().clone();
+    run_blocking_command(move || state.delete_clipboard_capture(request.id)).await
 }
 
 #[tauri::command]
@@ -97,12 +107,16 @@ pub async fn list_clipboard_source_apps(
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_clipboard_source_app_icons(
+pub async fn get_clipboard_source_app_icons(
     app: AppHandle,
     state: State<'_, AppState>,
     app_paths: Vec<String>,
 ) -> Result<Vec<ClipboardSourceAppIconResult>, String> {
-    source_apps::get_clipboard_source_app_icons(&app, state.inner(), app_paths)
+    let state = state.inner().clone();
+    run_blocking_command(move || {
+        source_apps::get_clipboard_source_app_icons(&app, &state, app_paths)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -113,11 +127,16 @@ pub fn report_app_activity(state: State<'_, AppState>) -> Result<(), String> {
 
 #[tauri::command]
 #[specta::specta]
-pub fn save_app_settings(
+pub async fn save_app_settings(
+    window: tauri::WebviewWindow,
     state: State<'_, AppState>,
     settings: AppSettings,
-) -> Result<AppSettings, String> {
-    state.save_settings(settings)
+) -> IpcResult<AppSettings> {
+    let state = state.inner().clone();
+    let source_window_label = Some(window.label().to_string());
+    run_blocking_command(move || state.save_settings(settings, source_window_label))
+        .await
+        .map_err(IpcError::from)
 }
 
 #[tauri::command]

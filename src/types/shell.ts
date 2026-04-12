@@ -9,12 +9,15 @@ import type {
   AppLocale as RustAppLocale,
   AppLocaleMode as RustAppLocaleMode,
   AppLocalePreference as RustAppLocalePreference,
+  AppSettingsChanged as RustAppSettingsChanged,
   AppSettings as RustAppSettings,
   AppShortcutOverride as RustAppShortcutOverride,
   BatchDecisionCluster as RustBatchDecisionCluster,
   BatchDecisionReview as RustBatchDecisionReview,
   CapturePreview as RustCapturePreview,
   ClipboardBoardBootstrap as RustClipboardBoardBootstrap,
+  ClipboardCapturesUpdated as RustClipboardCapturesUpdated,
+  ClipboardCapturesUpdatedReason as RustClipboardCapturesUpdatedReason,
   ClipboardPage as RustClipboardPage,
   ClipboardPageRequest as RustClipboardPageRequest,
   ClipboardSourceAppIconResult as RustClipboardSourceAppIconResult,
@@ -112,6 +115,17 @@ export type SettingsDraft = Omit<
   clipboardExcludedKeywords: string[];
   shortcutOverrides: ShortcutOverrideRecord;
 };
+
+export type AppSettingsChangedPayload = Omit<
+  RustAppSettingsChanged,
+  "previous" | "saved"
+> & {
+  previous: SettingsDraft | null;
+  saved: SettingsDraft;
+};
+
+export type ClipboardCapturesUpdatedReason = RustClipboardCapturesUpdatedReason;
+export type ClipboardCapturesUpdatedPayload = RustClipboardCapturesUpdated;
 
 export type ClipboardHistoryFilter = "all" | "text" | "link" | "image" | "video" | "file";
 

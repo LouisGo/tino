@@ -1,13 +1,14 @@
 import { useEffect, useEffectEvent } from "react";
 
-import { listen } from "@tauri-apps/api/event";
-
 import {
   clipboardCapturesUpdatedEvent,
   isTauriRuntime,
 } from "@/lib/tauri";
+import type { ClipboardCapturesUpdatedPayload } from "@/types/shell";
 
-export function useClipboardCaptureEvents(onUpdate: () => void | Promise<void>) {
+export function useClipboardCaptureEvents(
+  onUpdate: (payload: ClipboardCapturesUpdatedPayload) => void | Promise<void>,
+) {
   const handleUpdate = useEffectEvent(onUpdate);
 
   useEffect(() => {
@@ -18,8 +19,8 @@ export function useClipboardCaptureEvents(onUpdate: () => void | Promise<void>) 
     let disposed = false;
     let unlisten: null | (() => void | Promise<void>) = null;
 
-    void listen(clipboardCapturesUpdatedEvent, () => {
-      void handleUpdate();
+    void clipboardCapturesUpdatedEvent.listen(({ payload }) => {
+      void handleUpdate(payload);
     }).then((cleanup) => {
       if (disposed) {
         void cleanup();

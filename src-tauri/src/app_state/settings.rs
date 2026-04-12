@@ -17,6 +17,7 @@ const DEFAULT_CLIPBOARD_HISTORY_DAYS: u16 = 7;
 const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
 pub(crate) const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 90;
 const DEFAULT_CLIPBOARD_CAPTURE_ENABLED: bool = true;
+const DEFAULT_SETTINGS_REVISION: u64 = 0;
 
 fn default_clipboard_history_days() -> u16 {
     DEFAULT_CLIPBOARD_HISTORY_DAYS
@@ -24,6 +25,10 @@ fn default_clipboard_history_days() -> u16 {
 
 fn default_clipboard_capture_enabled() -> bool {
     DEFAULT_CLIPBOARD_CAPTURE_ENABLED
+}
+
+fn default_settings_revision() -> u64 {
+    DEFAULT_SETTINGS_REVISION
 }
 
 pub(crate) fn clipboard_history_storage_retention_days() -> u16 {
@@ -56,6 +61,8 @@ pub struct ClipboardSourceAppOption {
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
+    #[serde(default = "default_settings_revision")]
+    pub revision: u64,
     pub knowledge_root: String,
     pub runtime_provider_profiles: Vec<RuntimeProviderProfile>,
     pub active_runtime_provider_id: String,
@@ -79,6 +86,7 @@ impl AppSettings {
         let active_runtime_provider_id = runtime_provider_profiles[0].id.clone();
 
         Self {
+            revision: DEFAULT_SETTINGS_REVISION,
             knowledge_root: default_knowledge_root.display().to_string(),
             runtime_provider_profiles,
             active_runtime_provider_id,
@@ -191,6 +199,7 @@ impl LegacyAppSettings {
         runtime_provider.model = self.model;
 
         settings.knowledge_root = self.knowledge_root;
+        settings.revision = DEFAULT_SETTINGS_REVISION;
         settings.runtime_provider_profiles = vec![runtime_provider];
         settings.active_runtime_provider_id = settings.runtime_provider_profiles[0].id.clone();
         settings.locale_preference = self.locale_preference;
@@ -250,6 +259,7 @@ struct LegacyManagedAppSettings {
 impl LegacyManagedAppSettings {
     fn into_current(self) -> AppSettings {
         AppSettings {
+            revision: DEFAULT_SETTINGS_REVISION,
             knowledge_root: self.knowledge_root,
             runtime_provider_profiles: self
                 .runtime_provider_profiles
