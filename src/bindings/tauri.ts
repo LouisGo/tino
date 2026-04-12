@@ -164,6 +164,7 @@ export type CapturePreview = {
 	rawRich?: string | null,
 	rawRichFormat?: string | null,
 	linkUrl?: string | null,
+	linkMetadata?: LinkMetadata | null,
 	assetPath?: string | null,
 	thumbnailPath?: string | null,
 	imageWidth?: number | null,
@@ -183,7 +184,7 @@ export type ClipboardCapturesUpdated = {
 	refreshDashboard: boolean,
 };
 
-export type ClipboardCapturesUpdatedReason = "historyChanged" | "pinsChanged" | "captureDeleted" | "ocrUpdated" | "runtimeStateChanged";
+export type ClipboardCapturesUpdatedReason = "historyChanged" | "pinsChanged" | "captureDeleted" | "ocrUpdated" | "linkMetadataUpdated" | "runtimeStateChanged";
 
 export type ClipboardPage = {
 	captures: CapturePreview[],
@@ -276,6 +277,16 @@ export type IpcError = {
 };
 
 export type IpcErrorCode = "validation_error" | "state_conflict" | "not_found" | "permission_required" | "packaged_app_required" | "local_signing_required" | "signature_invalid" | "io_error" | "platform_error" | "internal_error";
+
+export type LinkMetadata = {
+	title?: string | null,
+	description?: string | null,
+	iconPath?: string | null,
+	fetchedAt?: string,
+	fetchStatus?: LinkMetadataFetchStatus,
+};
+
+export type LinkMetadataFetchStatus = "pending" | "ready" | "skipped" | "failed";
 
 export type PersistedKnowledgeDestination = "topic" | "inbox" | "discard";
 

@@ -2,6 +2,36 @@ import { defineShortcut, type ShortcutDefinition } from "@/core/shortcuts";
 
 export const clipboardShortcuts = [
   defineShortcut<{ direction: "previous" }, void>({
+    id: "clipboard.cyclePreviewModeBackward",
+    kind: "local",
+    label: "Cycle Preview Mode Backward",
+    description: "Switch the selected text capture preview to the previous available mode.",
+    defaults: "Shift+Tab",
+    scopes: ["clipboard.previewModes"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.cyclePreviewMode",
+      payload: () => ({
+        direction: "previous",
+      }),
+    },
+  }),
+  defineShortcut<{ direction: "next" }, void>({
+    id: "clipboard.cyclePreviewModeForward",
+    kind: "local",
+    label: "Cycle Preview Mode Forward",
+    description: "Switch the selected text capture preview to the next available mode.",
+    defaults: "Tab",
+    scopes: ["clipboard.previewModes"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.cyclePreviewMode",
+      payload: () => ({
+        direction: "next",
+      }),
+    },
+  }),
+  defineShortcut<{ direction: "previous" }, void>({
     id: "clipboard.selectPreviousCapture",
     kind: "local",
     label: "Select Previous Capture",
@@ -109,6 +139,34 @@ export const clipboardShortcuts = [
     allowInEditable: true,
     command: {
       id: "clipboard.openCaptureExternally",
+    },
+  }),
+  defineShortcut<void, void>({
+    id: "clipboard.focusSearch",
+    kind: "local",
+    label: "Focus Clipboard Search",
+    description: "Focus and select the clipboard search input.",
+    defaults: {
+      default: "CommandOrControl+F",
+    },
+    scopes: ["clipboard.previewModes"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.focusSearch",
+    },
+  }),
+  defineShortcut<void, void>({
+    id: "clipboard.openFilter",
+    kind: "local",
+    label: "Open Clipboard Filter",
+    description: "Open the clipboard type filter selector.",
+    defaults: {
+      default: "CommandOrControl+Shift+F",
+    },
+    scopes: ["clipboard.previewModes"],
+    allowInEditable: true,
+    command: {
+      id: "clipboard.openFilter",
     },
   }),
   defineShortcut<void, void>({

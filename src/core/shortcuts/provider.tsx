@@ -27,6 +27,7 @@ import type {
   ShortcutBindingOverride,
   ShortcutDefinition,
   ShortcutManager,
+  ShortcutPolicyActivationOptions,
   ShortcutScopeActivationOptions,
   ShortcutScopeId,
 } from "@/core/shortcuts/types";
@@ -47,6 +48,15 @@ export function AppShortcutProvider({
   const [scopes, setScopes] = useState<
     Array<{ id: ShortcutScopeId; key: number; reservedAccelerators: string[] }>
   >([]);
+  const [policies, setPolicies] = useState<
+    Array<{
+      id: string;
+      key: number;
+      ownedScopes: ShortcutScopeId[];
+      preventDefaultAccelerators: string[];
+      reservedAccelerators: string[];
+    }>
+  >([]);
   const scopeSerialRef = useRef(0);
   const overridesRecord = useMemo(() => overrides ?? {}, [overrides]);
   const resolvedShortcuts = useMemo(
@@ -55,6 +65,7 @@ export function AppShortcutProvider({
   );
   const resolvedShortcutsRef = useRef(resolvedShortcuts);
   const scopesRef = useRef(scopes);
+  const policiesRef = useRef(policies);
 
   useEffect(() => {
     resolvedShortcutsRef.current = resolvedShortcuts;
@@ -63,6 +74,10 @@ export function AppShortcutProvider({
   useEffect(() => {
     scopesRef.current = scopes;
   }, [scopes]);
+
+  useEffect(() => {
+    policiesRef.current = policies;
+  }, [policies]);
 
   const activateScope = useCallback((
     scopeId: ShortcutScopeId,
@@ -78,8 +93,31 @@ export function AppShortcutProvider({
     };
   }, []);
 
+  const activatePolicy = useCallback((
+    policyId: string,
+    options: ShortcutPolicyActivationOptions,
+  ) => {
+    const key = ++scopeSerialRef.current;
+
+    setPolicies((current) => [
+      ...current,
+      {
+        id: policyId,
+        key,
+        ownedScopes: options.ownedScopes,
+        preventDefaultAccelerators: options.preventDefaultAccelerators ?? [],
+        reservedAccelerators: options.reservedAccelerators ?? [],
+      },
+    ]);
+
+    return () => {
+      setPolicies((current) => current.filter((value) => value.key !== key));
+    };
+  }, []);
+
   const manager = useMemo<ShortcutManager>(() => ({
     activateScope: (scopeId, options) => activateScope(scopeId, options),
+    activatePolicy: (policyId, options) => activatePolicy(policyId, options),
     definitions: registry.getAll(),
     execute: async (id, trigger) => {
       const shortcut = resolvedShortcutsRef.current.find((candidate) => candidate.id === id);
@@ -125,7 +163,7 @@ export function AppShortcutProvider({
         platform,
         language,
       ),
-  }), [activateScope, commands, language, overridesRecord, platform, registry]);
+  }), [activatePolicy, activateScope, commands, language, overridesRecord, platform, registry]);
 
   const handleKeyDown = useEffectEvent((event: KeyboardEvent) => {
     if (event.defaultPrevented) {
@@ -138,6 +176,7 @@ export function AppShortcutProvider({
       overridesRecord,
       platform,
       scopesRef.current,
+      policiesRef.current,
       event,
       language,
     );
@@ -147,6 +186,9 @@ export function AppShortcutProvider({
     }
 
     if (handling.type === "blocked") {
+      if (handling.preventDefault) {
+        event.preventDefault();
+      }
       event.stopPropagation();
       return;
     }

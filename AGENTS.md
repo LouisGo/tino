@@ -9,6 +9,7 @@ Rust is the source of truth for Tauri IPC types and commands.
 - Use `.agents/skills/tino-task-router/SKILL.md` when the task is mainly about which docs to load or trust.
 - Use `.agents/skills/tino-ai-review-phase1/SKILL.md` for `/ai`, `applyBatchDecision`, live batch behavior, or the mock review chain.
 - Use `.agents/skills/tino-rust-boundaries/SKILL.md` for Tauri command/module-boundary work, Rust-vs-Renderer ownership decisions, or when a Rust file is at risk of turning into a mixed-responsibility god file.
+- Use `.agents/skills/tino-feature-playbook/SKILL.md` when implementing a new feature module or a cross-cutting feature change that needs a default delivery pattern.
 - Current behavior and phase claims live in `docs/03-planning/HANDOFF.md`.
 - Frozen architecture and responsibility boundaries live in `docs/03-planning/技术冻结记录.md`.
 - If repo-local skill wording conflicts with current planning docs, `docs/03-planning/HANDOFF.md` and `docs/03-planning/技术冻结记录.md` win.

@@ -15,9 +15,13 @@ use crate::{
     },
     clipboard::{
         preview::{
+            build_link_display_with_metadata, build_link_secondary_preview,
             hydrate_capture_preview_assets, normalize_ocr_text, should_persist_capture_history,
         },
-        types::{CapturePreview, ClipboardPage, ClipboardPageRequest, ClipboardPageSummary},
+        types::{
+            CapturePreview, ClipboardPage, ClipboardPageRequest, ClipboardPageSummary,
+            LinkMetadata,
+        },
     },
     storage::capture_history_store::{CaptureHistoryStore, CaptureHistoryUpsert},
 };
@@ -146,6 +150,26 @@ pub(crate) fn capture_preview_to_history_upsert(preview: CapturePreview) -> Capt
         raw_rich: preview.raw_rich,
         raw_rich_format: preview.raw_rich_format,
         link_url: preview.link_url,
+        link_title: preview
+            .link_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.title.clone()),
+        link_description: preview
+            .link_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.description.clone()),
+        link_icon_path: preview
+            .link_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.icon_path.clone()),
+        link_metadata_fetched_at: preview
+            .link_metadata
+            .as_ref()
+            .map(|metadata| metadata.fetched_at.clone()),
+        link_metadata_fetch_status: preview
+            .link_metadata
+            .as_ref()
+            .map(|metadata| metadata.fetch_status.as_storage_label().to_string()),
         asset_path: preview.asset_path,
         thumbnail_path: preview.thumbnail_path,
         image_width: preview.image_width,
@@ -153,6 +177,58 @@ pub(crate) fn capture_preview_to_history_upsert(preview: CapturePreview) -> Capt
         byte_size: preview.byte_size,
         hash: None,
     }
+}
+
+pub(crate) fn update_clipboard_history_link_metadata(
+    clipboard_cache_root: &Path,
+    history_days: u16,
+    capture_id: &str,
+    link_metadata: &LinkMetadata,
+) -> Result<bool, String> {
+    let normalized_capture_id = capture_id.trim();
+    if normalized_capture_id.is_empty() || link_metadata.fetched_at.trim().is_empty() {
+        return Ok(false);
+    }
+
+    let mut entries_by_day =
+        load_clipboard_history_entries_by_day(clipboard_cache_root, history_days)?;
+    let mut changed = false;
+
+    for captures_by_id in entries_by_day.values_mut() {
+        let Some(capture) = captures_by_id.get_mut(normalized_capture_id) else {
+            continue;
+        };
+
+        let next_preview = capture
+            .link_url
+            .as_deref()
+            .map(|link_url| build_link_display_with_metadata(link_url, Some(link_metadata)))
+            .unwrap_or_else(|| capture.preview.clone());
+        let next_secondary_preview = capture
+            .link_url
+            .as_deref()
+            .map(|link_url| build_link_secondary_preview(link_url, &capture.raw_text, Some(link_metadata)));
+
+        if capture.link_metadata.as_ref() == Some(link_metadata)
+            && capture.preview == next_preview
+            && capture.secondary_preview == next_secondary_preview
+        {
+            return Ok(false);
+        }
+
+        capture.link_metadata = Some(link_metadata.clone());
+        capture.preview = next_preview;
+        capture.secondary_preview = next_secondary_preview;
+        changed = true;
+        break;
+    }
+
+    if !changed {
+        return Ok(false);
+    }
+
+    persist_clipboard_history_entries(clipboard_cache_root, history_days, &entries_by_day)?;
+    Ok(true)
 }
 
 pub(crate) fn update_clipboard_history_ocr_text(
@@ -494,6 +570,7 @@ fn prune_capture_history_store_days(
 fn matches_clipboard_filter(capture: &CapturePreview, filter: &str) -> bool {
     matches_content_kind_filter(&capture.content_kind, filter)
 }
+
 
 fn visit_clipboard_history_entries<F>(
     clipboard_cache_root: &Path,

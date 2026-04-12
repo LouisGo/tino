@@ -3,6 +3,7 @@ export { ShortcutRegistry } from "@/core/shortcuts/registry";
 export { ShortcutKbd } from "@/core/shortcuts/shortcut-kbd";
 export {
   useAppShortcut,
+  useShortcutPolicy,
   useShortcutManager,
   useShortcutScope,
 } from "@/core/shortcuts/hooks";
@@ -20,6 +21,7 @@ export type {
   ShortcutDefinition,
   ShortcutKind,
   ShortcutManager,
+  ShortcutPolicyId,
   ShortcutPlatform,
   ShortcutScopeId,
 } from "@/core/shortcuts/types";

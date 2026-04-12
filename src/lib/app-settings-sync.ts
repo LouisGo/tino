@@ -24,7 +24,11 @@ export function applyIncomingAppSettingsChange(
     payload.previous,
     payload.saved,
   );
-  const shouldRefreshClipboardData = shouldInvalidateClipboardQueries(
+  const shouldRefreshClipboardHistory = shouldInvalidateClipboardHistoryQueries(
+    payload.previous,
+    payload.saved,
+  );
+  const shouldRefreshPinnedClipboardData = shouldInvalidatePinnedClipboardQueries(
     payload.previous,
     payload.saved,
   );
@@ -32,7 +36,11 @@ export function applyIncomingAppSettingsChange(
   useSettingsDraftStore.getState().setSettingsDraft(mergedDraft);
   queryClient.setQueryData(queryKeys.appSettings(), payload.saved);
 
-  if (!shouldRefreshDashboard && !shouldRefreshClipboardData) {
+  if (
+    !shouldRefreshDashboard
+    && !shouldRefreshClipboardHistory
+    && !shouldRefreshPinnedClipboardData
+  ) {
     return;
   }
 
@@ -42,9 +50,16 @@ export function applyIncomingAppSettingsChange(
     invalidations.push(queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() }));
   }
 
-  if (shouldRefreshClipboardData) {
+  if (shouldRefreshClipboardHistory) {
     invalidations.push(queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageBase() }));
     invalidations.push(queryClient.invalidateQueries({ queryKey: queryKeys.clipboardPageSummary() }));
+  }
+
+  if (shouldRefreshPinnedClipboardData) {
+    invalidations.push(queryClient.invalidateQueries({
+      queryKey: queryKeys.clipboardPinnedCaptures(),
+      exact: true,
+    }));
   }
 
   void Promise.all(invalidations);
@@ -95,7 +110,7 @@ function shouldInvalidateDashboardSnapshot(
   );
 }
 
-function shouldInvalidateClipboardQueries(
+function shouldInvalidateClipboardHistoryQueries(
   previousPersisted: SettingsDraft | null,
   savedSettings: SettingsDraft,
 ) {
@@ -103,7 +118,19 @@ function shouldInvalidateClipboardQueries(
     return true;
   }
 
-  return previousPersisted.clipboardHistoryDays !== savedSettings.clipboardHistoryDays;
+  return previousPersisted.knowledgeRoot !== savedSettings.knowledgeRoot
+    || previousPersisted.clipboardHistoryDays !== savedSettings.clipboardHistoryDays;
+}
+
+function shouldInvalidatePinnedClipboardQueries(
+  previousPersisted: SettingsDraft | null,
+  savedSettings: SettingsDraft,
+) {
+  if (!previousPersisted) {
+    return true;
+  }
+
+  return previousPersisted.knowledgeRoot !== savedSettings.knowledgeRoot;
 }
 
 function stableSerialize(value: unknown): string {

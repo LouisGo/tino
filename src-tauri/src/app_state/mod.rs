@@ -4,19 +4,21 @@ use chrono::Local;
 use log::warn;
 use serde::Serialize;
 use specta::Type;
-#[cfg(target_os = "macos")]
-use std::sync::atomic::AtomicBool;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fs, mem,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::AtomicBool,
+        Arc, Mutex,
+    },
 };
 use tauri::{AppHandle, Manager};
 use tauri_specta::Event as _;
 #[cfg(test)]
 use uuid::Uuid;
 
+mod link_metadata;
 mod ocr;
 mod runtime;
 mod settings;
@@ -80,6 +82,7 @@ const IMAGE_OCR_MAX_ATTEMPTS: usize = 2;
 const IMAGE_OCR_RETRY_DELAY_MS: u64 = 150;
 #[cfg(target_os = "macos")]
 const IMAGE_OCR_BACKFILL_BATCH_SIZE: usize = 4;
+const LINK_METADATA_BACKFILL_BATCH_SIZE: usize = 6;
 const RUNNING_WATCH_STATUS: &str = "Rust clipboard poller active";
 const STARTING_WATCH_STATUS: &str = "Rust clipboard poller starting";
 const DEDUP_WINDOW_MINUTES: i64 = 5;
@@ -136,6 +139,12 @@ struct ImageOcrRuntime {
 }
 
 #[derive(Debug)]
+struct LinkMetadataRuntime {
+    queued_capture_ids: Mutex<HashSet<String>>,
+    backfill_queued: AtomicBool,
+}
+
+#[derive(Debug)]
 struct SharedState {
     app_handle: AppHandle,
     task_scheduler: AppTaskScheduler,
@@ -150,6 +159,7 @@ struct SharedState {
     clipboard_source_app_icons_cache: Mutex<HashMap<String, Option<String>>>,
     #[cfg(target_os = "macos")]
     image_ocr: ImageOcrRuntime,
+    link_metadata: LinkMetadataRuntime,
     inner: Mutex<StateData>,
 }
 
@@ -223,6 +233,7 @@ impl AppState {
                 clipboard_source_app_icons_cache: Mutex::new(HashMap::new()),
                 #[cfg(target_os = "macos")]
                 image_ocr: Self::create_image_ocr_runtime(),
+                link_metadata: Self::create_link_metadata_runtime(),
                 inner: Mutex::new(StateData {
                     settings,
                     runtime,
@@ -236,6 +247,7 @@ impl AppState {
         state.try_refresh_clipboard_board_bootstrap_cache("startup");
         state.persist_runtime_snapshot()?;
         state.request_image_ocr_backfill();
+        state.request_link_metadata_backfill();
 
         Ok(state)
     }
@@ -424,6 +436,7 @@ impl AppState {
             || previous_settings.knowledge_root != normalized.knowledge_root
         {
             self.request_image_ocr_backfill();
+            self.request_link_metadata_backfill();
         }
 
         if let Err(error) = (AppSettingsChanged {
@@ -978,6 +991,7 @@ mod tests {
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,
+            link_metadata: None,
             asset_path: None,
             thumbnail_path: None,
             image_width: None,
@@ -1020,6 +1034,7 @@ mod tests {
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,
+            link_metadata: None,
             asset_path: None,
             thumbnail_path: None,
             image_width: None,
@@ -1398,6 +1413,7 @@ mod tests {
             byte_size: None,
             hash: "hash_icon".into(),
             link_url: None,
+            link_metadata: None,
             asset_path: None,
             thumbnail_path: None,
         };

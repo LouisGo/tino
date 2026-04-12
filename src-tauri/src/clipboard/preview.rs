@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    clipboard::types::{CapturePreview, CaptureRecord},
+    clipboard::types::{CapturePreview, CaptureRecord, LinkMetadata},
     storage::knowledge_root::assets_dir_path,
     video_thumbnail::generate_video_thumbnail_png,
 };
@@ -31,7 +31,9 @@ pub(crate) fn build_capture_preview(capture: &CaptureRecord, status: &str) -> Ca
             "link" => capture
                 .link_url
                 .as_deref()
-                .map(build_link_display)
+                .map(|link_url| {
+                    build_link_display_with_metadata(link_url, capture.link_metadata.as_ref())
+                })
                 .unwrap_or_else(|| build_preview(&capture.raw_text)),
             _ => build_preview(&capture.raw_text),
         },
@@ -44,6 +46,7 @@ pub(crate) fn build_capture_preview(capture: &CaptureRecord, status: &str) -> Ca
         raw_rich: capture.raw_rich.clone(),
         raw_rich_format: capture.raw_rich_format.clone(),
         link_url: capture.link_url.clone(),
+        link_metadata: capture.link_metadata.clone(),
         asset_path: capture.asset_path.clone(),
         thumbnail_path: capture.thumbnail_path.clone(),
         image_width: capture.image_width,
@@ -244,7 +247,11 @@ fn build_capture_secondary_preview(capture: &CaptureRecord) -> Option<String> {
         "link" => capture
             .link_url
             .as_deref()
-            .map(|link_url| build_link_secondary_preview(link_url, &capture.raw_text)),
+            .map(|link_url| build_link_secondary_preview(
+                link_url,
+                &capture.raw_text,
+                capture.link_metadata.as_ref(),
+            )),
         "video" | "file" => build_file_secondary_preview(&capture.raw_text, capture.byte_size),
         _ => {
             let line_count = capture.raw_text.lines().count().max(1);
@@ -258,20 +265,25 @@ fn build_capture_secondary_preview(capture: &CaptureRecord) -> Option<String> {
     }
 }
 
-fn build_link_display(link_url: &str) -> String {
+pub(crate) fn build_link_display_with_metadata(
+    link_url: &str,
+    metadata: Option<&LinkMetadata>,
+) -> String {
+    if let Some(title) = metadata
+        .and_then(|metadata| metadata.title.as_deref())
+        .map(str::trim)
+        .filter(|title| !title.is_empty())
+    {
+        return clamp_preview(title, 120);
+    }
+
     let normalized = link_url
         .trim()
         .trim_start_matches("https://")
         .trim_start_matches("http://")
         .trim_start_matches("www.");
     let compact = normalized.split_whitespace().next().unwrap_or(normalized);
-    let mut preview = compact.chars().take(80).collect::<String>();
-
-    if compact.chars().count() > 80 {
-        preview.push('…');
-    }
-
-    preview
+    clamp_preview(compact, 80)
 }
 
 fn is_missing_file_reference(content_kind: &str, raw_text: &str) -> bool {
@@ -341,7 +353,19 @@ fn compact_home_path(path: &str) -> String {
     }
 }
 
-fn build_link_secondary_preview(link_url: &str, fallback: &str) -> String {
+pub(crate) fn build_link_secondary_preview(
+    link_url: &str,
+    fallback: &str,
+    metadata: Option<&LinkMetadata>,
+) -> String {
+    if let Some(description) = metadata
+        .and_then(|metadata| metadata.description.as_deref())
+        .map(str::trim)
+        .filter(|description| !description.is_empty())
+    {
+        return clamp_preview(description, 160);
+    }
+
     let normalized = link_url
         .trim()
         .trim_start_matches("https://")
@@ -353,6 +377,14 @@ fn build_link_secondary_preview(link_url: &str, fallback: &str) -> String {
     } else {
         host.to_string()
     }
+}
+
+fn clamp_preview(value: &str, max_chars: usize) -> String {
+    let mut preview = value.chars().take(max_chars).collect::<String>();
+    if value.chars().count() > max_chars {
+        preview.push('…');
+    }
+    preview
 }
 
 fn parse_captured_at(captured_at: &str) -> Result<DateTime<FixedOffset>, String> {

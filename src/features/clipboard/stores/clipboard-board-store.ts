@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import type { ClipboardFilter } from "@/features/clipboard/lib/clipboard-board";
+import type { ClipboardTextPreviewMode } from "@/features/clipboard/lib/clipboard-preview-modes";
 import type { ClipboardCapture, PinnedClipboardCapture } from "@/types/shell";
 
 const initialClipboardBoardState = {
@@ -9,6 +10,8 @@ const initialClipboardBoardState = {
   selectedCaptureId: null,
   followsDefaultSelection: true,
   preferredSelectedCaptureId: null,
+  previewModeCaptureId: null,
+  selectedPreviewMode: null as ClipboardTextPreviewMode | null,
   isFilterSelectOpen: false,
   isShortcutHelpOpen: false,
   previewingImageId: null,
@@ -18,6 +21,7 @@ const initialClipboardBoardState = {
   pinnedCaptures: [] as PinnedClipboardCapture[],
   visibleCaptures: [] as ClipboardCapture[],
   listScrollRequest: 0,
+  searchInputFocusRequest: 0,
 };
 
 type ClipboardBoardState = {
@@ -26,6 +30,8 @@ type ClipboardBoardState = {
   selectedCaptureId: string | null;
   followsDefaultSelection: boolean;
   preferredSelectedCaptureId: string | null;
+  previewModeCaptureId: string | null;
+  selectedPreviewMode: ClipboardTextPreviewMode | null;
   isFilterSelectOpen: boolean;
   isShortcutHelpOpen: boolean;
   previewingImageId: string | null;
@@ -35,6 +41,7 @@ type ClipboardBoardState = {
   pinnedCaptures: PinnedClipboardCapture[];
   visibleCaptures: ClipboardCapture[];
   listScrollRequest: number;
+  searchInputFocusRequest: number;
   resetState: () => void;
   resetWindowSession: () => void;
   setSearchValue: (value: string) => void;
@@ -43,6 +50,10 @@ type ClipboardBoardState = {
   setSelectedCaptureId: (value: string | null) => void;
   setDerivedSelectedCaptureId: (value: string | null) => void;
   setPreferredSelectedCaptureId: (value: string | null) => void;
+  setSelectedPreviewMode: (
+    captureId: string,
+    mode: ClipboardTextPreviewMode,
+  ) => void;
   setIsFilterSelectOpen: (value: boolean) => void;
   setIsShortcutHelpOpen: (value: boolean) => void;
   setPreviewingImageId: (value: string | null) => void;
@@ -52,6 +63,7 @@ type ClipboardBoardState = {
   setPinnedCaptures: (captures: PinnedClipboardCapture[]) => void;
   setVisibleCaptures: (captures: ClipboardCapture[]) => void;
   requestListScrollToTop: () => void;
+  requestSearchInputFocus: () => void;
   removeCapture: (captureId: string) => void;
 };
 
@@ -101,6 +113,11 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
       followsDefaultSelection: true,
     }),
   setPreferredSelectedCaptureId: (value) => set({ preferredSelectedCaptureId: value }),
+  setSelectedPreviewMode: (captureId, mode) =>
+    set({
+      previewModeCaptureId: captureId,
+      selectedPreviewMode: mode,
+    }),
   setIsFilterSelectOpen: (value) => set({ isFilterSelectOpen: value }),
   setIsShortcutHelpOpen: (value) => set({ isShortcutHelpOpen: value }),
   setPreviewingImageId: (value) => set({ previewingImageId: value }),
@@ -113,6 +130,10 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
     set((state) => ({
       listScrollRequest: state.listScrollRequest + 1,
     })),
+  requestSearchInputFocus: () =>
+    set((state) => ({
+      searchInputFocusRequest: state.searchInputFocusRequest + 1,
+    })),
   removeCapture: (captureId) =>
     set((state) => ({
       selectedCaptureId:
@@ -121,6 +142,10 @@ export const useClipboardBoardStore = create<ClipboardBoardState>((set) => ({
         state.selectedCaptureId === captureId ? true : state.followsDefaultSelection,
       preferredSelectedCaptureId:
         state.preferredSelectedCaptureId === captureId ? null : state.preferredSelectedCaptureId,
+      previewModeCaptureId:
+        state.previewModeCaptureId === captureId ? null : state.previewModeCaptureId,
+      selectedPreviewMode:
+        state.previewModeCaptureId === captureId ? null : state.selectedPreviewMode,
       previewingImageId:
         state.previewingImageId === captureId ? null : state.previewingImageId,
       previewingOcrCaptureId:

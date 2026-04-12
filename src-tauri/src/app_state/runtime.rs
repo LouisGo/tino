@@ -308,6 +308,26 @@ pub(super) fn build_capture_history_upsert(
         raw_rich: preview.raw_rich.clone(),
         raw_rich_format: preview.raw_rich_format.clone(),
         link_url: preview.link_url.clone(),
+        link_title: preview
+            .link_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.title.clone()),
+        link_description: preview
+            .link_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.description.clone()),
+        link_icon_path: preview
+            .link_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.icon_path.clone()),
+        link_metadata_fetched_at: preview
+            .link_metadata
+            .as_ref()
+            .map(|metadata| metadata.fetched_at.clone()),
+        link_metadata_fetch_status: preview
+            .link_metadata
+            .as_ref()
+            .map(|metadata| metadata.fetch_status.as_storage_label().to_string()),
         asset_path: preview.asset_path.clone(),
         thumbnail_path: preview.thumbnail_path.clone(),
         image_width: preview.image_width,
@@ -541,6 +561,7 @@ impl AppState {
         }
 
         self.persist_runtime_snapshot()?;
+        self.spawn_link_metadata_for_capture(capture_id, capture.link_url.as_deref());
         self.emit_clipboard_updated(ClipboardCapturesUpdated::history_changed());
         Ok(true)
     }
@@ -584,6 +605,9 @@ impl AppState {
             )?;
         }
         self.persist_runtime_snapshot()?;
+        if should_persist_capture_history(status) {
+            self.spawn_link_metadata_for_capture(&preview.id, preview.link_url.as_deref());
+        }
         let update = if should_persist_capture_history(status) {
             ClipboardCapturesUpdated::history_changed()
         } else {

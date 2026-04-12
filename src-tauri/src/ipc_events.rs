@@ -19,6 +19,7 @@ pub enum ClipboardCapturesUpdatedReason {
     PinsChanged,
     CaptureDeleted,
     OcrUpdated,
+    LinkMetadataUpdated,
     RuntimeStateChanged,
 }
 
@@ -65,6 +66,15 @@ impl ClipboardCapturesUpdated {
             refresh_history: true,
             refresh_pinned: false,
             refresh_dashboard: false,
+        }
+    }
+
+    pub fn link_metadata_updated(refresh_pinned: bool) -> Self {
+        Self {
+            reason: ClipboardCapturesUpdatedReason::LinkMetadataUpdated,
+            refresh_history: true,
+            refresh_pinned,
+            refresh_dashboard: true,
         }
     }
 

@@ -374,7 +374,10 @@ export const enUSResources = defineLocaleSchema({
         rows: {
           openSelectedCapture: "Open the selected item in its native app",
           openActions: "Open actions for the selected item",
+          cyclePreviewModes: "Cycle the selected text preview mode",
           moveBetweenCaptures: "Move through captures",
+          focusSearch: "Focus the clipboard search input",
+          openFilter: "Open the clipboard filter",
           jumpToEdges: "Jump to the first or last capture",
           pasteBack: "Paste the selected item back",
           pasteFloating: "Paste the selected item back in the floating window",
@@ -1196,7 +1199,10 @@ export const zhCNResources = {
         rows: {
           openSelectedCapture: "用原生应用打开当前选中项",
           openActions: "打开当前选中项的操作菜单",
+          cyclePreviewModes: "切换当前文本预览模式",
           moveBetweenCaptures: "在记录之间移动",
+          focusSearch: "聚焦到剪贴板搜索框",
+          openFilter: "打开剪贴板筛选器",
           jumpToEdges: "跳到第一条或最后一条记录",
           pasteBack: "将当前选中项回填到原应用",
           pasteFloating: "在剪贴板小窗中，将当前选中项回填到原应用",

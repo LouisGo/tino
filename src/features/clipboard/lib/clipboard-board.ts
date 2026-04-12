@@ -426,6 +426,10 @@ export function captureTitle(capture: ClipboardCapture, t: ClipboardTranslate) {
 
 export function captureSubtitle(capture: ClipboardCapture, t: ClipboardTranslate) {
   if (capture.contentKind === "link") {
+    if (capture.secondaryPreview?.trim()) {
+      return capture.secondaryPreview.trim();
+    }
+
     return extractHostname(capture.linkUrl ?? capture.rawText) ?? t("preview.titles.linkFallback");
   }
 

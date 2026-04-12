@@ -4,6 +4,7 @@ import type { LocalizedText } from "@/i18n";
 export type AppShortcutId = string;
 export type ShortcutKind = "global" | "local";
 export type ShortcutScopeId = string;
+export type ShortcutPolicyId = string;
 export type ShortcutPlatform = "macos" | "windows" | "linux" | "browser";
 export type ShortcutBindingOverride = {
   accelerator?: string | null;
@@ -93,10 +94,20 @@ export type ShortcutScopeActivationOptions = {
   reservedAccelerators?: string[];
 };
 
+export type ShortcutPolicyActivationOptions = {
+  ownedScopes: ShortcutScopeId[];
+  preventDefaultAccelerators?: string[];
+  reservedAccelerators?: string[];
+};
+
 export type ShortcutManager = {
   activateScope: (
     scopeId: ShortcutScopeId,
     options?: ShortcutScopeActivationOptions,
+  ) => () => void;
+  activatePolicy: (
+    policyId: ShortcutPolicyId,
+    options: ShortcutPolicyActivationOptions,
   ) => () => void;
   definitions: ShortcutDefinition<unknown, unknown>[];
   execute: (

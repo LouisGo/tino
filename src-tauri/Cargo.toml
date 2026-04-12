@@ -31,7 +31,9 @@ objc2-core-graphics = { version = "0.3", features = ["CGDirectDisplay", "CGEvent
 objc2-foundation = { version = "0.3", features = ["block2", "NSBundle", "NSDictionary", "NSString"] }
 objc2 = { version = "0.6", features = ["exception"] }
 plist = "1"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "brotli", "deflate", "gzip", "rustls-tls"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
+scraper = "0.24"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
@@ -45,5 +47,6 @@ tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
 tauri-specta = { version = "2.0.0-rc.24", features = ["derive", "typescript"] }
 thiserror = "2"
+url = "2"
 uuid = { version = "1", features = ["serde", "v7"] }
 tauri-plugin-global-shortcut = "2"

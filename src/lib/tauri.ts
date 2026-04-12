@@ -245,6 +245,15 @@ function normalizeClipboardCapture(capture: RustCapturePreview): ClipboardCaptur
     rawRich: capture.rawRich ?? null,
     rawRichFormat: capture.rawRichFormat ?? null,
     linkUrl: capture.linkUrl ?? null,
+    linkMetadata: capture.linkMetadata
+      ? {
+          title: capture.linkMetadata.title ?? null,
+          description: capture.linkMetadata.description ?? null,
+          iconPath: capture.linkMetadata.iconPath ?? null,
+          fetchedAt: capture.linkMetadata.fetchedAt ?? "",
+          fetchStatus: capture.linkMetadata.fetchStatus ?? "pending",
+        }
+      : null,
     assetPath: capture.assetPath ?? null,
     thumbnailPath: capture.thumbnailPath ?? null,
     imageWidth: capture.imageWidth ?? null,

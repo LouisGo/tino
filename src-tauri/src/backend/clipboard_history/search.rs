@@ -249,6 +249,7 @@ mod tests {
             raw_rich: None,
             raw_rich_format: None,
             link_url: Some("https://example.com/roadmap".into()),
+            link_metadata: None,
             asset_path: None,
             thumbnail_path: None,
             image_width: None,

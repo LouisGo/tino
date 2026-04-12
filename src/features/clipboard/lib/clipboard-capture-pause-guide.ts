@@ -1,3 +1,5 @@
+import type { SettingsDraft } from "@/types/shell";
+
 const CLIPBOARD_CAPTURE_PAUSE_GUIDE_DISMISSED_KEY =
   "tino.clipboard-capture-pause-guide-dismissed";
 
@@ -23,4 +25,12 @@ export function resetClipboardCapturePauseGuideDismissed() {
   }
 
   window.localStorage.removeItem(CLIPBOARD_CAPTURE_PAUSE_GUIDE_DISMISSED_KEY);
+}
+
+export function shouldResetClipboardCapturePauseGuideDismissed(
+  previous: SettingsDraft | null,
+  saved: SettingsDraft,
+) {
+  return previous?.clipboardCaptureEnabled === false
+    && saved.clipboardCaptureEnabled;
 }

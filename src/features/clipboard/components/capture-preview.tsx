@@ -17,6 +17,7 @@ import {
   Copy,
   Expand,
   ExternalLink,
+  Link2,
   Minus,
   Plus,
   RotateCcw,
@@ -36,6 +37,14 @@ import {
 } from "@/features/clipboard/components/preview-toolbar";
 import { useClipboardAssetSrc } from "@/features/clipboard/hooks/use-clipboard-asset-src";
 import {
+  buildClipboardTextPreviewTabs,
+  canRenderHtmlPreview,
+  canRenderMarkdownPreview,
+  normalizeMarkdownSource,
+  preferredClipboardTextPreviewMode,
+  resolveClipboardTextPreviewMode,
+} from "@/features/clipboard/lib/clipboard-preview-modes";
+import {
   PREVIEW_HIGHLIGHT_SELECTOR,
   highlightSanitizedHtmlContent,
   highlightTextContent,
@@ -46,6 +55,7 @@ import {
   captureSurfaceClassName,
   isFileReferenceKind,
 } from "@/features/clipboard/lib/clipboard-board";
+import { useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import {
   getExternalLinkTargetFromEventTarget,
   openExternalLink,
@@ -58,7 +68,6 @@ import type { ClipboardCapture } from "@/types/shell";
 const MIN_IMAGE_SCALE = 0.8;
 const DEFAULT_IMAGE_SCALE = 1;
 const MAX_IMAGE_SCALE = 6;
-type TextPreviewMode = "preview" | "raw_text" | "raw_rich";
 type ClipboardTranslate = (
   key: TranslationKey<"clipboard">,
   options?: {
@@ -97,6 +106,9 @@ export function CaptureDetailPreview({
   );
   const assetSrc = useClipboardAssetSrc(
     capture.contentKind === "image" ? capture.assetPath : null,
+  );
+  const linkIconSrc = useClipboardAssetSrc(
+    capture.contentKind === "link" ? capture.linkMetadata?.iconPath ?? null : null,
   );
   const surfaceClassName = sharedSurface ? "" : captureSurfaceClassName(capture);
   const normalizedOcrText = capture.contentKind === "image"
@@ -152,6 +164,11 @@ export function CaptureDetailPreview({
   if (capture.contentKind === "link") {
     const target = capture.linkUrl ?? capture.rawText;
     const hostname = target ? extractHostname(target) : null;
+    const linkTitle = capture.linkMetadata?.title?.trim()
+      || capture.preview.trim()
+      || hostname
+      || t("preview.titles.linkFallback");
+    const linkDescription = capture.linkMetadata?.description?.trim() || "";
 
     return (
       <section className={cn(surfaceClassName, "flex h-full min-h-0 min-w-0 flex-col overflow-hidden")}>
@@ -175,10 +192,35 @@ export function CaptureDetailPreview({
         />
         <div className="flex min-h-0 flex-1 flex-col items-start justify-between px-4 pb-4 pt-4 text-left">
           <div className="space-y-2.5">
-            <div className="space-y-2">
-              <p className="app-kind-text-link text-lg font-semibold leading-7">
-                {hostname ?? t("preview.titles.linkFallback")}
-              </p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-border/55 bg-background/70 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+                  {linkIconSrc ? (
+                    <img
+                      src={linkIconSrc}
+                      alt={linkTitle}
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <Link2 className="size-5 text-muted-foreground/75" />
+                  )}
+                </span>
+                <div className="min-w-0 space-y-1.5">
+                  <p className="app-kind-text-link line-clamp-2 text-lg font-semibold leading-7">
+                    {linkTitle}
+                  </p>
+                  {hostname ? (
+                    <p className="text-[12px] font-medium tracking-[0.02em] text-muted-foreground/80">
+                      {hostname}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              {linkDescription ? (
+                <p className="app-selectable line-clamp-4 max-w-[62ch] text-[13px] leading-6 text-foreground/78">
+                  {linkDescription}
+                </p>
+              ) : null}
               <p className="app-selectable break-all font-mono text-[13px] leading-6 text-muted-foreground/86">
                 {target}
               </p>
@@ -226,7 +268,9 @@ function TextCapturePreview({
   toolbarActions?: ReactNode;
 }) {
   const t = useScopedT("clipboard");
-  const [mode, setMode] = useState<TextPreviewMode>(() => preferredTextPreviewMode(capture));
+  const previewModeCaptureId = useClipboardBoardStore((state) => state.previewModeCaptureId);
+  const selectedPreviewMode = useClipboardBoardStore((state) => state.selectedPreviewMode);
+  const setSelectedPreviewMode = useClipboardBoardStore((state) => state.setSelectedPreviewMode);
   const normalizedMarkdownSource = normalizeMarkdownSource(capture.rawText);
   const normalizedHighlightQuery = normalizeHighlightQuery(highlightQuery);
   const deferredHighlightQuery = useDeferredValue(normalizedHighlightQuery);
@@ -234,12 +278,31 @@ function TextCapturePreview({
   const pendingScrollFrameRef = useRef<number | null>(null);
   const lastHandledScrollKeyRef = useRef<string | null>(null);
 
-  const htmlPreview = canRenderHtmlPreview(capture);
-  const markdownPreview = canRenderMarkdownPreview(capture);
-  const previewKind = markdownPreview ? "markdown" : htmlPreview ? "html" : "text";
-  const tabs = buildTextPreviewTabs(capture, previewKind, t);
+  const previewKind = canRenderMarkdownPreview(capture)
+    ? "markdown"
+    : canRenderHtmlPreview(capture)
+      ? "html"
+      : "text";
+  const tabs = buildClipboardTextPreviewTabs(capture, t);
   const showModeToggle = tabs.length > 1;
+  const preferredMode = preferredClipboardTextPreviewMode(capture);
+  const mode = resolveClipboardTextPreviewMode(
+    capture,
+    previewModeCaptureId === capture.id ? selectedPreviewMode : preferredMode,
+  );
   const previewScrollKey = `${capture.id}:${mode}:${deferredHighlightQuery}`;
+
+  useEffect(() => {
+    if (previewModeCaptureId !== capture.id || selectedPreviewMode !== mode) {
+      setSelectedPreviewMode(capture.id, mode);
+    }
+  }, [
+    capture.id,
+    mode,
+    previewModeCaptureId,
+    selectedPreviewMode,
+    setSelectedPreviewMode,
+  ]);
 
   useEffect(() => {
     if (!deferredHighlightQuery) {
@@ -311,7 +374,7 @@ function TextCapturePreview({
                 <PreviewModeButton
                   key={tab.mode}
                   active={mode === tab.mode}
-                  onClick={() => setMode(tab.mode)}
+                  onClick={() => setSelectedPreviewMode(capture.id, tab.mode)}
                 >
                   {tab.label}
                 </PreviewModeButton>
@@ -366,6 +429,7 @@ function PreviewModeButton({
   return (
     <button
       type="button"
+      tabIndex={-1}
       onClick={onClick}
       className={
         active
@@ -817,87 +881,6 @@ function PreviewEmptyState({
       </p>
     </div>
   );
-}
-
-function preferredTextPreviewMode(capture: ClipboardCapture): TextPreviewMode {
-  return markdownLooksSupported(capture) || canRenderHtmlPreview(capture)
-    ? "preview"
-    : "raw_text";
-}
-
-function canRenderHtmlPreview(capture: ClipboardCapture) {
-  return capture.contentKind === "rich_text"
-    && capture.rawRichFormat === "html"
-    && Boolean(capture.rawRich?.trim());
-}
-
-function canRenderMarkdownPreview(capture: ClipboardCapture) {
-  if (capture.contentKind === "link" || capture.contentKind === "image" || isFileReferenceKind(capture.contentKind)) {
-    return false;
-  }
-
-  return looksLikeMarkdown(normalizeMarkdownSource(capture.rawText));
-}
-
-function markdownLooksSupported(capture: ClipboardCapture) {
-  return canRenderMarkdownPreview(capture);
-}
-
-function buildTextPreviewTabs(
-  capture: ClipboardCapture,
-  previewKind: "markdown" | "html" | "text",
-  t: ClipboardTranslate,
-) {
-  const tabs: Array<{ mode: TextPreviewMode; label: string }> = [];
-
-  if (previewKind === "markdown") {
-    tabs.push({ mode: "preview", label: t("preview.tabs.markdown") });
-  } else if (previewKind === "html") {
-    tabs.push({ mode: "preview", label: t("preview.tabs.richText") });
-  }
-
-  if (capture.rawText.trim()) {
-    tabs.push({ mode: "raw_text", label: t("preview.tabs.text") });
-  }
-
-  if (capture.rawRich?.trim()) {
-    tabs.push({
-      mode: "raw_rich",
-      label: capture.rawRichFormat === "html"
-        ? t("preview.tabs.html")
-        : t("preview.tabs.rawRich"),
-    });
-  }
-
-  if (tabs.length === 0) {
-    tabs.push({ mode: "raw_text", label: t("preview.tabs.raw") });
-  }
-
-  return tabs;
-}
-
-function looksLikeMarkdown(input: string) {
-  const normalized = input.trim();
-  if (!normalized) {
-    return false;
-  }
-
-  return [
-    /^#{1,6}\s/m,
-    /^>\s/m,
-    /^(-|\*|\+)\s/m,
-    /^\d+\.\s/m,
-    /```/,
-    /\|.+\|/,
-    /\[[^\]]+\]\([^)]+\)/,
-    /(\*\*|__)[^*_]+(\*\*|__)/,
-    /`[^`\n]+`/,
-    /~~[^~]+~~/,
-  ].some((pattern) => pattern.test(normalized));
-}
-
-function normalizeMarkdownSource(input: string) {
-  return input.replace(/[\u200B-\u200D\uFEFF]/g, "");
 }
 
 function normalizeOcrText(input: string | null | undefined) {

@@ -22,12 +22,20 @@ type ActiveShortcutScope = {
   reservedAccelerators: string[];
 };
 
+type ActiveShortcutPolicy = {
+  id: string;
+  ownedScopes: ShortcutScopeId[];
+  preventDefaultAccelerators: string[];
+  reservedAccelerators: string[];
+};
+
 export type LocalShortcutHandling =
   | {
       execution: ShortcutExecution;
       type: "execution";
     }
   | {
+      preventDefault: boolean;
       scopeId: ShortcutScopeId;
       type: "blocked";
     };
@@ -120,30 +128,7 @@ export function findLocalShortcutExecution(
       && matchesShortcutEvent(event, shortcut.accelerator, platform),
   );
 
-  for (let index = scopes.length - 1; index >= 0; index -= 1) {
-    const scopeId = scopes[index];
-    const shortcut = resolved.find((candidate) => candidate.scopes.includes(scopeId));
-    if (!shortcut) {
-      continue;
-    }
-
-    const execution = createShortcutExecution(shortcut, {
-      commands,
-      platform,
-      trigger: {
-        event,
-        platform,
-        scopeId,
-        source: "local",
-      },
-    });
-
-    if (execution) {
-      return execution;
-    }
-  }
-
-  return null;
+  return findExecutionForScopeIds(resolved, commands, platform, scopes, event);
 }
 
 export function findLocalShortcutHandling(
@@ -152,6 +137,7 @@ export function findLocalShortcutHandling(
   overrides: Record<string, ShortcutBindingOverride>,
   platform: ShortcutPlatform,
   scopes: ActiveShortcutScope[],
+  policies: ActiveShortcutPolicy[],
   event: KeyboardEvent,
   locale?: string,
 ): LocalShortcutHandling | null {
@@ -171,31 +157,72 @@ export function findLocalShortcutHandling(
       && matchesShortcutEvent(event, shortcut.accelerator, platform),
   );
 
-  for (let index = scopes.length - 1; index >= 0; index -= 1) {
-    const scope = scopes[index];
-    const shortcut = resolved.find((candidate) => candidate.scopes.includes(scope.id));
-    if (shortcut) {
-      const execution = createShortcutExecution(shortcut, {
-        commands,
-        platform,
-        trigger: {
-          event,
-          platform,
-          scopeId: scope.id,
-          source: "local",
-        },
-      });
+  for (let index = policies.length - 1; index >= 0; index -= 1) {
+    const policy = policies[index];
+    const availableScopeIds = findAvailableScopeIds(scopes, policy.ownedScopes);
+    if (availableScopeIds.length === 0) {
+      continue;
+    }
+    const execution = findExecutionForScopeIds(
+      resolved,
+      commands,
+      platform,
+      availableScopeIds,
+      event,
+    );
 
-      if (execution) {
-        return {
-          execution,
-          type: "execution",
-        };
-      }
+    if (execution) {
+      return {
+        execution,
+        type: "execution",
+      };
     }
 
-    if (scope.reservedAccelerators.some((accelerator) => matchesShortcutEvent(event, accelerator, platform))) {
+    if (
+      policy.preventDefaultAccelerators.some((accelerator) =>
+        matchesShortcutEvent(event, accelerator, platform))
+    ) {
       return {
+        preventDefault: true,
+        scopeId: availableScopeIds[availableScopeIds.length - 1] ?? policy.ownedScopes[0] ?? policy.id,
+        type: "blocked",
+      };
+    }
+
+    if (
+      policy.reservedAccelerators.some((accelerator) =>
+        matchesShortcutEvent(event, accelerator, platform))
+    ) {
+      return {
+        preventDefault: false,
+        scopeId: availableScopeIds[availableScopeIds.length - 1] ?? policy.ownedScopes[0] ?? policy.id,
+        type: "blocked",
+      };
+    }
+  }
+
+  for (let index = scopes.length - 1; index >= 0; index -= 1) {
+    const scope = scopes[index];
+    const execution = findExecutionForScopeIds(
+      resolved,
+      commands,
+      platform,
+      [scope.id],
+      event,
+    );
+    if (execution) {
+      return {
+        execution,
+        type: "execution",
+      };
+    }
+
+    if (
+      scope.reservedAccelerators.some((accelerator) =>
+        matchesShortcutEvent(event, accelerator, platform))
+    ) {
+      return {
+        preventDefault: false,
         scopeId: scope.id,
         type: "blocked",
       };
@@ -231,4 +258,52 @@ export async function executeShortcutExecution(
   execution: ShortcutExecution,
 ) {
   await commands.execute(execution.shortcut.command.id, execution.payload);
+}
+
+function findExecutionForScopeIds(
+  resolved: Array<
+    ResolvedShortcutDefinition & {
+      allowInEditable?: boolean;
+      allowRepeat?: boolean;
+      kind: "local";
+      scopes: ShortcutScopeId[];
+    }
+  >,
+  commands: CommandExecutor,
+  platform: ShortcutPlatform,
+  scopeIds: ShortcutScopeId[],
+  event: KeyboardEvent,
+) {
+  for (let index = scopeIds.length - 1; index >= 0; index -= 1) {
+    const scopeId = scopeIds[index];
+    const shortcut = resolved.find((candidate) => candidate.scopes.includes(scopeId));
+    if (!shortcut) {
+      continue;
+    }
+
+    const execution = createShortcutExecution(shortcut, {
+      commands,
+      platform,
+      trigger: {
+        event,
+        platform,
+        scopeId,
+        source: "local",
+      },
+    });
+
+    if (execution) {
+      return execution;
+    }
+  }
+
+  return null;
+}
+
+function findAvailableScopeIds(
+  activeScopes: ActiveShortcutScope[],
+  scopeIds: ShortcutScopeId[],
+) {
+  const activeScopeIds = new Set(activeScopes.map((scope) => scope.id));
+  return scopeIds.filter((scopeId) => activeScopeIds.has(scopeId));
 }

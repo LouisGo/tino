@@ -1,6 +1,46 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(default, rename_all = "camelCase")]
+pub struct LinkMetadata {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub icon_path: Option<String>,
+    pub fetched_at: String,
+    pub fetch_status: LinkMetadataFetchStatus,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum LinkMetadataFetchStatus {
+    #[default]
+    Pending,
+    Ready,
+    Skipped,
+    Failed,
+}
+
+impl LinkMetadataFetchStatus {
+    pub fn from_storage_label(value: &str) -> Self {
+        match value.trim() {
+            "ready" => Self::Ready,
+            "skipped" => Self::Skipped,
+            "failed" => Self::Failed,
+            _ => Self::Pending,
+        }
+    }
+
+    pub fn as_storage_label(self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Ready => "ready",
+            Self::Skipped => "skipped",
+            Self::Failed => "failed",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
 #[serde(default, rename_all = "camelCase")]
 pub struct CapturePreview {
@@ -21,6 +61,7 @@ pub struct CapturePreview {
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
     pub link_url: Option<String>,
+    pub link_metadata: Option<LinkMetadata>,
     pub asset_path: Option<String>,
     pub thumbnail_path: Option<String>,
     pub image_width: Option<u32>,
@@ -133,6 +174,7 @@ pub struct CaptureRecord {
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
     pub link_url: Option<String>,
+    pub link_metadata: Option<LinkMetadata>,
     pub asset_path: Option<String>,
     pub thumbnail_path: Option<String>,
     pub image_width: Option<u32>,

@@ -6,7 +6,9 @@ use crate::backend::clipboard_history::legacy::{
     load_recent_clipboard_captures_legacy, query_clipboard_history_page_legacy,
 };
 use crate::clipboard::preview::hydrate_capture_preview_assets;
-use crate::clipboard::types::{CapturePreview, ClipboardPage, ClipboardPageRequest};
+use crate::clipboard::types::{
+    CapturePreview, ClipboardPage, ClipboardPageRequest, LinkMetadata, LinkMetadataFetchStatus,
+};
 use crate::storage::capture_history_store::{
     CaptureHistoryEntry, CaptureHistoryQuery, CaptureHistoryStore, CaptureHistorySummary,
 };
@@ -135,6 +137,8 @@ fn load_recent_clipboard_captures_from_store(
 }
 
 fn capture_history_entry_to_preview(entry: CaptureHistoryEntry) -> CapturePreview {
+    let link_metadata = capture_history_entry_link_metadata(&entry);
+
     CapturePreview {
         id: entry.id,
         source: entry.source,
@@ -152,12 +156,30 @@ fn capture_history_entry_to_preview(entry: CaptureHistoryEntry) -> CapturePrevie
         raw_rich: entry.raw_rich,
         raw_rich_format: entry.raw_rich_format,
         link_url: entry.link_url,
+        link_metadata,
         asset_path: entry.asset_path,
         thumbnail_path: entry.thumbnail_path,
         image_width: entry.image_width,
         image_height: entry.image_height,
         byte_size: entry.byte_size,
     }
+}
+
+fn capture_history_entry_link_metadata(entry: &CaptureHistoryEntry) -> Option<LinkMetadata> {
+    let fetched_at = entry.link_metadata_fetched_at.as_deref()?.trim();
+    if fetched_at.is_empty() {
+        return None;
+    }
+
+    Some(LinkMetadata {
+        title: entry.link_title.clone(),
+        description: entry.link_description.clone(),
+        icon_path: entry.link_icon_path.clone(),
+        fetched_at: fetched_at.to_string(),
+        fetch_status: LinkMetadataFetchStatus::from_storage_label(
+            entry.link_metadata_fetch_status.as_deref().unwrap_or(""),
+        ),
+    })
 }
 
 fn capture_history_summary_to_page_summary(
@@ -210,6 +232,7 @@ mod tests {
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,
+            link_metadata: None,
             asset_path: None,
             thumbnail_path: None,
             image_width: None,

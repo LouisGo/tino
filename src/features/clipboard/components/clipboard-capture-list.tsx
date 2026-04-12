@@ -508,6 +508,9 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
       ? capture.thumbnailPath
       : null,
   );
+  const linkIconSrc = useClipboardAssetSrc(
+    capture.contentKind === "link" ? capture.linkMetadata?.iconPath ?? null : null,
+  );
 
   if ((capture.contentKind === "image" || capture.contentKind === "video") && thumbnailSrc) {
     return (
@@ -528,6 +531,20 @@ function CaptureThumb({ capture }: { capture: ClipboardCapture }) {
             </span>
           </span>
         ) : null}
+      </div>
+    );
+  }
+
+  if (capture.contentKind === "link" && linkIconSrc) {
+    return (
+      <div className="relative size-[30px] shrink-0 overflow-hidden rounded-[10px] border border-border/45 bg-background/72">
+        <img
+          src={linkIconSrc}
+          alt={capture.preview || t("capture.kinds.link")}
+          loading="lazy"
+          decoding="async"
+          className="size-full object-cover"
+        />
       </div>
     );
   }

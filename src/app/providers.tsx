@@ -21,7 +21,10 @@ import {
   syncLocalePreference,
 } from "@/i18n";
 import { queryClient } from "@/app/query-client";
-import { resetClipboardCapturePauseGuideDismissed } from "@/features/clipboard/lib/clipboard-capture-pause-guide";
+import {
+  resetClipboardCapturePauseGuideDismissed,
+  shouldResetClipboardCapturePauseGuideDismissed,
+} from "@/features/clipboard/lib/clipboard-capture-pause-guide";
 import { useClipboardAccessibilityPermissionFlow } from "@/features/clipboard/hooks/use-clipboard-accessibility-permission-flow";
 import {
   preloadClipboardSourceAppIcons,
@@ -293,7 +296,12 @@ function AppShellRuntime({ router }: AppProvidersProps) {
         return;
       }
 
-      if (payload.saved.clipboardCaptureEnabled) {
+      if (
+        shouldResetClipboardCapturePauseGuideDismissed(
+          payload.previous,
+          payload.saved,
+        )
+      ) {
         resetClipboardCapturePauseGuideDismissed();
       }
 

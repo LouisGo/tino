@@ -11,7 +11,7 @@ use rusqlite::{params, params_from_iter, types::Value, Connection, OptionalExten
 use crate::backend::clipboard_history::search::parse_clipboard_history_search;
 
 const SQLITE_FILE_NAME: &str = "tino.db";
-const CAPTURE_HISTORY_SCHEMA_VERSION: i32 = 4;
+const CAPTURE_HISTORY_SCHEMA_VERSION: i32 = 5;
 
 #[derive(Debug, Clone)]
 pub struct CaptureHistoryUpsert {
@@ -30,6 +30,11 @@ pub struct CaptureHistoryUpsert {
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
     pub link_url: Option<String>,
+    pub link_title: Option<String>,
+    pub link_description: Option<String>,
+    pub link_icon_path: Option<String>,
+    pub link_metadata_fetched_at: Option<String>,
+    pub link_metadata_fetch_status: Option<String>,
     pub asset_path: Option<String>,
     pub thumbnail_path: Option<String>,
     pub image_width: Option<u32>,
@@ -55,6 +60,11 @@ pub struct CaptureHistoryEntry {
     pub raw_rich: Option<String>,
     pub raw_rich_format: Option<String>,
     pub link_url: Option<String>,
+    pub link_title: Option<String>,
+    pub link_description: Option<String>,
+    pub link_icon_path: Option<String>,
+    pub link_metadata_fetched_at: Option<String>,
+    pub link_metadata_fetch_status: Option<String>,
     pub asset_path: Option<String>,
     pub thumbnail_path: Option<String>,
     pub image_width: Option<u32>,
@@ -127,6 +137,11 @@ impl CaptureHistoryStore {
                     raw_rich,
                     raw_rich_format,
                     link_url,
+                    link_title,
+                    link_description,
+                    link_icon_path,
+                    link_metadata_fetched_at,
+                    link_metadata_fetch_status,
                     asset_path,
                     thumbnail_path,
                     image_width,
@@ -137,7 +152,7 @@ impl CaptureHistoryStore {
                     updated_at
                 )
                 VALUES (
-                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25
+                    ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30
                 )
                 ON CONFLICT(id) DO UPDATE SET
                     captured_at = excluded.captured_at,
@@ -156,6 +171,11 @@ impl CaptureHistoryStore {
                     raw_rich = excluded.raw_rich,
                     raw_rich_format = excluded.raw_rich_format,
                     link_url = excluded.link_url,
+                    link_title = excluded.link_title,
+                    link_description = excluded.link_description,
+                    link_icon_path = excluded.link_icon_path,
+                    link_metadata_fetched_at = excluded.link_metadata_fetched_at,
+                    link_metadata_fetch_status = excluded.link_metadata_fetch_status,
                     asset_path = excluded.asset_path,
                     thumbnail_path = excluded.thumbnail_path,
                     image_width = excluded.image_width,
@@ -182,6 +202,11 @@ impl CaptureHistoryStore {
                     capture.raw_rich.as_deref(),
                     capture.raw_rich_format.as_deref(),
                     capture.link_url.as_deref(),
+                    capture.link_title.as_deref(),
+                    capture.link_description.as_deref(),
+                    capture.link_icon_path.as_deref(),
+                    capture.link_metadata_fetched_at.as_deref(),
+                    capture.link_metadata_fetch_status.as_deref(),
                     capture.asset_path.as_deref(),
                     capture.thumbnail_path.as_deref(),
                     capture.image_width,
@@ -275,6 +300,11 @@ impl CaptureHistoryStore {
                     raw_rich,
                     raw_rich_format,
                     link_url,
+                    link_title,
+                    link_description,
+                    link_icon_path,
+                    link_metadata_fetched_at,
+                    link_metadata_fetch_status,
                     asset_path,
                     thumbnail_path,
                     image_width,
@@ -347,6 +377,11 @@ impl CaptureHistoryStore {
                         raw_rich,
                         raw_rich_format,
                         link_url,
+                        link_title,
+                        link_description,
+                        link_icon_path,
+                        link_metadata_fetched_at,
+                        link_metadata_fetch_status,
                         asset_path,
                         thumbnail_path,
                         image_width,
@@ -356,7 +391,7 @@ impl CaptureHistoryStore {
                         created_at,
                         updated_at
                     ) VALUES (
-                        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25
+                        ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29, ?30
                     )
                     "#,
                 )
@@ -385,6 +420,11 @@ impl CaptureHistoryStore {
                         capture.raw_rich.as_deref(),
                         capture.raw_rich_format.as_deref(),
                         capture.link_url.as_deref(),
+                        capture.link_title.as_deref(),
+                        capture.link_description.as_deref(),
+                        capture.link_icon_path.as_deref(),
+                        capture.link_metadata_fetched_at.as_deref(),
+                        capture.link_metadata_fetch_status.as_deref(),
                         capture.asset_path.as_deref(),
                         capture.thumbnail_path.as_deref(),
                         capture.image_width,
@@ -433,6 +473,108 @@ impl CaptureHistoryStore {
                   AND (ocr_text IS NULL OR ocr_text <> ?1)
                 "#,
                 params![normalized, now_rfc3339(), capture_id],
+            )
+            .map_err(|error| error.to_string())?;
+
+        Ok(changed > 0)
+    }
+
+    pub fn update_capture_link_metadata(
+        &self,
+        capture_id: &str,
+        preview: &str,
+        secondary_preview: Option<&str>,
+        link_title: Option<&str>,
+        link_description: Option<&str>,
+        link_icon_path: Option<&str>,
+        link_metadata_fetched_at: &str,
+        link_metadata_fetch_status: &str,
+    ) -> Result<bool, String> {
+        let normalized_capture_id = capture_id.trim();
+        let normalized_preview = preview.trim();
+        let normalized_fetched_at = link_metadata_fetched_at.trim();
+        let normalized_status = link_metadata_fetch_status.trim();
+
+        if normalized_capture_id.is_empty()
+            || normalized_preview.is_empty()
+            || normalized_fetched_at.is_empty()
+            || normalized_status.is_empty()
+        {
+            return Ok(false);
+        }
+
+        let connection = self.open_connection()?;
+        let current = connection
+            .query_row(
+                r#"
+                SELECT
+                    preview,
+                    secondary_preview,
+                    link_title,
+                    link_description,
+                    link_icon_path,
+                    link_metadata_fetched_at,
+                    link_metadata_fetch_status
+                FROM capture_history
+                WHERE id = ?1
+                "#,
+                [normalized_capture_id],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                        row.get::<_, Option<String>>(4)?,
+                        row.get::<_, Option<String>>(5)?,
+                        row.get::<_, Option<String>>(6)?,
+                    ))
+                },
+            )
+            .optional()
+            .map_err(|error| error.to_string())?;
+
+        let Some(current) = current else {
+            return Ok(false);
+        };
+
+        if current.0 == normalized_preview
+            && current.1.as_deref() == secondary_preview
+            && current.2.as_deref() == link_title
+            && current.3.as_deref() == link_description
+            && current.4.as_deref() == link_icon_path
+            && current.5.as_deref() == Some(normalized_fetched_at)
+            && current.6.as_deref() == Some(normalized_status)
+        {
+            return Ok(false);
+        }
+
+        let changed = connection
+            .execute(
+                r#"
+                UPDATE capture_history
+                SET
+                    preview = ?1,
+                    secondary_preview = ?2,
+                    link_title = ?3,
+                    link_description = ?4,
+                    link_icon_path = ?5,
+                    link_metadata_fetched_at = ?6,
+                    link_metadata_fetch_status = ?7,
+                    updated_at = ?8
+                WHERE id = ?9
+                "#,
+                params![
+                    normalized_preview,
+                    secondary_preview,
+                    link_title,
+                    link_description,
+                    link_icon_path,
+                    normalized_fetched_at,
+                    normalized_status,
+                    now_rfc3339(),
+                    normalized_capture_id,
+                ],
             )
             .map_err(|error| error.to_string())?;
 
@@ -574,6 +716,11 @@ fn run_migrations(connection: &Connection) -> Result<(), String> {
                 raw_rich TEXT,
                 raw_rich_format TEXT,
                 link_url TEXT,
+                link_title TEXT,
+                link_description TEXT,
+                link_icon_path TEXT,
+                link_metadata_fetched_at TEXT,
+                link_metadata_fetch_status TEXT,
                 asset_path TEXT,
                 thumbnail_path TEXT,
                 image_width INTEGER,
@@ -603,6 +750,42 @@ fn run_migrations(connection: &Connection) -> Result<(), String> {
         connection
             .execute(
                 "ALTER TABLE capture_history ADD COLUMN captured_at_epoch_ms INTEGER NOT NULL DEFAULT 0",
+                [],
+            )
+            .map_err(|error| error.to_string())?;
+    }
+
+    if !column_exists(connection, "capture_history", "link_title")? {
+        connection
+            .execute("ALTER TABLE capture_history ADD COLUMN link_title TEXT", [])
+            .map_err(|error| error.to_string())?;
+    }
+
+    if !column_exists(connection, "capture_history", "link_description")? {
+        connection
+            .execute("ALTER TABLE capture_history ADD COLUMN link_description TEXT", [])
+            .map_err(|error| error.to_string())?;
+    }
+
+    if !column_exists(connection, "capture_history", "link_icon_path")? {
+        connection
+            .execute("ALTER TABLE capture_history ADD COLUMN link_icon_path TEXT", [])
+            .map_err(|error| error.to_string())?;
+    }
+
+    if !column_exists(connection, "capture_history", "link_metadata_fetched_at")? {
+        connection
+            .execute(
+                "ALTER TABLE capture_history ADD COLUMN link_metadata_fetched_at TEXT",
+                [],
+            )
+            .map_err(|error| error.to_string())?;
+    }
+
+    if !column_exists(connection, "capture_history", "link_metadata_fetch_status")? {
+        connection
+            .execute(
+                "ALTER TABLE capture_history ADD COLUMN link_metadata_fetch_status TEXT",
                 [],
             )
             .map_err(|error| error.to_string())?;
@@ -793,6 +976,11 @@ fn query_filtered_captures(
             raw_rich,
             raw_rich_format,
             link_url,
+            link_title,
+            link_description,
+            link_icon_path,
+            link_metadata_fetched_at,
+            link_metadata_fetch_status,
             asset_path,
             thumbnail_path,
             image_width,
@@ -910,11 +1098,16 @@ fn map_capture_history_entry_row(row: &Row<'_>) -> rusqlite::Result<CaptureHisto
         raw_rich: row.get(12)?,
         raw_rich_format: row.get(13)?,
         link_url: row.get(14)?,
-        asset_path: row.get(15)?,
-        thumbnail_path: row.get(16)?,
-        image_width: row.get(17)?,
-        image_height: row.get(18)?,
-        byte_size: row.get(19)?,
+        link_title: row.get(15)?,
+        link_description: row.get(16)?,
+        link_icon_path: row.get(17)?,
+        link_metadata_fetched_at: row.get(18)?,
+        link_metadata_fetch_status: row.get(19)?,
+        asset_path: row.get(20)?,
+        thumbnail_path: row.get(21)?,
+        image_width: row.get(22)?,
+        image_height: row.get(23)?,
+        byte_size: row.get(24)?,
     })
 }
 
@@ -968,6 +1161,11 @@ mod tests {
             raw_rich: None,
             raw_rich_format: None,
             link_url: None,
+            link_title: None,
+            link_description: None,
+            link_icon_path: None,
+            link_metadata_fetched_at: None,
+            link_metadata_fetch_status: None,
             asset_path: None,
             thumbnail_path: None,
             image_width: None,

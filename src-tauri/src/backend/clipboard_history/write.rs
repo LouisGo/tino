@@ -5,10 +5,11 @@ use log::warn;
 use crate::{
     backend::clipboard_history::legacy::{
         append_clipboard_history_entry, delete_clipboard_history_entry,
-        promote_clipboard_history_entry, update_clipboard_history_ocr_text,
+        promote_clipboard_history_entry, update_clipboard_history_link_metadata,
+        update_clipboard_history_ocr_text,
     },
     backend::clipboard_history::migration::reconcile_capture_history_store,
-    clipboard::types::{CapturePreview, DeleteClipboardCaptureResult},
+    clipboard::types::{CapturePreview, DeleteClipboardCaptureResult, LinkMetadata},
     storage::capture_history_store::{CaptureHistoryStore, CaptureHistoryUpsert},
 };
 
@@ -125,6 +126,56 @@ pub(crate) fn update_capture_ocr_text_with_fallback(
             {
                 warn!(
                     "failed to repair sqlite capture history store after OCR update: {sync_error}"
+                );
+            }
+            false
+        }
+    };
+
+    Ok(updated_history || updated_store)
+}
+
+pub(crate) fn update_capture_link_metadata_with_fallback(
+    clipboard_cache_root: &Path,
+    history_days: u16,
+    capture_id: &str,
+    preview: &str,
+    secondary_preview: Option<&str>,
+    link_metadata: &LinkMetadata,
+) -> Result<bool, String> {
+    let updated_history = match update_clipboard_history_link_metadata(
+        clipboard_cache_root,
+        history_days,
+        capture_id,
+        link_metadata,
+    ) {
+        Ok(updated) => updated,
+        Err(error) => {
+            warn!("failed to update capture link metadata in jsonl history: {error}");
+            false
+        }
+    };
+
+    let updated_store = match CaptureHistoryStore::new(clipboard_cache_root).and_then(|store| {
+        store.update_capture_link_metadata(
+            capture_id,
+            preview,
+            secondary_preview,
+            link_metadata.title.as_deref(),
+            link_metadata.description.as_deref(),
+            link_metadata.icon_path.as_deref(),
+            &link_metadata.fetched_at,
+            link_metadata.fetch_status.as_storage_label(),
+        )
+    }) {
+        Ok(updated) => updated,
+        Err(error) => {
+            warn!("failed to update capture link metadata in sqlite store: {error}");
+            if let Err(sync_error) =
+                reconcile_capture_history_store(clipboard_cache_root, history_days)
+            {
+                warn!(
+                    "failed to repair sqlite capture history store after link metadata update: {sync_error}"
                 );
             }
             false

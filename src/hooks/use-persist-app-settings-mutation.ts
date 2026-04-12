@@ -2,7 +2,10 @@ import PQueue from "p-queue";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/app/query-keys";
-import { resetClipboardCapturePauseGuideDismissed } from "@/features/clipboard/lib/clipboard-capture-pause-guide";
+import {
+  resetClipboardCapturePauseGuideDismissed,
+  shouldResetClipboardCapturePauseGuideDismissed,
+} from "@/features/clipboard/lib/clipboard-capture-pause-guide";
 import {
   applyIncomingAppSettingsChange,
 } from "@/lib/app-settings-sync";
@@ -83,7 +86,12 @@ export function usePersistAppSettingsMutation(options?: {
         saved: result.saved,
       });
 
-      if (result.saved.clipboardCaptureEnabled) {
+      if (
+        shouldResetClipboardCapturePauseGuideDismissed(
+          result.previousPersisted,
+          result.saved,
+        )
+      ) {
         resetClipboardCapturePauseGuideDismissed();
       }
 

@@ -17,6 +17,11 @@ import {
   clipboardPinsChangedUpdate,
   invalidateClipboardQueriesForUpdate,
 } from "@/features/clipboard/lib/clipboard-capture-sync";
+import {
+  cycleClipboardTextPreviewMode,
+  getClipboardTextPreviewModes,
+  resolveClipboardTextPreviewMode,
+} from "@/features/clipboard/lib/clipboard-preview-modes";
 import { hideClipboardWindowForNextOpen } from "@/features/clipboard/lib/clipboard-window-session";
 import {
   selectClipboardSearchFocusBlockingLayer,
@@ -73,6 +78,10 @@ type ClipboardSelectionBoundaryPayload = {
 
 type ClipboardConfirmSelectionPayload = {
   captureId?: string;
+};
+
+type ClipboardPreviewModeDirectionPayload = {
+  direction: "next" | "previous";
 };
 
 const GENERIC_PASTE_BACK_ERROR = "Clipboard content could not be returned to the previous app.";
@@ -141,6 +150,19 @@ function getCaptureForExternalOpen(
   payload?: ClipboardOpenCapturePayload,
 ) {
   return payload?.capture ?? getSelectedVisibleCapture();
+}
+
+function getSelectedPreviewMode() {
+  const store = useClipboardBoardStore.getState();
+  const capture = getSelectedVisibleCapture();
+  if (!capture) {
+    return null;
+  }
+
+  return resolveClipboardTextPreviewMode(
+    capture,
+    store.previewModeCaptureId === capture.id ? store.selectedPreviewMode : null,
+  );
 }
 
 function canOpenCaptureExternally(capture: ClipboardCapture | null) {
@@ -289,6 +311,56 @@ export const clipboardCommands = [
       }
 
       useClipboardBoardStore.getState().setSelectedCaptureId(targetCapture.id);
+    },
+  }),
+  defineCommand<ClipboardPreviewModeDirectionPayload, void>({
+    id: "clipboard.cyclePreviewMode",
+    label: "Cycle Clipboard Preview Mode",
+    isEnabled: ({ direction }) => {
+      const capture = getSelectedVisibleCapture();
+      if (!capture) {
+        return false;
+      }
+
+      return (
+        (direction === "next" || direction === "previous")
+        && !hasActiveClipboardPreview()
+        && !hasOpenClipboardTransientLayer()
+        && getClipboardTextPreviewModes(capture).length > 1
+      );
+    },
+    run: ({ direction }: ClipboardPreviewModeDirectionPayload) => {
+      const capture = getSelectedVisibleCapture();
+      if (!capture) {
+        return;
+      }
+
+      const nextMode = cycleClipboardTextPreviewMode(
+        capture,
+        getSelectedPreviewMode(),
+        direction,
+      );
+      useClipboardBoardStore.getState().setSelectedPreviewMode(capture.id, nextMode);
+    },
+  }),
+  defineCommand<void, void>({
+    id: "clipboard.focusSearch",
+    label: "Focus Clipboard Search",
+    isEnabled: () =>
+      !hasActiveClipboardPreview()
+      && !hasOpenClipboardTransientLayer(),
+    run: () => {
+      useClipboardBoardStore.getState().requestSearchInputFocus();
+    },
+  }),
+  defineCommand<void, void>({
+    id: "clipboard.openFilter",
+    label: "Open Clipboard Filter",
+    isEnabled: () =>
+      !hasActiveClipboardPreview()
+      && !hasOpenClipboardTransientLayer(),
+    run: () => {
+      useClipboardBoardStore.getState().setIsFilterSelectOpen(true);
     },
   }),
   defineCommand<void, void>({

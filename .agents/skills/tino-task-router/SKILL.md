@@ -24,6 +24,11 @@ Choose the smallest valid context set. This skill is a router, not a second sour
   Read `.agents/skills/tino-rust-boundaries/SKILL.md`.
   Read `docs/03-planning/技术冻结记录.md`.
   Add `docs/03-planning/HANDOFF.md` only if you need current implementation gaps versus the target IPC model.
+- New feature module, large cross-cutting feature, or “implement this whole capability in the repo’s standard way”:
+  Read `AGENTS.md`.
+  Read `.agents/skills/tino-feature-playbook/SKILL.md`.
+  Add `.agents/skills/tino-rust-boundaries/SKILL.md` if Rust/Tauri IPC or ownership is involved.
+  Add `docs/03-planning/HANDOFF.md` only if you need current behavior constraints.
 - `/ai` page, hidden intervention semantics, `applyBatchDecision`, live batch, queue/batches/reviews, empty-state debugging, or mock injection:
   Read `.agents/skills/tino-ai-review-phase1/SKILL.md`.
 - AI runtime layering, provider-vs-runtime split, workflow design, phase sequencing, or persistence planning:

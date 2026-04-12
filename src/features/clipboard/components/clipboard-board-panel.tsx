@@ -665,12 +665,30 @@ function ClipboardShortcutHelpDialogBody({ windowMode }: { windowMode: boolean }
       shortcutIds: ["contextMenu.openActiveTarget"],
     },
     {
+      id: "cycle-preview-modes",
+      description: t("dialogs.shortcuts.rows.cyclePreviewModes"),
+      shortcutIds: [
+        "clipboard.cyclePreviewModeBackward",
+        "clipboard.cyclePreviewModeForward",
+      ],
+    },
+    {
       id: "move-between-captures",
       description: t("dialogs.shortcuts.rows.moveBetweenCaptures"),
       shortcutIds: [
         "clipboard.selectPreviousCapture",
         "clipboard.selectNextCapture",
       ],
+    },
+    {
+      id: "focus-search",
+      description: t("dialogs.shortcuts.rows.focusSearch"),
+      shortcutIds: ["clipboard.focusSearch"],
+    },
+    {
+      id: "open-filter",
+      description: t("dialogs.shortcuts.rows.openFilter"),
+      shortcutIds: ["clipboard.openFilter"],
     },
     {
       id: "jump-to-edges",
@@ -760,6 +778,7 @@ function ClipboardBoardToolbar({
   const searchValue = useClipboardBoardStore((state) => state.searchValue);
   const filter = useClipboardBoardStore((state) => state.filter);
   const isFilterSelectOpen = useClipboardBoardStore((state) => state.isFilterSelectOpen);
+  const searchInputFocusRequest = useClipboardBoardStore((state) => state.searchInputFocusRequest);
   const hasClipboardFocusBlockingLayer = useClipboardBoardStore(
     selectClipboardSearchFocusBlockingLayer,
   );
@@ -775,7 +794,10 @@ function ClipboardBoardToolbar({
   const previousFocusBlockingLayerRef = useRef(hasFocusBlockingLayer);
 
   useEffect(() => {
-    if (!autoFocusSearch || searchFocusRequest === 0) {
+    if (
+      (!autoFocusSearch || searchFocusRequest === 0)
+      && searchInputFocusRequest === 0
+    ) {
       return;
     }
 
@@ -787,7 +809,7 @@ function ClipboardBoardToolbar({
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [autoFocusSearch, searchFocusRequest]);
+  }, [autoFocusSearch, searchFocusRequest, searchInputFocusRequest]);
 
   useEffect(() => {
     const wasFocusBlocked = previousFocusBlockingLayerRef.current;

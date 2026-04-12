@@ -3,6 +3,8 @@ import { useContext, useEffect } from "react";
 import { ShortcutManagerContext } from "@/core/shortcuts/context";
 import type {
   AppShortcutId,
+  ShortcutPolicyActivationOptions,
+  ShortcutPolicyId,
   ShortcutScopeActivationOptions,
   ShortcutScopeId,
 } from "@/core/shortcuts/types";
@@ -37,4 +39,38 @@ export function useShortcutScope(
 
     return manager.activateScope(scopeId, { reservedAccelerators });
   }, [active, manager, reservedAccelerators, scopeId]);
+}
+
+export function useShortcutPolicy(
+  policyId: ShortcutPolicyId,
+  options: ShortcutPolicyActivationOptions & {
+    active?: boolean;
+  },
+) {
+  const manager = useShortcutManager();
+  const active = options.active ?? true;
+  const {
+    ownedScopes,
+    preventDefaultAccelerators,
+    reservedAccelerators,
+  } = options;
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+
+    return manager.activatePolicy(policyId, {
+      ownedScopes,
+      preventDefaultAccelerators,
+      reservedAccelerators,
+    });
+  }, [
+    active,
+    manager,
+    ownedScopes,
+    policyId,
+    preventDefaultAccelerators,
+    reservedAccelerators,
+  ]);
 }

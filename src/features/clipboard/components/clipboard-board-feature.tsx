@@ -1,8 +1,12 @@
-import { useShortcutScope } from "@/core/shortcuts";
+import { useMemo } from "react";
+
+import { useShortcutPolicy, useShortcutScope } from "@/core/shortcuts";
+import { useContextMenuStore } from "@/core/context-menu";
 import { ClipboardBoardPanel } from "@/features/clipboard/components/clipboard-board-panel";
 import { ClipboardBoardSummary } from "@/features/clipboard/components/clipboard-board-summary";
 import type { ClipboardEmptyStateTone } from "@/features/clipboard/components/clipboard-empty-state";
 import { useClipboardBoardView } from "@/features/clipboard/hooks/use-clipboard-board-view";
+import { selectClipboardSearchFocusBlockingLayer, useClipboardBoardStore } from "@/features/clipboard/stores/clipboard-board-store";
 import { useScopedT } from "@/i18n";
 
 export function ClipboardBoardFeature({
@@ -18,7 +22,29 @@ export function ClipboardBoardFeature({
   autoFocusSearch?: boolean;
   searchFocusRequest?: number;
 }) {
+  const hasClipboardFocusBlockingLayer = useClipboardBoardStore(
+    selectClipboardSearchFocusBlockingLayer,
+  );
+  const isContextMenuOpen = useContextMenuStore((state) => state.isOpen);
+  const clipboardSurfaceScopes = useMemo(
+    () =>
+      windowMode
+        ? ["clipboard.window", "clipboard.panel", "clipboard.previewModes"]
+        : ["clipboard.panel", "clipboard.previewModes"],
+    [windowMode],
+  );
+  const clipboardPreviewOwnedAccelerators = useMemo(
+    () => ["Tab", "Shift+Tab"],
+    [],
+  );
+
   useShortcutScope("clipboard.panel");
+  useShortcutScope("clipboard.previewModes");
+  useShortcutPolicy("clipboard.surface", {
+    active: !hasClipboardFocusBlockingLayer && !isContextMenuOpen,
+    ownedScopes: clipboardSurfaceScopes,
+    preventDefaultAccelerators: clipboardPreviewOwnedAccelerators,
+  });
   const t = useScopedT("clipboard");
   const {
     captures,

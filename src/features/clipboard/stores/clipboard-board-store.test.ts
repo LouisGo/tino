@@ -62,6 +62,8 @@ describe("clipboard board store", () => {
       selectedCaptureId: "cap_selected",
       followsDefaultSelection: false,
       preferredSelectedCaptureId: "cap_preferred",
+      previewModeCaptureId: "cap_selected",
+      selectedPreviewMode: "raw_text",
       isFilterSelectOpen: true,
       isShortcutHelpOpen: true,
       previewingImageId: "cap_image",
@@ -77,6 +79,8 @@ describe("clipboard board store", () => {
     expect(nextState.selectedCaptureId).toBeNull();
     expect(nextState.followsDefaultSelection).toBe(true);
     expect(nextState.preferredSelectedCaptureId).toBeNull();
+    expect(nextState.previewModeCaptureId).toBeNull();
+    expect(nextState.selectedPreviewMode).toBeNull();
     expect(nextState.isFilterSelectOpen).toBe(false);
     expect(nextState.isShortcutHelpOpen).toBe(false);
     expect(nextState.previewingImageId).toBeNull();
@@ -111,5 +115,31 @@ describe("clipboard board store", () => {
       selectedCaptureId: "cap_default",
       followsDefaultSelection: true,
     });
+  });
+
+  it("drops the preview mode for a removed capture", () => {
+    const capture = createClipboardCapture({ id: "cap_remove" });
+
+    useClipboardBoardStore.setState({
+      previewModeCaptureId: capture.id,
+      selectedPreviewMode: "raw_rich",
+      visibleCaptures: [capture],
+    });
+
+    useClipboardBoardStore.getState().removeCapture(capture.id);
+
+    expect(useClipboardBoardStore.getState()).toMatchObject({
+      previewModeCaptureId: null,
+      selectedPreviewMode: null,
+    });
+  });
+
+  it("increments the search focus request when the search command asks for focus", () => {
+    const store = useClipboardBoardStore.getState();
+
+    store.requestSearchInputFocus();
+    store.requestSearchInputFocus();
+
+    expect(useClipboardBoardStore.getState().searchInputFocusRequest).toBe(2);
   });
 });
