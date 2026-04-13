@@ -1,106 +1,78 @@
 # Tino Handoff
 
-> 最后更新：2026-04-12
-> 当前基线提交：`8ac3f7f` + workspace clipboard capture/search changes
+> 最后更新：2026-04-13
+> 当前基线提交：`5630611` + working tree AI rethink planning updates
 > 角色：短版 current-state 控制文档
-> 原则：只写当前有效信息；细节用指针跳转，不在这里平铺
+> 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
 
 ## 1. 先读什么
 
 必读：
 
-1. [AGENTS.md](/Users/louistation/MySpace/Life/tino/AGENTS.md)
-2. [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
+1. [AGENTS.md](/Users/lou/Learn/tino/AGENTS.md)
+2. [技术冻结记录](/Users/lou/Learn/tino/docs/03-planning/技术冻结记录.md)
 3. 本文
 
 按任务再读：
 
-- `/ai` 页、review、mock 链路：  
-  [AI Review 当前实现与 Mock 链路说明](/Users/louistation/MySpace/Life/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
-- AI runtime 分层、后续 Phase 顺序：  
-  [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md)
+- AI 模块开发、runtime、能力边界、反馈记忆：  
+  [Tino AI Rethink 与模块开发基线 v1](/Users/lou/Learn/tino/docs/03-planning/Tino%20AI%20Rethink%20%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%BC%80%E5%8F%91%E5%9F%BA%E7%BA%BF%20v1.md)
 - 里程碑与任务拆解：  
-  [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
+  [MVP开发任务拆解](/Users/lou/Learn/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
 - 打包、环境、签名：  
-  [环境与打包流程](/Users/louistation/MySpace/Life/tino/docs/03-planning/%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.md)
+  [环境与打包流程](/Users/lou/Learn/tino/docs/03-planning/%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.md)
 - 产品目标与 AI 能力边界：  
-  [个人信息流软件需求原型文档](/Users/louistation/MySpace/Life/tino/docs/02-product/个人信息流软件需求原型文档.md)  
-  [Tino AI 能力地图 v0.2](/Users/louistation/MySpace/Life/tino/docs/02-product/Tino%20AI%20%E8%83%BD%E5%8A%9B%E5%9C%B0%E5%9B%BE%20v0.2.md)
-
-非必读归档：
-
-- [Handoff 扩展归档 2026-04-05](/Users/louistation/MySpace/Life/tino/docs/03-planning/archive/Handoff%20%E6%89%A9%E5%B1%95%E5%BD%92%E6%A1%A3%202026-04-05.md)
+  [个人信息流软件需求原型文档](/Users/lou/Learn/tino/docs/02-product/%E4%B8%AA%E4%BA%BA%E4%BF%A1%E6%81%AF%E6%B5%81%E8%BD%AF%E4%BB%B6%E9%9C%80%E6%B1%82%E5%8E%9F%E5%9E%8B%E6%96%87%E6%A1%A3.md)  
+  [Tino AI 能力地图 v0.2](/Users/lou/Learn/tino/docs/02-product/Tino%20AI%20%E8%83%BD%E5%8A%9B%E5%9C%B0%E5%9B%BE%20v0.2.md)
+- legacy `/ai` / review 资产说明（deprecated）：  
+  [AI Review 当前实现与 Mock 链路说明](/Users/lou/Learn/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
 
 ## 2. 项目一句话
 
 `Tino` 是一个运行在 `macOS` 上的个人信息流入口层工具：  
-低摩擦收集用户输入，先做原始归档，再由 AI 在后台做批量归并、生成议题与知识输出，最终以 `Markdown` 落盘给 Obsidian / 思源等系统使用。
+低摩擦收集用户输入，先做原始归档，再由后台 AI 编译成 `topics/`、`_inbox/` 等知识结果，最终以 `Markdown` 落盘给 Obsidian / 思源等系统使用。
 
 ## 3. 当前真实状态
 
-- `M0/M1/M2/M3/M4` 最小真实链路已通
-- `M5 AI Pipeline` 已进入 `Phase 2 Minimal LLM Link`
-- `M6 Knowledge Output` 已进入 `Manual Persistence Bridge`
+- `M0/M1/M2/M3/M4` 输入与原始归档链路已真实跑通
+- AI 开发基线已从旧的 `/ai review` 过渡方案切换到 `AI rethink / background compiler reset`
+- 旧 `Minimal LLM Link / Manual Persistence Bridge` 只保留为现存代码资产说明，不再作为后续开发目标
 
 当前已真实存在：
 
-- Rust 剪贴板轮询
-- `CaptureRecord`
-- `daily/*.md` 原始归档
-- clipboard panel 最近历史保留窗口（当前已落到稳定 app storage root；macOS 下默认使用 `~/Library/Application Support/Tino/{shared|production}`；`clipboard-cache/clipboard/*.jsonl` + `clipboard-cache/tino.db` + `clipboard-cache/app-icons/` 不裁剪 `daily` / `topics` / `_inbox` / 持久化附件；首次启动会尝试从旧 `com.louistation.tino*` app data 目录迁移）
-- clipboard history 边界已收口：`backend/clipboard_history/read.rs` 负责 sqlite 读取边界与 fallback；`backend/clipboard_history/write.rs` 负责 sqlite 写入边界与 fallback；`backend/clipboard_history/legacy.rs` 负责 JSONL + retention 内核；`app_state/runtime.rs` 仅保留编排调用
-- settings 页的“暂停采集”已接成真实 Rust 持久化能力；暂停时 watcher 继续轮询，但新复制内容不进 `daily` / history cache / queue / AI，重启后状态保持一致
-- renderer 侧 app settings 已按“`persisted settings` 运行态真相源 + `settings draft` 设置页编辑态”分层；成功的设置写入会先落 Rust 持久化，再由 Rust authoritative typed event 广播到主窗口与 clipboard 小窗，避免双向同步遗漏与并发写覆盖
-- persisted app settings 现已带 `revision`；Rust 侧设置保存按单写入口串行化，并在提交时做 revision/CAS 校验，避免跨窗口近同时保存时的静默互相覆盖；renderer 侧的函数式 intent 保存会在 `state_conflict` 时自动基于最新 persisted settings 重算一次
-- 跨窗口 app settings authoritative event 现在会按变更范围精确失效 renderer 查询：`clipboardHistoryDays` 会刷新 clipboard history/summary，`knowledgeRoot` 还会额外刷新 pinned captures；clipboard 小窗的“暂停采集”提示 dismissal 只会在真实的“paused -> running”恢复采集时被重置，不会被无关设置保存误清空
-- IPC/状态同步当前继续按 `Query` / `State Command` / `Action Command` / `Subscription` 四类模型收口；settings 跨窗口同步已切到 Rust authoritative emit，clipboard 订阅事件也已升级为 Rust-owned typed payload，并按 `history / pinned / dashboard` 范围收窄前端 invalidation
-- 第一批主链路重同步 shell command 已改为 `async command + spawn_blocking`：当前至少 `get_dashboard_snapshot`、`get_clipboard_page`、`get_clipboard_board_bootstrap`、`get_pinned_clipboard_captures`、`save_app_settings` 不再把其阻塞工作停留在 Tauri 主线程
-- `/ai` 页相关的 batch/topic/review 文件 IO 命令，以及 clipboard 的 pin/delete 写命令，现也已改为 `async command + blocking offload`，继续缩小 renderer 触发后在命令线程上直跑同步文件 IO 的范围
-- clipboard history retention 上限已从 `14 天`提到 `90 天`；现有设置档位为 `1 / 3 / 7 / 90`。设置项现在表示 clipboard history 的查询/展示窗口，切换时不会立即物理删除 90 天内缓存；超过 90 天的缓存仍会在启动、设置保存和定期维护时被真正清理
-- clipboard board 搜索框已支持关键词式搜索；除普通文本外，可用 `app:` / `source:`、`bundle:`、`date:`、`type:` 在单个输入框里做组合检索，sqlite 与 JSONL fallback 语义保持一致
-- clipboard link 现已支持 Rust 侧异步外链 enrich：对 `http/https` 链接会在入 history 后后台抓取站点 `icon/title/description`，成功后回写 clipboard history / pinned / dashboard cache；favicon 抓取现已改为“标准 favicon / manifest / 默认 favicon”多候选优先级策略，并在页面 HTML 被站点拦截时继续尝试默认 favicon；clipboard 列表中的 link 行保持 `URL-first` 展示，详情区再展示抓取到的站点标题与描述
-- clipboard replay / paste-back Rust 边界已收口：`commands/shell.rs` 对这条链路只保留 IPC adapter；`clipboard/source_apps.rs` 负责来源应用发现与图标缓存；`clipboard/replay/` 目录模块已拆分为 `mod.rs` 编排、`pasteboard.rs`、`authorization.rs`、`focus.rs`
-- clipboard board 启动时会由 Rust 预热首屏 `summary + pinned + page 0` bootstrap；只要本地已有历史，应用重启后不应再先落入空白 loading 再回填
-- clipboard board 的查询策略现为“事件驱动失效 + 页面挂载重验”双保险，避免窗口或页面未挂载时错过事件后长期停留在旧缓存
-- clipboard 小窗会话的默认高亮现已区分“派生默认选中”和“用户手动选中”；窗口 reset 后若隐藏期间有新 capture 进入，重新打开时应跟随最新的“非 PIN 第一条”，而不是停留在 reset 当下的旧首项
-- macOS 下主窗口与 clipboard 小窗的重新打开路径现在会在显示前先恢复/重定位到当前活动屏，主窗口也改为隐藏创建后再恢复尺寸，避免旧屏闪现、首开尺寸回弹，以及 Dark 主题首帧白底更明显的闪烁；透明 panel 首帧外层背景改按窗口模式分流，不再把主窗口的实体背景误套到 clipboard 小窗外圈
-- renderer 侧快捷键现已补上“interaction policy”场景层：`shortcut` 继续绑定到 `command`，但复杂前端交互面可通过场景 policy 声明自己拥有的按键与是否阻止浏览器默认行为；clipboard 现作为第一批接入场景，把 `Tab / Shift+Tab` 收归为当前选中文本的 preview mode 切换，并补了 `CommandOrControl+F` 聚焦搜索、`CommandOrControl+Shift+F` 打开筛选
-- settings 页已支持 clipboard 过滤规则：可按来源应用 `bundle id` 黑名单和关键词排除剪贴板捕获；被排除内容仍会写入 `_system/filters.log` 结构化日志，便于调试
-- 主窗口首次可见时会主动预热 macOS `Accessibility` 授权，尽量把剪贴板回填所需的打扰前置到应用打开阶段；授权后仍需重启当前 app 副本
+- Rust 剪贴板轮询、`CaptureRecord`、`daily/*.md` 原始归档
+- clipboard history 稳定 app storage root、sqlite + JSONL fallback、90 天缓存保留上限
+- clipboard 搜索、过滤、暂停采集、link enrich、paste-back、窗口 bootstrap 等主体验已基本收口
+- settings / dashboard 的真实 Rust 持久化与 authoritative 同步
+- Runtime Provider 多配置 CRUD、当前启用项切换、smoke test
+- Renderer 侧交互式 provider access layer 与首页即时 AI 调用入口
 - `_system/runtime.json`
 - `_system/queue.json`
 - `_system/batches/*.json`
-- settings / dashboard 的真实 Rust 持久化与读取
-- Runtime Provider 多配置 CRUD 与当前启用项切换；provider profile 已拆分为 `vendor + baseURL + apiKey + default model override`
-- settings 页 live provider smoke test
-- 首页右侧单个模型 selector，按 provider 分组；首页切换只影响当前会话，不改 settings 中的默认 provider
-- Renderer 侧 OpenAI Responses provider access layer（支持自定义 `baseURL`）
-- `/ai` 页读取 live batch（当前主要作为隐藏干预 / 校准面）
-- `/ai` 页支持单批次 manual live candidate run（renderer 侧 live `generateObject`）
-- review 提交写入 `_system/reviews/*.json`
-- `applyBatchDecision` 受控写入 `topics/*.md`
-- `applyBatchDecision` 受控写入 `_inbox/YYYY-MM-DD.md`
-- review 提交后 batch 状态更新为 `persisted`
+
+当前仍存在但已降级为 legacy 过渡资产：
+
+- `/ai` 页面
+- renderer 侧 manual live candidate run
+- review DTO / `_system/reviews/*.json`
+- `applyBatchDecision` 的手动持久化桥接语义
+- `pnpm mock:ai-review` 这条 review-first mock 链路
 
 当前仍未真实存在：
 
-- 静默后台自动落盘
-- 独立正式 topic index 资产
+- Rust-owned background compiler
+- 正式 topic index 资产
+- feedback memory / quality metrics SQLite
+- 新的 AI Ops 次级入口
 - 历史补跑
 
-## 4. 当前 `/ai` 页必须这样理解
+## 4. 当前 AI 相关旧资产必须这样理解
 
-- `/ai` 页读取的 batch 可以是 live batch
-- preview batch 仍使用 mock 结果
-- live batch 现在可以手动触发 renderer 侧 live `generateObject`
-- live candidate 在提交前只保留在 renderer 内存中
-- `applyBatchDecision` 当前负责审阅应用、review 留痕与受控知识落盘，但仍不生成 batch、不调用模型
-- `/ai` 当前更接近隐藏干预 / 校准界面，不是普通用户的主产品路径
-- 若当前启用 provider 的 `apiKey` 为空，capture 只进 `daily`，不进 AI queue
-
-细节说明看：
-
-- [AI Review 当前实现与 Mock 链路说明](/Users/louistation/MySpace/Life/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
+- `/ai` 页面不是主产品路径，也不是当前 AI 模块设计中心
+- `/ai` 页面可以被推翻或重做
+- `applyBatchDecision` 现在只是 legacy 手动受控持久化命令
+- provider settings 可以保留，但只是能力配置入口，不是 AI 架构中心
+- 当前如果代码里还存在 review-first 语义，应视为迁移中的旧实现，而不是未来方向
 
 ## 5. 不要漂移的边界
 
@@ -114,36 +86,27 @@
 
 - 剪贴板轮询：`Rust`
 - 本地文件读写：`Rust`
-- AI 调用：`Renderer`
-- Agent runtime / prompt 编排：`Renderer`
-- 真实副作用：`Rust command`
-- 运行态：`_system/ JSON`
+- 交互式 AI：`Renderer`
+- 后台 AI 编译 runtime：`Rust async runtime`
+- 真实副作用：`Rust`
+- 反馈记忆与质量指标：`SQLite + Rust`
+- 运行态与审计：`_system/ JSON` + 必要的本地 SQLite
 
 数据边界：
 
 - clipboard history 是输入插件缓存，不是长期知识真相源
-- clipboard retention 只作用于 app data 下的 clipboard panel / history query 缓存层
-- `clipboardHistoryDays` 控制用户可见的历史查询窗口，不直接决定物理删除时机
-- clipboard cache 的物理清理窗口固定按 `90 天` 上限执行，避免用户切换设置时误删仍可能恢复的历史
-- app_state 不直接持有 clipboard history 的 JSONL retention/file-IO 内核，统一由 `backend/clipboard_history/legacy.rs` 提供能力
-- 来源应用图标缓存也属于 clipboard 插件 UI 缓存，放 app data，不写入长期 Markdown 资产
-- 外链站点 `icon/title/description` enrich 结果也属于 clipboard 插件 UI 缓存，放 app data，不写入长期 Markdown 资产
 - `daily/` 只做原始归档
-- `daily/` / `topics/` / `_inbox/` / 已持久化附件应视为长期知识资产，不应被 clipboard retention 误删
 - `topics/` / `_inbox/` 是 AI 知识层输出
-- `topic` 是系统后台生成的结果，不是用户前置输入
-- AI 不能直接控制真实文件路径
+- AI 不直接控制真实文件路径
+- provider 配置与敏感能力配置放应用稳定持久化目录
+- feedback / quality / preference store 也应放应用稳定持久化目录，不放知识根目录
 
 AI 策略：
 
-- 批处理，不做逐条实时
-- 触发条件：`20 条`或`10 分钟`
-- 用户主路径是 `inbox-first`，不是 `topic-first`
-- 用户不需要先创建 topic
-- 允许批次内归并或拆分为多个系统生成的 topic
-- 低置信度进入 `_inbox`
-- 用户主路径是 `静默输入 -> 后台编译 -> 结果呈现`
+- 主路径是 `静默输入 -> 后台编译 -> 结果呈现`
 - review / 调试只作为异常兜底与开发校准层
+- 分层按触发频率与生命周期，而不是按模型强弱
+- 后台编译和交互式 AI 必须物理隔离
 
 ## 6. 默认开发顺序
 
@@ -153,9 +116,10 @@ AI 策略：
 
 如果做 AI：
 
-- `Contract -> Provider Access -> Runtime -> Hidden Intervention -> Persistence`
-- 不要把“接模型”和“写知识层”混成一步
-- 不要把 `/ai review` 误当成普通用户主体验
+- `Contract -> Storage / Feedback -> Capability Boundary -> Rust Background Compiler -> Persistence -> AI Ops`
+- 不要先继续写 `/ai` 页面
+- 不要把 provider UI 当成 AI 模块中心
+- 不要在 Rust 状态机和反馈存储没定之前先扩 AI UI
 
 ## 7. 常用命令
 
@@ -167,35 +131,32 @@ pnpm tauri dev
 pnpm mock:ai-review run --profile preview --count 20
 ```
 
+说明：
+
+- `pnpm mock:ai-review` 仍可用于 legacy `/ai` 与 batch 文件调试，但不代表新的 AI 主链路
+
 如果只做 Rust 校验：
 
 ```bash
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-打 production 包时额外注意：
-
-- `pnpm tauri:build:prod` 只生成正式产物，不会安装到 `/Applications`；当前会在 Finder 自动揭示 `src-tauri/target/release/bundle/macos/Tino.app`
-- `pnpm tauri:build-install:prod` 才会把正式包安装到 `/Applications/Tino.app`
-- 不要把“从 `.dmg` 挂载卷里直接运行”当成已安装
-
 ## 8. 维护规则
 
-每次阶段变化，至少更新：
+每次 AI 阶段变化，至少同步更新：
 
 - `最后更新`
 - `当前基线提交`
 - `当前真实状态`
-- `/ai` 页真实边界是否变化
+- [技术冻结记录](/Users/lou/Learn/tino/docs/03-planning/技术冻结记录.md)
+- [Tino AI Rethink 与模块开发基线 v1](/Users/lou/Learn/tino/docs/03-planning/Tino%20AI%20Rethink%20%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%BC%80%E5%8F%91%E5%9F%BA%E7%BA%BF%20v1.md)
 
-如果发生架构变化，还要同步：
+如果只是排查 legacy `/ai` 行为，再额外参考：
 
-- [技术冻结记录](/Users/louistation/MySpace/Life/tino/docs/03-planning/技术冻结记录.md)
-- [Tino AI Runtime 与 Agent 工程方案 v0.1](/Users/louistation/MySpace/Life/tino/docs/03-planning/Tino%20AI%20Runtime%20%E4%B8%8E%20Agent%20%E5%B7%A5%E7%A8%8B%E6%96%B9%E6%A1%88%20v0.1.md)
-- [MVP开发任务拆解](/Users/louistation/MySpace/Life/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
+- [AI Review 当前实现与 Mock 链路说明](/Users/lou/Learn/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
 
 ## 9. 一句结论
 
-当前仓库的正确理解不是“AI 已接完”，而是：
+当前仓库的正确理解不是“AI 已经接完”，而是：
 
-> 无 AI 原始归档链路已真实跑通；AI provider config 已升级为多 profile 管理，并按 `vendor + baseURL + apiKey + default model override` 建模，支持 live smoke test、首页按 provider 分组的单个模型 selector，以及 `/ai` 与后台自动链路共用 settings 中的默认 provider；`/ai` 当前主要承担隐藏干预与校准，并已支持单批次 manual live candidate run + manual persistence apply；普通用户主路径仍应理解为静默输入、后台编译与知识结果交付；自动静默落盘仍未接入。
+> 输入侧和原始归档链路已经真实可用；provider settings 与 legacy `/ai` 只完成了过渡期能力接入；后续 AI 开发应围绕 `Rust-owned background compiler + feedback memory + controlled persistence + AI Ops` 推进，而不是继续扩旧 `/ai review` 方案。

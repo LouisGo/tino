@@ -29,10 +29,10 @@ Choose the smallest valid context set. This skill is a router, not a second sour
   Read `.agents/skills/tino-feature-playbook/SKILL.md`.
   Add `.agents/skills/tino-rust-boundaries/SKILL.md` if Rust/Tauri IPC or ownership is involved.
   Add `docs/03-planning/HANDOFF.md` only if you need current behavior constraints.
-- `/ai` page, hidden intervention semantics, `applyBatchDecision`, live batch, queue/batches/reviews, empty-state debugging, or mock injection:
+- AI rethink, background compiler planning, capability boundaries, feedback memory, AI Ops, or legacy `/ai` / `applyBatchDecision` assets:
   Read `.agents/skills/tino-ai-review-phase1/SKILL.md`.
-- AI runtime layering, provider-vs-runtime split, workflow design, phase sequencing, or persistence planning:
-  Read `docs/03-planning/Tino AI Runtime 与 Agent 工程方案 v0.1.md`.
+- AI runtime layering, provider-vs-runtime split, workflow design, phase sequencing, persistence planning, or storage planning:
+  Read `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`.
   `docs/03-planning/技术冻结记录.md` wins on boundary conflicts.
 - Packaging, signing, preview/prod data channel, or build/install flow:
   Read `docs/03-planning/环境与打包流程.md`.
@@ -44,4 +44,4 @@ Choose the smallest valid context set. This skill is a router, not a second sour
 
 - If the task changes current behavior or stage claims, update `docs/03-planning/HANDOFF.md`.
 - If the task changes frozen architecture or responsibility boundaries, update `docs/03-planning/技术冻结记录.md`.
-- If the task changes AI phase sequencing or runtime layering, update `docs/03-planning/Tino AI Runtime 与 Agent 工程方案 v0.1.md`.
+- If the task changes AI phase sequencing, runtime layering, or storage ownership, update `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`.

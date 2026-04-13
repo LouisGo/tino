@@ -7,11 +7,12 @@ Rust is the source of truth for Tauri IPC types and commands.
 - Repo-wide rules live in `AGENTS.md`.
 - Repo-local skills live in `.agents/skills/`.
 - Use `.agents/skills/tino-task-router/SKILL.md` when the task is mainly about which docs to load or trust.
-- Use `.agents/skills/tino-ai-review-phase1/SKILL.md` for `/ai`, `applyBatchDecision`, live batch behavior, or the mock review chain.
+- Use `.agents/skills/tino-ai-review-phase1/SKILL.md` for current AI rethink work, background compiler planning, feedback-memory planning, and legacy `/ai` / `applyBatchDecision` assets. The filename is legacy; the skill content is the current AI routing guide.
 - Use `.agents/skills/tino-rust-boundaries/SKILL.md` for Tauri command/module-boundary work, Rust-vs-Renderer ownership decisions, or when a Rust file is at risk of turning into a mixed-responsibility god file.
 - Use `.agents/skills/tino-feature-playbook/SKILL.md` when implementing a new feature module or a cross-cutting feature change that needs a default delivery pattern.
 - Current behavior and phase claims live in `docs/03-planning/HANDOFF.md`.
 - Frozen architecture and responsibility boundaries live in `docs/03-planning/技术冻结记录.md`.
+- Current AI module development baseline lives in `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`.
 - If repo-local skill wording conflicts with current planning docs, `docs/03-planning/HANDOFF.md` and `docs/03-planning/技术冻结记录.md` win.
 - `README.md` and `docs/README.md` are pointers, not working truth.
 - Keep repo-local skills short and pointer-based. Do not duplicate them into README or handoff docs.

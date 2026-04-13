@@ -1,44 +1,42 @@
 ---
 name: tino-ai-review-phase1
-description: "Use this skill for current Tino `/ai` hidden-intervention work: live batch debugging, `applyBatchDecision`, queue-to-batch promotion, manual candidate runs, and the near-real mock review chain."
+description: "Legacy filename. Use this skill for current Tino AI rethink work: background compiler planning, capability boundaries, feedback memory, AI Ops, and legacy `/ai` compatibility questions."
 ---
 
-# Tino AI Review State
+# Tino AI Rethink Router
 
 ## Load Order
 
-1. Read `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md`.
-2. Read `docs/03-planning/HANDOFF.md` only if you need broader current-state or phase alignment.
-3. Read `docs/03-planning/Tino AI Runtime 与 Agent 工程方案 v0.1.md` only for next-phase architecture, not current semantics.
+1. Read `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`.
+2. Read `docs/03-planning/HANDOFF.md` only if you need current repo state or transition notes.
+3. Read `docs/03-planning/技术冻结记录.md` if the task may change ownership, runtime location, storage, or feedback boundaries.
+4. Read `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md` only when debugging legacy `/ai` or `applyBatchDecision`.
 
 ## Current Contract
 
-- `/ai` is currently a hidden intervention, calibration, and debug surface, not the primary end-user product path.
-- `applyBatchDecision` is review plus controlled persistence. It writes review artifacts and approved outputs; it does not generate batches or call a model.
-- Live candidate generation is renderer-side and stays local until submit.
-- Batch generation happens earlier: `capture -> _system/queue.json -> promote -> _system/batches/*.json`.
-- If `apiKey` is empty, capture stays in `daily` and does not enter the AI queue.
+- `/ai` is a disposable legacy surface, not the center of AI product design.
+- Provider settings can stay, but provider UI is not the center of AI architecture.
+- Interactive AI and background compile are different systems with different owners.
+- Background compile ownership belongs to `Rust async runtime`.
+- Feedback memory and quality metrics are first-class architecture, not later polish.
 
-## Debug Order For Empty `/ai`
+## What To Optimize For
 
-1. Confirm the knowledge root or profile matches what the app is actually using.
-2. Check whether new captures reached `_system/queue.json`.
-3. Check whether the queue met `20 items` or `10 minutes`, or was manually promoted.
-4. Check whether `_system/batches/*.json` exists and is `ready`.
-5. Only after that inspect renderer empty-state logic.
+1. Contract and state machine before UI.
+2. Rust-owned background compiler before new review surfaces.
+3. Feedback memory and correction metrics before prompt polish.
+4. AI Ops observability before new user-facing AI chrome.
 
-## Mock Chain
+## Legacy Compatibility
 
-- Use the filesystem mock chain, not browser demo fixtures, for near-real `/ai` verification.
-- Main command: `pnpm mock:ai-review run --profile preview --count 20`.
-- Script and fixtures: `scripts/mock-ai-review-chain.mjs`, `src/features/ai/lib/mock-fixtures.ts`, `src/features/ai/lib/mock-review.ts`.
-
-Browser fixture files are preview-only and do not write a knowledge root.
+- `applyBatchDecision`, legacy review DTOs, and `pnpm mock:ai-review` still exist.
+- Use them only to understand or unwind transition code.
+- Do not extend them as the future AI architecture.
 
 ## Guardrails
 
-- Do not describe the current system as "AI finished" or as fully automatic.
-- Do not frame `/ai` review as the product centerpiece or as the normal daily workflow.
-- Do not claim users should manually review every batch.
-- Do not repurpose `applyBatchDecision` into task generation without updating docs and phase framing.
-- If `/ai` semantics change, update `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md` and `docs/03-planning/HANDOFF.md`.
+- Do not make React component state authoritative for batch runtime.
+- Do not build new product semantics on top of legacy `/ai review`.
+- Do not let provider setup shape the core AI module boundaries.
+- Do not delay feedback-memory design until after UI polish.
+- If AI architecture changes, update `Tino AI Rethink 与模块开发基线 v1.md`, `HANDOFF.md`, and `技术冻结记录.md`.

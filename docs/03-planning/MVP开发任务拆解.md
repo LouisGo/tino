@@ -2,6 +2,7 @@
 
 > 基线文档：`docs/02-product/个人信息流软件需求原型文档.md`
 > MVP 心智：`inbox-first`。用户先丢内容，系统后台再长出议题。
+> 当前 AI 执行基线：`docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`
 
 ## 1. 当前开发顺序判断
 
@@ -46,16 +47,17 @@
 - Tauri 是否使用官方 `tray` / menubar 方案
 - 剪贴板轮询放在 Rust 侧还是前端侧
 - 文件写入统一走哪一层
-- AI 调用层放在前端还是 Rust command
-- `_system/` 状态文件采用什么格式
+- 交互式 AI 与后台 AI 的运行归属如何切分
+- `_system/` 状态文件与 feedback store 分别采用什么存储
 
 建议结论：
 
 - Tray 和系统集成走 Tauri 原生能力
 - 剪贴板轮询放 Rust 侧
 - 文件写入放 Rust 侧
-- AI 调用先走前端 `Renderer`
-- `_system/` 先用 JSON 文件，不上数据库
+- 交互式 AI 在 `Renderer`
+- 后台 AI 编译 runtime 在 `Rust async runtime`
+- `_system/` 继续用 JSON；feedback / quality 进入本地 SQLite
 
 完成标准：
 
@@ -143,83 +145,102 @@ MVP 最小过滤建议：
 
 - 即使 AI 失败，原始内容仍然已进入 `daily/`
 
-### M5. AI Pipeline
+### M5. AI Contract Reset
 
-目标：把一批缓冲内容转换为结构化决策结果。
+目标：先把 AI 的输入输出、状态机、质量口径钉死，而不是先写新 UI。
 
 任务：
 
-- 设计 AI 输入 schema
-- 设计 AI 输出 schema
-- 固定第一版 prompt
-- 调用模型进行批处理
-- 校验结构化输出
-- 记录失败批次
-
-AI 输出至少包含：
-
-- `source_ids`
-- `decision`
-- `topic_slug_suggestion`
-- `topic_name_suggestion`
-- `title`
-- `summary`
-- `key_points`
-- `tags`
-- `confidence`
-- `reason`
+- 定义 `BatchCompileJob` / `BatchCompileInput` / `BatchCompileDecision`
+- 定义 Rust 权威 batch runtime state
+- 定义 `PersistedKnowledgeWrite`
+- 定义 `FeedbackEvent` / `QualitySnapshot`
+- 固定第一版 compile schema 与失败语义
 
 完成标准：
 
-- 一批内容可产出结构化结果
-- 结果不合法时能被识别和兜底
+- 背景编译可以脱离 `/ai` 页面被描述为完整工作流
+- 新开发不再依赖 review-first DTO 思维
 
-### M6. Knowledge Output
+### M6. Storage Reset
 
-目标：把 AI 结果稳定落为 Markdown 知识文件。
+目标：先把 AI 运行态和反馈记忆的存储拆开。
+
+任务：
+
+- 明确 `_system/queue` / `batch` / `runtime` / `job audit` 文件结构
+- 建立 feedback / quality / preference 的本地 SQLite store
+- 明确 topic index 的正式资产形态
+
+完成标准：
+
+- 后台 AI runtime 与反馈记忆有清晰持久化边界
+- 不再把 AI 状态主要放在页面内存里理解
+
+### M7. Background Compiler
+
+目标：把后台 AI 主链路迁到 Rust runtime。
+
+任务：
+
+- Rust runtime 驱动 batch compile 调度
+- 接通 capability boundary
+- 执行结构化 compile
+- 校验 schema
+- 记录失败、重试、恢复
+
+完成标准：
+
+- 不打开 `/ai` 页也能跑后台 AI 编译
+- 批次状态机、重试和崩溃恢复不依赖 React 生命周期
+
+### M8. Knowledge Output
+
+目标：把 compile 结果稳定落为 Markdown 知识文件。
 
 任务：
 
 - 设计系统生成 `topics/` 的文件命名规则
 - 设计 `_inbox/` 兜底规则
-- 生成 front matter
 - 决定追加写入还是新建文件
 - 确保路径生成由程序控制，不由 AI 直接控制
+- 刷新正式 topic index 资产
 
 完成标准：
 
 - 高置信度内容进入 `topics/`
 - 低置信度内容进入 `_inbox/`
-- Markdown 结构可被 Obsidian / 思源读取
+- 写入、索引刷新、审计记录形成闭环
 
-### M7. Config / Skill Stub
+### M9. Feedback Memory 与 Quality Loop
 
-目标：先把扩展口留好，不在 MVP 做复杂功能。
-
-任务：
-
-- 创建 `_config/` 目录约定
-- 预留 `config.json` 读取逻辑
-- 为后续 Skill 注入留接口
-
-完成标准：
-
-- 系统具备最小配置入口，但不要求完善 UI
-
-### M8. Debug / Observability
-
-目标：让 MVP 在开发阶段可验证、可定位问题。
+目标：让落库质量开始可量化、可提升。
 
 任务：
 
-- 输出基础日志
-- 记录批次状态
-- 提供最小调试视图或调试命令
-- 能看到最近一次 capture / archive / AI / output 的执行结果
+- 记录用户纠错、删除、保留、topic 使用行为
+- 计算并暴露主动纠错率
+- 将偏好信号注入后续 compile context
 
 完成标准：
 
-- 出问题时能快速判断卡在主链路哪一环
+- `用户主动纠错率` 成为可观察指标
+- AI 质量改进不再只靠主观感觉
+
+### M10. AI Ops
+
+目标：用新的运行态重做次级 AI 调试入口。
+
+任务：
+
+- 替换或清理旧 `/ai` 页面
+- 提供 job 状态、失败、重试、回放、写入结果视图
+- 保留最小调试能力，但不做 review-first 主体验
+
+完成标准：
+
+- 能快速判断卡在 capture / queue / compile / persist / feedback 哪一环
+- 新入口服务开发与异常排查，而不是人工逐批审阅
 
 ## 4. 里程碑建议
 
@@ -246,18 +267,38 @@ AI 输出至少包含：
 
 - 即使不调用 AI，系统也能把剪贴板内容稳定归档到 `daily/`
 
-### 里程碑 3：AI 闭环打通
+### 里程碑 3：AI Contract 与存储基线就绪
 
 包含模块：
 
-- `M5 AI Pipeline`
-- `M6 Knowledge Output`
+- `M5 AI Contract Reset`
+- `M6 Storage Reset`
 
 结果：
 
-- 从复制文本到 `topics/` / `_inbox/` 的全链路打通
+- AI 开发从 `/ai review` 过渡思路切换到真正的后台编译架构
 
-### 里程碑 4：可持续迭代基线
+### 里程碑 4：后台 AI 编译闭环
+
+包含模块：
+
+- `M7 Background Compiler`
+- `M8 Knowledge Output`
+
+结果：
+
+- 从复制文本到 `topics/` / `_inbox/` 的后台自动编译闭环打通
+
+### 里程碑 5：可持续迭代基线
+
+包含模块：
+
+- `M9 Feedback Memory 与 Quality Loop`
+- `M10 AI Ops`
+
+结果：
+
+- AI 质量进入可测量、可调试、可持续迭代阶段
 
 包含模块：
 
