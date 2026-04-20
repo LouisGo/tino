@@ -1,0 +1,39 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "holdout_new_topic_support_macro_001",
+  "batchId": "batch_holdout_new_topic_support_macro_001",
+  "split": "holdout",
+  "scenarioFamily": "writing_planning",
+  "difficulty": "hard",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_support_macro_library",
+      "sourceIds": [
+        "cap_supportmacro_001",
+        "cap_supportmacro_002",
+        "cap_supportmacro_003",
+        "cap_supportmacro_004",
+        "cap_supportmacro_005",
+        "cap_supportmacro_006"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "new_topic",
+      "expectedTopicSlug": "support-macro-library",
+      "expectedTopicName": "Support Macro Library",
+      "mustSupport": [
+        "The batch defines reusable support response patterns rather than product copy or meeting ops.",
+        "Macros should be grouped by failure mode.",
+        "Each macro should contain symptom, likely cause, next check, and escalation rule."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Do not force-fit this batch into product-writing-playbook.",
+    "Any inbox result here should count as a miss on new-topic creation."
+  ],
+  "annotationNotes": [
+    "This is the seed corpus new-topic holdout case.",
+    "The batch is cohesive and durable enough to justify a new topic."
+  ]
+}

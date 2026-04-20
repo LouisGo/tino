@@ -9,6 +9,13 @@ export const commands = {
 	getAiBatchPayload: (batchId: string) => typedError<AiBatchPayload, IpcError>(__TAURI_INVOKE("get_ai_batch_payload", { batchId })),
 	getTopicIndexEntries: () => typedError<TopicIndexEntry[], IpcError>(__TAURI_INVOKE("get_topic_index_entries")),
 	applyBatchDecision: (request: ApplyBatchDecisionRequest) => typedError<ApplyBatchDecisionResult, IpcError>(__TAURI_INVOKE("apply_batch_decision", { request })),
+	listHomeChatConversations: () => typedError<HomeChatConversationSummary[], string>(__TAURI_INVOKE("list_home_chat_conversations")),
+	getHomeChatConversation: (conversationId: string) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("get_home_chat_conversation", { conversationId })),
+	createHomeChatConversation: (request: CreateHomeChatConversationRequest) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("create_home_chat_conversation", { request })),
+	appendHomeChatUserMessage: (request: AppendHomeChatUserMessageRequest) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("append_home_chat_user_message", { request })),
+	replaceLatestHomeChatAssistantMessage: (request: ReplaceLatestHomeChatAssistantMessageRequest) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("replace_latest_home_chat_assistant_message", { request })),
+	rewriteLatestHomeChatUserMessage: (request: RewriteLatestHomeChatUserMessageRequest) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("rewrite_latest_home_chat_user_message", { request })),
+	updateHomeChatConversationTitle: (request: UpdateHomeChatConversationTitleRequest) => typedError<HomeChatConversationSummary, string>(__TAURI_INVOKE("update_home_chat_conversation_title", { request })),
 	getDashboardSnapshot: () => typedError<DashboardSnapshot, string>(__TAURI_INVOKE("get_dashboard_snapshot")),
 	getClipboardPage: (request: ClipboardPageRequest) => typedError<ClipboardPage, string>(__TAURI_INVOKE("get_clipboard_page", { request })),
 	getClipboardBoardBootstrap: () => typedError<ClipboardBoardBootstrap, string>(__TAURI_INVOKE("get_clipboard_board_bootstrap")),
@@ -37,6 +44,7 @@ export const commands = {
 export const events = {
 	appSettingsChanged: makeEvent<AppSettingsChanged>("app-settings-changed"),
 	clipboardCapturesUpdated: makeEvent<ClipboardCapturesUpdated>("clipboard-captures-updated"),
+	homeChatConversationsUpdated: makeEvent<HomeChatConversationsUpdated>("home-chat-conversations-updated"),
 };
 
 /* Types */
@@ -105,6 +113,11 @@ export type AppSettingsChanged = {
 
 export type AppShortcutOverride = {
 	accelerator?: string | null,
+};
+
+export type AppendHomeChatUserMessageRequest = {
+	conversationId: string,
+	userMessage: string,
 };
 
 export type ApplyBatchDecisionRequest = {
@@ -243,6 +256,10 @@ export type ClipboardSourceAppRule = {
 	appName: string,
 };
 
+export type CreateHomeChatConversationRequest = {
+	initialUserMessage: string,
+};
+
 export type DashboardSnapshot = {
 	appName: string,
 	appVersion: string,
@@ -269,6 +286,55 @@ export type DeleteClipboardCaptureResult = {
 	removedFromPinned: boolean,
 	deleted: boolean,
 };
+
+export type HomeChatConversationDetail = {
+	conversation: HomeChatConversationSummary,
+	messages: HomeChatMessage[],
+};
+
+export type HomeChatConversationSummary = {
+	id: string,
+	title: string | null,
+	titleStatus: HomeChatConversationTitleStatus,
+	titleSource: HomeChatConversationTitleSource | null,
+	previewText: string | null,
+	messageCount: number,
+	createdAt: string,
+	updatedAt: string,
+	lastMessageAt: string,
+};
+
+export type HomeChatConversationTitleSource = "model" | "fallback" | "manual";
+
+export type HomeChatConversationTitleStatus = "pending" | "ready" | "failed" | "fallback";
+
+export type HomeChatConversationsUpdated = {
+	reason: HomeChatConversationsUpdatedReason,
+	conversationId: string | null,
+	refreshList: boolean,
+	refreshConversation: boolean,
+};
+
+export type HomeChatConversationsUpdatedReason = "conversationCreated" | "messagesChanged" | "titleChanged";
+
+export type HomeChatMessage = {
+	id: string,
+	conversationId: string,
+	ordinal: number,
+	role: HomeChatMessageRole,
+	content: string,
+	reasoningText: string | null,
+	status: HomeChatMessageStatus,
+	errorMessage: string | null,
+	providerLabel: string | null,
+	responseModel: string | null,
+	createdAt: string,
+	updatedAt: string,
+};
+
+export type HomeChatMessageRole = "user" | "assistant";
+
+export type HomeChatMessageStatus = "completed" | "failed" | "stopped";
 
 export type IpcError = {
 	code: IpcErrorCode,
@@ -309,6 +375,16 @@ export type PossibleTopicSuggestion = {
 	reason: string | null,
 };
 
+export type ReplaceLatestHomeChatAssistantMessageRequest = {
+	conversationId: string,
+	content: string,
+	reasoningText: string | null,
+	status: HomeChatMessageStatus,
+	errorMessage: string | null,
+	providerLabel: string | null,
+	responseModel: string | null,
+};
+
 export type ReviewAction = "accept_all" | "accept_with_edits" | "reroute_to_inbox" | "reroute_topic" | "discard";
 
 export type ReviewFeedbackRecord = {
@@ -318,6 +394,11 @@ export type ReviewFeedbackRecord = {
 	editedClusterIds: string[],
 	note: string | null,
 	submittedAt: string,
+};
+
+export type RewriteLatestHomeChatUserMessageRequest = {
+	conversationId: string,
+	userMessage: string,
 };
 
 export type RuntimeProviderProfile = {
@@ -351,6 +432,13 @@ export type UpdateClipboardPinResult = {
 	changed: boolean,
 	replacedCaptureId: string | null,
 	pinnedCount: number,
+};
+
+export type UpdateHomeChatConversationTitleRequest = {
+	conversationId: string,
+	title: string,
+	titleStatus: HomeChatConversationTitleStatus,
+	titleSource: HomeChatConversationTitleSource,
 };
 
 /* Tauri Specta runtime */

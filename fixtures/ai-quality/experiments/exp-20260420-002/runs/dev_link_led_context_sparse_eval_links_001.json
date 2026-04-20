@@ -1,0 +1,264 @@
+{
+  "createdAt": "2026-04-20T14:54:13.683Z",
+  "experimentId": "exp-20260420-002",
+  "fixtureChecksum": "b6c16315ad3e3970cc7dc6f695bc707f25d9833457578b2569a9d2f5378b4bea",
+  "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_link_led_context_sparse_eval_links_001_1776696853683",
+    "batchId": "batch_dev_link_led_context_sparse_eval_links_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T14:54:13.684Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_primary",
+        "sourceIds": [
+          "cap_evalinks_004"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "maybe useful later for scorecards",
+        "summary": "maybe useful later for scorecards",
+        "keyPoints": [
+          "maybe useful later for scorecards"
+        ],
+        "tags": [
+          "eval",
+          "golden",
+          "runner",
+          "regression",
+          "plain_text"
+        ],
+        "confidence": 0.67,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "link-triage-watchlist",
+            "topicName": "Link Triage Watchlist",
+            "reason": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_secondary",
+        "sourceIds": [
+          "cap_evalinks_001",
+          "cap_evalinks_002",
+          "cap_evalinks_003",
+          "cap_evalinks_005"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Provider access references need manual confirmation",
+        "summary": "Reference links and loose follow-up notes are held for review before they influence persistence.",
+        "keyPoints": [
+          "https://platform.openai.com/docs/guides/evals",
+          "https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically",
+          "https://docs.ragas.io/en/latest/",
+          "https://humanloop.com/docs/evals"
+        ],
+        "tags": [
+          "python",
+          "notebook",
+          "analysis",
+          "artifacts",
+          "link"
+        ],
+        "confidence": 0.54,
+        "reason": "This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "link-triage-watchlist",
+            "topicName": "Link Triage Watchlist",
+            "reason": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics."
+          }
+        ],
+        "missingContext": [
+          "Need confirmation whether the external reference should become a long-term topic section."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_secondary",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_link_led_context_sparse_eval_links_001\ncapture_count: 5\ntrigger_reason: capture_count\nwindow: 2026-04-18T02:32:00Z -> 2026-04-18T02:40:00Z\n\nRelevant topic index entries\n1. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n2. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n3. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n4. Multilingual Prompting [multilingual-prompting]\n   summary: Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\n   recent_tags: bilingual, locale, prompts, zh-en\n   last_updated_at: 2026-04-18T09:15:00Z\n5. Customer Research Synthesis [customer-research-synthesis]\n   summary: Interview notes, tagged insights, jobs-to-be-done patterns, and synthesized research themes.\n   recent_tags: research, insights, jtbd, synthesis\n   last_updated_at: 2026-04-17T08:05:00Z\n\nCaptures\ncapture_1:\nid: cap_evalinks_001\ncontent_kind: link\ncaptured_at: 2026-04-18T02:32:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://platform.openai.com/docs/guides/evals\nlink_url: https://platform.openai.com/docs/guides/evals\nraw_text:\n  https://platform.openai.com/docs/guides/evals\n\ncapture_2:\nid: cap_evalinks_002\ncontent_kind: link\ncaptured_at: 2026-04-18T02:34:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\nlink_url: https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\nraw_text:\n  https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\n\ncapture_3:\nid: cap_evalinks_003\ncontent_kind: link\ncaptured_at: 2026-04-18T02:36:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://docs.ragas.io/en/latest/\nlink_url: https://docs.ragas.io/en/latest/\nraw_text:\n  https://docs.ragas.io/en/latest/\n\ncapture_4:\nid: cap_evalinks_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T02:38:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: maybe useful later for scorecards\nraw_text:\n  maybe useful later for scorecards\n\ncapture_5:\nid: cap_evalinks_005\ncontent_kind: link\ncaptured_at: 2026-04-18T02:40:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://humanloop.com/docs/evals\nlink_url: https://humanloop.com/docs/evals\nraw_text:\n  https://humanloop.com/docs/evals\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_link_led_context_sparse_eval_links_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_evalinks_004\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"maybe useful later for scorecards\",\n      \"summary\": \"maybe useful later for scorecards\",\n      \"keyPoints\": [\n        \"maybe useful later for scorecards\"\n      ],\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"runner\",\n        \"regression\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.67,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"link-triage-watchlist\",\n          \"topicName\": \"Link Triage Watchlist\",\n          \"reason\": \"Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_link_led_context_sparse_eval_links_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_evalinks_001\",\n        \"cap_evalinks_002\",\n        \"cap_evalinks_003\",\n        \"cap_evalinks_005\"\n      ],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Provider access references need manual confirmation\",\n      \"summary\": \"Reference links and loose follow-up notes are held for review before they influence persistence.\",\n      \"keyPoints\": [\n        \"https://platform.openai.com/docs/guides/evals\",\n        \"https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\",\n        \"https://docs.ragas.io/en/latest/\",\n        \"https://humanloop.com/docs/evals\"\n      ],\n      \"tags\": [\n        \"python\",\n        \"notebook\",\n        \"analysis\",\n        \"artifacts\",\n        \"link\"\n      ],\n      \"confidence\": 0.54,\n      \"reason\": \"This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"link-triage-watchlist\",\n          \"topicName\": \"Link Triage Watchlist\",\n          \"reason\": \"Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\"\n        }\n      ],\n      \"missingContext\": [\n        \"Need confirmation whether the external reference should become a long-term topic section.\"\n      ]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_link_led_context_sparse_eval_links_001_dd70e18f",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_eval_link_watchlist",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 1"
+    ],
+    "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.7499999999999999,
+      "destinationAccuracy": {
+        "correct": 4,
+        "rate": 0.8,
+        "total": 5
+      },
+      "falseArchiveRate": {
+        "correct": 1,
+        "rate": 0.2,
+        "total": 5
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 4,
+        "rate": 0.8,
+        "total": 5
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      }
+    },
+    "overallScore": 0.6641666666666668,
+    "pairwiseCounts": {
+      "falseNegative": 4,
+      "falsePositive": 0,
+      "truePositive": 6
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    },
+    {
+      "topicSlug": "multilingual-prompting",
+      "topicName": "Multilingual Prompting",
+      "topicSummary": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.",
+      "recentTags": [
+        "bilingual",
+        "locale",
+        "prompts",
+        "zh-en"
+      ],
+      "lastUpdatedAt": "2026-04-18T09:15:00Z"
+    },
+    {
+      "topicSlug": "customer-research-synthesis",
+      "topicName": "Customer Research Synthesis",
+      "topicSummary": "Interview notes, tagged insights, jobs-to-be-done patterns, and synthesized research themes.",
+      "recentTags": [
+        "research",
+        "insights",
+        "jtbd",
+        "synthesis"
+      ],
+      "lastUpdatedAt": "2026-04-17T08:05:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

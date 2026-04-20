@@ -1,0 +1,57 @@
+{
+  "experimentId": "exp-20260420-004",
+  "mode": "live",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 0,
+        "name": "false_archive_rate",
+        "passed": true,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 1,
+        "name": "destination_accuracy",
+        "passed": true,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 1,
+        "name": "topic_merge_accuracy",
+        "passed": true,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 1,
+      "destinationAccuracy": 1,
+      "falseArchiveRate": 0,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 1,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 1
+    },
+    "runs": 1
+  },
+  "topFailures": [
+    {
+      "criticalFailures": [],
+      "fixtureId": "dev_focused_research_markitdown_001",
+      "overallScore": 0.8666666666666666
+    }
+  ]
+}

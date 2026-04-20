@@ -1,34 +1,13 @@
-import { createRendererLogger } from "@/lib/logger"
-import type {
-  AiBatchCapture,
-  AiBatchPayload,
-  BatchDecisionReview,
-  TopicIndexEntry,
-} from "@/types/shell"
+import type { AiBatchCapture, AiBatchPayload, TopicIndexEntry } from "../../../types/shell"
 import {
-  MODEL_SCHEMA_VERSION,
   type ModelBatchDecision,
   modelBatchDecisionSchema,
-} from "@/features/ai/schemas/model-output"
+} from "../schemas/model-output"
+import { buildBatchDecisionReview } from "../runtime/batch-review-engine"
 
-const logger = createRendererLogger("agent.runtime")
-
-export function buildMockBatchReview(payload: AiBatchPayload): BatchDecisionReview {
+export function buildMockBatchReview(payload: AiBatchPayload) {
   const parsed = modelBatchDecisionSchema.parse(buildMockModelOutput(payload))
-
-  logger.info("Built mock AI review session", {
-    batchId: payload.batch.id,
-    clusterCount: parsed.clusters.length,
-  })
-
-  return {
-    reviewId: `review_${payload.batch.id}`,
-    batchId: payload.batch.id,
-    runtimeState: "review_pending",
-    createdAt: new Date().toISOString(),
-    modelSchemaVersion: MODEL_SCHEMA_VERSION,
-    clusters: parsed.clusters,
-  }
+  return buildBatchDecisionReview(payload.batch.id, parsed)
 }
 
 function buildMockModelOutput(payload: AiBatchPayload): ModelBatchDecision {
@@ -44,7 +23,7 @@ function buildMockModelOutput(payload: AiBatchPayload): ModelBatchDecision {
       sourceIds: archiveCaptures.slice(0, Math.max(1, Math.min(2, archiveCaptures.length))).map(
         (capture) => capture.id,
       ),
-      decision: "archive_to_topic" as const,
+      decision: "archive_to_topic",
       topicSlugSuggestion: primaryTopic?.topicSlug ?? buildTopicSlug(archiveCaptures[0].preview),
       topicNameSuggestion: primaryTopic?.topicName ?? buildTopicName(archiveCaptures[0].preview),
       title: buildClusterTitle(archiveCaptures),
@@ -178,5 +157,9 @@ function truncate(value: string, limit: number) {
     return value
   }
 
-  return `${value.slice(0, limit - 1)}…`
+  if (limit <= 3) {
+    return value.slice(0, limit)
+  }
+
+  return `${value.slice(0, limit - 3)}...`
 }

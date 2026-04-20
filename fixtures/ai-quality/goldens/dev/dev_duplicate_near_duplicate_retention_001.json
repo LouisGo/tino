@@ -1,0 +1,39 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+  "batchId": "batch_dev_duplicate_near_duplicate_retention_001",
+  "split": "dev",
+  "scenarioFamily": "duplicate_and_near_duplicate",
+  "difficulty": "medium",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_retention_semantics",
+      "sourceIds": [
+        "cap_retentiondup_001",
+        "cap_retentiondup_002",
+        "cap_retentiondup_003",
+        "cap_retentiondup_004",
+        "cap_retentiondup_005",
+        "cap_retentiondup_006"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "personal-knowledge-ops",
+      "expectedTopicName": "Personal Knowledge Ops",
+      "mustSupport": [
+        "Clipboard retention should survive upgrades and reinstalls.",
+        "Retained history is a durable user asset rather than disposable cache.",
+        "Environment channels may vary, but retention semantics should stay stable."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Do not split the near-duplicate statements into multiple clusters.",
+    "Do not down-rank the cluster just because several captures repeat the same point."
+  ],
+  "annotationNotes": [
+    "This batch is for duplicate tolerance in clustering.",
+    "The repeated phrasing is intentional and should reinforce confidence rather than create fragmentation."
+  ]
+}

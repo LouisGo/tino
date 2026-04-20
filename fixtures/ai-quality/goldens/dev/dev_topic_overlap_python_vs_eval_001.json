@@ -1,0 +1,54 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+  "batchId": "batch_dev_topic_overlap_python_vs_eval_001",
+  "split": "dev",
+  "scenarioFamily": "topic_overlap_ambiguous",
+  "difficulty": "hard",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_python_analysis_role",
+      "sourceIds": [
+        "cap_pyeval_001",
+        "cap_pyeval_002",
+        "cap_pyeval_003",
+        "cap_pyeval_005",
+        "cap_pyeval_007"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "python-analysis-sidecar",
+      "expectedTopicName": "Python Analysis Sidecar",
+      "mustSupport": [
+        "Python should consume frozen artifacts rather than duplicate the runtime prompt path.",
+        "Python is appropriate for error clustering and deeper analysis.",
+        "The notebook command and pandas reference belong to the Python analysis cluster."
+      ],
+      "severity": "high"
+    },
+    {
+      "clusterId": "golden_eval_runner_metrics",
+      "sourceIds": [
+        "cap_pyeval_004",
+        "cap_pyeval_006"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "prompt-eval-experimentation",
+      "expectedTopicName": "Prompt Eval Experimentation",
+      "mustSupport": [
+        "The runner and scorer remain in TypeScript for fidelity to the product path.",
+        "Destination accuracy and regression reporting belong to the core evaluation system."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Do not collapse all seven captures into a single eval cluster.",
+    "Do not misroute the notebook and pandas material into link-triage-watchlist."
+  ],
+  "annotationNotes": [
+    "This is a deliberate overlap case. A good model should see that Python is one subtopic inside a broader evaluation program.",
+    "The scorer should penalize wrong merges here more than wording differences."
+  ]
+}

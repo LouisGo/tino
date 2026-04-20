@@ -1,0 +1,88 @@
+{
+  "experimentId": "exp-20260420-002",
+  "mode": "mock",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 0.4090909090909091,
+        "name": "false_archive_rate",
+        "passed": false,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.515625,
+        "name": "destination_accuracy",
+        "passed": false,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.3333333333333333,
+        "name": "topic_merge_accuracy",
+        "passed": false,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.5777777777777777,
+      "destinationAccuracy": 0.515625,
+      "falseArchiveRate": 0.4090909090909091,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 0.359375,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.3333333333333333
+    },
+    "runs": 10
+  },
+  "topFailures": [
+    {
+      "criticalFailures": [
+        "Wrong existing-topic merge on 5/7 source assignments."
+      ],
+      "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+      "overallScore": 0.4207792207792208
+    },
+    {
+      "criticalFailures": [
+        "Wrong existing-topic merge on 5/7 source assignments."
+      ],
+      "fixtureId": "dev_bilingual_mixed_eval_001",
+      "overallScore": 0.4417582417582418
+    },
+    {
+      "criticalFailures": [
+        "False archive count: 2"
+      ],
+      "fixtureId": "dev_low_value_noise_misc_001",
+      "overallScore": 0.44652014652014654
+    },
+    {
+      "criticalFailures": [
+        "False archive count: 4",
+        "Wrong existing-topic merge on 2/4 source assignments."
+      ],
+      "fixtureId": "dev_task_switching_copy_and_terminal_001",
+      "overallScore": 0.47500000000000003
+    },
+    {
+      "criticalFailures": [
+        "Wrong existing-topic merge on 4/6 source assignments."
+      ],
+      "fixtureId": "dev_focused_research_markitdown_001",
+      "overallScore": 0.48686868686868684
+    }
+  ]
+}

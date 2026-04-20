@@ -1,0 +1,69 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "holdout_import_runtime_overlap_001",
+  "batchId": "batch_holdout_import_runtime_overlap_001",
+  "split": "holdout",
+  "scenarioFamily": "topic_overlap_ambiguous",
+  "difficulty": "hard",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_import_conversion_fit",
+      "sourceIds": [
+        "cap_importruntime_001",
+        "cap_importruntime_002",
+        "cap_importruntime_004",
+        "cap_importruntime_007"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "document-markdown-normalization",
+      "expectedTopicName": "Document Markdown Normalization",
+      "mustSupport": [
+        "MarkItDown is more relevant to document imports than live clipboard processing.",
+        "Clipboard HTML cleanup remains a separate normalization problem.",
+        "The MCP or package link is supporting evidence for the import-adapter discussion."
+      ],
+      "severity": "high"
+    },
+    {
+      "clusterId": "golden_import_runtime_boundary",
+      "sourceIds": [
+        "cap_importruntime_003",
+        "cap_importruntime_006",
+        "cap_importruntime_008"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "rust-background-compiler",
+      "expectedTopicName": "Rust Background Compiler",
+      "mustSupport": [
+        "Import adapters should run inside Rust background jobs with scheduler ownership.",
+        "Clipboard eval remains the nearer milestone.",
+        "Python-based adapters are acceptable only behind the runtime boundary."
+      ],
+      "severity": "high"
+    },
+    {
+      "clusterId": "golden_import_benchmark_followup",
+      "sourceIds": [
+        "cap_importruntime_005"
+      ],
+      "expectedDestination": "send_to_inbox",
+      "topicMode": "inbox",
+      "expectedTopicSlug": null,
+      "expectedTopicName": null,
+      "mustSupport": [
+        "The benchmark idea is useful but still a follow-up task rather than durable knowledge on its own."
+      ],
+      "severity": "medium"
+    }
+  ],
+  "criticalChecks": [
+    "Do not collapse all eight captures into document-markdown-normalization.",
+    "Do not discard the runtime-boundary captures just because they mention Python."
+  ],
+  "annotationNotes": [
+    "This is a deliberate holdout for adjacent-topic separation.",
+    "A good system should distinguish conversion-library fit from runtime ownership."
+  ]
+}

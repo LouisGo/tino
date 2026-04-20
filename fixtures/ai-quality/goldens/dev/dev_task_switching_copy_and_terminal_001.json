@@ -1,0 +1,68 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_task_switching_copy_and_terminal_001",
+  "batchId": "batch_dev_task_switching_copy_and_terminal_001",
+  "split": "dev",
+  "scenarioFamily": "task_switching_interruptions",
+  "difficulty": "hard",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_copywriting_cluster",
+      "sourceIds": [
+        "cap_taskswitch_001",
+        "cap_taskswitch_002",
+        "cap_taskswitch_005",
+        "cap_taskswitch_008"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "product-writing-playbook",
+      "expectedTopicName": "Product Writing Playbook",
+      "mustSupport": [
+        "The product messaging should emphasize calm capture and later organization.",
+        "Tone should stay warm but technical.",
+        "Background AI should be framed as quiet synthesis rather than manual filing."
+      ],
+      "severity": "high"
+    },
+    {
+      "clusterId": "golden_interrupted_dev_notes",
+      "sourceIds": [
+        "cap_taskswitch_003",
+        "cap_taskswitch_004",
+        "cap_taskswitch_007"
+      ],
+      "expectedDestination": "send_to_inbox",
+      "topicMode": "inbox",
+      "expectedTopicSlug": null,
+      "expectedTopicName": null,
+      "mustSupport": [
+        "The development snippets are incomplete and context-poor.",
+        "They reflect interrupted work rather than durable knowledge."
+      ],
+      "severity": "medium"
+    },
+    {
+      "clusterId": "golden_personal_noise",
+      "sourceIds": [
+        "cap_taskswitch_006"
+      ],
+      "expectedDestination": "discard",
+      "topicMode": "discard",
+      "expectedTopicSlug": null,
+      "expectedTopicName": null,
+      "mustSupport": [
+        "The HDMI reminder is unrelated low-value noise."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Do not merge the terminal and compiler error text into the copywriting cluster.",
+    "Do not archive the personal reminder."
+  ],
+  "annotationNotes": [
+    "This case measures whether the system can separate interleaved tasks without over-archiving.",
+    "The interrupted engineering snippets are intentionally too thin for topic persistence."
+  ]
+}

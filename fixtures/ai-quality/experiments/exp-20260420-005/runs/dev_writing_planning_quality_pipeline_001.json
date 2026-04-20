@@ -1,0 +1,302 @@
+{
+  "createdAt": "2026-04-20T15:01:25.901Z",
+  "experimentId": "exp-20260420-005",
+  "fixtureChecksum": "c2ef6b6594d19f8d1c65662a01fc7d1940cac2febcf7e63b5ecf04a6787c0eb7",
+  "fixtureId": "dev_writing_planning_quality_pipeline_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_writing_planning_quality_pipeline_001_1776697366090",
+    "batchId": "batch_dev_writing_planning_quality_pipeline_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T15:02:46.090Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_quality_pipeline_001",
+        "sourceIds": [
+          "cap_qualityplan_001",
+          "cap_qualityplan_002",
+          "cap_qualityplan_004",
+          "cap_qualityplan_006"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "AI Quality Pipeline Development: Fixtures, Goldens, and Metrics",
+        "summary": "Captures discuss the development of an AI quality pipeline (v0.1), focusing on fixtures, golden labels, a replay runner, scorer, and an experiment registry. It emphasizes splitting dev and holdout sets before prompt tuning to avoid overfitting and identifies critical metrics like source assignment integrity and false archive rate.",
+        "keyPoints": [
+          "AI Quality Pipeline v0.1 is under development.",
+          "Core components include fixtures, goldens, a replay runner, scorer, and experiment registry.",
+          "Dev and holdout sets must be split before prompt tuning begins.",
+          "Critical success metrics are source assignment integrity and false archive rate."
+        ],
+        "tags": [
+          "eval",
+          "pipeline",
+          "golden",
+          "metrics",
+          "holdout"
+        ],
+        "confidence": 0.9,
+        "reason": "Captures directly reference components (fixtures, goldens, replay runner) and principles (holdout split, metrics) central to the 'Prompt Eval Experimentation' topic. The language is technical and focused on evaluation system development.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Direct match for quality pipeline, fixtures, goldens, replay runner, and holdout discipline."
+          },
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "The pipeline's execution runtime could involve the background compiler, but the captures are about evaluation design, not runtime execution."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_development_priority_002",
+        "sourceIds": [
+          "cap_qualityplan_003"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "personal-knowledge-ops",
+        "topicNameSuggestion": "Personal Knowledge Ops",
+        "title": "Development Priority: Structural Decision Correctness Over Prose Polish",
+        "summary": "A note in Chinese emphasizes that during development, the top priority is getting the structural decisions (routing, clustering, topic merge) correct and stable, not making the prose look smoother.",
+        "keyPoints": [
+          "During development, ensure routing, clustering, and topic merge are stable first.",
+          "Structural decision correctness is the first priority, not prose polish."
+        ],
+        "tags": [
+          "development",
+          "priority",
+          "clustering",
+          "routing"
+        ],
+        "confidence": 0.7,
+        "reason": "The capture discusses a high-level principle for system development (structural correctness over polish) related to knowledge operations (routing, clustering, topic merge). It fits the 'Personal Knowledge Ops' topic which covers rules for archive and topic management.",
+        "possibleTopics": [
+          {
+            "topicSlug": "personal-knowledge-ops",
+            "topicName": "Personal Knowledge Ops",
+            "reason": "Discusses principles for the knowledge system's core operations (routing, clustering, topic merge)."
+          },
+          {
+            "topicSlug": "multilingual-prompting",
+            "topicName": "Multilingual Prompting",
+            "reason": "The note is written in Chinese, but the content is about development priority, not specifically about multilingual workflows."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_python_sidecar_003",
+        "sourceIds": [
+          "cap_qualityplan_005"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "python-analysis-sidecar",
+        "topicNameSuggestion": "Python Analysis Sidecar",
+        "title": "Python Sidecar Usage After Contract Freeze",
+        "summary": "A note states that the Python sidecar should only be used after artifact and schema contracts are frozen, and the first replay loop should reuse the TypeScript runtime.",
+        "keyPoints": [
+          "Python sidecar is for use only after artifact and schema contracts are frozen.",
+          "The first replay loop should reuse the existing TypeScript runtime path."
+        ],
+        "tags": [
+          "python",
+          "sidecar",
+          "contract",
+          "typescript",
+          "runtime"
+        ],
+        "confidence": 0.95,
+        "reason": "The capture is a direct, explicit statement about the conditions for using the Python sidecar, perfectly matching the 'Python Analysis Sidecar' topic summary.",
+        "possibleTopics": [
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Exact match for the rule governing when the Python sidecar is used."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Mentions 'replay loop', which is related to evaluation, but the core subject is the Python sidecar constraint."
+          }
+        ],
+        "missingContext": []
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_quality_pipeline_001",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "cluster_development_priority_002",
+        "destination": "topic",
+        "filePath": "topics/personal-knowledge-ops.md",
+        "topicName": "Personal Knowledge Ops",
+        "topicSlug": "personal-knowledge-ops"
+      },
+      {
+        "clusterId": "cluster_python_sidecar_003",
+        "destination": "topic",
+        "filePath": "topics/python-analysis-sidecar.md",
+        "topicName": "Python Analysis Sidecar",
+        "topicSlug": "python-analysis-sidecar"
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_writing_planning_quality_pipeline_001\ncapture_count: 6\ntrigger_reason: max_wait\nwindow: 2026-04-19T03:17:00Z -> 2026-04-19T03:27:00Z\n\nRelevant topic index entries\n1. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n2. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n3. Rust Background Compiler [rust-background-compiler]\n   summary: Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\n   recent_tags: rust, compiler, batch, runtime\n   last_updated_at: 2026-04-19T10:05:00Z\n4. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n5. Multilingual Prompting [multilingual-prompting]\n   summary: Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\n   recent_tags: bilingual, locale, prompts, zh-en\n   last_updated_at: 2026-04-18T09:15:00Z\n\nCaptures\ncapture_1:\nid: cap_qualityplan_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:17:00Z\nsource: clipboard\nsource_app_name: Google Docs\npreview: AI Quality Pipeline v0.1\nraw_text:\n  AI Quality Pipeline v0.1\n\ncapture_2:\nid: cap_qualityplan_002\ncontent_kind: rich_text\ncaptured_at: 2026-04-19T03:19:00Z\nsource: clipboard\nsource_app_name: Notion\npreview: fixtures, goldens, replay runner, scorer, experiment registry\nraw_text:\n  fixtures, goldens, replay runner, scorer, experiment registry\n\ncapture_3:\nid: cap_qualityplan_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:21:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 先把 routing、clustering、topic merge 跑稳，再谈 prose polish。\nraw_text:\n  先把 routing、clustering、topic merge 跑稳，再谈 prose polish。开发期第一优先级是结构决策正确，不是文章看起来更顺。\n\ncapture_4:\nid: cap_qualityplan_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:23:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Dev and holdout must be split before prompt tuning starts.\nraw_text:\n  Dev and holdout must be split before prompt tuning starts. Otherwise we will end up repairing specific cases instead of improving the system.\n\ncapture_5:\nid: cap_qualityplan_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:25:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Python sidecar only after artifact and schema contracts freeze.\nraw_text:\n  Python sidecar only after artifact and schema contracts freeze. The first replay loop should reuse the TypeScript runtime path instead of creating a second prompt stack.\n\ncapture_6:\nid: cap_qualityplan_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:27:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Critical metrics: source assignment integrity and false archive rate.\nraw_text:\n  Critical metrics: source assignment integrity and false archive rate. A prettier summary cannot compensate for a wrong topic merge or a false archive.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 54898,
+    "finishReason": "stop",
+    "inputTokens": 1209,
+    "model": "deepseek-chat",
+    "outputTokens": 1183,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"cluster_quality_pipeline_001\",\n      \"sourceIds\": [\"cap_qualityplan_001\", \"cap_qualityplan_002\", \"cap_qualityplan_004\", \"cap_qualityplan_006\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"AI Quality Pipeline Development: Fixtures, Goldens, and Metrics\",\n      \"summary\": \"Captures discuss the development of an AI quality pipeline (v0.1), focusing on fixtures, golden labels, a replay runner, scorer, and an experiment registry. It emphasizes splitting dev and holdout sets before prompt tuning to avoid overfitting and identifies critical metrics like source assignment integrity and false archive rate.\",\n      \"keyPoints\": [\n        \"AI Quality Pipeline v0.1 is under development.\",\n        \"Core components include fixtures, goldens, a replay runner, scorer, and experiment registry.\",\n        \"Dev and holdout sets must be split before prompt tuning begins.\",\n        \"Critical success metrics are source assignment integrity and false archive rate.\"\n      ],\n      \"tags\": [\"eval\", \"pipeline\", \"golden\", \"metrics\", \"holdout\"],\n      \"confidence\": 0.9,\n      \"reason\": \"Captures directly reference components (fixtures, goldens, replay runner) and principles (holdout split, metrics) central to the 'Prompt Eval Experimentation' topic. The language is technical and focused on evaluation system development.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Direct match for quality pipeline, fixtures, goldens, replay runner, and holdout discipline.\"\n        },\n        {\n          \"topicSlug\": \"rust-background-compiler\",\n          \"topicName\": \"Rust Background Compiler\",\n          \"reason\": \"The pipeline's execution runtime could involve the background compiler, but the captures are about evaluation design, not runtime execution.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"cluster_development_priority_002\",\n      \"sourceIds\": [\"cap_qualityplan_003\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"personal-knowledge-ops\",\n      \"topicNameSuggestion\": \"Personal Knowledge Ops\",\n      \"title\": \"Development Priority: Structural Decision Correctness Over Prose Polish\",\n      \"summary\": \"A note in Chinese emphasizes that during development, the top priority is getting the structural decisions (routing, clustering, topic merge) correct and stable, not making the prose look smoother.\",\n      \"keyPoints\": [\n        \"During development, ensure routing, clustering, and topic merge are stable first.\",\n        \"Structural decision correctness is the first priority, not prose polish.\"\n      ],\n      \"tags\": [\"development\", \"priority\", \"clustering\", \"routing\"],\n      \"confidence\": 0.7,\n      \"reason\": \"The capture discusses a high-level principle for system development (structural correctness over polish) related to knowledge operations (routing, clustering, topic merge). It fits the 'Personal Knowledge Ops' topic which covers rules for archive and topic management.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"personal-knowledge-ops\",\n          \"topicName\": \"Personal Knowledge Ops\",\n          \"reason\": \"Discusses principles for the knowledge system's core operations (routing, clustering, topic merge).\"\n        },\n        {\n          \"topicSlug\": \"multilingual-prompting\",\n          \"topicName\": \"Multilingual Prompting\",\n          \"reason\": \"The note is written in Chinese, but the content is about development priority, not specifically about multilingual workflows.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"cluster_python_sidecar_003\",\n      \"sourceIds\": [\"cap_qualityplan_005\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"python-analysis-sidecar\",\n      \"topicNameSuggestion\": \"Python Analysis Sidecar\",\n      \"title\": \"Python Sidecar Usage After Contract Freeze\",\n      \"summary\": \"A note states that the Python sidecar should only be used after artifact and schema contracts are frozen, and the first replay loop should reuse the TypeScript runtime.\",\n      \"keyPoints\": [\n        \"Python sidecar is for use only after artifact and schema contracts are frozen.\",\n        \"The first replay loop should reuse the existing TypeScript runtime path.\"\n      ],\n      \"tags\": [\"python\", \"sidecar\", \"contract\", \"typescript\", \"runtime\"],\n      \"confidence\": 0.95,\n      \"reason\": \"The capture is a direct, explicit statement about the conditions for using the Python sidecar, perfectly matching the 'Python Analysis Sidecar' topic summary.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Exact match for the rule governing when the Python sidecar is used.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Mentions 'replay loop', which is related to evaluation, but the core subject is the Python sidecar constraint.\"\n        }\n      ],\n      \"missingContext\": []\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_writing_planning_quality_pipeline_001_7193883e",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_quality_pipeline_plan",
+        "overlapCount": 4,
+        "predictedClusterId": "cluster_quality_pipeline_001"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 2/6 source assignments."
+    ],
+    "fixtureId": "dev_writing_planning_quality_pipeline_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.5714285714285715,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 4,
+        "rate": 0.6666666666666666,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 4,
+        "rate": 0.6666666666666666,
+        "total": 6
+      }
+    },
+    "overallScore": 0.6595238095238095,
+    "pairwiseCounts": {
+      "falseNegative": 9,
+      "falsePositive": 0,
+      "truePositive": 6
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "rust-background-compiler",
+      "topicName": "Rust Background Compiler",
+      "topicSummary": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.",
+      "recentTags": [
+        "rust",
+        "compiler",
+        "batch",
+        "runtime"
+      ],
+      "lastUpdatedAt": "2026-04-19T10:05:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "multilingual-prompting",
+      "topicName": "Multilingual Prompting",
+      "topicSummary": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.",
+      "recentTags": [
+        "bilingual",
+        "locale",
+        "prompts",
+        "zh-en"
+      ],
+      "lastUpdatedAt": "2026-04-18T09:15:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": true,
+  "validationErrors": []
+}

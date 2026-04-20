@@ -16,6 +16,7 @@ use tauri_specta::Event as _;
 use uuid::Uuid;
 
 mod link_metadata;
+mod chat;
 mod ocr;
 mod runtime;
 mod settings;

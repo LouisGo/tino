@@ -1,0 +1,53 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_bilingual_mixed_eval_001",
+  "batchId": "batch_dev_bilingual_mixed_eval_001",
+  "split": "dev",
+  "scenarioFamily": "bilingual_or_mixed_language",
+  "difficulty": "hard",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_bilingual_eval_core",
+      "sourceIds": [
+        "cap_bilingual_001",
+        "cap_bilingual_002",
+        "cap_bilingual_003",
+        "cap_bilingual_004",
+        "cap_bilingual_006",
+        "cap_bilingual_007"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "prompt-eval-experimentation",
+      "expectedTopicName": "Prompt Eval Experimentation",
+      "mustSupport": [
+        "Benchmark fixtures and holdout discipline come before prompt polish.",
+        "False archive is more important than cosmetic overall score gains.",
+        "Experiments should be compared case by case with explicit regressions."
+      ],
+      "severity": "high"
+    },
+    {
+      "clusterId": "golden_bilingual_python_boundary",
+      "sourceIds": [
+        "cap_bilingual_005"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "python-analysis-sidecar",
+      "expectedTopicName": "Python Analysis Sidecar",
+      "mustSupport": [
+        "Python should remain an analysis layer rather than the runtime source of truth."
+      ],
+      "severity": "medium"
+    }
+  ],
+  "criticalChecks": [
+    "Do not treat bilingual wording as a reason to send this batch to inbox.",
+    "Do not merge the Python boundary statement into the main eval cluster if the model can separate it cleanly."
+  ],
+  "annotationNotes": [
+    "The core challenge here is language mixing, not link density or noise.",
+    "A one-line Python note is allowed to become its own cluster because it states a stable architectural boundary."
+  ]
+}

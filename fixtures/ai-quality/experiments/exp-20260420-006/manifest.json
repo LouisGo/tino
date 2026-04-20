@@ -1,0 +1,29 @@
+{
+  "createdAt": "2026-04-20T15:08:24.981Z",
+  "experimentId": "exp-20260420-006",
+  "fixtureCount": 2,
+  "fixtures": [
+    "holdout_new_topic_support_macro_001",
+    "holdout_import_runtime_overlap_001"
+  ],
+  "mode": "live",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "runArtifacts": [
+    {
+      "artifactPath": "runs/holdout_new_topic_support_macro_001.json",
+      "fixtureId": "holdout_new_topic_support_macro_001",
+      "overallScore": 0.5666666666666667
+    },
+    {
+      "artifactPath": "runs/holdout_import_runtime_overlap_001.json",
+      "fixtureId": "holdout_import_runtime_overlap_001",
+      "overallScore": 0.7047619047619049
+    }
+  ],
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "split": "holdout"
+}

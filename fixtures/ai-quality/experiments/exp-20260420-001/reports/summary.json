@@ -1,0 +1,66 @@
+{
+  "experimentId": "exp-20260420-001",
+  "mode": "mock",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 0,
+        "name": "false_archive_rate",
+        "passed": true,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.3333333333333333,
+        "name": "destination_accuracy",
+        "passed": false,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.3333333333333333,
+        "name": "topic_merge_accuracy",
+        "passed": false,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.6363636363636364,
+      "destinationAccuracy": 0.3333333333333333,
+      "falseArchiveRate": 0,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 0.3333333333333333,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.3333333333333333
+    },
+    "runs": 2
+  },
+  "topFailures": [
+    {
+      "criticalFailures": [
+        "Wrong existing-topic merge on 4/6 source assignments."
+      ],
+      "fixtureId": "dev_focused_research_markitdown_001",
+      "overallScore": 0.48686868686868684
+    },
+    {
+      "criticalFailures": [
+        "Wrong existing-topic merge on 4/6 source assignments."
+      ],
+      "fixtureId": "dev_coding_debugging_pasteback_001",
+      "overallScore": 0.48686868686868684
+    }
+  ]
+}

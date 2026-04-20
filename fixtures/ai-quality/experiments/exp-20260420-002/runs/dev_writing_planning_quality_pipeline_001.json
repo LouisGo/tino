@@ -1,0 +1,266 @@
+{
+  "createdAt": "2026-04-20T14:54:13.681Z",
+  "experimentId": "exp-20260420-002",
+  "fixtureChecksum": "c2ef6b6594d19f8d1c65662a01fc7d1940cac2febcf7e63b5ecf04a6787c0eb7",
+  "fixtureId": "dev_writing_planning_quality_pipeline_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_writing_planning_quality_pipeline_001_1776696853681",
+    "batchId": "batch_dev_writing_planning_quality_pipeline_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T14:54:13.681Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_writing_planning_quality_pipeline_001_cluster_primary",
+        "sourceIds": [
+          "cap_qualityplan_001",
+          "cap_qualityplan_002"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "AI Quality Pipeline v0.1",
+        "summary": "AI Quality Pipeline v0.1 fixtures, goldens, replay runner, scorer, experiment registry",
+        "keyPoints": [
+          "AI Quality Pipeline v0.1",
+          "fixtures, goldens, replay runner, scorer, experiment registry",
+          "先把 routing、clustering、topic merge 跑稳，再谈 prose polish。",
+          "Dev and holdout must be split before prompt tuning starts."
+        ],
+        "tags": [
+          "eval",
+          "golden",
+          "runner",
+          "regression",
+          "plain_text"
+        ],
+        "confidence": 0.83,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_writing_planning_quality_pipeline_001_cluster_secondary",
+        "sourceIds": [
+          "cap_qualityplan_003",
+          "cap_qualityplan_004",
+          "cap_qualityplan_005",
+          "cap_qualityplan_006"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "python-analysis-sidecar",
+        "topicNameSuggestion": "Python Analysis Sidecar",
+        "title": "先把 routing、clustering、topic merge 跑稳，再谈 prose polish。",
+        "summary": "先把 routing、clustering、topic merge 跑稳，再谈 prose polish。开发期第一优先级是结构决策正确，不是文章看起来更顺。 Dev and holdout must be split before prompt tuning starts. Otherwise we will end up repairing specific cases instead of improving the system.",
+        "keyPoints": [
+          "先把 routing、clustering、topic merge 跑稳，再谈 prose polish。",
+          "Dev and holdout must be split before prompt tuning starts.",
+          "Python sidecar only after artifact and schema contracts freeze.",
+          "Critical metrics: source assignment integrity and false archive rate."
+        ],
+        "tags": [
+          "python",
+          "notebook",
+          "analysis",
+          "artifacts",
+          "plain_text"
+        ],
+        "confidence": 0.71,
+        "reason": "The content still fits the same AI engineering theme but with lower evidence density.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control."
+          }
+        ],
+        "missingContext": []
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_writing_planning_quality_pipeline_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "batch_dev_writing_planning_quality_pipeline_001_cluster_secondary",
+        "destination": "topic",
+        "filePath": "topics/python-analysis-sidecar.md",
+        "topicName": "Python Analysis Sidecar",
+        "topicSlug": "python-analysis-sidecar"
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_writing_planning_quality_pipeline_001\ncapture_count: 6\ntrigger_reason: max_wait\nwindow: 2026-04-19T03:17:00Z -> 2026-04-19T03:27:00Z\n\nRelevant topic index entries\n1. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n2. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n3. Rust Background Compiler [rust-background-compiler]\n   summary: Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\n   recent_tags: rust, compiler, batch, runtime\n   last_updated_at: 2026-04-19T10:05:00Z\n4. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n5. Multilingual Prompting [multilingual-prompting]\n   summary: Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\n   recent_tags: bilingual, locale, prompts, zh-en\n   last_updated_at: 2026-04-18T09:15:00Z\n\nCaptures\ncapture_1:\nid: cap_qualityplan_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:17:00Z\nsource: clipboard\nsource_app_name: Google Docs\npreview: AI Quality Pipeline v0.1\nraw_text:\n  AI Quality Pipeline v0.1\n\ncapture_2:\nid: cap_qualityplan_002\ncontent_kind: rich_text\ncaptured_at: 2026-04-19T03:19:00Z\nsource: clipboard\nsource_app_name: Notion\npreview: fixtures, goldens, replay runner, scorer, experiment registry\nraw_text:\n  fixtures, goldens, replay runner, scorer, experiment registry\n\ncapture_3:\nid: cap_qualityplan_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:21:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 先把 routing、clustering、topic merge 跑稳，再谈 prose polish。\nraw_text:\n  先把 routing、clustering、topic merge 跑稳，再谈 prose polish。开发期第一优先级是结构决策正确，不是文章看起来更顺。\n\ncapture_4:\nid: cap_qualityplan_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:23:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Dev and holdout must be split before prompt tuning starts.\nraw_text:\n  Dev and holdout must be split before prompt tuning starts. Otherwise we will end up repairing specific cases instead of improving the system.\n\ncapture_5:\nid: cap_qualityplan_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:25:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Python sidecar only after artifact and schema contracts freeze.\nraw_text:\n  Python sidecar only after artifact and schema contracts freeze. The first replay loop should reuse the TypeScript runtime path instead of creating a second prompt stack.\n\ncapture_6:\nid: cap_qualityplan_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T03:27:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Critical metrics: source assignment integrity and false archive rate.\nraw_text:\n  Critical metrics: source assignment integrity and false archive rate. A prettier summary cannot compensate for a wrong topic merge or a false archive.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_writing_planning_quality_pipeline_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_qualityplan_001\",\n        \"cap_qualityplan_002\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"AI Quality Pipeline v0.1\",\n      \"summary\": \"AI Quality Pipeline v0.1 fixtures, goldens, replay runner, scorer, experiment registry\",\n      \"keyPoints\": [\n        \"AI Quality Pipeline v0.1\",\n        \"fixtures, goldens, replay runner, scorer, experiment registry\",\n        \"先把 routing、clustering、topic merge 跑稳，再谈 prose polish。\",\n        \"Dev and holdout must be split before prompt tuning starts.\"\n      ],\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"runner\",\n        \"regression\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.83,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"rust-background-compiler\",\n          \"topicName\": \"Rust Background Compiler\",\n          \"reason\": \"Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_writing_planning_quality_pipeline_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_qualityplan_003\",\n        \"cap_qualityplan_004\",\n        \"cap_qualityplan_005\",\n        \"cap_qualityplan_006\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"python-analysis-sidecar\",\n      \"topicNameSuggestion\": \"Python Analysis Sidecar\",\n      \"title\": \"先把 routing、clustering、topic merge 跑稳，再谈 prose polish。\",\n      \"summary\": \"先把 routing、clustering、topic merge 跑稳，再谈 prose polish。开发期第一优先级是结构决策正确，不是文章看起来更顺。 Dev and holdout must be split before prompt tuning starts. Otherwise we will end up repairing specific cases instead of improving the system.\",\n      \"keyPoints\": [\n        \"先把 routing、clustering、topic merge 跑稳，再谈 prose polish。\",\n        \"Dev and holdout must be split before prompt tuning starts.\",\n        \"Python sidecar only after artifact and schema contracts freeze.\",\n        \"Critical metrics: source assignment integrity and false archive rate.\"\n      ],\n      \"tags\": [\n        \"python\",\n        \"notebook\",\n        \"analysis\",\n        \"artifacts\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.71,\n      \"reason\": \"The content still fits the same AI engineering theme but with lower evidence density.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"rust-background-compiler\",\n          \"topicName\": \"Rust Background Compiler\",\n          \"reason\": \"Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\"\n        }\n      ],\n      \"missingContext\": []\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_writing_planning_quality_pipeline_001_88aac94f",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_quality_pipeline_plan",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_writing_planning_quality_pipeline_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 4/6 source assignments."
+    ],
+    "fixtureId": "dev_writing_planning_quality_pipeline_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.6363636363636364,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      }
+    },
+    "overallScore": 0.5757575757575758,
+    "pairwiseCounts": {
+      "falseNegative": 8,
+      "falsePositive": 0,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "rust-background-compiler",
+      "topicName": "Rust Background Compiler",
+      "topicSummary": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.",
+      "recentTags": [
+        "rust",
+        "compiler",
+        "batch",
+        "runtime"
+      ],
+      "lastUpdatedAt": "2026-04-19T10:05:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "multilingual-prompting",
+      "topicName": "Multilingual Prompting",
+      "topicSummary": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.",
+      "recentTags": [
+        "bilingual",
+        "locale",
+        "prompts",
+        "zh-en"
+      ],
+      "lastUpdatedAt": "2026-04-18T09:15:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

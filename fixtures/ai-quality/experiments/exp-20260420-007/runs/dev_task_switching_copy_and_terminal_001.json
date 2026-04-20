@@ -1,0 +1,359 @@
+{
+  "createdAt": "2026-04-20T15:53:00.614Z",
+  "experimentId": "exp-20260420-007",
+  "fixtureChecksum": "83f0760846e68b957c8d20eb3b17f03cd9df60a93efb6b9be4a5bc1226c60533",
+  "fixtureId": "dev_task_switching_copy_and_terminal_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_task_switching_copy_and_terminal_001_1776700491229",
+    "batchId": "batch_dev_task_switching_copy_and_terminal_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T15:54:51.229Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_1",
+        "sourceIds": [
+          "cap_taskswitch_001",
+          "cap_taskswitch_002",
+          "cap_taskswitch_008"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "product-writing-playbook",
+        "topicNameSuggestion": "Product Writing Playbook",
+        "title": "Product copy principles: quiet inbox, capture-first, calm synthesis",
+        "summary": "Three related notes about product copy and messaging, emphasizing a low-friction capture experience, organization as a secondary promise, and AI-driven synthesis as a core homepage value.",
+        "keyPoints": [
+          "Clipboard should feel like a quiet inbox, not a dashboard.",
+          "Core promise: capture first, organize later.",
+          "Homepage should promise calm synthesis via background AI, not manual filing."
+        ],
+        "tags": [
+          "copywriting",
+          "messaging",
+          "homepage",
+          "product-principles"
+        ],
+        "confidence": 0.9,
+        "reason": "Durable product copy and messaging principles that fit the existing 'Product Writing Playbook' topic scope. They are not time-bound or actionable tasks.",
+        "possibleTopics": [
+          {
+            "topicSlug": "product-writing-playbook",
+            "topicName": "Product Writing Playbook",
+            "reason": "Direct fit for product copy, messaging structures, and homepage narrative rules."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_2",
+        "sourceIds": [
+          "cap_taskswitch_003",
+          "cap_taskswitch_004"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Rust/Tauri build error during local development",
+        "summary": "A cargo check command and a related type mismatch error in an IPC schema file, captured from terminal and VS Code.",
+        "keyPoints": [
+          "Ran `cargo check` on Tauri manifest.",
+          "Encountered type error `expected Option<String>, found String` in `ipc_schema.rs`."
+        ],
+        "tags": [
+          "rust",
+          "tauri",
+          "build-error",
+          "development"
+        ],
+        "confidence": 0.85,
+        "reason": "Actionable development work: a specific build error that needs to be fixed. It's not durable knowledge for a topic yet; it's a transient task.",
+        "possibleTopics": [
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "Related to Rust/Tauri codebase, but this is a specific transient error, not a durable pattern or system knowledge."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_3",
+        "sourceIds": [
+          "cap_taskswitch_005"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "product-writing-playbook",
+        "topicNameSuggestion": "Product Writing Playbook",
+        "title": "Homepage tone guidance: warm but technical, avoid enterprise polish",
+        "summary": "A note specifying the desired tone for the homepage: warmer and technical, tailored for serious personal workflows, avoiding polished enterprise language.",
+        "keyPoints": [
+          "Homepage tone should be warmer but still technical.",
+          "Avoid polished enterprise language.",
+          "Sound like a tool for serious personal workflows."
+        ],
+        "tags": [
+          "copywriting",
+          "tone",
+          "homepage",
+          "messaging"
+        ],
+        "confidence": 0.9,
+        "reason": "Durable copywriting and tone guidance that directly fits the 'Product Writing Playbook' topic. It's a stable stylistic decision.",
+        "possibleTopics": [
+          {
+            "topicSlug": "product-writing-playbook",
+            "topicName": "Product Writing Playbook",
+            "reason": "Direct fit for homepage messaging and tone rules."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_4",
+        "sourceIds": [
+          "cap_taskswitch_006"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Personal errand: buy HDMI adapter",
+        "summary": "A simple reminder to purchase an HDMI adapter.",
+        "keyPoints": [
+          "Action: buy HDMI adapter."
+        ],
+        "tags": [
+          "personal",
+          "errand",
+          "reminder"
+        ],
+        "confidence": 0.95,
+        "reason": "Actionable personal task with a clear owner (the user). It belongs in the inbox for triage and completion.",
+        "possibleTopics": [],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_5",
+        "sourceIds": [
+          "cap_taskswitch_007"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Workflow note: rename screenshots before uploading",
+        "summary": "A reminder or note about a personal workflow step to rename screenshots prior to uploading them.",
+        "keyPoints": [
+          "Action: rename screenshots before uploading."
+        ],
+        "tags": [
+          "workflow",
+          "screenshots",
+          "personal-ops"
+        ],
+        "confidence": 0.8,
+        "reason": "Actionable personal workflow note. It's a potential habit or task, not durable knowledge for a shared topic.",
+        "possibleTopics": [
+          {
+            "topicSlug": "personal-knowledge-ops",
+            "topicName": "Personal Knowledge Ops",
+            "reason": "Tangentially related to personal capture/retention workflows, but this is a specific actionable reminder, not a durable rule."
+          }
+        ],
+        "missingContext": []
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_1",
+        "destination": "topic",
+        "filePath": "topics/product-writing-playbook.md",
+        "topicName": "Product Writing Playbook",
+        "topicSlug": "product-writing-playbook"
+      },
+      {
+        "clusterId": "cluster_2",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      },
+      {
+        "clusterId": "cluster_3",
+        "destination": "topic",
+        "filePath": "topics/product-writing-playbook.md",
+        "topicName": "Product Writing Playbook",
+        "topicSlug": "product-writing-playbook"
+      },
+      {
+        "clusterId": "cluster_4",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      },
+      {
+        "clusterId": "cluster_5",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_task_switching_copy_and_terminal_001\ncapture_count: 8\ntrigger_reason: capture_count\nwindow: 2026-04-19T09:12:00Z -> 2026-04-19T09:25:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Product Writing Playbook [product-writing-playbook]\n   summary: Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.\n   recent_tags: copywriting, messaging, headline, launch\n   last_updated_at: 2026-04-17T14:40:00Z\n2. Rust Background Compiler [rust-background-compiler]\n   summary: Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\n   recent_tags: rust, compiler, batch, runtime\n   last_updated_at: 2026-04-19T10:05:00Z\n3. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n4. Weekly Product Ops [weekly-product-ops]\n   summary: Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.\n   recent_tags: meeting, owners, timeline, release\n   last_updated_at: 2026-04-19T05:50:00Z\n5. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n\nCaptures\ncapture_1:\nid: cap_taskswitch_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T09:12:00Z\nsource: clipboard\nsource_app_name: Figma\npreview: The clipboard should feel like a quiet inbox, not a dashboard.\nraw_text:\n  The clipboard should feel like a quiet inbox, not a dashboard. The product promise is low-friction capture first, organization second.\n\ncapture_2:\nid: cap_taskswitch_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T09:14:00Z\nsource: clipboard\nsource_app_name: Google Docs\npreview: Capture first, organize later.\nraw_text:\n  Capture first, organize later.\n\ncapture_3:\nid: cap_taskswitch_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T09:16:00Z\nsource: clipboard\nsource_app_name: Terminal\npreview: cargo check --manifest-path src-tauri/Cargo.toml\nraw_text:\n  cargo check --manifest-path src-tauri/Cargo.toml\n\ncapture_4:\nid: cap_taskswitch_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T09:18:00Z\nsource: clipboard\nsource_app_name: VS Code\npreview: error[E0308]: expected Option<String>, found String in ipc_schema.rs\nraw_text:\n  error[E0308]: expected Option<String>, found String in ipc_schema.rs\n\ncapture_5:\nid: cap_taskswitch_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T09:20:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Need warmer but still technical tone for the homepage.\nraw_text:\n  Need warmer but still technical tone for the homepage. Avoid polished enterprise language; it should sound like a tool for serious personal workflows.\n\ncapture_6:\nid: cap_taskswitch_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T09:22:00Z\nsource: clipboard\nsource_app_name: Reminders\npreview: buy HDMI adapter\nraw_text:\n  buy HDMI adapter\n\ncapture_7:\nid: cap_taskswitch_007\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T09:23:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: rename screenshots before uploading\nraw_text:\n  rename screenshots before uploading\n\ncapture_8:\nid: cap_taskswitch_008\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T09:25:00Z\nsource: clipboard\nsource_app_name: Google Docs\npreview: Background AI compiles scattered fragments into topics.\nraw_text:\n  Background AI compiles scattered fragments into topics. The homepage should promise calm synthesis, not manual filing work.\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Only create a new topic when none of the listed topics is a reasonable broader home.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v2",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 55733,
+    "finishReason": "stop",
+    "inputTokens": 2039,
+    "model": "deepseek-chat",
+    "outputTokens": 1228,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "```json\n{\n    \"clusters\": [\n        {\n            \"clusterId\": \"cluster_1\",\n            \"sourceIds\": [\"cap_taskswitch_001\", \"cap_taskswitch_002\", \"cap_taskswitch_008\"],\n            \"decision\": \"archive_to_topic\",\n            \"topicSlugSuggestion\": \"product-writing-playbook\",\n            \"topicNameSuggestion\": \"Product Writing Playbook\",\n            \"title\": \"Product copy principles: quiet inbox, capture-first, calm synthesis\",\n            \"summary\": \"Three related notes about product copy and messaging, emphasizing a low-friction capture experience, organization as a secondary promise, and AI-driven synthesis as a core homepage value.\",\n            \"keyPoints\": [\"Clipboard should feel like a quiet inbox, not a dashboard.\", \"Core promise: capture first, organize later.\", \"Homepage should promise calm synthesis via background AI, not manual filing.\"],\n            \"tags\": [\"copywriting\", \"messaging\", \"homepage\", \"product-principles\"],\n            \"confidence\": 0.9,\n            \"reason\": \"Durable product copy and messaging principles that fit the existing 'Product Writing Playbook' topic scope. They are not time-bound or actionable tasks.\",\n            \"possibleTopics\": [{\"topicSlug\": \"product-writing-playbook\", \"topicName\": \"Product Writing Playbook\", \"reason\": \"Direct fit for product copy, messaging structures, and homepage narrative rules.\"}],\n            \"missingContext\": []\n        },\n        {\n            \"clusterId\": \"cluster_2\",\n            \"sourceIds\": [\"cap_taskswitch_003\", \"cap_taskswitch_004\"],\n            \"decision\": \"send_to_inbox\",\n            \"topicSlugSuggestion\": null,\n            \"topicNameSuggestion\": null,\n            \"title\": \"Rust/Tauri build error during local development\",\n            \"summary\": \"A cargo check command and a related type mismatch error in an IPC schema file, captured from terminal and VS Code.\",\n            \"keyPoints\": [\"Ran `cargo check` on Tauri manifest.\", \"Encountered type error `expected Option<String>, found String` in `ipc_schema.rs`.\"],\n            \"tags\": [\"rust\", \"tauri\", \"build-error\", \"development\"],\n            \"confidence\": 0.85,\n            \"reason\": \"Actionable development work: a specific build error that needs to be fixed. It's not durable knowledge for a topic yet; it's a transient task.\",\n            \"possibleTopics\": [{\"topicSlug\": \"rust-background-compiler\", \"topicName\": \"Rust Background Compiler\", \"reason\": \"Related to Rust/Tauri codebase, but this is a specific transient error, not a durable pattern or system knowledge.\"}],\n            \"missingContext\": []\n        },\n        {\n            \"clusterId\": \"cluster_3\",\n            \"sourceIds\": [\"cap_taskswitch_005\"],\n            \"decision\": \"archive_to_topic\",\n            \"topicSlugSuggestion\": \"product-writing-playbook\",\n            \"topicNameSuggestion\": \"Product Writing Playbook\",\n            \"title\": \"Homepage tone guidance: warm but technical, avoid enterprise polish\",\n            \"summary\": \"A note specifying the desired tone for the homepage: warmer and technical, tailored for serious personal workflows, avoiding polished enterprise language.\",\n            \"keyPoints\": [\"Homepage tone should be warmer but still technical.\", \"Avoid polished enterprise language.\", \"Sound like a tool for serious personal workflows.\"],\n            \"tags\": [\"copywriting\", \"tone\", \"homepage\", \"messaging\"],\n            \"confidence\": 0.9,\n            \"reason\": \"Durable copywriting and tone guidance that directly fits the 'Product Writing Playbook' topic. It's a stable stylistic decision.\",\n            \"possibleTopics\": [{\"topicSlug\": \"product-writing-playbook\", \"topicName\": \"Product Writing Playbook\", \"reason\": \"Direct fit for homepage messaging and tone rules.\"}],\n            \"missingContext\": []\n        },\n        {\n            \"clusterId\": \"cluster_4\",\n            \"sourceIds\": [\"cap_taskswitch_006\"],\n            \"decision\": \"send_to_inbox\",\n            \"topicSlugSuggestion\": null,\n            \"topicNameSuggestion\": null,\n            \"title\": \"Personal errand: buy HDMI adapter\",\n            \"summary\": \"A simple reminder to purchase an HDMI adapter.\",\n            \"keyPoints\": [\"Action: buy HDMI adapter.\"],\n            \"tags\": [\"personal\", \"errand\", \"reminder\"],\n            \"confidence\": 0.95,\n            \"reason\": \"Actionable personal task with a clear owner (the user). It belongs in the inbox for triage and completion.\",\n            \"possibleTopics\": [],\n            \"missingContext\": []\n        },\n        {\n            \"clusterId\": \"cluster_5\",\n            \"sourceIds\": [\"cap_taskswitch_007\"],\n            \"decision\": \"send_to_inbox\",\n            \"topicSlugSuggestion\": null,\n            \"topicNameSuggestion\": null,\n            \"title\": \"Workflow note: rename screenshots before uploading\",\n            \"summary\": \"A reminder or note about a personal workflow step to rename screenshots prior to uploading them.\",\n            \"keyPoints\": [\"Action: rename screenshots before uploading.\"],\n            \"tags\": [\"workflow\", \"screenshots\", \"personal-ops\"],\n            \"confidence\": 0.8,\n            \"reason\": \"Actionable personal workflow note. It's a potential habit or task, not durable knowledge for a shared topic.\",\n            \"possibleTopics\": [{\"topicSlug\": \"personal-knowledge-ops\", \"topicName\": \"Personal Knowledge Ops\", \"reason\": \"Tangentially related to personal capture/retention workflows, but this is a specific actionable reminder, not a durable rule.\"}],\n            \"missingContext\": []\n        }\n    ]\n}\n```",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_task_switching_copy_and_terminal_001_6a7b714f",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_copywriting_cluster",
+        "overlapCount": 3,
+        "predictedClusterId": "cluster_1"
+      },
+      {
+        "expectedClusterId": "golden_interrupted_dev_notes",
+        "overlapCount": 2,
+        "predictedClusterId": "cluster_2"
+      },
+      {
+        "expectedClusterId": "golden_personal_noise",
+        "overlapCount": 1,
+        "predictedClusterId": "cluster_4"
+      }
+    ],
+    "criticalFailures": [],
+    "fixtureId": "dev_task_switching_copy_and_terminal_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.6153846153846153,
+      "destinationAccuracy": {
+        "correct": 7,
+        "rate": 0.875,
+        "total": 8
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": 0,
+        "total": 4
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 7,
+        "rate": 0.875,
+        "total": 8
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 4,
+        "rate": 1,
+        "total": 4
+      }
+    },
+    "overallScore": 0.8746794871794873,
+    "pairwiseCounts": {
+      "falseNegative": 5,
+      "falsePositive": 0,
+      "truePositive": 4
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "product-writing-playbook",
+      "topicName": "Product Writing Playbook",
+      "topicSummary": "Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.",
+      "recentTags": [
+        "copywriting",
+        "messaging",
+        "headline",
+        "launch"
+      ],
+      "lastUpdatedAt": "2026-04-17T14:40:00Z"
+    },
+    {
+      "topicSlug": "rust-background-compiler",
+      "topicName": "Rust Background Compiler",
+      "topicSummary": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.",
+      "recentTags": [
+        "rust",
+        "compiler",
+        "batch",
+        "runtime"
+      ],
+      "lastUpdatedAt": "2026-04-19T10:05:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "weekly-product-ops",
+      "topicName": "Weekly Product Ops",
+      "topicSummary": "Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.",
+      "recentTags": [
+        "meeting",
+        "owners",
+        "timeline",
+        "release"
+      ],
+      "lastUpdatedAt": "2026-04-19T05:50:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": true,
+  "validationErrors": []
+}

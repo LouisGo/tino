@@ -1,0 +1,51 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_low_value_noise_misc_001",
+  "batchId": "batch_dev_low_value_noise_misc_001",
+  "split": "dev",
+  "scenarioFamily": "low_value_noise",
+  "difficulty": "medium",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_noise_discard",
+      "sourceIds": [
+        "cap_noise_001",
+        "cap_noise_002",
+        "cap_noise_003",
+        "cap_noise_004",
+        "cap_noise_006",
+        "cap_noise_007"
+      ],
+      "expectedDestination": "discard",
+      "topicMode": "discard",
+      "expectedTopicSlug": null,
+      "expectedTopicName": null,
+      "mustSupport": [
+        "These captures are low-value or highly ephemeral noise."
+      ],
+      "severity": "high"
+    },
+    {
+      "clusterId": "golden_noise_followup_note",
+      "sourceIds": [
+        "cap_noise_005"
+      ],
+      "expectedDestination": "send_to_inbox",
+      "topicMode": "inbox",
+      "expectedTopicSlug": null,
+      "expectedTopicName": null,
+      "mustSupport": [
+        "The filter-log idea is useful but still too underdeveloped for direct topic archival."
+      ],
+      "severity": "medium"
+    }
+  ],
+  "criticalChecks": [
+    "Any attempt to archive the OTP or personal errand text is a severe error.",
+    "The lone useful note should not be swallowed into the discard cluster."
+  ],
+  "annotationNotes": [
+    "This batch tests whether the system can rescue one meaningful fragment from mostly worthless noise.",
+    "The rescued note still belongs in inbox because it lacks surrounding evidence."
+  ]
+}

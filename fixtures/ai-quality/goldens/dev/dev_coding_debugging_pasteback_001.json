@@ -1,0 +1,39 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_coding_debugging_pasteback_001",
+  "batchId": "batch_dev_coding_debugging_pasteback_001",
+  "split": "dev",
+  "scenarioFamily": "coding_debugging",
+  "difficulty": "medium",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_pasteback_permissions",
+      "sourceIds": [
+        "cap_pasteback_001",
+        "cap_pasteback_002",
+        "cap_pasteback_003",
+        "cap_pasteback_004",
+        "cap_pasteback_005",
+        "cap_pasteback_006"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "tauri-macos-permissions",
+      "expectedTopicName": "Tauri macOS Permissions",
+      "mustSupport": [
+        "Paste-back failures are tied to Accessibility trust and signing identity.",
+        "Local signing is part of the correct validation path.",
+        "User-facing guidance should explain permission recovery clearly."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Do not discard or inbox the command snippet when it clearly supports the permission-debugging cluster.",
+    "Do not reroute this batch into a generic rust-background-compiler topic."
+  ],
+  "annotationNotes": [
+    "The GitHub issue link is evidence, not a standalone watchlist item.",
+    "The semantic core is macOS permission behavior, not build tooling."
+  ]
+}

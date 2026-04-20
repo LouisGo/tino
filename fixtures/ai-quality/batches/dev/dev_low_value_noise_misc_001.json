@@ -1,0 +1,130 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_low_value_noise_misc_001",
+  "split": "dev",
+  "scenarioFamily": "low_value_noise",
+  "difficulty": "medium",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "personal-knowledge-ops",
+    "prompt-eval-experimentation",
+    "link-triage-watchlist",
+    "weekly-product-ops",
+    "product-writing-playbook"
+  ],
+  "notes": [
+    "Mostly noise with one useful product note hidden inside.",
+    "The useful note still lacks enough context for direct topic archival."
+  ],
+  "batch": {
+    "id": "batch_dev_low_value_noise_misc_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-18T11:43:00Z",
+    "triggerReason": "capture_count",
+    "captureCount": 7,
+    "firstCapturedAt": "2026-04-18T11:31:00Z",
+    "lastCapturedAt": "2026-04-18T11:42:00Z",
+    "sourceIds": [
+      "cap_noise_001",
+      "cap_noise_002",
+      "cap_noise_003",
+      "cap_noise_004",
+      "cap_noise_005",
+      "cap_noise_006",
+      "cap_noise_007"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_noise_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T11:31:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Messages",
+      "sourceAppBundleId": "com.apple.MobileSMS",
+      "preview": "482911",
+      "rawText": "482911",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_noise_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T11:33:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Zoom",
+      "sourceAppBundleId": "us.zoom.xos",
+      "preview": "Zoom code 448-992-103",
+      "rawText": "Zoom code 448-992-103",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_noise_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T11:35:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Reminders",
+      "sourceAppBundleId": "com.apple.reminders",
+      "preview": "send invoice after lunch",
+      "rawText": "send invoice after lunch",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_noise_004",
+      "contentKind": "link",
+      "capturedAt": "2026-04-18T11:37:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Safari",
+      "sourceAppBundleId": "com.apple.Safari",
+      "preview": "https://maps.apple.com/?q=bao+house",
+      "rawText": "https://maps.apple.com/?q=bao+house",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://maps.apple.com/?q=bao+house"
+    },
+    {
+      "id": "cap_noise_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T11:39:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Need filter logs for discarded sensitive snippets so we can debug false positives.",
+      "rawText": "Need filter logs for discarded sensitive snippets so we can debug false positives. Right now filtered captures disappear too completely to tune the gating rules.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_noise_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T11:40:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Messages",
+      "sourceAppBundleId": "com.apple.MobileSMS",
+      "preview": "2FA",
+      "rawText": "2FA",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_noise_007",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T11:42:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Finder",
+      "sourceAppBundleId": "com.apple.finder",
+      "preview": "IMG_4021.PNG",
+      "rawText": "IMG_4021.PNG",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

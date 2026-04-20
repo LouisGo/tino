@@ -1,0 +1,116 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_writing_planning_quality_pipeline_001",
+  "split": "dev",
+  "scenarioFamily": "writing_planning",
+  "difficulty": "medium",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "prompt-eval-experimentation",
+    "python-analysis-sidecar",
+    "rust-background-compiler",
+    "personal-knowledge-ops",
+    "multilingual-prompting"
+  ],
+  "notes": [
+    "Planning session for the AI quality loop itself.",
+    "The batch should reward structural quality concerns over writing polish."
+  ],
+  "batch": {
+    "id": "batch_dev_writing_planning_quality_pipeline_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-19T03:28:00Z",
+    "triggerReason": "max_wait",
+    "captureCount": 6,
+    "firstCapturedAt": "2026-04-19T03:17:00Z",
+    "lastCapturedAt": "2026-04-19T03:27:00Z",
+    "sourceIds": [
+      "cap_qualityplan_001",
+      "cap_qualityplan_002",
+      "cap_qualityplan_003",
+      "cap_qualityplan_004",
+      "cap_qualityplan_005",
+      "cap_qualityplan_006"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_qualityplan_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T03:17:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Google Docs",
+      "sourceAppBundleId": "com.google.Chrome",
+      "preview": "AI Quality Pipeline v0.1",
+      "rawText": "AI Quality Pipeline v0.1",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_qualityplan_002",
+      "contentKind": "rich_text",
+      "capturedAt": "2026-04-19T03:19:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notion",
+      "sourceAppBundleId": "notion.id",
+      "preview": "fixtures, goldens, replay runner, scorer, experiment registry",
+      "rawText": "fixtures, goldens, replay runner, scorer, experiment registry",
+      "rawRich": "<ul><li>fixtures</li><li>goldens</li><li>replay runner</li><li>scorer</li><li>experiment registry</li></ul>",
+      "rawRichFormat": "html",
+      "linkUrl": null
+    },
+    {
+      "id": "cap_qualityplan_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T03:21:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "先把 routing、clustering、topic merge 跑稳，再谈 prose polish。",
+      "rawText": "先把 routing、clustering、topic merge 跑稳，再谈 prose polish。开发期第一优先级是结构决策正确，不是文章看起来更顺。",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_qualityplan_004",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T03:23:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Dev and holdout must be split before prompt tuning starts.",
+      "rawText": "Dev and holdout must be split before prompt tuning starts. Otherwise we will end up repairing specific cases instead of improving the system.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_qualityplan_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T03:25:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Python sidecar only after artifact and schema contracts freeze.",
+      "rawText": "Python sidecar only after artifact and schema contracts freeze. The first replay loop should reuse the TypeScript runtime path instead of creating a second prompt stack.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_qualityplan_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T03:27:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "Critical metrics: source assignment integrity and false archive rate.",
+      "rawText": "Critical metrics: source assignment integrity and false archive rate. A prettier summary cannot compensate for a wrong topic merge or a false archive.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

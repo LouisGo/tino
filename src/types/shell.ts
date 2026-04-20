@@ -25,6 +25,15 @@ import type {
   ClipboardSourceAppRule as RustClipboardSourceAppRule,
   DashboardSnapshot as RustDashboardSnapshot,
   DeleteClipboardCaptureResult as RustDeleteClipboardCaptureResult,
+  HomeChatConversationDetail as RustHomeChatConversationDetail,
+  HomeChatConversationSummary as RustHomeChatConversationSummary,
+  HomeChatConversationTitleSource as RustHomeChatConversationTitleSource,
+  HomeChatConversationTitleStatus as RustHomeChatConversationTitleStatus,
+  HomeChatConversationsUpdated as RustHomeChatConversationsUpdated,
+  HomeChatConversationsUpdatedReason as RustHomeChatConversationsUpdatedReason,
+  HomeChatMessage as RustHomeChatMessage,
+  HomeChatMessageRole as RustHomeChatMessageRole,
+  HomeChatMessageStatus as RustHomeChatMessageStatus,
   PinnedClipboardCapture as RustPinnedClipboardCapture,
   ReviewAction as RustReviewAction,
   ReviewFeedbackRecord as RustReviewFeedbackRecord,
@@ -133,6 +142,16 @@ export type ClipboardPageRequest = Omit<RustClipboardPageRequest, "search" | "fi
   search?: string | null;
   filter?: ClipboardHistoryFilter | null;
 };
+
+export type HomeChatMessageRole = RustHomeChatMessageRole;
+export type HomeChatMessageStatus = RustHomeChatMessageStatus;
+export type HomeChatConversationTitleStatus = RustHomeChatConversationTitleStatus;
+export type HomeChatConversationTitleSource = RustHomeChatConversationTitleSource;
+export type HomeChatMessage = RustHomeChatMessage;
+export type HomeChatConversationSummary = RustHomeChatConversationSummary;
+export type HomeChatConversationDetail = RustHomeChatConversationDetail;
+export type HomeChatConversationsUpdatedReason = RustHomeChatConversationsUpdatedReason;
+export type HomeChatConversationsUpdatedPayload = RustHomeChatConversationsUpdated;
 
 export type AiBatchRuntimeState = RustAiBatchRuntimeState;
 export type AiDecision = RustAiDecision;

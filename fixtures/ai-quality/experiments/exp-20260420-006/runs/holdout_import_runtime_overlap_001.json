@@ -1,0 +1,304 @@
+{
+  "createdAt": "2026-04-20T15:07:38.498Z",
+  "experimentId": "exp-20260420-006",
+  "fixtureChecksum": "dc663def74f51a60d7d3238d0cf15e3f6d18bf9f2d1b8f4953c55238c463d93c",
+  "fixtureId": "holdout_import_runtime_overlap_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_holdout_import_runtime_overlap_001_1776697704980",
+    "batchId": "batch_holdout_import_runtime_overlap_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T15:08:24.980Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_import_runtime_overlap_001",
+        "sourceIds": [
+          "cap_importruntime_001",
+          "cap_importruntime_002",
+          "cap_importruntime_004",
+          "cap_importruntime_005",
+          "cap_importruntime_007"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "document-markdown-normalization",
+        "topicNameSuggestion": "Document Markdown Normalization",
+        "title": "Document Import Adapters and Clipboard Normalization Trade-offs",
+        "summary": "Discusses using MarkItDown for file imports (PDF/DOCX) versus separate clipboard HTML cleanup, benchmarking adapter fidelity and cost, and the distinction between import adapters and live clipboard processing.",
+        "keyPoints": [
+          "MarkItDown is for file imports, not the live clipboard hot path.",
+          "Clipboard rich-text cleanup is a separate normalization problem.",
+          "Need artifact-level benchmarks to compare import adapters on fidelity and cost.",
+          "HTML cleanup for copied rich text remains distinct from file conversion."
+        ],
+        "tags": [
+          "markdown",
+          "ingestion",
+          "import",
+          "benchmark",
+          "normalization"
+        ],
+        "confidence": 0.9,
+        "reason": "Captures focus on document-to-Markdown conversion tools, their appropriate use cases, and benchmarking, aligning closely with the existing 'Document Markdown Normalization' topic.",
+        "possibleTopics": [
+          {
+            "topicSlug": "document-markdown-normalization",
+            "topicName": "Document Markdown Normalization",
+            "reason": "Directly discusses MarkItDown, import adapters, and normalization trade-offs."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_import_runtime_overlap_002",
+        "sourceIds": [
+          "cap_importruntime_003",
+          "cap_importruntime_008"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "rust-background-compiler",
+        "topicNameSuggestion": "Rust Background Compiler",
+        "title": "Runtime Contract and Isolation for Import Adapters",
+        "summary": "Notes that import adapters should run inside Rust background jobs, with Python-based adapters acceptable if isolated behind async task boundaries, maintaining the runtime contract in the Rust compiler layer.",
+        "keyPoints": [
+          "Import adapters should run inside Rust background jobs, not renderer hooks.",
+          "Scheduling and retry semantics belong to the compiler runtime.",
+          "Python-based adapters are acceptable if isolated behind async task boundaries.",
+          "The runtime contract belongs to the Rust compiler layer."
+        ],
+        "tags": [
+          "rust",
+          "compiler",
+          "runtime",
+          "import",
+          "isolation"
+        ],
+        "confidence": 0.85,
+        "reason": "Captures discuss where import adapter logic should execute (Rust background jobs) and the runtime contract, fitting the 'Rust Background Compiler' topic's scope.",
+        "possibleTopics": [
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "Focuses on runtime execution, scheduling, and task boundaries for background jobs."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_import_runtime_overlap_003",
+        "sourceIds": [
+          "cap_importruntime_006"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Priority for Clipboard Eval Over Document Imports",
+        "summary": "A Slack message stating to ship clipboard evaluation first and document imports second, to avoid derailing the quality pipeline milestone.",
+        "keyPoints": [
+          "Ship clipboard eval first, document imports second.",
+          "The import path should not derail the quality pipeline milestone."
+        ],
+        "tags": [
+          "prioritization",
+          "milestone",
+          "eval",
+          "import"
+        ],
+        "confidence": 0.7,
+        "reason": "This is a single, tactical message about project priorities and milestone sequencing. It doesn't form a full knowledge cluster and is better suited for inbox review to inform planning.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Mentions 'clipboard eval' and 'quality pipeline', which relates to evaluation workstreams."
+          }
+        ],
+        "missingContext": [
+          "What specific 'clipboard eval' and 'quality pipeline milestone' this refers to."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_import_runtime_overlap_001",
+        "destination": "topic",
+        "filePath": "topics/document-markdown-normalization.md",
+        "topicName": "Document Markdown Normalization",
+        "topicSlug": "document-markdown-normalization"
+      },
+      {
+        "clusterId": "cluster_import_runtime_overlap_002",
+        "destination": "topic",
+        "filePath": "topics/rust-background-compiler.md",
+        "topicName": "Rust Background Compiler",
+        "topicSlug": "rust-background-compiler"
+      },
+      {
+        "clusterId": "cluster_import_runtime_overlap_003",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_holdout_import_runtime_overlap_001\ncapture_count: 8\ntrigger_reason: capture_count\nwindow: 2026-04-20T04:58:00Z -> 2026-04-20T05:10:00Z\n\nRelevant topic index entries\n1. Document Markdown Normalization [document-markdown-normalization]\n   summary: Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.\n   recent_tags: markdown, ingestion, markitdown, html\n   last_updated_at: 2026-04-19T08:30:00Z\n2. Rust Background Compiler [rust-background-compiler]\n   summary: Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\n   recent_tags: rust, compiler, batch, runtime\n   last_updated_at: 2026-04-19T10:05:00Z\n3. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n4. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n5. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n\nCaptures\ncapture_1:\nid: cap_importruntime_001\ncontent_kind: link\ncaptured_at: 2026-04-20T04:58:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://github.com/microsoft/markitdown\nlink_url: https://github.com/microsoft/markitdown\nraw_text:\n  https://github.com/microsoft/markitdown\n\ncapture_2:\nid: cap_importruntime_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T05:00:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: MarkItDown is useful for dropped PDF or DOCX imports, not the live clipboard hot path.\nraw_text:\n  MarkItDown is useful for dropped PDF or DOCX imports, not the live clipboard hot path. Clipboard rich-text cleanup is still a separate normalization problem.\n\ncapture_3:\nid: cap_importruntime_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T05:02:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: If we add import adapters, run them inside Rust background jobs, not renderer hooks.\nraw_text:\n  If we add import adapters, run them inside Rust background jobs, not renderer hooks. The scheduling and retry semantics belong to the compiler runtime.\n\ncapture_4:\nid: cap_importruntime_004\ncontent_kind: link\ncaptured_at: 2026-04-20T05:04:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp\nlink_url: https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp\nraw_text:\n  https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp\n\ncapture_5:\nid: cap_importruntime_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T05:06:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Need an artifact-level benchmark comparing import adapters on fidelity and cost.\nraw_text:\n  Need an artifact-level benchmark comparing import adapters on fidelity and cost. We should not pick a conversion library just because the README looks broad.\n\ncapture_6:\nid: cap_importruntime_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T05:07:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Ship clipboard eval first and document imports second.\nraw_text:\n  Ship clipboard eval first and document imports second. The import path is useful, but it should not derail the quality pipeline milestone.\n\ncapture_7:\nid: cap_importruntime_007\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T05:09:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: HTML cleanup for copied rich text is still a separate problem.\nraw_text:\n  HTML cleanup for copied rich text is still a separate problem. A file converter does not replace clipboard-specific normalization.\n\ncapture_8:\nid: cap_importruntime_008\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T05:10:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Python-based import adapters are acceptable if isolated behind async task boundaries.\nraw_text:\n  Python-based import adapters are acceptable if isolated behind async task boundaries. The runtime contract still belongs to the Rust compiler layer.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 46480,
+    "finishReason": "stop",
+    "inputTokens": 1479,
+    "model": "deepseek-chat",
+    "outputTokens": 984,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"cluster_import_runtime_overlap_001\",\n      \"sourceIds\": [\"cap_importruntime_001\", \"cap_importruntime_002\", \"cap_importruntime_004\", \"cap_importruntime_005\", \"cap_importruntime_007\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"document-markdown-normalization\",\n      \"topicNameSuggestion\": \"Document Markdown Normalization\",\n      \"title\": \"Document Import Adapters and Clipboard Normalization Trade-offs\",\n      \"summary\": \"Discusses using MarkItDown for file imports (PDF/DOCX) versus separate clipboard HTML cleanup, benchmarking adapter fidelity and cost, and the distinction between import adapters and live clipboard processing.\",\n      \"keyPoints\": [\"MarkItDown is for file imports, not the live clipboard hot path.\", \"Clipboard rich-text cleanup is a separate normalization problem.\", \"Need artifact-level benchmarks to compare import adapters on fidelity and cost.\", \"HTML cleanup for copied rich text remains distinct from file conversion.\"],\n      \"tags\": [\"markdown\", \"ingestion\", \"import\", \"benchmark\", \"normalization\"],\n      \"confidence\": 0.9,\n      \"reason\": \"Captures focus on document-to-Markdown conversion tools, their appropriate use cases, and benchmarking, aligning closely with the existing 'Document Markdown Normalization' topic.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"document-markdown-normalization\",\n          \"topicName\": \"Document Markdown Normalization\",\n          \"reason\": \"Directly discusses MarkItDown, import adapters, and normalization trade-offs.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"cluster_import_runtime_overlap_002\",\n      \"sourceIds\": [\"cap_importruntime_003\", \"cap_importruntime_008\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"rust-background-compiler\",\n      \"topicNameSuggestion\": \"Rust Background Compiler\",\n      \"title\": \"Runtime Contract and Isolation for Import Adapters\",\n      \"summary\": \"Notes that import adapters should run inside Rust background jobs, with Python-based adapters acceptable if isolated behind async task boundaries, maintaining the runtime contract in the Rust compiler layer.\",\n      \"keyPoints\": [\"Import adapters should run inside Rust background jobs, not renderer hooks.\", \"Scheduling and retry semantics belong to the compiler runtime.\", \"Python-based adapters are acceptable if isolated behind async task boundaries.\", \"The runtime contract belongs to the Rust compiler layer.\"],\n      \"tags\": [\"rust\", \"compiler\", \"runtime\", \"import\", \"isolation\"],\n      \"confidence\": 0.85,\n      \"reason\": \"Captures discuss where import adapter logic should execute (Rust background jobs) and the runtime contract, fitting the 'Rust Background Compiler' topic's scope.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"rust-background-compiler\",\n          \"topicName\": \"Rust Background Compiler\",\n          \"reason\": \"Focuses on runtime execution, scheduling, and task boundaries for background jobs.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"cluster_import_runtime_overlap_003\",\n      \"sourceIds\": [\"cap_importruntime_006\"],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Priority for Clipboard Eval Over Document Imports\",\n      \"summary\": \"A Slack message stating to ship clipboard evaluation first and document imports second, to avoid derailing the quality pipeline milestone.\",\n      \"keyPoints\": [\"Ship clipboard eval first, document imports second.\", \"The import path should not derail the quality pipeline milestone.\"],\n      \"tags\": [\"prioritization\", \"milestone\", \"eval\", \"import\"],\n      \"confidence\": 0.7,\n      \"reason\": \"This is a single, tactical message about project priorities and milestone sequencing. It doesn't form a full knowledge cluster and is better suited for inbox review to inform planning.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Mentions 'clipboard eval' and 'quality pipeline', which relates to evaluation workstreams.\"\n        }\n      ],\n      \"missingContext\": [\"What specific 'clipboard eval' and 'quality pipeline milestone' this refers to.\"]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_holdout_import_runtime_overlap_001_6248d14d",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_import_conversion_fit",
+        "overlapCount": 4,
+        "predictedClusterId": "cluster_import_runtime_overlap_001"
+      },
+      {
+        "expectedClusterId": "golden_import_runtime_boundary",
+        "overlapCount": 2,
+        "predictedClusterId": "cluster_import_runtime_overlap_002"
+      },
+      {
+        "expectedClusterId": "golden_import_benchmark_followup",
+        "overlapCount": 1,
+        "predictedClusterId": "cluster_import_runtime_overlap_001"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 1",
+      "Wrong existing-topic merge on 1/7 source assignments."
+    ],
+    "fixtureId": "holdout_import_runtime_overlap_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.7000000000000001,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 0.75,
+        "total": 8
+      },
+      "falseArchiveRate": {
+        "correct": 1,
+        "rate": 1,
+        "total": 1
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 6,
+        "rate": 0.75,
+        "total": 8
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 6,
+        "rate": 0.8571428571428571,
+        "total": 7
+      }
+    },
+    "overallScore": 0.7047619047619049,
+    "pairwiseCounts": {
+      "falseNegative": 2,
+      "falsePositive": 4,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "document-markdown-normalization",
+      "topicName": "Document Markdown Normalization",
+      "topicSummary": "Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.",
+      "recentTags": [
+        "markdown",
+        "ingestion",
+        "markitdown",
+        "html"
+      ],
+      "lastUpdatedAt": "2026-04-19T08:30:00Z"
+    },
+    {
+      "topicSlug": "rust-background-compiler",
+      "topicName": "Rust Background Compiler",
+      "topicSummary": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.",
+      "recentTags": [
+        "rust",
+        "compiler",
+        "batch",
+        "runtime"
+      ],
+      "lastUpdatedAt": "2026-04-19T10:05:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    }
+  ],
+  "split": "holdout",
+  "usedFallback": false,
+  "validationErrors": []
+}

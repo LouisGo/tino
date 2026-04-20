@@ -1,6 +1,7 @@
 use crate::error::{AppError, IpcError, IpcResult};
 
 pub mod ai;
+pub mod chat;
 pub mod shell;
 
 pub(crate) async fn run_blocking_command<T, E, F>(operation: F) -> Result<T, E>

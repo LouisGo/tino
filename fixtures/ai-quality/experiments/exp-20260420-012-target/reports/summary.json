@@ -1,0 +1,102 @@
+{
+  "experimentId": "exp-20260420-012-target",
+  "mode": "live",
+  "promptVersion": "tino.batch_review.engine.v5",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 0.09090909090909091,
+        "name": "false_archive_rate",
+        "passed": false,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.9411764705882353,
+        "name": "destination_accuracy",
+        "passed": true,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.8235294117647058,
+        "name": "topic_merge_accuracy",
+        "passed": true,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.8472222222222222,
+      "destinationAccuracy": 0.9411764705882353,
+      "falseArchiveRate": 0.09090909090909091,
+      "newTopicPrecision": 0,
+      "persistSemanticCorrectness": 0.6764705882352942,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.8235294117647058
+    },
+    "runs": 5
+  },
+  "comparison": null,
+  "topFailures": [
+    {
+      "actual": "archive the whole batch to new topic `support-macros-playbook` (\"Support macro design: failure-mode grouping, reply structure, and diagn...\")",
+      "expected": "archive the whole batch to new topic `support-macro-library`",
+      "failures": [],
+      "fixtureId": "holdout_new_topic_support_macro_001",
+      "scenario": "writing and planning notes",
+      "score": 0.5666666666666667,
+      "why": "This is a holdout new-topic precision case and should not be overfit by prompt repair."
+    },
+    {
+      "actual": "archive the whole batch to existing topic `document-markdown-normalization` (\"Import adapter fit and runtime ownership boundaries\")",
+      "expected": "split into archive 4 captures to existing topic `document-markdown-normalization`; archive 3 captures to existing topic `rust-background-compiler`; send 1 captures to inbox",
+      "failures": [
+        "False archive count: 1",
+        "Wrong existing-topic merge on 3/7 source assignments."
+      ],
+      "fixtureId": "holdout_import_runtime_overlap_001",
+      "scenario": "overlapping Python-analysis and eval-system notes",
+      "score": 0.5859073359073359,
+      "why": "This holdout should expose whether the model over-merges adjacent architecture concepts."
+    },
+    {
+      "actual": "send the whole batch to inbox (\"Friday demo prep: flow visibility, owner assignments, script, and fallb...\")",
+      "expected": "send the whole batch to inbox",
+      "failures": [],
+      "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+      "scenario": "meeting and demo actionables",
+      "score": 0.8,
+      "why": "Correct routing is inbox because these are actionables with owners and immediate deadlines."
+    },
+    {
+      "actual": "archive the whole batch to existing topic `prompt-eval-experimentation` (\"AI Quality Pipeline v0.1 Planning Notes\")",
+      "expected": "archive the whole batch to existing topic `prompt-eval-experimentation`",
+      "failures": [],
+      "fixtureId": "dev_writing_planning_quality_pipeline_001",
+      "scenario": "writing and planning notes",
+      "score": 0.8666666666666666,
+      "why": "The batch should reward structural quality concerns over writing polish."
+    },
+    {
+      "actual": "archive 4 captures to existing topic `product-writing-playbook` (\"Product messaging and tone guidance for clipboard and homepage\"); send 2 captures to inbox (\"Terminal cargo check command and Rust compiler error\"); discard 2 captures (\"Personal errand and file management reminder\")",
+      "expected": "split into archive 4 captures to existing topic `product-writing-playbook`; send 3 captures to inbox; discard 1 captures",
+      "failures": [],
+      "fixtureId": "dev_task_switching_copy_and_terminal_001",
+      "scenario": "task-switching operational notes",
+      "score": 0.92671568627451,
+      "why": "The correct result requires one durable copywriting cluster, one inbox cluster, and one discard."
+    }
+  ]
+}

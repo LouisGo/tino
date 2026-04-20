@@ -12,4 +12,7 @@ export const queryKeys = {
   clipboardPageSummary: () => ["clipboard-page-summary"] as const,
   clipboardPinnedCaptures: () => ["clipboard-pinned-captures"] as const,
   clipboardSourceApps: () => ["clipboard-source-apps"] as const,
+  homeChatConversations: () => ["home-chat-conversations"] as const,
+  homeChatConversation: (conversationId: string) =>
+    ["home-chat-conversation", conversationId] as const,
 };

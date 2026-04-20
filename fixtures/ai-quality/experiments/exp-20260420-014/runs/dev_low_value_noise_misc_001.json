@@ -1,0 +1,251 @@
+{
+  "createdAt": "2026-04-20T16:27:40.240Z",
+  "experimentId": "exp-20260420-014",
+  "fixtureChecksum": "7d2c897bd4b2616232cc4baaf0c17eb931769fc80f5af7d1628a936cf39ef93a",
+  "fixtureId": "dev_low_value_noise_misc_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_low_value_noise_misc_001_1776702509465",
+    "batchId": "batch_dev_low_value_noise_misc_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T16:28:29.465Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_1",
+        "sourceIds": [
+          "cap_noise_001",
+          "cap_noise_002",
+          "cap_noise_003",
+          "cap_noise_004",
+          "cap_noise_006",
+          "cap_noise_007"
+        ],
+        "decision": "discard",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Transient noise and personal reminders",
+        "summary": "A collection of low-value, transient personal data points including numeric codes, a reminder, a map link, and a file name with no durable knowledge or actionable follow-up.",
+        "keyPoints": [
+          "Numeric snippet '482911' with no context.",
+          "Zoom meeting code '448-992-103' for a past meeting.",
+          "Personal reminder 'send invoice after lunch'.",
+          "Apple Maps link to 'bao house'.",
+          "Isolated '2FA' text.",
+          "File name 'IMG_4021.PNG'."
+        ],
+        "tags": [
+          "noise",
+          "transient",
+          "personal"
+        ],
+        "confidence": 0.95,
+        "reason": "These are all obvious low-value noise or accidental scraps with no durable knowledge value and no actionable follow-up value. They meet the criteria for discard.",
+        "possibleTopics": [],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_2",
+        "sourceIds": [
+          "cap_noise_005"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "personal-knowledge-ops",
+        "topicNameSuggestion": "Personal Knowledge Ops",
+        "title": "Need for filter logs to debug sensitive snippet discarding",
+        "summary": "Identifies a gap in the capture system where filtered sensitive snippets disappear without logs, hindering the ability to tune gating rules.",
+        "keyPoints": [
+          "Current filter for sensitive snippets discards captures completely.",
+          "Lack of logs makes debugging false positives difficult.",
+          "Suggests a need for filter logs to improve rule tuning."
+        ],
+        "tags": [
+          "filter",
+          "logs",
+          "debugging",
+          "sensitive",
+          "retention"
+        ],
+        "confidence": 0.9,
+        "reason": "This is durable knowledge about the system's capture retention and persistence semantics, which fits the 'Personal Knowledge Ops' topic. It defines a stable principle or gap, not an immediate action with an owner or deadline.",
+        "possibleTopics": [
+          {
+            "topicSlug": "personal-knowledge-ops",
+            "topicName": "Personal Knowledge Ops",
+            "reason": "Directly concerns durable capture retention and controlled persistence semantics, which is the core of this topic."
+          }
+        ],
+        "missingContext": []
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_1",
+        "destination": "discard",
+        "filePath": null,
+        "topicName": null,
+        "topicSlug": null
+      },
+      {
+        "clusterId": "cluster_2",
+        "destination": "topic",
+        "filePath": "topics/personal-knowledge-ops.md",
+        "topicName": "Personal Knowledge Ops",
+        "topicSlug": "personal-knowledge-ops"
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, reusable assets such as libraries/playbooks/macros/templates, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- Reusable assets can justify a new topic even if they were created for an upcoming launch or tester wave, as long as the cluster is defining the reusable asset itself rather than just tracking immediate execution.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- Planning notes are still durable knowledge when they define a stable framework, evaluation rubric, architecture principle, or metrics strategy. Do not send them to inbox just because they mention v0.1, planning, or prompt tuning.\n- Prefer the most semantically direct existing topic over a broader meta topic. User-facing copy, tone, headline, and product-message guidance belongs with writing/playbook topics rather than generic knowledge-ops topics.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n- When import/conversion-library fit overlaps with runtime ownership, keep library-fit and normalization notes with the document/import topic, keep execution-boundary and scheduler-ownership notes with the runtime topic, and keep pure follow-up benchmark asks in inbox.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_low_value_noise_misc_001\ncapture_count: 7\ntrigger_reason: capture_count\nwindow: 2026-04-18T11:31:00Z -> 2026-04-18T11:42:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n2. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n3. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n4. Weekly Product Ops [weekly-product-ops]\n   summary: Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.\n   recent_tags: meeting, owners, timeline, release\n   last_updated_at: 2026-04-19T05:50:00Z\n5. Product Writing Playbook [product-writing-playbook]\n   summary: Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.\n   recent_tags: copywriting, messaging, headline, launch\n   last_updated_at: 2026-04-17T14:40:00Z\n\nCaptures\ncapture_1:\nid: cap_noise_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T11:31:00Z\nsource: clipboard\nsource_app_name: Messages\npreview: 482911\nraw_text:\n  482911\n\ncapture_2:\nid: cap_noise_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T11:33:00Z\nsource: clipboard\nsource_app_name: Zoom\npreview: Zoom code 448-992-103\nraw_text:\n  Zoom code 448-992-103\n\ncapture_3:\nid: cap_noise_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T11:35:00Z\nsource: clipboard\nsource_app_name: Reminders\npreview: send invoice after lunch\nraw_text:\n  send invoice after lunch\n\ncapture_4:\nid: cap_noise_004\ncontent_kind: link\ncaptured_at: 2026-04-18T11:37:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://maps.apple.com/?q=bao+house\nlink_url: https://maps.apple.com/?q=bao+house\nraw_text:\n  https://maps.apple.com/?q=bao+house\n\ncapture_5:\nid: cap_noise_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T11:39:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Need filter logs for discarded sensitive snippets so we can debug false positives.\nraw_text:\n  Need filter logs for discarded sensitive snippets so we can debug false positives. Right now filtered captures disappear too completely to tune the gating rules.\n\ncapture_6:\nid: cap_noise_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T11:40:00Z\nsource: clipboard\nsource_app_name: Messages\npreview: 2FA\nraw_text:\n  2FA\n\ncapture_7:\nid: cap_noise_007\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T11:42:00Z\nsource: clipboard\nsource_app_name: Finder\npreview: IMG_4021.PNG\nraw_text:\n  IMG_4021.PNG\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Create a new topic only when none of the listed topics is a reasonable broader home and the cluster defines durable knowledge or a reusable asset.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v6",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 25272,
+    "finishReason": "stop",
+    "inputTokens": 2108,
+    "model": "deepseek-chat",
+    "outputTokens": 592,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"cluster_1\",\n      \"sourceIds\": [\"cap_noise_001\", \"cap_noise_002\", \"cap_noise_003\", \"cap_noise_004\", \"cap_noise_006\", \"cap_noise_007\"],\n      \"decision\": \"discard\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Transient noise and personal reminders\",\n      \"summary\": \"A collection of low-value, transient personal data points including numeric codes, a reminder, a map link, and a file name with no durable knowledge or actionable follow-up.\",\n      \"keyPoints\": [\"Numeric snippet '482911' with no context.\", \"Zoom meeting code '448-992-103' for a past meeting.\", \"Personal reminder 'send invoice after lunch'.\", \"Apple Maps link to 'bao house'.\", \"Isolated '2FA' text.\", \"File name 'IMG_4021.PNG'.\"],\n      \"tags\": [\"noise\", \"transient\", \"personal\"],\n      \"confidence\": 0.95,\n      \"reason\": \"These are all obvious low-value noise or accidental scraps with no durable knowledge value and no actionable follow-up value. They meet the criteria for discard.\",\n      \"possibleTopics\": [],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"cluster_2\",\n      \"sourceIds\": [\"cap_noise_005\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"personal-knowledge-ops\",\n      \"topicNameSuggestion\": \"Personal Knowledge Ops\",\n      \"title\": \"Need for filter logs to debug sensitive snippet discarding\",\n      \"summary\": \"Identifies a gap in the capture system where filtered sensitive snippets disappear without logs, hindering the ability to tune gating rules.\",\n      \"keyPoints\": [\"Current filter for sensitive snippets discards captures completely.\", \"Lack of logs makes debugging false positives difficult.\", \"Suggests a need for filter logs to improve rule tuning.\"],\n      \"tags\": [\"filter\", \"logs\", \"debugging\", \"sensitive\", \"retention\"],\n      \"confidence\": 0.9,\n      \"reason\": \"This is durable knowledge about the system's capture retention and persistence semantics, which fits the 'Personal Knowledge Ops' topic. It defines a stable principle or gap, not an immediate action with an owner or deadline.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"personal-knowledge-ops\",\n          \"topicName\": \"Personal Knowledge Ops\",\n          \"reason\": \"Directly concerns durable capture retention and controlled persistence semantics, which is the core of this topic.\"\n        }\n      ],\n      \"missingContext\": []\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_low_value_noise_misc_001_c88faee5",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_noise_discard",
+        "overlapCount": 6,
+        "predictedClusterId": "cluster_1"
+      },
+      {
+        "expectedClusterId": "golden_noise_followup_note",
+        "overlapCount": 1,
+        "predictedClusterId": "cluster_2"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 1"
+    ],
+    "fixtureId": "dev_low_value_noise_misc_001",
+    "metrics": {
+      "clusterPairwiseF1": 1,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 0.8571428571428571,
+        "total": 7
+      },
+      "falseArchiveRate": {
+        "correct": 1,
+        "rate": 0.14285714285714285,
+        "total": 7
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 6,
+        "rate": 0.8571428571428571,
+        "total": 7
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      }
+    },
+    "overallScore": 0.7476190476190477,
+    "pairwiseCounts": {
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "truePositive": 15
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    },
+    {
+      "topicSlug": "weekly-product-ops",
+      "topicName": "Weekly Product Ops",
+      "topicSummary": "Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.",
+      "recentTags": [
+        "meeting",
+        "owners",
+        "timeline",
+        "release"
+      ],
+      "lastUpdatedAt": "2026-04-19T05:50:00Z"
+    },
+    {
+      "topicSlug": "product-writing-playbook",
+      "topicName": "Product Writing Playbook",
+      "topicSummary": "Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.",
+      "recentTags": [
+        "copywriting",
+        "messaging",
+        "headline",
+        "launch"
+      ],
+      "lastUpdatedAt": "2026-04-17T14:40:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": true,
+  "validationErrors": []
+}

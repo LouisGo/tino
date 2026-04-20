@@ -1,0 +1,102 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+  "split": "dev",
+  "scenarioFamily": "link_led_context_sparse",
+  "difficulty": "easy",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "prompt-eval-experimentation",
+    "python-analysis-sidecar",
+    "link-triage-watchlist",
+    "multilingual-prompting",
+    "customer-research-synthesis"
+  ],
+  "notes": [
+    "Link-heavy batch with almost no synthesis.",
+    "Correct behavior is cautious inbox routing rather than optimistic archival."
+  ],
+  "batch": {
+    "id": "batch_dev_link_led_context_sparse_eval_links_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-18T02:41:00Z",
+    "triggerReason": "capture_count",
+    "captureCount": 5,
+    "firstCapturedAt": "2026-04-18T02:32:00Z",
+    "lastCapturedAt": "2026-04-18T02:40:00Z",
+    "sourceIds": [
+      "cap_evalinks_001",
+      "cap_evalinks_002",
+      "cap_evalinks_003",
+      "cap_evalinks_004",
+      "cap_evalinks_005"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_evalinks_001",
+      "contentKind": "link",
+      "capturedAt": "2026-04-18T02:32:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Chrome",
+      "sourceAppBundleId": "com.google.Chrome",
+      "preview": "https://platform.openai.com/docs/guides/evals",
+      "rawText": "https://platform.openai.com/docs/guides/evals",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://platform.openai.com/docs/guides/evals"
+    },
+    {
+      "id": "cap_evalinks_002",
+      "contentKind": "link",
+      "capturedAt": "2026-04-18T02:34:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Chrome",
+      "sourceAppBundleId": "com.google.Chrome",
+      "preview": "https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically",
+      "rawText": "https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically"
+    },
+    {
+      "id": "cap_evalinks_003",
+      "contentKind": "link",
+      "capturedAt": "2026-04-18T02:36:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Safari",
+      "sourceAppBundleId": "com.apple.Safari",
+      "preview": "https://docs.ragas.io/en/latest/",
+      "rawText": "https://docs.ragas.io/en/latest/",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://docs.ragas.io/en/latest/"
+    },
+    {
+      "id": "cap_evalinks_004",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T02:38:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "maybe useful later for scorecards",
+      "rawText": "maybe useful later for scorecards",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_evalinks_005",
+      "contentKind": "link",
+      "capturedAt": "2026-04-18T02:40:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Chrome",
+      "sourceAppBundleId": "com.google.Chrome",
+      "preview": "https://humanloop.com/docs/evals",
+      "rawText": "https://humanloop.com/docs/evals",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://humanloop.com/docs/evals"
+    }
+  ]
+}

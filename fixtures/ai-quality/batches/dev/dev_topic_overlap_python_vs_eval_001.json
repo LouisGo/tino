@@ -1,0 +1,130 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+  "split": "dev",
+  "scenarioFamily": "topic_overlap_ambiguous",
+  "difficulty": "hard",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "python-analysis-sidecar",
+    "prompt-eval-experimentation",
+    "rust-background-compiler",
+    "link-triage-watchlist",
+    "document-markdown-normalization"
+  ],
+  "notes": [
+    "Intentionally overlaps the Python analysis role with the broader evaluation pipeline.",
+    "Correct clustering requires separating Python-side artifact analysis from runner and metric ownership."
+  ],
+  "batch": {
+    "id": "batch_dev_topic_overlap_python_vs_eval_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-19T06:54:00Z",
+    "triggerReason": "capture_count",
+    "captureCount": 7,
+    "firstCapturedAt": "2026-04-19T06:41:00Z",
+    "lastCapturedAt": "2026-04-19T06:53:00Z",
+    "sourceIds": [
+      "cap_pyeval_001",
+      "cap_pyeval_002",
+      "cap_pyeval_003",
+      "cap_pyeval_004",
+      "cap_pyeval_005",
+      "cap_pyeval_006",
+      "cap_pyeval_007"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_pyeval_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T06:41:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "Use Python notebooks to cluster failure cases after each experiment run.",
+      "rawText": "Use Python notebooks to cluster failure cases after each experiment run. That work starts only after the replay runner has already written stable JSON artifacts.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pyeval_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T06:43:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Terminal",
+      "sourceAppBundleId": "com.apple.Terminal",
+      "preview": "uv run notebooks/error_buckets.py --input fixtures/ai-quality/experiments/exp-20260420-001",
+      "rawText": "uv run notebooks/error_buckets.py --input fixtures/ai-quality/experiments/exp-20260420-001",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pyeval_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T06:45:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Do not duplicate prompt assembly in Python; consume frozen artifacts only.",
+      "rawText": "Do not duplicate prompt assembly in Python; consume frozen artifacts only. The runtime prompt and parser still belong to the TypeScript product path in v0.1.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pyeval_004",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T06:47:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "Need confusion matrix for destination_accuracy by scenario family.",
+      "rawText": "Need confusion matrix for destination_accuracy by scenario family. The scorer should report regressions separately for false archive, topic merge, and clustering failures.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pyeval_005",
+      "contentKind": "link",
+      "capturedAt": "2026-04-19T06:49:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Safari",
+      "sourceAppBundleId": "com.apple.Safari",
+      "preview": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html",
+      "rawText": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html"
+    },
+    {
+      "id": "cap_pyeval_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T06:51:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Runner and scorer stay in TypeScript because product chain lives there.",
+      "rawText": "Runner and scorer stay in TypeScript because product chain lives there. The first goal is faithful replay, not rewriting the stack in a nicer analysis language.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pyeval_007",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T06:53:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "Python can own error clustering, long-tail pattern mining, and plots.",
+      "rawText": "Python can own error clustering, long-tail pattern mining, and plots once the artifacts are frozen. That is analysis-side leverage, not runtime ownership.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

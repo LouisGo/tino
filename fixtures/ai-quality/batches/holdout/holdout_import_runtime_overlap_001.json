@@ -1,0 +1,144 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "holdout_import_runtime_overlap_001",
+  "split": "holdout",
+  "scenarioFamily": "topic_overlap_ambiguous",
+  "difficulty": "hard",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "document-markdown-normalization",
+    "rust-background-compiler",
+    "python-analysis-sidecar",
+    "prompt-eval-experimentation",
+    "link-triage-watchlist"
+  ],
+  "notes": [
+    "Hard overlap across document conversion, runtime boundaries, and benchmark planning.",
+    "This holdout should expose whether the model over-merges adjacent architecture concepts."
+  ],
+  "batch": {
+    "id": "batch_holdout_import_runtime_overlap_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-20T05:11:00Z",
+    "triggerReason": "capture_count",
+    "captureCount": 8,
+    "firstCapturedAt": "2026-04-20T04:58:00Z",
+    "lastCapturedAt": "2026-04-20T05:10:00Z",
+    "sourceIds": [
+      "cap_importruntime_001",
+      "cap_importruntime_002",
+      "cap_importruntime_003",
+      "cap_importruntime_004",
+      "cap_importruntime_005",
+      "cap_importruntime_006",
+      "cap_importruntime_007",
+      "cap_importruntime_008"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_importruntime_001",
+      "contentKind": "link",
+      "capturedAt": "2026-04-20T04:58:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Safari",
+      "sourceAppBundleId": "com.apple.Safari",
+      "preview": "https://github.com/microsoft/markitdown",
+      "rawText": "https://github.com/microsoft/markitdown",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://github.com/microsoft/markitdown"
+    },
+    {
+      "id": "cap_importruntime_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T05:00:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "MarkItDown is useful for dropped PDF or DOCX imports, not the live clipboard hot path.",
+      "rawText": "MarkItDown is useful for dropped PDF or DOCX imports, not the live clipboard hot path. Clipboard rich-text cleanup is still a separate normalization problem.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_importruntime_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T05:02:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "If we add import adapters, run them inside Rust background jobs, not renderer hooks.",
+      "rawText": "If we add import adapters, run them inside Rust background jobs, not renderer hooks. The scheduling and retry semantics belong to the compiler runtime.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_importruntime_004",
+      "contentKind": "link",
+      "capturedAt": "2026-04-20T05:04:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Safari",
+      "sourceAppBundleId": "com.apple.Safari",
+      "preview": "https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp",
+      "rawText": "https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp"
+    },
+    {
+      "id": "cap_importruntime_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T05:06:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "Need an artifact-level benchmark comparing import adapters on fidelity and cost.",
+      "rawText": "Need an artifact-level benchmark comparing import adapters on fidelity and cost. We should not pick a conversion library just because the README looks broad.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_importruntime_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T05:07:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "Ship clipboard eval first and document imports second.",
+      "rawText": "Ship clipboard eval first and document imports second. The import path is useful, but it should not derail the quality pipeline milestone.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_importruntime_007",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T05:09:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "HTML cleanup for copied rich text is still a separate problem.",
+      "rawText": "HTML cleanup for copied rich text is still a separate problem. A file converter does not replace clipboard-specific normalization.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_importruntime_008",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T05:10:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Python-based import adapters are acceptable if isolated behind async task boundaries.",
+      "rawText": "Python-based import adapters are acceptable if isolated behind async task boundaries. The runtime contract still belongs to the Rust compiler layer.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

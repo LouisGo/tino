@@ -1,0 +1,217 @@
+{
+  "createdAt": "2026-04-20T15:00:36.211Z",
+  "experimentId": "exp-20260420-005",
+  "fixtureChecksum": "f12cfdc7631073284e3314b6116251d63b7152c945bada46f69d012d74f9b0d2",
+  "fixtureId": "dev_focused_research_markitdown_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_focused_research_markitdown_001_1776697263419",
+    "batchId": "batch_dev_focused_research_markitdown_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T15:01:03.419Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_markitdown_research_001",
+        "sourceIds": [
+          "cap_markitdown_001",
+          "cap_markitdown_002",
+          "cap_markitdown_003",
+          "cap_markitdown_004",
+          "cap_markitdown_005",
+          "cap_markitdown_006"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "document-markdown-normalization",
+        "topicNameSuggestion": "Document Markdown Normalization",
+        "title": "MarkItDown Evaluation for Document Import vs. Clipboard Pipeline",
+        "summary": "A focused research batch evaluating Microsoft's MarkItDown tool. The captures discuss its role as a file-to-Markdown converter for PDF, DOCX, PPTX, and email, concluding it is better suited as a document import adapter than a core component of the hot clipboard semantic batching and quality pipeline.",
+        "keyPoints": [
+          "MarkItDown is designed for file-to-Markdown conversion, not clipboard semantic routing.",
+          "Its primary value is as a future import adapter for dropped documents, not the main capture path.",
+          "Clipboard captures need HTML normalization and source attribution first.",
+          "Introducing it should be behind an adapter boundary, separate from runtime evaluation.",
+          "The core evaluation problem (fixtures, goldens, scoring) remains distinct from format conversion."
+        ],
+        "tags": [
+          "markitdown",
+          "markdown",
+          "ingestion",
+          "adapter",
+          "evaluation",
+          "import"
+        ],
+        "confidence": 0.95,
+        "reason": "All six captures are part of a single, coherent research thread evaluating the MarkItDown tool's fit within the system. They reference the same tool, discuss its pros/cons, and converge on a conclusion about its architectural placement. The content directly aligns with the existing 'Document Markdown Normalization' topic.",
+        "possibleTopics": [
+          {
+            "topicSlug": "document-markdown-normalization",
+            "topicName": "Document Markdown Normalization",
+            "reason": "Directly discusses tradeoffs in Markdown conversion tools (MarkItDown) for knowledge ingestion."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Mentions the separate need for evaluation fixtures, goldens, and scoring, which is a secondary theme."
+          }
+        ],
+        "missingContext": []
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_markitdown_research_001",
+        "destination": "topic",
+        "filePath": "topics/document-markdown-normalization.md",
+        "topicName": "Document Markdown Normalization",
+        "topicSlug": "document-markdown-normalization"
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_focused_research_markitdown_001\ncapture_count: 6\ntrigger_reason: max_wait\nwindow: 2026-04-20T00:07:00Z -> 2026-04-20T00:17:00Z\n\nRelevant topic index entries\n1. Document Markdown Normalization [document-markdown-normalization]\n   summary: Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.\n   recent_tags: markdown, ingestion, markitdown, html\n   last_updated_at: 2026-04-19T08:30:00Z\n2. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n3. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n4. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n5. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n\nCaptures\ncapture_1:\nid: cap_markitdown_001\ncontent_kind: link\ncaptured_at: 2026-04-20T00:07:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://github.com/microsoft/markitdown\nlink_url: https://github.com/microsoft/markitdown\nraw_text:\n  https://github.com/microsoft/markitdown\n\ncapture_2:\nid: cap_markitdown_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T00:09:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching.\nraw_text:\n  MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching. It looks useful for PDF, DOCX, PPTX, and email imports, but it does not directly answer how Tino should judge routing or topic merge quality.\n\ncapture_3:\nid: cap_markitdown_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T00:10:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Possible fit: optional import adapter for dropped documents, not the hot clipboard path.\nraw_text:\n  Possible fit: optional import adapter for dropped documents later in the roadmap, not the hot clipboard path. Clipboard captures already arrive as plain text or rich text, so the first gap is HTML normalization and source attribution.\n\ncapture_4:\nid: cap_markitdown_004\ncontent_kind: rich_text\ncaptured_at: 2026-04-20T00:12:00Z\nsource: clipboard\nsource_app_name: Arc\npreview: Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.\nraw_text:\n  Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.\n\ncapture_5:\nid: cap_markitdown_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T00:14:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: If we introduce it, keep it behind an import adapter boundary instead of coupling it to runtime evaluation.\nraw_text:\n  If we introduce MarkItDown, keep it behind an import adapter boundary instead of coupling it to runtime evaluation. The evaluation problem still needs fixtures, goldens, replay, and scoring.\n\ncapture_6:\nid: cap_markitdown_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T00:17:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 结论：对 clipboard 主链路帮助有限，对文档导入链路更有帮助。\nraw_text:\n  结论：对 clipboard 主链路帮助有限，对文档导入链路更有帮助。更准确的定位是 document normalization adapter，而不是 AI quality pipeline 本身。\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 27205,
+    "finishReason": "stop",
+    "inputTokens": 1324,
+    "model": "deepseek-chat",
+    "outputTokens": 533,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"cluster_markitdown_research_001\",\n      \"sourceIds\": [\"cap_markitdown_001\", \"cap_markitdown_002\", \"cap_markitdown_003\", \"cap_markitdown_004\", \"cap_markitdown_005\", \"cap_markitdown_006\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"document-markdown-normalization\",\n      \"topicNameSuggestion\": \"Document Markdown Normalization\",\n      \"title\": \"MarkItDown Evaluation for Document Import vs. Clipboard Pipeline\",\n      \"summary\": \"A focused research batch evaluating Microsoft's MarkItDown tool. The captures discuss its role as a file-to-Markdown converter for PDF, DOCX, PPTX, and email, concluding it is better suited as a document import adapter than a core component of the hot clipboard semantic batching and quality pipeline.\",\n      \"keyPoints\": [\"MarkItDown is designed for file-to-Markdown conversion, not clipboard semantic routing.\", \"Its primary value is as a future import adapter for dropped documents, not the main capture path.\", \"Clipboard captures need HTML normalization and source attribution first.\", \"Introducing it should be behind an adapter boundary, separate from runtime evaluation.\", \"The core evaluation problem (fixtures, goldens, scoring) remains distinct from format conversion.\"],\n      \"tags\": [\"markitdown\", \"markdown\", \"ingestion\", \"adapter\", \"evaluation\", \"import\"],\n      \"confidence\": 0.95,\n      \"reason\": \"All six captures are part of a single, coherent research thread evaluating the MarkItDown tool's fit within the system. They reference the same tool, discuss its pros/cons, and converge on a conclusion about its architectural placement. The content directly aligns with the existing 'Document Markdown Normalization' topic.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"document-markdown-normalization\",\n          \"topicName\": \"Document Markdown Normalization\",\n          \"reason\": \"Directly discusses tradeoffs in Markdown conversion tools (MarkItDown) for knowledge ingestion.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Mentions the separate need for evaluation fixtures, goldens, and scoring, which is a secondary theme.\"\n        }\n      ],\n      \"missingContext\": []\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_focused_research_markitdown_001_177ecf26",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_markitdown_research",
+        "overlapCount": 6,
+        "predictedClusterId": "cluster_markitdown_research_001"
+      }
+    ],
+    "criticalFailures": [],
+    "fixtureId": "dev_focused_research_markitdown_001",
+    "metrics": {
+      "clusterPairwiseF1": 1,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      }
+    },
+    "overallScore": 0.8666666666666666,
+    "pairwiseCounts": {
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "truePositive": 15
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "document-markdown-normalization",
+      "topicName": "Document Markdown Normalization",
+      "topicSummary": "Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.",
+      "recentTags": [
+        "markdown",
+        "ingestion",
+        "markitdown",
+        "html"
+      ],
+      "lastUpdatedAt": "2026-04-19T08:30:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

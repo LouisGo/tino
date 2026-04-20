@@ -1,0 +1,116 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_coding_debugging_pasteback_001",
+  "split": "dev",
+  "scenarioFamily": "coding_debugging",
+  "difficulty": "medium",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "tauri-macos-permissions",
+    "rust-background-compiler",
+    "personal-knowledge-ops",
+    "prompt-eval-experimentation",
+    "link-triage-watchlist"
+  ],
+  "notes": [
+    "Permission-debugging session around paste-back on macOS.",
+    "The durable knowledge is about signing and Accessibility trust, not the one-off command text."
+  ],
+  "batch": {
+    "id": "batch_dev_coding_debugging_pasteback_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-19T14:46:00Z",
+    "triggerReason": "capture_count",
+    "captureCount": 6,
+    "firstCapturedAt": "2026-04-19T14:31:00Z",
+    "lastCapturedAt": "2026-04-19T14:45:00Z",
+    "sourceIds": [
+      "cap_pasteback_001",
+      "cap_pasteback_002",
+      "cap_pasteback_003",
+      "cap_pasteback_004",
+      "cap_pasteback_005",
+      "cap_pasteback_006"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_pasteback_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T14:31:00Z",
+      "source": "clipboard",
+      "sourceAppName": "VS Code",
+      "sourceAppBundleId": "com.microsoft.VSCode",
+      "preview": "paste_back failed: Accessibility permission not granted for current signed app.",
+      "rawText": "paste_back failed: Accessibility permission not granted for current signed app. The event succeeds only after re-authorizing the installed bundle.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pasteback_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T14:34:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Terminal",
+      "sourceAppBundleId": "com.apple.Terminal",
+      "preview": "pnpm macos:setup-local-signing",
+      "rawText": "pnpm macos:setup-local-signing",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pasteback_003",
+      "contentKind": "link",
+      "capturedAt": "2026-04-19T14:36:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Safari",
+      "sourceAppBundleId": "com.apple.Safari",
+      "preview": "https://github.com/tauri-apps/tauri/issues/10627",
+      "rawText": "https://github.com/tauri-apps/tauri/issues/10627",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://github.com/tauri-apps/tauri/issues/10627"
+    },
+    {
+      "id": "cap_pasteback_004",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T14:39:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notion",
+      "sourceAppBundleId": "notion.id",
+      "preview": "Ad-hoc signed builds can lose Accessibility trust after reinstall.",
+      "rawText": "Ad-hoc signed builds can lose Accessibility trust after reinstall. We should validate paste-back only on the locally signed build that matches the installed bundle identity.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pasteback_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T14:42:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "UI should explain: grant Accessibility, then reopen the signed app before retrying.",
+      "rawText": "UI should explain: grant Accessibility, then reopen the signed app before retrying. Otherwise testers think paste-back is flaky when the real problem is trust state.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_pasteback_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T14:45:00Z",
+      "source": "clipboard",
+      "sourceAppName": "VS Code",
+      "sourceAppBundleId": "com.microsoft.VSCode",
+      "preview": "AXIsProcessTrustedWithOptions only becomes true for the trusted installed bundle.",
+      "rawText": "AXIsProcessTrustedWithOptions only becomes true for the trusted installed bundle. Permission debugging has to be tied to signing identity, not just app code.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

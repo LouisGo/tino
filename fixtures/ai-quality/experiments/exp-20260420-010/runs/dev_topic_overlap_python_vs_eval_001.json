@@ -1,0 +1,257 @@
+{
+  "createdAt": "2026-04-20T16:05:41.121Z",
+  "experimentId": "exp-20260420-010",
+  "fixtureChecksum": "04862e32381011ae65ce50bf19994cef29cbe1823087d62c90a69943a221967d",
+  "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_topic_overlap_python_vs_eval_001_1776701205072",
+    "batchId": "batch_dev_topic_overlap_python_vs_eval_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T16:06:45.072Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_python_analysis_001",
+        "sourceIds": [
+          "cap_pyeval_001",
+          "cap_pyeval_002",
+          "cap_pyeval_003",
+          "cap_pyeval_005",
+          "cap_pyeval_007"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "python-analysis-sidecar",
+        "topicNameSuggestion": "Python Analysis Sidecar",
+        "title": "Python analysis sidecar responsibilities and execution pattern",
+        "summary": "Defines the durable boundary where Python is used for post-run analysis, error clustering, and visualization after stable artifacts are produced, explicitly separating it from runtime prompt assembly and product chain ownership.",
+        "keyPoints": [
+          "Python notebooks are used to cluster failure cases after experiment runs.",
+          "Analysis work begins only after replay runner writes stable JSON artifacts.",
+          "Python should not duplicate prompt assembly; it consumes frozen artifacts only.",
+          "Python can own error clustering, long-tail pattern mining, and plots.",
+          "Pandas DataFrame.groupby is a relevant reference for analysis tasks."
+        ],
+        "tags": [
+          "python",
+          "notebook",
+          "analysis",
+          "artifacts",
+          "boundary"
+        ],
+        "confidence": 0.95,
+        "reason": "This cluster defines a durable, reusable architectural boundary and responsibility split for Python analysis work. It fits the existing 'Python Analysis Sidecar' topic perfectly, which is described as 'Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.' The content is not time-bound or actionable but establishes a stable principle.",
+        "possibleTopics": [
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Exact match: defines Python's role as analysis sidecar after artifacts are frozen, with references to notebooks, error clustering, and consumption of stable outputs."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_eval_system_001",
+        "sourceIds": [
+          "cap_pyeval_004",
+          "cap_pyeval_006"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "Evaluation system ownership and regression reporting requirements",
+        "summary": "Clarifies that runner and scorer stay in TypeScript for product chain fidelity, and defines specific evaluation metrics needed for regression tracking, including confusion matrices and failure type breakdowns.",
+        "keyPoints": [
+          "Runner and scorer stay in TypeScript because product chain lives there.",
+          "First goal is faithful replay, not rewriting stack in analysis language.",
+          "Need confusion matrix for destination_accuracy by scenario family.",
+          "Scorer should report regressions separately for false archive, topic merge, and clustering failures."
+        ],
+        "tags": [
+          "eval",
+          "runner",
+          "scorer",
+          "regression",
+          "metrics"
+        ],
+        "confidence": 0.9,
+        "reason": "This cluster contains durable knowledge about evaluation system architecture and metric requirements. It fits the 'Prompt Eval Experimentation' topic which covers 'scorecards, holdout discipline, and regression tracking for AI quality.' The content defines stable ownership and reporting needs, not immediate actionable tasks.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Strong fit: addresses evaluation system components (runner, scorer), regression tracking, and specific scoring metrics for AI quality assessment."
+          }
+        ],
+        "missingContext": []
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_python_analysis_001",
+        "destination": "topic",
+        "filePath": "topics/python-analysis-sidecar.md",
+        "topicName": "Python Analysis Sidecar",
+        "topicSlug": "python-analysis-sidecar"
+      },
+      {
+        "clusterId": "cluster_eval_system_001",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, reusable assets such as libraries/playbooks/macros/templates, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox unless the cluster is mainly defining a reusable artifact, template, playbook, macro set, taxonomy, or policy.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- Reusable assets can justify a new topic even if they were created for an upcoming launch or tester wave, as long as the cluster is defining the reusable asset itself rather than just tracking immediate execution.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n- When import/conversion-library fit overlaps with runtime ownership, keep library-fit and normalization notes with the document/import topic, keep execution-boundary and scheduler-ownership notes with the runtime topic, and keep pure follow-up benchmark asks in inbox.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n5. A batch defining reusable support macros, grouped by failure mode with a stable reply structure, can justify archive_to_topic and even a new topic if no listed topic fits.\n6. MarkItDown/import-adapter fit notes and supporting links belong with the document/import topic; Rust job ownership and async boundary notes belong with the runtime topic; a benchmark follow-up idea stays in inbox.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_topic_overlap_python_vs_eval_001\ncapture_count: 7\ntrigger_reason: capture_count\nwindow: 2026-04-19T06:41:00Z -> 2026-04-19T06:53:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n2. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n3. Rust Background Compiler [rust-background-compiler]\n   summary: Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\n   recent_tags: rust, compiler, batch, runtime\n   last_updated_at: 2026-04-19T10:05:00Z\n4. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n5. Document Markdown Normalization [document-markdown-normalization]\n   summary: Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.\n   recent_tags: markdown, ingestion, markitdown, html\n   last_updated_at: 2026-04-19T08:30:00Z\n\nCaptures\ncapture_1:\nid: cap_pyeval_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T06:41:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Use Python notebooks to cluster failure cases after each experiment run.\nraw_text:\n  Use Python notebooks to cluster failure cases after each experiment run. That work starts only after the replay runner has already written stable JSON artifacts.\n\ncapture_2:\nid: cap_pyeval_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T06:43:00Z\nsource: clipboard\nsource_app_name: Terminal\npreview: uv run notebooks/error_buckets.py --input fixtures/ai-quality/experiments/exp-20260420-001\nraw_text:\n  uv run notebooks/error_buckets.py --input fixtures/ai-quality/experiments/exp-20260420-001\n\ncapture_3:\nid: cap_pyeval_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T06:45:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Do not duplicate prompt assembly in Python; consume frozen artifacts only.\nraw_text:\n  Do not duplicate prompt assembly in Python; consume frozen artifacts only. The runtime prompt and parser still belong to the TypeScript product path in v0.1.\n\ncapture_4:\nid: cap_pyeval_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T06:47:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Need confusion matrix for destination_accuracy by scenario family.\nraw_text:\n  Need confusion matrix for destination_accuracy by scenario family. The scorer should report regressions separately for false archive, topic merge, and clustering failures.\n\ncapture_5:\nid: cap_pyeval_005\ncontent_kind: link\ncaptured_at: 2026-04-19T06:49:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html\nlink_url: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html\nraw_text:\n  https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html\n\ncapture_6:\nid: cap_pyeval_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T06:51:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Runner and scorer stay in TypeScript because product chain lives there.\nraw_text:\n  Runner and scorer stay in TypeScript because product chain lives there. The first goal is faithful replay, not rewriting the stack in a nicer analysis language.\n\ncapture_7:\nid: cap_pyeval_007\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T06:53:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Python can own error clustering, long-tail pattern mining, and plots.\nraw_text:\n  Python can own error clustering, long-tail pattern mining, and plots once the artifacts are frozen. That is analysis-side leverage, not runtime ownership.\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound and is not primarily defining a reusable asset, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Create a new topic only when none of the listed topics is a reasonable broader home and the cluster defines durable knowledge or a reusable asset.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v3",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 33322,
+    "finishReason": "stop",
+    "inputTokens": 2339,
+    "model": "deepseek-chat",
+    "outputTokens": 800,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "```json\n{\n  \"clusters\": [\n    {\n      \"clusterId\": \"cluster_python_analysis_001\",\n      \"sourceIds\": [\"cap_pyeval_001\", \"cap_pyeval_002\", \"cap_pyeval_003\", \"cap_pyeval_005\", \"cap_pyeval_007\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"python-analysis-sidecar\",\n      \"topicNameSuggestion\": \"Python Analysis Sidecar\",\n      \"title\": \"Python analysis sidecar responsibilities and execution pattern\",\n      \"summary\": \"Defines the durable boundary where Python is used for post-run analysis, error clustering, and visualization after stable artifacts are produced, explicitly separating it from runtime prompt assembly and product chain ownership.\",\n      \"keyPoints\": [\n        \"Python notebooks are used to cluster failure cases after experiment runs.\",\n        \"Analysis work begins only after replay runner writes stable JSON artifacts.\",\n        \"Python should not duplicate prompt assembly; it consumes frozen artifacts only.\",\n        \"Python can own error clustering, long-tail pattern mining, and plots.\",\n        \"Pandas DataFrame.groupby is a relevant reference for analysis tasks.\"\n      ],\n      \"tags\": [\"python\", \"notebook\", \"analysis\", \"artifacts\", \"boundary\"],\n      \"confidence\": 0.95,\n      \"reason\": \"This cluster defines a durable, reusable architectural boundary and responsibility split for Python analysis work. It fits the existing 'Python Analysis Sidecar' topic perfectly, which is described as 'Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.' The content is not time-bound or actionable but establishes a stable principle.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Exact match: defines Python's role as analysis sidecar after artifacts are frozen, with references to notebooks, error clustering, and consumption of stable outputs.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"cluster_eval_system_001\",\n      \"sourceIds\": [\"cap_pyeval_004\", \"cap_pyeval_006\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"Evaluation system ownership and regression reporting requirements\",\n      \"summary\": \"Clarifies that runner and scorer stay in TypeScript for product chain fidelity, and defines specific evaluation metrics needed for regression tracking, including confusion matrices and failure type breakdowns.\",\n      \"keyPoints\": [\n        \"Runner and scorer stay in TypeScript because product chain lives there.\",\n        \"First goal is faithful replay, not rewriting stack in analysis language.\",\n        \"Need confusion matrix for destination_accuracy by scenario family.\",\n        \"Scorer should report regressions separately for false archive, topic merge, and clustering failures.\"\n      ],\n      \"tags\": [\"eval\", \"runner\", \"scorer\", \"regression\", \"metrics\"],\n      \"confidence\": 0.9,\n      \"reason\": \"This cluster contains durable knowledge about evaluation system architecture and metric requirements. It fits the 'Prompt Eval Experimentation' topic which covers 'scorecards, holdout discipline, and regression tracking for AI quality.' The content defines stable ownership and reporting needs, not immediate actionable tasks.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Strong fit: addresses evaluation system components (runner, scorer), regression tracking, and specific scoring metrics for AI quality assessment.\"\n        }\n      ],\n      \"missingContext\": []\n    }\n  ]\n}\n```",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_topic_overlap_python_vs_eval_001_84ef8b5c",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_python_analysis_role",
+        "overlapCount": 5,
+        "predictedClusterId": "cluster_python_analysis_001"
+      },
+      {
+        "expectedClusterId": "golden_eval_runner_metrics",
+        "overlapCount": 2,
+        "predictedClusterId": "cluster_eval_system_001"
+      }
+    ],
+    "criticalFailures": [],
+    "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+    "metrics": {
+      "clusterPairwiseF1": 1,
+      "destinationAccuracy": {
+        "correct": 7,
+        "rate": 1,
+        "total": 7
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 7,
+        "rate": 1,
+        "total": 7
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 7,
+        "rate": 1,
+        "total": 7
+      }
+    },
+    "overallScore": 0.8666666666666666,
+    "pairwiseCounts": {
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "truePositive": 11
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "rust-background-compiler",
+      "topicName": "Rust Background Compiler",
+      "topicSummary": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.",
+      "recentTags": [
+        "rust",
+        "compiler",
+        "batch",
+        "runtime"
+      ],
+      "lastUpdatedAt": "2026-04-19T10:05:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    },
+    {
+      "topicSlug": "document-markdown-normalization",
+      "topicName": "Document Markdown Normalization",
+      "topicSummary": "Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.",
+      "recentTags": [
+        "markdown",
+        "ingestion",
+        "markitdown",
+        "html"
+      ],
+      "lastUpdatedAt": "2026-04-19T08:30:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": true,
+  "validationErrors": []
+}

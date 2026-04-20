@@ -1,0 +1,116 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+  "split": "dev",
+  "scenarioFamily": "duplicate_and_near_duplicate",
+  "difficulty": "medium",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "personal-knowledge-ops",
+    "rust-background-compiler",
+    "prompt-eval-experimentation",
+    "weekly-product-ops",
+    "product-writing-playbook"
+  ],
+  "notes": [
+    "Several captures restate the same retention rule with minor wording changes.",
+    "The scorer should reward grouping all near-duplicates into one durable knowledge cluster."
+  ],
+  "batch": {
+    "id": "batch_dev_duplicate_near_duplicate_retention_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-18T15:10:00Z",
+    "triggerReason": "capture_count",
+    "captureCount": 6,
+    "firstCapturedAt": "2026-04-18T14:58:00Z",
+    "lastCapturedAt": "2026-04-18T15:09:00Z",
+    "sourceIds": [
+      "cap_retentiondup_001",
+      "cap_retentiondup_002",
+      "cap_retentiondup_003",
+      "cap_retentiondup_004",
+      "cap_retentiondup_005",
+      "cap_retentiondup_006"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_retentiondup_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T14:58:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "Clipboard history should retain 90 days and survive upgrades.",
+      "rawText": "Clipboard history should retain 90 days and survive upgrades.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_retentiondup_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T15:00:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Clipboard history needs to survive app upgrades for the full 90-day window.",
+      "rawText": "Clipboard history needs to survive app upgrades for the full 90-day window.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_retentiondup_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T15:02:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "Retention data is a durable user asset, not disposable cache.",
+      "rawText": "Retention data is a durable user asset, not disposable cache.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_retentiondup_004",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T15:05:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "Do not tie clipboard history lifetime to bundle reinstall.",
+      "rawText": "Do not tie clipboard history lifetime to bundle reinstall. App upgrades and re-installs should not silently erase retained captures.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_retentiondup_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T15:07:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "Clipboard retention is a durable asset, not just temporary app cache.",
+      "rawText": "Clipboard retention is a durable asset, not just temporary app cache.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_retentiondup_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T15:09:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Preview and production channels can differ, but retention semantics should not.",
+      "rawText": "Preview and production channels can differ, but retention semantics should not. The user's retained history is still the same long-lived asset.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

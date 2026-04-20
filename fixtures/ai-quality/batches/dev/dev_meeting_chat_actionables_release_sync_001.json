@@ -1,0 +1,116 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+  "split": "dev",
+  "scenarioFamily": "meeting_chat_actionables",
+  "difficulty": "medium",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "weekly-product-ops",
+    "prompt-eval-experimentation",
+    "tauri-macos-permissions",
+    "product-writing-playbook",
+    "personal-knowledge-ops"
+  ],
+  "notes": [
+    "Near-term execution notes for an internal demo.",
+    "Correct routing is inbox because these are actionables with owners and immediate deadlines."
+  ],
+  "batch": {
+    "id": "batch_dev_meeting_chat_actionables_release_sync_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-18T09:12:00Z",
+    "triggerReason": "max_wait",
+    "captureCount": 6,
+    "firstCapturedAt": "2026-04-18T08:58:00Z",
+    "lastCapturedAt": "2026-04-18T09:10:00Z",
+    "sourceIds": [
+      "cap_releasesync_001",
+      "cap_releasesync_002",
+      "cap_releasesync_003",
+      "cap_releasesync_004",
+      "cap_releasesync_005",
+      "cap_releasesync_006"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_releasesync_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T08:58:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "Friday demo needs one visible flow: queue -> batch -> topic.",
+      "rawText": "Friday demo needs one visible flow: queue -> batch -> topic. If the AI part looks confusing, we should hide extra chrome instead of explaining more UI.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_releasesync_002",
+      "contentKind": "rich_text",
+      "capturedAt": "2026-04-18T09:01:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Zoom",
+      "sourceAppBundleId": "us.zoom.xos",
+      "preview": "Lou: seed fixtures. Chen: signing flow. Mia: settings copy.",
+      "rawText": "Lou: seed fixtures. Chen: signing flow. Mia: settings copy.",
+      "rawRich": "<ul><li>Lou: seed fixtures</li><li>Chen: signing flow</li><li>Mia: settings copy</li></ul>",
+      "rawRichFormat": "html",
+      "linkUrl": null
+    },
+    {
+      "id": "cap_releasesync_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T09:03:00Z",
+      "source": "clipboard",
+      "sourceAppName": "WeChat",
+      "sourceAppBundleId": "com.tencent.xinWeChat",
+      "preview": "先别继续扩 /ai 页面，demo 里只要结果链路。",
+      "rawText": "先别继续扩 /ai 页面，demo 里只要结果链路。把 review 相关内容收起来，避免用户误以为那是主流程。",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_releasesync_004",
+      "contentKind": "link",
+      "capturedAt": "2026-04-18T09:05:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Linear",
+      "sourceAppBundleId": "com.linear",
+      "preview": "https://linear.app/tino/issue/TIN-214/prepare-internal-demo-script",
+      "rawText": "https://linear.app/tino/issue/TIN-214/prepare-internal-demo-script",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://linear.app/tino/issue/TIN-214/prepare-internal-demo-script"
+    },
+    {
+      "id": "cap_releasesync_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T09:07:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Need an 8-minute demo script and a fallback recording.",
+      "rawText": "Need an 8-minute demo script and a fallback recording. If paste-back permissions fail on the room machine, use the recorded flow.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_releasesync_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-18T09:10:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "Invite 5 testers and ask Chen to record the clean run.",
+      "rawText": "Invite 5 testers and ask Chen to record the clean run. We only need enough polish to make the hidden flow believable.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

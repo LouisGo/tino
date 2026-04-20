@@ -1,0 +1,251 @@
+{
+  "createdAt": "2026-04-20T15:03:09.627Z",
+  "experimentId": "exp-20260420-005",
+  "fixtureChecksum": "b6c16315ad3e3970cc7dc6f695bc707f25d9833457578b2569a9d2f5378b4bea",
+  "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_link_led_context_sparse_eval_links_001_1776697422573",
+    "batchId": "batch_dev_link_led_context_sparse_eval_links_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T15:03:42.573Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_eval_links_001",
+        "sourceIds": [
+          "cap_evalinks_001",
+          "cap_evalinks_002",
+          "cap_evalinks_003",
+          "cap_evalinks_005"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "Collection of AI Evaluation Framework Documentation Links",
+        "summary": "A set of links to documentation for various AI evaluation frameworks and tools, including OpenAI Evals, LangSmith, Ragas, and Humanloop, captured during research.",
+        "keyPoints": [
+          "Links to official documentation for multiple evaluation platforms.",
+          "Includes OpenAI's evals guide, LangSmith dataset management, Ragas, and Humanloop evals.",
+          "Potentially useful for building scorecards or understanding different eval approaches."
+        ],
+        "tags": [
+          "eval",
+          "documentation",
+          "frameworks",
+          "scorecards"
+        ],
+        "confidence": 0.85,
+        "reason": "The links are all directly related to AI evaluation frameworks and tooling, which aligns perfectly with the existing 'Prompt Eval Experimentation' topic covering offline fixtures, golden labels, and regression tracking. The text note 'maybe useful later for scorecards' further supports this connection.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Direct match on evaluation frameworks, tools, and the potential use for scorecards."
+          },
+          {
+            "topicSlug": "link-triage-watchlist",
+            "topicName": "Link Triage Watchlist",
+            "reason": "The content is a collection of raw links, which is the primary focus of the watchlist for review before archiving."
+          }
+        ],
+        "missingContext": [
+          "The specific research goal or project these links were gathered for.",
+          "Any notes comparing the frameworks or intended use cases beyond 'scorecards'."
+        ]
+      },
+      {
+        "clusterId": "cluster_text_note_001",
+        "sourceIds": [
+          "cap_evalinks_004"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Vague note about potential future use for scorecards",
+        "summary": "A brief, ambiguous text note stating 'maybe useful later for scorecards' with no specific reference.",
+        "keyPoints": [
+          "Note is too vague to archive directly.",
+          "Lacks context about what 'useful' refers to.",
+          "Should be reviewed to connect it to a specific item or topic."
+        ],
+        "tags": [
+          "note",
+          "vague",
+          "todo"
+        ],
+        "confidence": 0.3,
+        "reason": "This standalone text note is extremely sparse and lacks any connection to the captured links or other context. It cannot be confidently archived without more information and should be triaged in the inbox.",
+        "possibleTopics": [],
+        "missingContext": [
+          "What the note is referring to (e.g., a specific link, tool, or concept).",
+          "The project or task where scorecards are needed."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_eval_links_001",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "cluster_text_note_001",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_link_led_context_sparse_eval_links_001\ncapture_count: 5\ntrigger_reason: capture_count\nwindow: 2026-04-18T02:32:00Z -> 2026-04-18T02:40:00Z\n\nRelevant topic index entries\n1. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n2. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n3. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n4. Multilingual Prompting [multilingual-prompting]\n   summary: Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\n   recent_tags: bilingual, locale, prompts, zh-en\n   last_updated_at: 2026-04-18T09:15:00Z\n5. Customer Research Synthesis [customer-research-synthesis]\n   summary: Interview notes, tagged insights, jobs-to-be-done patterns, and synthesized research themes.\n   recent_tags: research, insights, jtbd, synthesis\n   last_updated_at: 2026-04-17T08:05:00Z\n\nCaptures\ncapture_1:\nid: cap_evalinks_001\ncontent_kind: link\ncaptured_at: 2026-04-18T02:32:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://platform.openai.com/docs/guides/evals\nlink_url: https://platform.openai.com/docs/guides/evals\nraw_text:\n  https://platform.openai.com/docs/guides/evals\n\ncapture_2:\nid: cap_evalinks_002\ncontent_kind: link\ncaptured_at: 2026-04-18T02:34:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\nlink_url: https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\nraw_text:\n  https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\n\ncapture_3:\nid: cap_evalinks_003\ncontent_kind: link\ncaptured_at: 2026-04-18T02:36:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://docs.ragas.io/en/latest/\nlink_url: https://docs.ragas.io/en/latest/\nraw_text:\n  https://docs.ragas.io/en/latest/\n\ncapture_4:\nid: cap_evalinks_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T02:38:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: maybe useful later for scorecards\nraw_text:\n  maybe useful later for scorecards\n\ncapture_5:\nid: cap_evalinks_005\ncontent_kind: link\ncaptured_at: 2026-04-18T02:40:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://humanloop.com/docs/evals\nlink_url: https://humanloop.com/docs/evals\nraw_text:\n  https://humanloop.com/docs/evals\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 32945,
+    "finishReason": "stop",
+    "inputTokens": 1129,
+    "model": "deepseek-chat",
+    "outputTokens": 699,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"cluster_eval_links_001\",\n      \"sourceIds\": [\"cap_evalinks_001\", \"cap_evalinks_002\", \"cap_evalinks_003\", \"cap_evalinks_005\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"Collection of AI Evaluation Framework Documentation Links\",\n      \"summary\": \"A set of links to documentation for various AI evaluation frameworks and tools, including OpenAI Evals, LangSmith, Ragas, and Humanloop, captured during research.\",\n      \"keyPoints\": [\"Links to official documentation for multiple evaluation platforms.\", \"Includes OpenAI's evals guide, LangSmith dataset management, Ragas, and Humanloop evals.\", \"Potentially useful for building scorecards or understanding different eval approaches.\"],\n      \"tags\": [\"eval\", \"documentation\", \"frameworks\", \"scorecards\"],\n      \"confidence\": 0.85,\n      \"reason\": \"The links are all directly related to AI evaluation frameworks and tooling, which aligns perfectly with the existing 'Prompt Eval Experimentation' topic covering offline fixtures, golden labels, and regression tracking. The text note 'maybe useful later for scorecards' further supports this connection.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Direct match on evaluation frameworks, tools, and the potential use for scorecards.\"\n        },\n        {\n          \"topicSlug\": \"link-triage-watchlist\",\n          \"topicName\": \"Link Triage Watchlist\",\n          \"reason\": \"The content is a collection of raw links, which is the primary focus of the watchlist for review before archiving.\"\n        }\n      ],\n      \"missingContext\": [\"The specific research goal or project these links were gathered for.\", \"Any notes comparing the frameworks or intended use cases beyond 'scorecards'.\"]\n    },\n    {\n      \"clusterId\": \"cluster_text_note_001\",\n      \"sourceIds\": [\"cap_evalinks_004\"],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Vague note about potential future use for scorecards\",\n      \"summary\": \"A brief, ambiguous text note stating 'maybe useful later for scorecards' with no specific reference.\",\n      \"keyPoints\": [\"Note is too vague to archive directly.\", \"Lacks context about what 'useful' refers to.\", \"Should be reviewed to connect it to a specific item or topic.\"],\n      \"tags\": [\"note\", \"vague\", \"todo\"],\n      \"confidence\": 0.3,\n      \"reason\": \"This standalone text note is extremely sparse and lacks any connection to the captured links or other context. It cannot be confidently archived without more information and should be triaged in the inbox.\",\n      \"possibleTopics\": [],\n      \"missingContext\": [\"What the note is referring to (e.g., a specific link, tool, or concept).\", \"The project or task where scorecards are needed.\"]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_link_led_context_sparse_eval_links_001_a6a05036",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_eval_link_watchlist",
+        "overlapCount": 4,
+        "predictedClusterId": "cluster_eval_links_001"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 4"
+    ],
+    "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.7499999999999999,
+      "destinationAccuracy": {
+        "correct": 1,
+        "rate": 0.2,
+        "total": 5
+      },
+      "falseArchiveRate": {
+        "correct": 4,
+        "rate": 0.8,
+        "total": 5
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 1,
+        "rate": 0.2,
+        "total": 5
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      }
+    },
+    "overallScore": 0.44416666666666665,
+    "pairwiseCounts": {
+      "falseNegative": 4,
+      "falsePositive": 0,
+      "truePositive": 6
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    },
+    {
+      "topicSlug": "multilingual-prompting",
+      "topicName": "Multilingual Prompting",
+      "topicSummary": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.",
+      "recentTags": [
+        "bilingual",
+        "locale",
+        "prompts",
+        "zh-en"
+      ],
+      "lastUpdatedAt": "2026-04-18T09:15:00Z"
+    },
+    {
+      "topicSlug": "customer-research-synthesis",
+      "topicName": "Customer Research Synthesis",
+      "topicSummary": "Interview notes, tagged insights, jobs-to-be-done patterns, and synthesized research themes.",
+      "recentTags": [
+        "research",
+        "insights",
+        "jtbd",
+        "synthesis"
+      ],
+      "lastUpdatedAt": "2026-04-17T08:05:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

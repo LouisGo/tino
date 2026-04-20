@@ -1,0 +1,344 @@
+{
+  "createdAt": "2026-04-20T15:55:51.966Z",
+  "experimentId": "exp-20260420-007",
+  "fixtureChecksum": "8cf84e94a3e1f8af8741b3befb12f53285c47367bc2dcb5a89c7964425ffbc27",
+  "fixtureId": "dev_bilingual_mixed_eval_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_bilingual_mixed_eval_001_1776700672111",
+    "batchId": "batch_dev_bilingual_mixed_eval_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T15:57:52.111Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_eval_principles_001",
+        "sourceIds": [
+          "cap_bilingual_001",
+          "cap_bilingual_002",
+          "cap_bilingual_003",
+          "cap_bilingual_006"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "Core principles for stable evaluation: golden fixtures, holdout discipline, and routing metrics",
+        "summary": "Durable evaluation principles emphasizing the need for stable golden fixtures before prompt polishing, the strict role of holdout cases for regression detection, the priority of routing metrics like false_archive_rate over overall scores, and the requirement for case-by-case diff analysis over subjective impressions.",
+        "keyPoints": [
+          "Establish stable mock batch and golden fixtures as a baseline before prompt polishing.",
+          "Holdout cases are for regression detection, not for prompt-by-prompt repair or memorization.",
+          "The false_archive_rate (routing accuracy) is more critical than overall score for evaluation.",
+          "Avoid subjective impressions; rely on case-by-case diff analysis to track progress and regressions per scenario."
+        ],
+        "tags": [
+          "eval",
+          "golden",
+          "holdout",
+          "regression",
+          "routing",
+          "metrics"
+        ],
+        "confidence": 0.95,
+        "reason": "Cluster contains durable, reusable knowledge about evaluation methodology, fixture discipline, and metric priorities. It fits perfectly under the existing 'Prompt Eval Experimentation' topic, which covers golden labels, regression tracking, and scorecards.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Direct match for golden fixtures, holdout cases, regression detection, and evaluation metrics."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_python_analysis_role_001",
+        "sourceIds": [
+          "cap_bilingual_005"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "python-analysis-sidecar",
+        "topicNameSuggestion": "Python Analysis Sidecar",
+        "title": "Python's role as an analysis layer, not the runtime source of truth",
+        "summary": "A principle defining Python's scope as strictly an analysis layer for post-run artifact processing, emphasizing that the TypeScript replay runner and artifacts must be stabilized first as the source of truth.",
+        "keyPoints": [
+          "Python should serve only as an analysis layer, not the runtime source of truth.",
+          "The TypeScript replay runner and its artifacts must be stabilized as the primary system."
+        ],
+        "tags": [
+          "python",
+          "analysis",
+          "typescript",
+          "runner",
+          "artifacts"
+        ],
+        "confidence": 0.9,
+        "reason": "This is a durable architectural principle about the division of responsibility between Python and TypeScript in the evaluation system. It belongs to the existing 'Python Analysis Sidecar' topic, which defines Python's role for artifact analysis after contracts are frozen.",
+        "possibleTopics": [
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Direct match for the principle defining Python's role as an analysis sidecar, not the source of truth."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Related to the broader evaluation system, but the specific Python/TypeScript boundary is better covered by the dedicated Python topic."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "cluster_link_triage_001",
+        "sourceIds": [
+          "cap_bilingual_004"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "External link on LLM evaluators for review",
+        "summary": "A single external link to an article about LLM evaluators, captured for potential future reference. It requires human review to determine its durable value.",
+        "keyPoints": [
+          "Link: https://eugeneyan.com/writing/llm-evaluators/"
+        ],
+        "tags": [
+          "link",
+          "llm",
+          "evaluators",
+          "external"
+        ],
+        "confidence": 0.85,
+        "reason": "This is a link-heavy capture with no synthesis or context. According to the rules, sparse link collections should be sent to the inbox for triage. The 'Link Triage Watchlist' topic exists, but the rule states to send such items to the inbox for human review first.",
+        "possibleTopics": [
+          {
+            "topicSlug": "link-triage-watchlist",
+            "topicName": "Link Triage Watchlist",
+            "reason": "The topic is designed for link-heavy research queues that need review before entering durable knowledge."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Potentially related to LLM evaluation techniques, but the link lacks any contextual note to justify archiving directly."
+          }
+        ],
+        "missingContext": [
+          "Why was this link saved? What specific aspect of LLM evaluators is of interest?"
+        ]
+      },
+      {
+        "clusterId": "cluster_metric_thresholds_001",
+        "sourceIds": [
+          "cap_bilingual_007"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Metric thresholds for schema validity and source assignment",
+        "summary": "Two specific numeric thresholds for evaluation metrics: schema_valid_rate >= 98% and source_assignment_integrity = 100%.",
+        "keyPoints": [
+          "schema_valid_rate must be >= 98%.",
+          "source_assignment_integrity must be 100%."
+        ],
+        "tags": [
+          "metrics",
+          "thresholds",
+          "schema",
+          "integrity"
+        ],
+        "confidence": 0.8,
+        "reason": "These are specific, actionable metric targets that likely belong to an ongoing evaluation project or quality gate. They are time-bound and execution-oriented, needing human triage to determine if they are final standards (for archiving) or current sprint goals (for inbox action).",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Could become durable knowledge about evaluation standards if confirmed as long-term targets."
+          }
+        ],
+        "missingContext": [
+          "Are these proposed targets, agreed-upon standards, or results from a specific run? What system or project do they apply to?"
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_eval_principles_001",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "cluster_python_analysis_role_001",
+        "destination": "topic",
+        "filePath": "topics/python-analysis-sidecar.md",
+        "topicName": "Python Analysis Sidecar",
+        "topicSlug": "python-analysis-sidecar"
+      },
+      {
+        "clusterId": "cluster_link_triage_001",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      },
+      {
+        "clusterId": "cluster_metric_thresholds_001",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_bilingual_mixed_eval_001\ncapture_count: 7\ntrigger_reason: max_wait\nwindow: 2026-04-20T01:54:00Z -> 2026-04-20T02:04:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n2. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n3. Multilingual Prompting [multilingual-prompting]\n   summary: Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\n   recent_tags: bilingual, locale, prompts, zh-en\n   last_updated_at: 2026-04-18T09:15:00Z\n4. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n5. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n\nCaptures\ncapture_1:\nid: cap_bilingual_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:54:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 先把 mock batch 和 golden 固定，再谈 prompt polish。\nraw_text:\n  先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了只是主观印象。\n\ncapture_2:\nid: cap_bilingual_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:56:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Holdout cases should never become prompt-by-prompt repair targets.\nraw_text:\n  Holdout cases should never become prompt-by-prompt repair targets. They are for regression detection, not for case memorization.\n\ncapture_3:\nid: cap_bilingual_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:58:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: `false_archive_rate` 比 overall score 更重要。\nraw_text:\n  `false_archive_rate` 比 overall score 更重要。路由错了，再漂亮的 summary 也没有价值。\n\ncapture_4:\nid: cap_bilingual_004\ncontent_kind: link\ncaptured_at: 2026-04-20T02:00:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://eugeneyan.com/writing/llm-evaluators/\nlink_url: https://eugeneyan.com/writing/llm-evaluators/\nraw_text:\n  https://eugeneyan.com/writing/llm-evaluators/\n\ncapture_5:\nid: cap_bilingual_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T02:01:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Python 只做 analysis layer, not runtime source of truth.\nraw_text:\n  Python 只做 analysis layer, not runtime source of truth. 先把 TS replay runner 和 artifacts 稳定下来。\n\ncapture_6:\nid: cap_bilingual_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T02:03:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 不要再凭感觉说结果更顺了，要看 case-by-case diff。\nraw_text:\n  不要再凭感觉说结果更顺了，要看 case-by-case diff。每一轮实验都要能说明哪些场景进步，哪些场景退化。\n\ncapture_7:\nid: cap_bilingual_007\ncontent_kind: rich_text\ncaptured_at: 2026-04-20T02:04:00Z\nsource: clipboard\nsource_app_name: Notion\npreview: schema_valid_rate >= 98%; source_assignment_integrity = 100%\nraw_text:\n  schema_valid_rate >= 98%; source_assignment_integrity = 100%\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Only create a new topic when none of the listed topics is a reasonable broader home.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v2",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 64123,
+    "finishReason": "stop",
+    "inputTokens": 2053,
+    "model": "deepseek-chat",
+    "outputTokens": 1485,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"cluster_eval_principles_001\",\n      \"sourceIds\": [\"cap_bilingual_001\", \"cap_bilingual_002\", \"cap_bilingual_003\", \"cap_bilingual_006\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"Core principles for stable evaluation: golden fixtures, holdout discipline, and routing metrics\",\n      \"summary\": \"Durable evaluation principles emphasizing the need for stable golden fixtures before prompt polishing, the strict role of holdout cases for regression detection, the priority of routing metrics like false_archive_rate over overall scores, and the requirement for case-by-case diff analysis over subjective impressions.\",\n      \"keyPoints\": [\n        \"Establish stable mock batch and golden fixtures as a baseline before prompt polishing.\",\n        \"Holdout cases are for regression detection, not for prompt-by-prompt repair or memorization.\",\n        \"The false_archive_rate (routing accuracy) is more critical than overall score for evaluation.\",\n        \"Avoid subjective impressions; rely on case-by-case diff analysis to track progress and regressions per scenario.\"\n      ],\n      \"tags\": [\"eval\", \"golden\", \"holdout\", \"regression\", \"routing\", \"metrics\"],\n      \"confidence\": 0.95,\n      \"reason\": \"Cluster contains durable, reusable knowledge about evaluation methodology, fixture discipline, and metric priorities. It fits perfectly under the existing 'Prompt Eval Experimentation' topic, which covers golden labels, regression tracking, and scorecards.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Direct match for golden fixtures, holdout cases, regression detection, and evaluation metrics.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"cluster_python_analysis_role_001\",\n      \"sourceIds\": [\"cap_bilingual_005\"],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"python-analysis-sidecar\",\n      \"topicNameSuggestion\": \"Python Analysis Sidecar\",\n      \"title\": \"Python's role as an analysis layer, not the runtime source of truth\",\n      \"summary\": \"A principle defining Python's scope as strictly an analysis layer for post-run artifact processing, emphasizing that the TypeScript replay runner and artifacts must be stabilized first as the source of truth.\",\n      \"keyPoints\": [\n        \"Python should serve only as an analysis layer, not the runtime source of truth.\",\n        \"The TypeScript replay runner and its artifacts must be stabilized as the primary system.\"\n      ],\n      \"tags\": [\"python\", \"analysis\", \"typescript\", \"runner\", \"artifacts\"],\n      \"confidence\": 0.9,\n      \"reason\": \"This is a durable architectural principle about the division of responsibility between Python and TypeScript in the evaluation system. It belongs to the existing 'Python Analysis Sidecar' topic, which defines Python's role for artifact analysis after contracts are frozen.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Direct match for the principle defining Python's role as an analysis sidecar, not the source of truth.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Related to the broader evaluation system, but the specific Python/TypeScript boundary is better covered by the dedicated Python topic.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"cluster_link_triage_001\",\n      \"sourceIds\": [\"cap_bilingual_004\"],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"External link on LLM evaluators for review\",\n      \"summary\": \"A single external link to an article about LLM evaluators, captured for potential future reference. It requires human review to determine its durable value.\",\n      \"keyPoints\": [\n        \"Link: https://eugeneyan.com/writing/llm-evaluators/\"\n      ],\n      \"tags\": [\"link\", \"llm\", \"evaluators\", \"external\"],\n      \"confidence\": 0.85,\n      \"reason\": \"This is a link-heavy capture with no synthesis or context. According to the rules, sparse link collections should be sent to the inbox for triage. The 'Link Triage Watchlist' topic exists, but the rule states to send such items to the inbox for human review first.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"link-triage-watchlist\",\n          \"topicName\": \"Link Triage Watchlist\",\n          \"reason\": \"The topic is designed for link-heavy research queues that need review before entering durable knowledge.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Potentially related to LLM evaluation techniques, but the link lacks any contextual note to justify archiving directly.\"\n        }\n      ],\n      \"missingContext\": [\"Why was this link saved? What specific aspect of LLM evaluators is of interest?\"]\n    },\n    {\n      \"clusterId\": \"cluster_metric_thresholds_001\",\n      \"sourceIds\": [\"cap_bilingual_007\"],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Metric thresholds for schema validity and source assignment\",\n      \"summary\": \"Two specific numeric thresholds for evaluation metrics: schema_valid_rate >= 98% and source_assignment_integrity = 100%.\",\n      \"keyPoints\": [\n        \"schema_valid_rate must be >= 98%.\",\n        \"source_assignment_integrity must be 100%.\"\n      ],\n      \"tags\": [\"metrics\", \"thresholds\", \"schema\", \"integrity\"],\n      \"confidence\": 0.8,\n      \"reason\": \"These are specific, actionable metric targets that likely belong to an ongoing evaluation project or quality gate. They are time-bound and execution-oriented, needing human triage to determine if they are final standards (for archiving) or current sprint goals (for inbox action).\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Could become durable knowledge about evaluation standards if confirmed as long-term targets.\"\n        }\n      ],\n      \"missingContext\": [\"Are these proposed targets, agreed-upon standards, or results from a specific run? What system or project do they apply to?\"]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_bilingual_mixed_eval_001_5a7a88f3",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_bilingual_eval_core",
+        "overlapCount": 4,
+        "predictedClusterId": "cluster_eval_principles_001"
+      },
+      {
+        "expectedClusterId": "golden_bilingual_python_boundary",
+        "overlapCount": 1,
+        "predictedClusterId": "cluster_python_analysis_role_001"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 2/7 source assignments."
+    ],
+    "fixtureId": "dev_bilingual_mixed_eval_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.5714285714285715,
+      "destinationAccuracy": {
+        "correct": 5,
+        "rate": 0.7142857142857143,
+        "total": 7
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 5,
+        "rate": 0.7142857142857143,
+        "total": 7
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 5,
+        "rate": 0.7142857142857143,
+        "total": 7
+      }
+    },
+    "overallScore": 0.6357142857142858,
+    "pairwiseCounts": {
+      "falseNegative": 9,
+      "falsePositive": 0,
+      "truePositive": 6
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "multilingual-prompting",
+      "topicName": "Multilingual Prompting",
+      "topicSummary": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.",
+      "recentTags": [
+        "bilingual",
+        "locale",
+        "prompts",
+        "zh-en"
+      ],
+      "lastUpdatedAt": "2026-04-18T09:15:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": true,
+  "validationErrors": []
+}

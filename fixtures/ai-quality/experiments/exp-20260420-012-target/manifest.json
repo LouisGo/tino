@@ -1,0 +1,47 @@
+{
+  "createdAt": "2026-04-20T16:19:07.166Z",
+  "experimentId": "exp-20260420-012-target",
+  "fixtureCount": 5,
+  "fixtures": [
+    "dev_writing_planning_quality_pipeline_001",
+    "dev_meeting_chat_actionables_release_sync_001",
+    "dev_task_switching_copy_and_terminal_001",
+    "holdout_new_topic_support_macro_001",
+    "holdout_import_runtime_overlap_001"
+  ],
+  "mode": "live",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "runArtifacts": [
+    {
+      "artifactPath": "runs/dev_writing_planning_quality_pipeline_001.json",
+      "fixtureId": "dev_writing_planning_quality_pipeline_001",
+      "overallScore": 0.8666666666666666
+    },
+    {
+      "artifactPath": "runs/dev_meeting_chat_actionables_release_sync_001.json",
+      "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+      "overallScore": 0.8
+    },
+    {
+      "artifactPath": "runs/dev_task_switching_copy_and_terminal_001.json",
+      "fixtureId": "dev_task_switching_copy_and_terminal_001",
+      "overallScore": 0.92671568627451
+    },
+    {
+      "artifactPath": "runs/holdout_new_topic_support_macro_001.json",
+      "fixtureId": "holdout_new_topic_support_macro_001",
+      "overallScore": 0.5666666666666667
+    },
+    {
+      "artifactPath": "runs/holdout_import_runtime_overlap_001.json",
+      "fixtureId": "holdout_import_runtime_overlap_001",
+      "overallScore": 0.5859073359073359
+    }
+  ],
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "split": "all"
+}

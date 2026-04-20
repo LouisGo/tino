@@ -1,0 +1,268 @@
+{
+  "createdAt": "2026-04-20T15:48:25.982Z",
+  "experimentId": "exp-20260420-smoke",
+  "fixtureChecksum": "cfd00cae495388bc1bd6cf1ec004cb1b9155ccc98a65810f2a60616fd13dddc8",
+  "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_meeting_chat_actionables_release_sync_001_1776700105984",
+    "batchId": "batch_dev_meeting_chat_actionables_release_sync_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T15:48:25.984Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_meeting_chat_actionables_release_sync_001_cluster_primary",
+        "sourceIds": [
+          "cap_releasesync_001",
+          "cap_releasesync_002"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "weekly-product-ops",
+        "topicNameSuggestion": "Weekly Product Ops",
+        "title": "Friday demo needs one visible flow: queue -> batch -> t...",
+        "summary": "Friday demo needs one visible flow: queue -> batch -> topic. If the AI part looks confusing, we should hide extra chrome instead of explaining more UI. Lou: seed fixtures. Chen: signing flow. Mia: settings copy.",
+        "keyPoints": [
+          "Friday demo needs one visible flow: queue -> batch -> topic.",
+          "Lou: seed fixtures. Chen: signing flow. Mia: settings copy.",
+          "先别继续扩 /ai 页面，demo 里只要结果链路。",
+          "Need an 8-minute demo script and a fallback recording."
+        ],
+        "tags": [
+          "meeting",
+          "owners",
+          "timeline",
+          "release",
+          "plain_text"
+        ],
+        "confidence": 0.83,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "weekly-product-ops",
+            "topicName": "Weekly Product Ops",
+            "reason": "Recurring product meetings, owner assignments, release checklists, and near-term execution coordination."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "tauri-macos-permissions",
+            "topicName": "Tauri macOS Permissions",
+            "reason": "Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_meeting_chat_actionables_release_sync_001_cluster_secondary",
+        "sourceIds": [
+          "cap_releasesync_003",
+          "cap_releasesync_005",
+          "cap_releasesync_006",
+          "cap_releasesync_004"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Provider access references need manual confirmation",
+        "summary": "Reference links and loose follow-up notes are held for review before they influence persistence.",
+        "keyPoints": [
+          "先别继续扩 /ai 页面，demo 里只要结果链路。",
+          "Need an 8-minute demo script and a fallback recording.",
+          "Invite 5 testers and ask Chen to record the clean run.",
+          "https://linear.app/tino/issue/TIN-214/prepare-internal-demo-script"
+        ],
+        "tags": [
+          "eval",
+          "golden",
+          "runner",
+          "regression",
+          "plain_text"
+        ],
+        "confidence": 0.54,
+        "reason": "This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.",
+        "possibleTopics": [
+          {
+            "topicSlug": "weekly-product-ops",
+            "topicName": "Weekly Product Ops",
+            "reason": "Recurring product meetings, owner assignments, release checklists, and near-term execution coordination."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "tauri-macos-permissions",
+            "topicName": "Tauri macOS Permissions",
+            "reason": "Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows."
+          }
+        ],
+        "missingContext": [
+          "Need confirmation whether the external reference should become a long-term topic section."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_meeting_chat_actionables_release_sync_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/weekly-product-ops.md",
+        "topicName": "Weekly Product Ops",
+        "topicSlug": "weekly-product-ops"
+      },
+      {
+        "clusterId": "batch_dev_meeting_chat_actionables_release_sync_001_cluster_secondary",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_meeting_chat_actionables_release_sync_001\ncapture_count: 6\ntrigger_reason: max_wait\nwindow: 2026-04-18T08:58:00Z -> 2026-04-18T09:10:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Weekly Product Ops [weekly-product-ops]\n   summary: Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.\n   recent_tags: meeting, owners, timeline, release\n   last_updated_at: 2026-04-19T05:50:00Z\n2. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n3. Tauri macOS Permissions [tauri-macos-permissions]\n   summary: Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows.\n   recent_tags: tauri, macos, accessibility, signing\n   last_updated_at: 2026-04-19T07:20:00Z\n4. Product Writing Playbook [product-writing-playbook]\n   summary: Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.\n   recent_tags: copywriting, messaging, headline, launch\n   last_updated_at: 2026-04-17T14:40:00Z\n5. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n\nCaptures\ncapture_1:\nid: cap_releasesync_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T08:58:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Friday demo needs one visible flow: queue -> batch -> topic.\nraw_text:\n  Friday demo needs one visible flow: queue -> batch -> topic. If the AI part looks confusing, we should hide extra chrome instead of explaining more UI.\n\ncapture_2:\nid: cap_releasesync_002\ncontent_kind: rich_text\ncaptured_at: 2026-04-18T09:01:00Z\nsource: clipboard\nsource_app_name: Zoom\npreview: Lou: seed fixtures. Chen: signing flow. Mia: settings copy.\nraw_text:\n  Lou: seed fixtures. Chen: signing flow. Mia: settings copy.\n\ncapture_3:\nid: cap_releasesync_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T09:03:00Z\nsource: clipboard\nsource_app_name: WeChat\npreview: 先别继续扩 /ai 页面，demo 里只要结果链路。\nraw_text:\n  先别继续扩 /ai 页面，demo 里只要结果链路。把 review 相关内容收起来，避免用户误以为那是主流程。\n\ncapture_4:\nid: cap_releasesync_004\ncontent_kind: link\ncaptured_at: 2026-04-18T09:05:00Z\nsource: clipboard\nsource_app_name: Linear\npreview: https://linear.app/tino/issue/TIN-214/prepare-internal-demo-script\nlink_url: https://linear.app/tino/issue/TIN-214/prepare-internal-demo-script\nraw_text:\n  https://linear.app/tino/issue/TIN-214/prepare-internal-demo-script\n\ncapture_5:\nid: cap_releasesync_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T09:07:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Need an 8-minute demo script and a fallback recording.\nraw_text:\n  Need an 8-minute demo script and a fallback recording. If paste-back permissions fail on the room machine, use the recorded flow.\n\ncapture_6:\nid: cap_releasesync_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T09:10:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Invite 5 testers and ask Chen to record the clean run.\nraw_text:\n  Invite 5 testers and ask Chen to record the clean run. We only need enough polish to make the hidden flow believable.\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Only create a new topic when none of the listed topics is a reasonable broader home.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v2",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_meeting_chat_actionables_release_sync_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_releasesync_001\",\n        \"cap_releasesync_002\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"weekly-product-ops\",\n      \"topicNameSuggestion\": \"Weekly Product Ops\",\n      \"title\": \"Friday demo needs one visible flow: queue -> batch -> t...\",\n      \"summary\": \"Friday demo needs one visible flow: queue -> batch -> topic. If the AI part looks confusing, we should hide extra chrome instead of explaining more UI. Lou: seed fixtures. Chen: signing flow. Mia: settings copy.\",\n      \"keyPoints\": [\n        \"Friday demo needs one visible flow: queue -> batch -> topic.\",\n        \"Lou: seed fixtures. Chen: signing flow. Mia: settings copy.\",\n        \"先别继续扩 /ai 页面，demo 里只要结果链路。\",\n        \"Need an 8-minute demo script and a fallback recording.\"\n      ],\n      \"tags\": [\n        \"meeting\",\n        \"owners\",\n        \"timeline\",\n        \"release\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.83,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"weekly-product-ops\",\n          \"topicName\": \"Weekly Product Ops\",\n          \"reason\": \"Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"tauri-macos-permissions\",\n          \"topicName\": \"Tauri macOS Permissions\",\n          \"reason\": \"Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_meeting_chat_actionables_release_sync_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_releasesync_003\",\n        \"cap_releasesync_005\",\n        \"cap_releasesync_006\",\n        \"cap_releasesync_004\"\n      ],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Provider access references need manual confirmation\",\n      \"summary\": \"Reference links and loose follow-up notes are held for review before they influence persistence.\",\n      \"keyPoints\": [\n        \"先别继续扩 /ai 页面，demo 里只要结果链路。\",\n        \"Need an 8-minute demo script and a fallback recording.\",\n        \"Invite 5 testers and ask Chen to record the clean run.\",\n        \"https://linear.app/tino/issue/TIN-214/prepare-internal-demo-script\"\n      ],\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"runner\",\n        \"regression\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.54,\n      \"reason\": \"This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"weekly-product-ops\",\n          \"topicName\": \"Weekly Product Ops\",\n          \"reason\": \"Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"tauri-macos-permissions\",\n          \"topicName\": \"Tauri macOS Permissions\",\n          \"reason\": \"Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows.\"\n        }\n      ],\n      \"missingContext\": [\n        \"Need confirmation whether the external reference should become a long-term topic section.\"\n      ]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_meeting_chat_actionables_release_sync_001_610ee6b2",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_release_sync_actionables",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_meeting_chat_actionables_release_sync_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 2"
+    ],
+    "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.6363636363636364,
+      "destinationAccuracy": {
+        "correct": 4,
+        "rate": 0.6666666666666666,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 4,
+        "rate": 0.6666666666666666,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      }
+    },
+    "overallScore": 0.5868686868686869,
+    "pairwiseCounts": {
+      "falseNegative": 8,
+      "falsePositive": 0,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "weekly-product-ops",
+      "topicName": "Weekly Product Ops",
+      "topicSummary": "Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.",
+      "recentTags": [
+        "meeting",
+        "owners",
+        "timeline",
+        "release"
+      ],
+      "lastUpdatedAt": "2026-04-19T05:50:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "tauri-macos-permissions",
+      "topicName": "Tauri macOS Permissions",
+      "topicSummary": "Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows.",
+      "recentTags": [
+        "tauri",
+        "macos",
+        "accessibility",
+        "signing"
+      ],
+      "lastUpdatedAt": "2026-04-19T07:20:00Z"
+    },
+    {
+      "topicSlug": "product-writing-playbook",
+      "topicName": "Product Writing Playbook",
+      "topicSummary": "Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.",
+      "recentTags": [
+        "copywriting",
+        "messaging",
+        "headline",
+        "launch"
+      ],
+      "lastUpdatedAt": "2026-04-17T14:40:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

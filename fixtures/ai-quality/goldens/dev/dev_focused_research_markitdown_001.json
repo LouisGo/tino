@@ -1,0 +1,39 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_focused_research_markitdown_001",
+  "batchId": "batch_dev_focused_research_markitdown_001",
+  "split": "dev",
+  "scenarioFamily": "focused_research",
+  "difficulty": "medium",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_markitdown_research",
+      "sourceIds": [
+        "cap_markitdown_001",
+        "cap_markitdown_002",
+        "cap_markitdown_003",
+        "cap_markitdown_004",
+        "cap_markitdown_005",
+        "cap_markitdown_006"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "document-markdown-normalization",
+      "expectedTopicName": "Document Markdown Normalization",
+      "mustSupport": [
+        "MarkItDown is primarily useful for document-to-Markdown conversion rather than clipboard semantic batching.",
+        "Clipboard ingestion still needs separate HTML or rich-text normalization.",
+        "If adopted, MarkItDown should sit behind an import adapter boundary."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Do not reroute this batch into prompt-eval-experimentation.",
+    "The supporting GitHub link should stay attached to the research cluster rather than isolated into inbox."
+  ],
+  "annotationNotes": [
+    "This batch is coherent enough that the link belongs inside the durable research cluster.",
+    "The key judgment is product fit and architectural placement, not prose quality."
+  ]
+}

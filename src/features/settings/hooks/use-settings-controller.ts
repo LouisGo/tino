@@ -26,7 +26,8 @@ function sanitizeSettingsDraft(settings: SettingsDraft): SettingsDraft {
 }
 
 function serializeSettingsDraft(settings: SettingsDraft) {
-  const { revision: _revision, ...comparableSettings } = settings;
+  const comparableSettings = { ...settings };
+  delete comparableSettings.revision;
   const normalizedOverrides = Object.fromEntries(
     Object.entries(sanitizeShortcutOverrides(settings.shortcutOverrides)).sort(
       ([left], [right]) => left.localeCompare(right),

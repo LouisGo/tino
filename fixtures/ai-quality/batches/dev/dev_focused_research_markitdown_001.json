@@ -1,0 +1,117 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_focused_research_markitdown_001",
+  "split": "dev",
+  "scenarioFamily": "focused_research",
+  "difficulty": "medium",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "document-markdown-normalization",
+    "prompt-eval-experimentation",
+    "python-analysis-sidecar",
+    "personal-knowledge-ops",
+    "rust-background-compiler",
+    "link-triage-watchlist"
+  ],
+  "notes": [
+    "Dense research micro-session about whether MarkItDown helps Tino's clipboard pipeline.",
+    "The correct durable output is a merge into document-markdown-normalization, not a generic AI quality topic."
+  ],
+  "batch": {
+    "id": "batch_dev_focused_research_markitdown_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-20T00:18:00Z",
+    "triggerReason": "max_wait",
+    "captureCount": 6,
+    "firstCapturedAt": "2026-04-20T00:07:00Z",
+    "lastCapturedAt": "2026-04-20T00:17:00Z",
+    "sourceIds": [
+      "cap_markitdown_001",
+      "cap_markitdown_002",
+      "cap_markitdown_003",
+      "cap_markitdown_004",
+      "cap_markitdown_005",
+      "cap_markitdown_006"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_markitdown_001",
+      "contentKind": "link",
+      "capturedAt": "2026-04-20T00:07:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Safari",
+      "sourceAppBundleId": "com.apple.Safari",
+      "preview": "https://github.com/microsoft/markitdown",
+      "rawText": "https://github.com/microsoft/markitdown",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://github.com/microsoft/markitdown"
+    },
+    {
+      "id": "cap_markitdown_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T00:09:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching.",
+      "rawText": "MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching. It looks useful for PDF, DOCX, PPTX, and email imports, but it does not directly answer how Tino should judge routing or topic merge quality.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_markitdown_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T00:10:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Possible fit: optional import adapter for dropped documents, not the hot clipboard path.",
+      "rawText": "Possible fit: optional import adapter for dropped documents later in the roadmap, not the hot clipboard path. Clipboard captures already arrive as plain text or rich text, so the first gap is HTML normalization and source attribution.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_markitdown_004",
+      "contentKind": "rich_text",
+      "capturedAt": "2026-04-20T00:12:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Arc",
+      "sourceAppBundleId": "company.thebrowser.Browser",
+      "preview": "Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.",
+      "rawText": "Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.",
+      "rawRich": "<ul><li>Pros: broad format coverage</li><li>Cons: Python dependency</li><li>Cons: file-oriented</li><li>Cons: not a quality pipeline by itself</li></ul>",
+      "rawRichFormat": "html",
+      "linkUrl": null
+    },
+    {
+      "id": "cap_markitdown_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T00:14:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "If we introduce it, keep it behind an import adapter boundary instead of coupling it to runtime evaluation.",
+      "rawText": "If we introduce MarkItDown, keep it behind an import adapter boundary instead of coupling it to runtime evaluation. The evaluation problem still needs fixtures, goldens, replay, and scoring.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_markitdown_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T00:17:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "结论：对 clipboard 主链路帮助有限，对文档导入链路更有帮助。",
+      "rawText": "结论：对 clipboard 主链路帮助有限，对文档导入链路更有帮助。更准确的定位是 document normalization adapter，而不是 AI quality pipeline 本身。",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

@@ -16,6 +16,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "mock:ai-review": "node scripts/mock-ai-review-chain.mjs",
+    "ai-quality:replay": "tsx scripts/ai-quality-replay.ts",
     "preview": "vite preview",
     "macos:setup-local-signing": "node scripts/setup-local-macos-signing.mjs",
     "tauri": "node scripts/tauri-run.mjs",

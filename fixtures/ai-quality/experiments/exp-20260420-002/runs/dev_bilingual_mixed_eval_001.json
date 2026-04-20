@@ -1,0 +1,274 @@
+{
+  "createdAt": "2026-04-20T14:54:13.685Z",
+  "experimentId": "exp-20260420-002",
+  "fixtureChecksum": "8cf84e94a3e1f8af8741b3befb12f53285c47367bc2dcb5a89c7964425ffbc27",
+  "fixtureId": "dev_bilingual_mixed_eval_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_bilingual_mixed_eval_001_1776696853685",
+    "batchId": "batch_dev_bilingual_mixed_eval_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T14:54:13.685Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_bilingual_mixed_eval_001_cluster_primary",
+        "sourceIds": [
+          "cap_bilingual_001",
+          "cap_bilingual_002"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "先把 mock batch 和 golden 固定，再谈 prompt polish。",
+        "summary": "先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了只是主观印象。 Holdout cases should never become prompt-by-prompt repair targets. They are for regression detection, not for case memorization.",
+        "keyPoints": [
+          "先把 mock batch 和 golden 固定，再谈 prompt polish。",
+          "Holdout cases should never become prompt-by-prompt repair targets.",
+          "`false_archive_rate` 比 overall score 更重要。",
+          "Python 只做 analysis layer, not runtime source of truth."
+        ],
+        "tags": [
+          "eval",
+          "golden",
+          "runner",
+          "regression",
+          "plain_text"
+        ],
+        "confidence": 0.83,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "multilingual-prompting",
+            "topicName": "Multilingual Prompting",
+            "reason": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_bilingual_mixed_eval_001_cluster_secondary",
+        "sourceIds": [
+          "cap_bilingual_003",
+          "cap_bilingual_005",
+          "cap_bilingual_006",
+          "cap_bilingual_007",
+          "cap_bilingual_004"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Provider access references need manual confirmation",
+        "summary": "Reference links and loose follow-up notes are held for review before they influence persistence.",
+        "keyPoints": [
+          "`false_archive_rate` 比 overall score 更重要。",
+          "Python 只做 analysis layer, not runtime source of truth.",
+          "不要再凭感觉说结果更顺了，要看 case-by-case diff。",
+          "schema_valid_rate >= 98%; source_assignment_integrity = 100%"
+        ],
+        "tags": [
+          "python",
+          "notebook",
+          "analysis",
+          "artifacts",
+          "plain_text"
+        ],
+        "confidence": 0.54,
+        "reason": "This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "multilingual-prompting",
+            "topicName": "Multilingual Prompting",
+            "reason": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows."
+          }
+        ],
+        "missingContext": [
+          "Need confirmation whether the external reference should become a long-term topic section."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_bilingual_mixed_eval_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "batch_dev_bilingual_mixed_eval_001_cluster_secondary",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_bilingual_mixed_eval_001\ncapture_count: 7\ntrigger_reason: max_wait\nwindow: 2026-04-20T01:54:00Z -> 2026-04-20T02:04:00Z\n\nRelevant topic index entries\n1. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n2. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n3. Multilingual Prompting [multilingual-prompting]\n   summary: Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\n   recent_tags: bilingual, locale, prompts, zh-en\n   last_updated_at: 2026-04-18T09:15:00Z\n4. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n5. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n\nCaptures\ncapture_1:\nid: cap_bilingual_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:54:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 先把 mock batch 和 golden 固定，再谈 prompt polish。\nraw_text:\n  先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了只是主观印象。\n\ncapture_2:\nid: cap_bilingual_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:56:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Holdout cases should never become prompt-by-prompt repair targets.\nraw_text:\n  Holdout cases should never become prompt-by-prompt repair targets. They are for regression detection, not for case memorization.\n\ncapture_3:\nid: cap_bilingual_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:58:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: `false_archive_rate` 比 overall score 更重要。\nraw_text:\n  `false_archive_rate` 比 overall score 更重要。路由错了，再漂亮的 summary 也没有价值。\n\ncapture_4:\nid: cap_bilingual_004\ncontent_kind: link\ncaptured_at: 2026-04-20T02:00:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://eugeneyan.com/writing/llm-evaluators/\nlink_url: https://eugeneyan.com/writing/llm-evaluators/\nraw_text:\n  https://eugeneyan.com/writing/llm-evaluators/\n\ncapture_5:\nid: cap_bilingual_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T02:01:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Python 只做 analysis layer, not runtime source of truth.\nraw_text:\n  Python 只做 analysis layer, not runtime source of truth. 先把 TS replay runner 和 artifacts 稳定下来。\n\ncapture_6:\nid: cap_bilingual_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T02:03:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 不要再凭感觉说结果更顺了，要看 case-by-case diff。\nraw_text:\n  不要再凭感觉说结果更顺了，要看 case-by-case diff。每一轮实验都要能说明哪些场景进步，哪些场景退化。\n\ncapture_7:\nid: cap_bilingual_007\ncontent_kind: rich_text\ncaptured_at: 2026-04-20T02:04:00Z\nsource: clipboard\nsource_app_name: Notion\npreview: schema_valid_rate >= 98%; source_assignment_integrity = 100%\nraw_text:\n  schema_valid_rate >= 98%; source_assignment_integrity = 100%\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_bilingual_mixed_eval_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_bilingual_001\",\n        \"cap_bilingual_002\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"先把 mock batch 和 golden 固定，再谈 prompt polish。\",\n      \"summary\": \"先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了只是主观印象。 Holdout cases should never become prompt-by-prompt repair targets. They are for regression detection, not for case memorization.\",\n      \"keyPoints\": [\n        \"先把 mock batch 和 golden 固定，再谈 prompt polish。\",\n        \"Holdout cases should never become prompt-by-prompt repair targets.\",\n        \"`false_archive_rate` 比 overall score 更重要。\",\n        \"Python 只做 analysis layer, not runtime source of truth.\"\n      ],\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"runner\",\n        \"regression\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.83,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"multilingual-prompting\",\n          \"topicName\": \"Multilingual Prompting\",\n          \"reason\": \"Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_bilingual_mixed_eval_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_bilingual_003\",\n        \"cap_bilingual_005\",\n        \"cap_bilingual_006\",\n        \"cap_bilingual_007\",\n        \"cap_bilingual_004\"\n      ],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Provider access references need manual confirmation\",\n      \"summary\": \"Reference links and loose follow-up notes are held for review before they influence persistence.\",\n      \"keyPoints\": [\n        \"`false_archive_rate` 比 overall score 更重要。\",\n        \"Python 只做 analysis layer, not runtime source of truth.\",\n        \"不要再凭感觉说结果更顺了，要看 case-by-case diff。\",\n        \"schema_valid_rate >= 98%; source_assignment_integrity = 100%\"\n      ],\n      \"tags\": [\n        \"python\",\n        \"notebook\",\n        \"analysis\",\n        \"artifacts\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.54,\n      \"reason\": \"This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"multilingual-prompting\",\n          \"topicName\": \"Multilingual Prompting\",\n          \"reason\": \"Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\"\n        }\n      ],\n      \"missingContext\": [\n        \"Need confirmation whether the external reference should become a long-term topic section.\"\n      ]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_bilingual_mixed_eval_001_9417fc4c",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_bilingual_eval_core",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_bilingual_mixed_eval_001_cluster_secondary"
+      },
+      {
+        "expectedClusterId": "golden_bilingual_python_boundary",
+        "overlapCount": 1,
+        "predictedClusterId": "batch_dev_bilingual_mixed_eval_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 5/7 source assignments."
+    ],
+    "fixtureId": "dev_bilingual_mixed_eval_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.5384615384615385,
+      "destinationAccuracy": {
+        "correct": 2,
+        "rate": 0.2857142857142857,
+        "total": 7
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 2,
+        "rate": 0.2857142857142857,
+        "total": 7
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 2,
+        "rate": 0.2857142857142857,
+        "total": 7
+      }
+    },
+    "overallScore": 0.4417582417582418,
+    "pairwiseCounts": {
+      "falseNegative": 8,
+      "falsePositive": 4,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "multilingual-prompting",
+      "topicName": "Multilingual Prompting",
+      "topicSummary": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.",
+      "recentTags": [
+        "bilingual",
+        "locale",
+        "prompts",
+        "zh-en"
+      ],
+      "lastUpdatedAt": "2026-04-18T09:15:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

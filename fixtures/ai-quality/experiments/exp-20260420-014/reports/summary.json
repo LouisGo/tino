@@ -1,0 +1,251 @@
+{
+  "experimentId": "exp-20260420-014",
+  "mode": "live",
+  "promptVersion": "tino.batch_review.engine.v6",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 0.045454545454545456,
+        "name": "false_archive_rate",
+        "passed": true,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.9375,
+        "name": "destination_accuracy",
+        "passed": true,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.9523809523809523,
+        "name": "topic_merge_accuracy",
+        "passed": true,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.9498069498069498,
+      "destinationAccuracy": 0.9375,
+      "falseArchiveRate": 0.045454545454545456,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 0.9375,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.9523809523809523
+    },
+    "runs": 10
+  },
+  "comparison": {
+    "compareToExperimentId": "exp-20260420-005",
+    "comparedRuns": 10,
+    "improved": [
+      {
+        "after": "archive 5 captures to existing topic `python-analysis-sidecar` (\"Python Post-Artifact Analysis Scope\"); archive 2 captures to existing topic `prompt-eval-experimentation` (\"Evaluation System Ownership and Metrics\")",
+        "before": "archive 6 captures to new topic `python-eval-analysis` (\"Python for post-run evaluation analysis and error clustering\"); send 1 captures to inbox (\"Pandas DataFrame.groupby documentation link\")",
+        "currentScore": 0.8666666666666666,
+        "delta": 0.43443223443223433,
+        "expected": "split into archive 5 captures to existing topic `python-analysis-sidecar`; archive 2 captures to existing topic `prompt-eval-experimentation`",
+        "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+        "previousScore": 0.43223443223443225,
+        "scenario": "overlapping Python-analysis and eval-system notes",
+        "why": "Correct clustering requires separating Python-side artifact analysis from runner and metric ownership."
+      },
+      {
+        "after": "send the whole batch to inbox (\"Demo prep: flow visibility, owner assignments, script, and recording fa...\")",
+        "before": "archive the whole batch to existing topic `weekly-product-ops` (\"Internal Demo Preparation & Owner Assignments\")",
+        "currentScore": 0.8,
+        "delta": 0.36666666666666675,
+        "expected": "send the whole batch to inbox",
+        "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+        "previousScore": 0.4333333333333333,
+        "scenario": "meeting and demo actionables",
+        "why": "Correct routing is inbox because these are actionables with owners and immediate deadlines."
+      },
+      {
+        "after": "send the whole batch to inbox (\"Evaluation tool links for potential scorecard use\")",
+        "before": "archive 4 captures to existing topic `prompt-eval-experimentation` (\"Collection of AI Evaluation Framework Documentation Links\"); send 1 captures to inbox (\"Vague note about potential future use for scorecards\")",
+        "currentScore": 0.8,
+        "delta": 0.3558333333333334,
+        "expected": "send the whole batch to inbox",
+        "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+        "previousScore": 0.44416666666666665,
+        "scenario": "link-heavy sparse research batch",
+        "why": "Correct behavior is cautious inbox routing rather than optimistic archival."
+      },
+      {
+        "after": "archive the whole batch to existing topic `personal-knowledge-ops` (\"Clipboard retention as a durable user asset\")",
+        "before": "archive the whole batch to new topic `clipboard-retention-durability` (\"Clipboard history as a durable asset with 90-day retention across upgra...\")",
+        "currentScore": 0.8666666666666666,
+        "delta": 0.29999999999999993,
+        "expected": "archive the whole batch to existing topic `personal-knowledge-ops`",
+        "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+        "previousScore": 0.5666666666666667,
+        "scenario": "near-duplicate durable knowledge notes",
+        "why": "The scorer should reward grouping all near-duplicates into one durable knowledge cluster."
+      },
+      {
+        "after": "discard 6 captures (\"Transient noise and personal reminders\"); archive 1 captures to existing topic `personal-knowledge-ops` (\"Need for filter logs to debug sensitive snippet discarding\")",
+        "before": "discard 4 captures (\"Transient Codes and File Names\"); send 1 captures to inbox (\"Action Reminder: Send Invoice\"); send 1 captures to inbox (\"Map Link to Restaurant\"); archive 1 captures to existing topic `personal-knowledge-ops` (\"Feature Request: Logs for Filtered/Discarded Captures\")",
+        "currentScore": 0.7476190476190477,
+        "delta": 0.17380952380952375,
+        "expected": "split into discard 6 captures; send 1 captures to inbox",
+        "fixtureId": "dev_low_value_noise_misc_001",
+        "previousScore": 0.573809523809524,
+        "scenario": "low-value mixed clipboard noise",
+        "why": "The useful note still lacks enough context for direct topic archival."
+      },
+      {
+        "after": "archive 4 captures to existing topic `product-writing-playbook` (\"Product copy and tone guidance for homepage and clipboard\"); send 2 captures to inbox (\"Rust compiler check and error during Tauri development\"); send 2 captures to inbox (\"Personal reminders: buy adapter and rename screenshots\")",
+        "before": "archive 4 captures to existing topic `product-writing-playbook` (\"Product copy and tone principles for capture and synthesis\"); archive 2 captures to existing topic `rust-background-compiler` (\"Rust/Tauri build and compilation error\"); send 2 captures to inbox (\"Miscellaneous personal and workflow reminders\")",
+        "currentScore": 0.92671568627451,
+        "delta": 0.1250000000000001,
+        "expected": "split into archive 4 captures to existing topic `product-writing-playbook`; send 3 captures to inbox; discard 1 captures",
+        "fixtureId": "dev_task_switching_copy_and_terminal_001",
+        "previousScore": 0.8017156862745098,
+        "scenario": "task-switching operational notes",
+        "why": "The correct result requires one durable copywriting cluster, one inbox cluster, and one discard."
+      },
+      {
+        "after": "archive 5 captures to existing topic `prompt-eval-experimentation` (\"AI Quality Pipeline v0.1 Planning and Principles\"); send 1 captures to inbox (\"Development Priority Reminder\")",
+        "before": "archive 4 captures to existing topic `prompt-eval-experimentation` (\"AI Quality Pipeline Development: Fixtures, Goldens, and Metrics\"); archive 1 captures to existing topic `personal-knowledge-ops` (\"Development Priority: Structural Decision Correctness Over Prose Polish\"); archive 1 captures to existing topic `python-analysis-sidecar` (\"Python Sidecar Usage After Contract Freeze\")",
+        "currentScore": 0.7444444444444446,
+        "delta": 0.08492063492063506,
+        "expected": "archive the whole batch to existing topic `prompt-eval-experimentation`",
+        "fixtureId": "dev_writing_planning_quality_pipeline_001",
+        "previousScore": 0.6595238095238095,
+        "scenario": "writing and planning notes",
+        "why": "The batch should reward structural quality concerns over writing polish."
+      },
+      {
+        "after": "archive 5 captures to existing topic `prompt-eval-experimentation` (\"Principles for stable evaluation and regression tracking\"); archive 1 captures to existing topic `python-analysis-sidecar` (\"Python as analysis layer, not runtime source of truth\"); send 1 captures to inbox (\"LLM evaluators article link for review\")",
+        "before": "archive 4 captures to existing topic `prompt-eval-experimentation` (\"Principles for Prompt Evaluation and Regression Discipline\"); archive 1 captures to existing topic `python-analysis-sidecar` (\"Python's Role as Analysis Layer\"); send 1 captures to inbox (\"External Link on LLM Evaluators\"); archive 1 captures to existing topic `prompt-eval-experimentation` (\"Target Quality Metrics for Eval System\")",
+        "currentScore": 0.7547619047619049,
+        "delta": 0.05714285714285716,
+        "expected": "split into archive 6 captures to existing topic `prompt-eval-experimentation`; archive 1 captures to existing topic `python-analysis-sidecar`",
+        "fixtureId": "dev_bilingual_mixed_eval_001",
+        "previousScore": 0.6976190476190477,
+        "scenario": "bilingual mixed-language clipboard batch",
+        "why": "The system should not confuse bilingual wording with topic ambiguity."
+      }
+    ],
+    "metricDiffs": [
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "schema_valid_rate"
+      },
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "source_assignment_integrity"
+      },
+      {
+        "after": 0.9375,
+        "before": 0.71875,
+        "delta": 0.21875,
+        "name": "destination_accuracy"
+      },
+      {
+        "after": 0.045454545454545456,
+        "before": 0.5909090909090909,
+        "delta": -0.5454545454545455,
+        "name": "false_archive_rate"
+      },
+      {
+        "after": 0.9523809523809523,
+        "before": 0.6190476190476191,
+        "delta": 0.33333333333333326,
+        "name": "topic_merge_accuracy"
+      },
+      {
+        "after": null,
+        "before": 0,
+        "delta": null,
+        "name": "new_topic_precision"
+      },
+      {
+        "after": 0.9498069498069498,
+        "before": 0.8099173553719008,
+        "delta": 0.139889594435049,
+        "name": "cluster_pairwise_f1"
+      },
+      {
+        "after": 0.9375,
+        "before": 0.5,
+        "delta": 0.4375,
+        "name": "persist_semantic_correctness"
+      }
+    ],
+    "missingFixtureIds": [],
+    "regressed": [],
+    "unchangedCount": 2
+  },
+  "topFailures": [
+    {
+      "actual": "archive 5 captures to existing topic `prompt-eval-experimentation` (\"AI Quality Pipeline v0.1 Planning and Principles\"); send 1 captures to inbox (\"Development Priority Reminder\")",
+      "expected": "archive the whole batch to existing topic `prompt-eval-experimentation`",
+      "failures": [
+        "Wrong existing-topic merge on 1/6 source assignments."
+      ],
+      "fixtureId": "dev_writing_planning_quality_pipeline_001",
+      "scenario": "writing and planning notes",
+      "score": 0.7444444444444446,
+      "why": "The batch should reward structural quality concerns over writing polish."
+    },
+    {
+      "actual": "discard 6 captures (\"Transient noise and personal reminders\"); archive 1 captures to existing topic `personal-knowledge-ops` (\"Need for filter logs to debug sensitive snippet discarding\")",
+      "expected": "split into discard 6 captures; send 1 captures to inbox",
+      "failures": [
+        "False archive count: 1"
+      ],
+      "fixtureId": "dev_low_value_noise_misc_001",
+      "scenario": "low-value mixed clipboard noise",
+      "score": 0.7476190476190477,
+      "why": "The useful note still lacks enough context for direct topic archival."
+    },
+    {
+      "actual": "archive 5 captures to existing topic `prompt-eval-experimentation` (\"Principles for stable evaluation and regression tracking\"); archive 1 captures to existing topic `python-analysis-sidecar` (\"Python as analysis layer, not runtime source of truth\"); send 1 captures to inbox (\"LLM evaluators article link for review\")",
+      "expected": "split into archive 6 captures to existing topic `prompt-eval-experimentation`; archive 1 captures to existing topic `python-analysis-sidecar`",
+      "failures": [
+        "Wrong existing-topic merge on 1/7 source assignments."
+      ],
+      "fixtureId": "dev_bilingual_mixed_eval_001",
+      "scenario": "bilingual mixed-language clipboard batch",
+      "score": 0.7547619047619049,
+      "why": "The system should not confuse bilingual wording with topic ambiguity."
+    },
+    {
+      "actual": "send the whole batch to inbox (\"Demo prep: flow visibility, owner assignments, script, and recording fa...\")",
+      "expected": "send the whole batch to inbox",
+      "failures": [],
+      "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+      "scenario": "meeting and demo actionables",
+      "score": 0.8,
+      "why": "Correct routing is inbox because these are actionables with owners and immediate deadlines."
+    },
+    {
+      "actual": "send the whole batch to inbox (\"Evaluation tool links for potential scorecard use\")",
+      "expected": "send the whole batch to inbox",
+      "failures": [],
+      "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+      "scenario": "link-heavy sparse research batch",
+      "score": 0.8,
+      "why": "Correct behavior is cautious inbox routing rather than optimistic archival."
+    }
+  ]
+}

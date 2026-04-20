@@ -1,0 +1,268 @@
+{
+  "createdAt": "2026-04-20T14:53:17.277Z",
+  "experimentId": "exp-20260420-001",
+  "fixtureChecksum": "4dc3eb0f475e22a63a8e9f8a2a46f3a94fdceaf31d71e3f7dd9d16f04c38d36a",
+  "fixtureId": "dev_coding_debugging_pasteback_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_coding_debugging_pasteback_001_1776696797277",
+    "batchId": "batch_dev_coding_debugging_pasteback_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T14:53:17.277Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_coding_debugging_pasteback_001_cluster_primary",
+        "sourceIds": [
+          "cap_pasteback_001",
+          "cap_pasteback_002"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "tauri-macos-permissions",
+        "topicNameSuggestion": "Tauri macOS Permissions",
+        "title": "paste_back failed: Accessibility permission not granted...",
+        "summary": "paste_back failed: Accessibility permission not granted for current signed app. The event succeeds only after re-authorizing the installed bundle. pnpm macos:setup-local-signing",
+        "keyPoints": [
+          "paste_back failed: Accessibility permission not granted for current signed app.",
+          "pnpm macos:setup-local-signing",
+          "Ad-hoc signed builds can lose Accessibility trust after reinstall.",
+          "UI should explain: grant Accessibility, then reopen the signed app before retrying."
+        ],
+        "tags": [
+          "tauri",
+          "macos",
+          "accessibility",
+          "signing",
+          "plain_text"
+        ],
+        "confidence": 0.83,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "tauri-macos-permissions",
+            "topicName": "Tauri macOS Permissions",
+            "reason": "Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows."
+          },
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control."
+          },
+          {
+            "topicSlug": "personal-knowledge-ops",
+            "topicName": "Personal Knowledge Ops",
+            "reason": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_coding_debugging_pasteback_001_cluster_secondary",
+        "sourceIds": [
+          "cap_pasteback_004",
+          "cap_pasteback_005",
+          "cap_pasteback_006",
+          "cap_pasteback_003"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Provider access references need manual confirmation",
+        "summary": "Reference links and loose follow-up notes are held for review before they influence persistence.",
+        "keyPoints": [
+          "Ad-hoc signed builds can lose Accessibility trust after reinstall.",
+          "UI should explain: grant Accessibility, then reopen the signed app before retrying.",
+          "AXIsProcessTrustedWithOptions only becomes true for the trusted installed bundle.",
+          "https://github.com/tauri-apps/tauri/issues/10627"
+        ],
+        "tags": [
+          "rust",
+          "compiler",
+          "batch",
+          "runtime",
+          "plain_text"
+        ],
+        "confidence": 0.54,
+        "reason": "This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.",
+        "possibleTopics": [
+          {
+            "topicSlug": "tauri-macos-permissions",
+            "topicName": "Tauri macOS Permissions",
+            "reason": "Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows."
+          },
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control."
+          },
+          {
+            "topicSlug": "personal-knowledge-ops",
+            "topicName": "Personal Knowledge Ops",
+            "reason": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics."
+          }
+        ],
+        "missingContext": [
+          "Need confirmation whether the external reference should become a long-term topic section."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_coding_debugging_pasteback_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/tauri-macos-permissions.md",
+        "topicName": "Tauri macOS Permissions",
+        "topicSlug": "tauri-macos-permissions"
+      },
+      {
+        "clusterId": "batch_dev_coding_debugging_pasteback_001_cluster_secondary",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-20.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_coding_debugging_pasteback_001\ncapture_count: 6\ntrigger_reason: capture_count\nwindow: 2026-04-19T14:31:00Z -> 2026-04-19T14:45:00Z\n\nRelevant topic index entries\n1. Tauri macOS Permissions [tauri-macos-permissions]\n   summary: Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows.\n   recent_tags: tauri, macos, accessibility, signing\n   last_updated_at: 2026-04-19T07:20:00Z\n2. Rust Background Compiler [rust-background-compiler]\n   summary: Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\n   recent_tags: rust, compiler, batch, runtime\n   last_updated_at: 2026-04-19T10:05:00Z\n3. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n4. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n5. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n\nCaptures\ncapture_1:\nid: cap_pasteback_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T14:31:00Z\nsource: clipboard\nsource_app_name: VS Code\npreview: paste_back failed: Accessibility permission not granted for current signed app.\nraw_text:\n  paste_back failed: Accessibility permission not granted for current signed app. The event succeeds only after re-authorizing the installed bundle.\n\ncapture_2:\nid: cap_pasteback_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T14:34:00Z\nsource: clipboard\nsource_app_name: Terminal\npreview: pnpm macos:setup-local-signing\nraw_text:\n  pnpm macos:setup-local-signing\n\ncapture_3:\nid: cap_pasteback_003\ncontent_kind: link\ncaptured_at: 2026-04-19T14:36:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://github.com/tauri-apps/tauri/issues/10627\nlink_url: https://github.com/tauri-apps/tauri/issues/10627\nraw_text:\n  https://github.com/tauri-apps/tauri/issues/10627\n\ncapture_4:\nid: cap_pasteback_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T14:39:00Z\nsource: clipboard\nsource_app_name: Notion\npreview: Ad-hoc signed builds can lose Accessibility trust after reinstall.\nraw_text:\n  Ad-hoc signed builds can lose Accessibility trust after reinstall. We should validate paste-back only on the locally signed build that matches the installed bundle identity.\n\ncapture_5:\nid: cap_pasteback_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T14:42:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: UI should explain: grant Accessibility, then reopen the signed app before retrying.\nraw_text:\n  UI should explain: grant Accessibility, then reopen the signed app before retrying. Otherwise testers think paste-back is flaky when the real problem is trust state.\n\ncapture_6:\nid: cap_pasteback_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-19T14:45:00Z\nsource: clipboard\nsource_app_name: VS Code\npreview: AXIsProcessTrustedWithOptions only becomes true for the trusted installed bundle.\nraw_text:\n  AXIsProcessTrustedWithOptions only becomes true for the trusted installed bundle. Permission debugging has to be tied to signing identity, not just app code.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_coding_debugging_pasteback_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_pasteback_001\",\n        \"cap_pasteback_002\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"tauri-macos-permissions\",\n      \"topicNameSuggestion\": \"Tauri macOS Permissions\",\n      \"title\": \"paste_back failed: Accessibility permission not granted...\",\n      \"summary\": \"paste_back failed: Accessibility permission not granted for current signed app. The event succeeds only after re-authorizing the installed bundle. pnpm macos:setup-local-signing\",\n      \"keyPoints\": [\n        \"paste_back failed: Accessibility permission not granted for current signed app.\",\n        \"pnpm macos:setup-local-signing\",\n        \"Ad-hoc signed builds can lose Accessibility trust after reinstall.\",\n        \"UI should explain: grant Accessibility, then reopen the signed app before retrying.\"\n      ],\n      \"tags\": [\n        \"tauri\",\n        \"macos\",\n        \"accessibility\",\n        \"signing\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.83,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"tauri-macos-permissions\",\n          \"topicName\": \"Tauri macOS Permissions\",\n          \"reason\": \"Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows.\"\n        },\n        {\n          \"topicSlug\": \"rust-background-compiler\",\n          \"topicName\": \"Rust Background Compiler\",\n          \"reason\": \"Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\"\n        },\n        {\n          \"topicSlug\": \"personal-knowledge-ops\",\n          \"topicName\": \"Personal Knowledge Ops\",\n          \"reason\": \"Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_coding_debugging_pasteback_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_pasteback_004\",\n        \"cap_pasteback_005\",\n        \"cap_pasteback_006\",\n        \"cap_pasteback_003\"\n      ],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Provider access references need manual confirmation\",\n      \"summary\": \"Reference links and loose follow-up notes are held for review before they influence persistence.\",\n      \"keyPoints\": [\n        \"Ad-hoc signed builds can lose Accessibility trust after reinstall.\",\n        \"UI should explain: grant Accessibility, then reopen the signed app before retrying.\",\n        \"AXIsProcessTrustedWithOptions only becomes true for the trusted installed bundle.\",\n        \"https://github.com/tauri-apps/tauri/issues/10627\"\n      ],\n      \"tags\": [\n        \"rust\",\n        \"compiler\",\n        \"batch\",\n        \"runtime\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.54,\n      \"reason\": \"This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"tauri-macos-permissions\",\n          \"topicName\": \"Tauri macOS Permissions\",\n          \"reason\": \"Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows.\"\n        },\n        {\n          \"topicSlug\": \"rust-background-compiler\",\n          \"topicName\": \"Rust Background Compiler\",\n          \"reason\": \"Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\"\n        },\n        {\n          \"topicSlug\": \"personal-knowledge-ops\",\n          \"topicName\": \"Personal Knowledge Ops\",\n          \"reason\": \"Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\"\n        }\n      ],\n      \"missingContext\": [\n        \"Need confirmation whether the external reference should become a long-term topic section.\"\n      ]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_coding_debugging_pasteback_001_9df50737",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_pasteback_permissions",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_coding_debugging_pasteback_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 4/6 source assignments."
+    ],
+    "fixtureId": "dev_coding_debugging_pasteback_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.6363636363636364,
+      "destinationAccuracy": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      }
+    },
+    "overallScore": 0.48686868686868684,
+    "pairwiseCounts": {
+      "falseNegative": 8,
+      "falsePositive": 0,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "tauri-macos-permissions",
+      "topicName": "Tauri macOS Permissions",
+      "topicSummary": "Accessibility trust, local signing, paste-back debugging, and macOS permission behavior for Tauri desktop flows.",
+      "recentTags": [
+        "tauri",
+        "macos",
+        "accessibility",
+        "signing"
+      ],
+      "lastUpdatedAt": "2026-04-19T07:20:00Z"
+    },
+    {
+      "topicSlug": "rust-background-compiler",
+      "topicName": "Rust Background Compiler",
+      "topicSummary": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.",
+      "recentTags": [
+        "rust",
+        "compiler",
+        "batch",
+        "runtime"
+      ],
+      "lastUpdatedAt": "2026-04-19T10:05:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

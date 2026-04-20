@@ -1,6 +1,6 @@
 # Tino Handoff
 
-> 最后更新：2026-04-13
+> 最后更新：2026-04-20
 > 当前基线提交：`5630611` + working tree AI rethink planning updates
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
@@ -46,6 +46,8 @@
 - settings / dashboard 的真实 Rust 持久化与 authoritative 同步
 - Runtime Provider 多配置 CRUD、当前启用项切换、smoke test
 - Renderer 侧交互式 provider access layer 与首页即时 AI 调用入口
+- 首页 `HomeChatWorkspace` 已升级为可复用组件：支持多会话、SQLite 持久化、首问后建会话、首条消息异步生成标题
+- 首页 chat 视觉与交互基线已调整为 Gemini-like 双态：空态沿用原首页 banner / background 语义，首问后 composer 沉底，消息流与 reasoning 展示在上方
 - `_system/runtime.json`
 - `_system/queue.json`
 - `_system/batches/*.json`

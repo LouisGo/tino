@@ -1,0 +1,38 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+  "batchId": "batch_dev_link_led_context_sparse_eval_links_001",
+  "split": "dev",
+  "scenarioFamily": "link_led_context_sparse",
+  "difficulty": "easy",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_eval_link_watchlist",
+      "sourceIds": [
+        "cap_evalinks_001",
+        "cap_evalinks_002",
+        "cap_evalinks_003",
+        "cap_evalinks_004",
+        "cap_evalinks_005"
+      ],
+      "expectedDestination": "send_to_inbox",
+      "topicMode": "inbox",
+      "expectedTopicSlug": null,
+      "expectedTopicName": null,
+      "mustSupport": [
+        "The batch is mostly links about evaluation tooling.",
+        "Context is too sparse for durable topic archival.",
+        "A cautious watchlist or inbox route is better than creating or merging a topic."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Any archive_to_topic output should count as a likely false archive.",
+    "Do not split each link into separate clusters."
+  ],
+  "annotationNotes": [
+    "This is a calibration case for link-heavy false positives.",
+    "The short note is not enough synthesis to justify archival."
+  ]
+}

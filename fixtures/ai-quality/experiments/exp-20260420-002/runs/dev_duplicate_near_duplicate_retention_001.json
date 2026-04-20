@@ -1,0 +1,266 @@
+{
+  "createdAt": "2026-04-20T14:54:13.684Z",
+  "experimentId": "exp-20260420-002",
+  "fixtureChecksum": "0b674b22d6031efe7329625cc9ae9c9e36ad5c3b4de92586a732d08fc160675b",
+  "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_duplicate_near_duplicate_retention_001_1776696853684",
+    "batchId": "batch_dev_duplicate_near_duplicate_retention_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T14:54:13.685Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_duplicate_near_duplicate_retention_001_cluster_primary",
+        "sourceIds": [
+          "cap_retentiondup_001",
+          "cap_retentiondup_002"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "personal-knowledge-ops",
+        "topicNameSuggestion": "Personal Knowledge Ops",
+        "title": "Clipboard history should retain 90 days and survive upg...",
+        "summary": "Clipboard history should retain 90 days and survive upgrades. Clipboard history needs to survive app upgrades for the full 90-day window.",
+        "keyPoints": [
+          "Clipboard history should retain 90 days and survive upgrades.",
+          "Clipboard history needs to survive app upgrades for the full 90-day window.",
+          "Retention data is a durable user asset, not disposable cache.",
+          "Do not tie clipboard history lifetime to bundle reinstall."
+        ],
+        "tags": [
+          "daily",
+          "topics",
+          "inbox",
+          "retention",
+          "plain_text"
+        ],
+        "confidence": 0.83,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "personal-knowledge-ops",
+            "topicName": "Personal Knowledge Ops",
+            "reason": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics."
+          },
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_duplicate_near_duplicate_retention_001_cluster_secondary",
+        "sourceIds": [
+          "cap_retentiondup_003",
+          "cap_retentiondup_004",
+          "cap_retentiondup_005",
+          "cap_retentiondup_006"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "rust-background-compiler",
+        "topicNameSuggestion": "Rust Background Compiler",
+        "title": "Retention data is a durable user asset, not disposable ...",
+        "summary": "Retention data is a durable user asset, not disposable cache. Do not tie clipboard history lifetime to bundle reinstall. App upgrades and re-installs should not silently erase retained captures.",
+        "keyPoints": [
+          "Retention data is a durable user asset, not disposable cache.",
+          "Do not tie clipboard history lifetime to bundle reinstall.",
+          "Clipboard retention is a durable asset, not just temporary app cache.",
+          "Preview and production channels can differ, but retention semantics should not."
+        ],
+        "tags": [
+          "rust",
+          "compiler",
+          "batch",
+          "runtime",
+          "plain_text"
+        ],
+        "confidence": 0.71,
+        "reason": "The content still fits the same AI engineering theme but with lower evidence density.",
+        "possibleTopics": [
+          {
+            "topicSlug": "personal-knowledge-ops",
+            "topicName": "Personal Knowledge Ops",
+            "reason": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics."
+          },
+          {
+            "topicSlug": "rust-background-compiler",
+            "topicName": "Rust Background Compiler",
+            "reason": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          }
+        ],
+        "missingContext": []
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_duplicate_near_duplicate_retention_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/personal-knowledge-ops.md",
+        "topicName": "Personal Knowledge Ops",
+        "topicSlug": "personal-knowledge-ops"
+      },
+      {
+        "clusterId": "batch_dev_duplicate_near_duplicate_retention_001_cluster_secondary",
+        "destination": "topic",
+        "filePath": "topics/rust-background-compiler.md",
+        "topicName": "Rust Background Compiler",
+        "topicSlug": "rust-background-compiler"
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_duplicate_near_duplicate_retention_001\ncapture_count: 6\ntrigger_reason: capture_count\nwindow: 2026-04-18T14:58:00Z -> 2026-04-18T15:09:00Z\n\nRelevant topic index entries\n1. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n2. Rust Background Compiler [rust-background-compiler]\n   summary: Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\n   recent_tags: rust, compiler, batch, runtime\n   last_updated_at: 2026-04-19T10:05:00Z\n3. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n4. Weekly Product Ops [weekly-product-ops]\n   summary: Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.\n   recent_tags: meeting, owners, timeline, release\n   last_updated_at: 2026-04-19T05:50:00Z\n5. Product Writing Playbook [product-writing-playbook]\n   summary: Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.\n   recent_tags: copywriting, messaging, headline, launch\n   last_updated_at: 2026-04-17T14:40:00Z\n\nCaptures\ncapture_1:\nid: cap_retentiondup_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T14:58:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Clipboard history should retain 90 days and survive upgrades.\nraw_text:\n  Clipboard history should retain 90 days and survive upgrades.\n\ncapture_2:\nid: cap_retentiondup_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:00:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Clipboard history needs to survive app upgrades for the full 90-day window.\nraw_text:\n  Clipboard history needs to survive app upgrades for the full 90-day window.\n\ncapture_3:\nid: cap_retentiondup_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:02:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Retention data is a durable user asset, not disposable cache.\nraw_text:\n  Retention data is a durable user asset, not disposable cache.\n\ncapture_4:\nid: cap_retentiondup_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:05:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Do not tie clipboard history lifetime to bundle reinstall.\nraw_text:\n  Do not tie clipboard history lifetime to bundle reinstall. App upgrades and re-installs should not silently erase retained captures.\n\ncapture_5:\nid: cap_retentiondup_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:07:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Clipboard retention is a durable asset, not just temporary app cache.\nraw_text:\n  Clipboard retention is a durable asset, not just temporary app cache.\n\ncapture_6:\nid: cap_retentiondup_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:09:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Preview and production channels can differ, but retention semantics should not.\nraw_text:\n  Preview and production channels can differ, but retention semantics should not. The user's retained history is still the same long-lived asset.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use null when topic suggestion is unavailable.\n6. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v1",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_duplicate_near_duplicate_retention_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_retentiondup_001\",\n        \"cap_retentiondup_002\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"personal-knowledge-ops\",\n      \"topicNameSuggestion\": \"Personal Knowledge Ops\",\n      \"title\": \"Clipboard history should retain 90 days and survive upg...\",\n      \"summary\": \"Clipboard history should retain 90 days and survive upgrades. Clipboard history needs to survive app upgrades for the full 90-day window.\",\n      \"keyPoints\": [\n        \"Clipboard history should retain 90 days and survive upgrades.\",\n        \"Clipboard history needs to survive app upgrades for the full 90-day window.\",\n        \"Retention data is a durable user asset, not disposable cache.\",\n        \"Do not tie clipboard history lifetime to bundle reinstall.\"\n      ],\n      \"tags\": [\n        \"daily\",\n        \"topics\",\n        \"inbox\",\n        \"retention\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.83,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"personal-knowledge-ops\",\n          \"topicName\": \"Personal Knowledge Ops\",\n          \"reason\": \"Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\"\n        },\n        {\n          \"topicSlug\": \"rust-background-compiler\",\n          \"topicName\": \"Rust Background Compiler\",\n          \"reason\": \"Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_duplicate_near_duplicate_retention_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_retentiondup_003\",\n        \"cap_retentiondup_004\",\n        \"cap_retentiondup_005\",\n        \"cap_retentiondup_006\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"rust-background-compiler\",\n      \"topicNameSuggestion\": \"Rust Background Compiler\",\n      \"title\": \"Retention data is a durable user asset, not disposable ...\",\n      \"summary\": \"Retention data is a durable user asset, not disposable cache. Do not tie clipboard history lifetime to bundle reinstall. App upgrades and re-installs should not silently erase retained captures.\",\n      \"keyPoints\": [\n        \"Retention data is a durable user asset, not disposable cache.\",\n        \"Do not tie clipboard history lifetime to bundle reinstall.\",\n        \"Clipboard retention is a durable asset, not just temporary app cache.\",\n        \"Preview and production channels can differ, but retention semantics should not.\"\n      ],\n      \"tags\": [\n        \"rust\",\n        \"compiler\",\n        \"batch\",\n        \"runtime\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.71,\n      \"reason\": \"The content still fits the same AI engineering theme but with lower evidence density.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"personal-knowledge-ops\",\n          \"topicName\": \"Personal Knowledge Ops\",\n          \"reason\": \"Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\"\n        },\n        {\n          \"topicSlug\": \"rust-background-compiler\",\n          \"topicName\": \"Rust Background Compiler\",\n          \"reason\": \"Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        }\n      ],\n      \"missingContext\": []\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_duplicate_near_duplicate_retention_001_e9f19949",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_retention_semantics",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_duplicate_near_duplicate_retention_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 4/6 source assignments."
+    ],
+    "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.6363636363636364,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      }
+    },
+    "overallScore": 0.5757575757575758,
+    "pairwiseCounts": {
+      "falseNegative": 8,
+      "falsePositive": 0,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "rust-background-compiler",
+      "topicName": "Rust Background Compiler",
+      "topicSummary": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.",
+      "recentTags": [
+        "rust",
+        "compiler",
+        "batch",
+        "runtime"
+      ],
+      "lastUpdatedAt": "2026-04-19T10:05:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "weekly-product-ops",
+      "topicName": "Weekly Product Ops",
+      "topicSummary": "Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.",
+      "recentTags": [
+        "meeting",
+        "owners",
+        "timeline",
+        "release"
+      ],
+      "lastUpdatedAt": "2026-04-19T05:50:00Z"
+    },
+    {
+      "topicSlug": "product-writing-playbook",
+      "topicName": "Product Writing Playbook",
+      "topicSummary": "Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.",
+      "recentTags": [
+        "copywriting",
+        "messaging",
+        "headline",
+        "launch"
+      ],
+      "lastUpdatedAt": "2026-04-17T14:40:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

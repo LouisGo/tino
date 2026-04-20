@@ -5,6 +5,7 @@ mod capture;
 mod clipboard;
 mod commands;
 mod error;
+mod home_chat;
 mod ipc_events;
 pub mod ipc_schema;
 mod locale;

@@ -1,0 +1,39 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+  "batchId": "batch_dev_meeting_chat_actionables_release_sync_001",
+  "split": "dev",
+  "scenarioFamily": "meeting_chat_actionables",
+  "difficulty": "medium",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_release_sync_actionables",
+      "sourceIds": [
+        "cap_releasesync_001",
+        "cap_releasesync_002",
+        "cap_releasesync_003",
+        "cap_releasesync_004",
+        "cap_releasesync_005",
+        "cap_releasesync_006"
+      ],
+      "expectedDestination": "send_to_inbox",
+      "topicMode": "inbox",
+      "expectedTopicSlug": null,
+      "expectedTopicName": null,
+      "mustSupport": [
+        "The batch is about preparing an internal demo with owners and immediate tasks.",
+        "The notes are execution-focused rather than long-term knowledge.",
+        "The /ai surface should stay hidden during the demo."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Do not archive this batch into weekly-product-ops just because it mentions a meeting.",
+    "The Linear link should stay attached to the actionable cluster rather than become a standalone link item."
+  ],
+  "annotationNotes": [
+    "The existence of owners and deadlines is the main inbox signal.",
+    "This is exactly the kind of batch that can look well-structured yet still should not become a durable topic section."
+  ]
+}

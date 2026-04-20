@@ -32,6 +32,52 @@ pub struct ClipboardCapturesUpdated {
     pub refresh_dashboard: bool,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum HomeChatConversationsUpdatedReason {
+    ConversationCreated,
+    MessagesChanged,
+    TitleChanged,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[serde(rename_all = "camelCase")]
+pub struct HomeChatConversationsUpdated {
+    pub reason: HomeChatConversationsUpdatedReason,
+    pub conversation_id: Option<String>,
+    pub refresh_list: bool,
+    pub refresh_conversation: bool,
+}
+
+impl HomeChatConversationsUpdated {
+    pub fn conversation_created(conversation_id: String) -> Self {
+        Self {
+            reason: HomeChatConversationsUpdatedReason::ConversationCreated,
+            conversation_id: Some(conversation_id),
+            refresh_list: true,
+            refresh_conversation: true,
+        }
+    }
+
+    pub fn messages_changed(conversation_id: String) -> Self {
+        Self {
+            reason: HomeChatConversationsUpdatedReason::MessagesChanged,
+            conversation_id: Some(conversation_id),
+            refresh_list: true,
+            refresh_conversation: true,
+        }
+    }
+
+    pub fn title_changed(conversation_id: String) -> Self {
+        Self {
+            reason: HomeChatConversationsUpdatedReason::TitleChanged,
+            conversation_id: Some(conversation_id),
+            refresh_list: true,
+            refresh_conversation: false,
+        }
+    }
+}
+
 impl ClipboardCapturesUpdated {
     pub fn history_changed() -> Self {
         Self {

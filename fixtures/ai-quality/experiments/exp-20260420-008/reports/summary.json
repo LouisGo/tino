@@ -1,0 +1,155 @@
+{
+  "experimentId": "exp-20260420-008",
+  "mode": "live",
+  "promptVersion": "tino.batch_review.engine.v2",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 1,
+        "name": "false_archive_rate",
+        "passed": false,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.5,
+        "name": "destination_accuracy",
+        "passed": false,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.5714285714285714,
+        "name": "topic_merge_accuracy",
+        "passed": false,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.7164179104477612,
+      "destinationAccuracy": 0.5,
+      "falseArchiveRate": 1,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 0.2857142857142857,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.5714285714285714
+    },
+    "runs": 2
+  },
+  "comparison": {
+    "compareToExperimentId": "exp-20260420-006",
+    "comparedRuns": 2,
+    "improved": [],
+    "metricDiffs": [
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "schema_valid_rate"
+      },
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "source_assignment_integrity"
+      },
+      {
+        "after": 0.5,
+        "before": 0.8571428571428571,
+        "delta": -0.3571428571428571,
+        "name": "destination_accuracy"
+      },
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "false_archive_rate"
+      },
+      {
+        "after": 0.5714285714285714,
+        "before": 0.8571428571428571,
+        "delta": -0.2857142857142857,
+        "name": "topic_merge_accuracy"
+      },
+      {
+        "after": null,
+        "before": 0,
+        "delta": null,
+        "name": "new_topic_precision"
+      },
+      {
+        "after": 0.7164179104477612,
+        "before": 0.8799999999999999,
+        "delta": -0.16358208955223874,
+        "name": "cluster_pairwise_f1"
+      },
+      {
+        "after": 0.2857142857142857,
+        "before": 0.42857142857142855,
+        "delta": -0.14285714285714285,
+        "name": "persist_semantic_correctness"
+      }
+    ],
+    "missingFixtureIds": [],
+    "regressed": [
+      {
+        "after": "send the whole batch to inbox (\"Support Macro Development and Reply Structure\")",
+        "before": "archive the whole batch to new topic `support-macros` (\"Support Macro Development and Structure\")",
+        "currentScore": 0.4333333333333333,
+        "delta": -0.13333333333333336,
+        "expected": "archive the whole batch to new topic `support-macro-library`",
+        "fixtureId": "holdout_new_topic_support_macro_001",
+        "previousScore": 0.5666666666666667,
+        "scenario": "writing and planning notes",
+        "why": "This is a holdout new-topic precision case and should not be overfit by prompt repair."
+      },
+      {
+        "after": "archive the whole batch to existing topic `document-markdown-normalization` (\"Document import adapter design and runtime integration\")",
+        "before": "archive 5 captures to existing topic `document-markdown-normalization` (\"Document Import Adapters and Clipboard Normalization Trade-offs\"); archive 2 captures to existing topic `rust-background-compiler` (\"Runtime Contract and Isolation for Import Adapters\"); send 1 captures to inbox (\"Priority for Clipboard Eval Over Document Imports\")",
+        "currentScore": 0.5859073359073359,
+        "delta": -0.11885456885456902,
+        "expected": "split into archive 4 captures to existing topic `document-markdown-normalization`; archive 3 captures to existing topic `rust-background-compiler`; send 1 captures to inbox",
+        "fixtureId": "holdout_import_runtime_overlap_001",
+        "previousScore": 0.7047619047619049,
+        "scenario": "overlapping Python-analysis and eval-system notes",
+        "why": "This holdout should expose whether the model over-merges adjacent architecture concepts."
+      }
+    ],
+    "unchangedCount": 0
+  },
+  "topFailures": [
+    {
+      "actual": "send the whole batch to inbox (\"Support Macro Development and Reply Structure\")",
+      "expected": "archive the whole batch to new topic `support-macro-library`",
+      "failures": [],
+      "fixtureId": "holdout_new_topic_support_macro_001",
+      "scenario": "writing and planning notes",
+      "score": 0.4333333333333333,
+      "why": "This is a holdout new-topic precision case and should not be overfit by prompt repair."
+    },
+    {
+      "actual": "archive the whole batch to existing topic `document-markdown-normalization` (\"Document import adapter design and runtime integration\")",
+      "expected": "split into archive 4 captures to existing topic `document-markdown-normalization`; archive 3 captures to existing topic `rust-background-compiler`; send 1 captures to inbox",
+      "failures": [
+        "False archive count: 1",
+        "Wrong existing-topic merge on 3/7 source assignments."
+      ],
+      "fixtureId": "holdout_import_runtime_overlap_001",
+      "scenario": "overlapping Python-analysis and eval-system notes",
+      "score": 0.5859073359073359,
+      "why": "This holdout should expose whether the model over-merges adjacent architecture concepts."
+    }
+  ]
+}

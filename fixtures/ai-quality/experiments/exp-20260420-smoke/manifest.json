@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-04-20T15:48:25.987Z",
+  "experimentId": "exp-20260420-smoke",
+  "fixtureCount": 1,
+  "fixtures": [
+    "dev_meeting_chat_actionables_release_sync_001"
+  ],
+  "mode": "mock",
+  "provider": "mock",
+  "runArtifacts": [
+    {
+      "artifactPath": "runs/dev_meeting_chat_actionables_release_sync_001.json",
+      "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+      "overallScore": 0.5868686868686869
+    }
+  ],
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "split": "dev"
+}

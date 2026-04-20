@@ -1,0 +1,25 @@
+{
+  "createdAt": "2026-04-20T14:53:17.279Z",
+  "experimentId": "exp-20260420-001",
+  "fixtureCount": 2,
+  "fixtures": [
+    "dev_focused_research_markitdown_001",
+    "dev_coding_debugging_pasteback_001"
+  ],
+  "mode": "mock",
+  "provider": "mock",
+  "runArtifacts": [
+    {
+      "artifactPath": "runs/dev_focused_research_markitdown_001.json",
+      "fixtureId": "dev_focused_research_markitdown_001",
+      "overallScore": 0.48686868686868684
+    },
+    {
+      "artifactPath": "runs/dev_coding_debugging_pasteback_001.json",
+      "fixtureId": "dev_coding_debugging_pasteback_001",
+      "overallScore": 0.48686868686868684
+    }
+  ],
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "split": "dev"
+}

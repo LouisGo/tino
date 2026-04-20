@@ -1,0 +1,39 @@
+{
+  "fixtureVersion": "tino.ai_quality.golden.v0.1",
+  "fixtureId": "dev_writing_planning_quality_pipeline_001",
+  "batchId": "batch_dev_writing_planning_quality_pipeline_001",
+  "split": "dev",
+  "scenarioFamily": "writing_planning",
+  "difficulty": "medium",
+  "expectedClusters": [
+    {
+      "clusterId": "golden_quality_pipeline_plan",
+      "sourceIds": [
+        "cap_qualityplan_001",
+        "cap_qualityplan_002",
+        "cap_qualityplan_003",
+        "cap_qualityplan_004",
+        "cap_qualityplan_005",
+        "cap_qualityplan_006"
+      ],
+      "expectedDestination": "archive_to_topic",
+      "topicMode": "existing_topic",
+      "expectedTopicSlug": "prompt-eval-experimentation",
+      "expectedTopicName": "Prompt Eval Experimentation",
+      "mustSupport": [
+        "The quality loop needs fixtures, goldens, replay, scoring, and experiment tracking.",
+        "Structural routing and clustering quality come before prose polish.",
+        "Python should not fork the product prompt stack before artifact contracts are frozen."
+      ],
+      "severity": "high"
+    }
+  ],
+  "criticalChecks": [
+    "Do not route the batch primarily into python-analysis-sidecar.",
+    "Keep the metrics note attached to the planning cluster rather than isolating it."
+  ],
+  "annotationNotes": [
+    "This batch talks about Python, but only as a constraint inside the broader evaluation plan.",
+    "The durable knowledge is the plan for experimentation, not notebook tooling."
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "datasetVersion": "tino.ai_quality.dataset.v0.1",
+  "status": "seed",
+  "createdAt": "2026-04-20T11:10:00Z",
+  "planDocument": "docs/03-planning/Tino AI 开发期质量管线计划 v0.1.md",
+  "fixtureSchemaVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "goldenSchemaVersion": "tino.ai_quality.golden.v0.1",
+  "topicIndexRef": "topic-index.v0.1",
+  "targetBatchCount": 60,
+  "currentBatchCount": 12,
+  "currentCaptureCount": 78,
+  "splits": {
+    "dev": 10,
+    "holdout": 2
+  },
+  "contentKinds": [
+    "plain_text",
+    "rich_text",
+    "link"
+  ],
+  "scenarioFamilies": [
+    "focused_research",
+    "coding_debugging",
+    "writing_planning",
+    "meeting_chat_actionables",
+    "link_led_context_sparse",
+    "topic_overlap_ambiguous",
+    "task_switching_interruptions",
+    "duplicate_and_near_duplicate",
+    "low_value_noise",
+    "bilingual_or_mixed_language"
+  ],
+  "fixtures": [
+    {
+      "fixtureId": "dev_focused_research_markitdown_001",
+      "split": "dev",
+      "scenarioFamily": "focused_research",
+      "difficulty": "medium",
+      "captureCount": 6,
+      "primaryExpectation": "existing_topic:document-markdown-normalization"
+    },
+    {
+      "fixtureId": "dev_coding_debugging_pasteback_001",
+      "split": "dev",
+      "scenarioFamily": "coding_debugging",
+      "difficulty": "medium",
+      "captureCount": 6,
+      "primaryExpectation": "existing_topic:tauri-macos-permissions"
+    },
+    {
+      "fixtureId": "dev_writing_planning_quality_pipeline_001",
+      "split": "dev",
+      "scenarioFamily": "writing_planning",
+      "difficulty": "medium",
+      "captureCount": 6,
+      "primaryExpectation": "existing_topic:prompt-eval-experimentation"
+    },
+    {
+      "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+      "split": "dev",
+      "scenarioFamily": "meeting_chat_actionables",
+      "difficulty": "medium",
+      "captureCount": 6,
+      "primaryExpectation": "inbox"
+    },
+    {
+      "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+      "split": "dev",
+      "scenarioFamily": "link_led_context_sparse",
+      "difficulty": "easy",
+      "captureCount": 5,
+      "primaryExpectation": "inbox"
+    },
+    {
+      "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+      "split": "dev",
+      "scenarioFamily": "topic_overlap_ambiguous",
+      "difficulty": "hard",
+      "captureCount": 7,
+      "primaryExpectation": "split_existing_topics:python-analysis-sidecar,prompt-eval-experimentation"
+    },
+    {
+      "fixtureId": "dev_task_switching_copy_and_terminal_001",
+      "split": "dev",
+      "scenarioFamily": "task_switching_interruptions",
+      "difficulty": "hard",
+      "captureCount": 8,
+      "primaryExpectation": "mixed:topic+inbox+discard"
+    },
+    {
+      "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+      "split": "dev",
+      "scenarioFamily": "duplicate_and_near_duplicate",
+      "difficulty": "medium",
+      "captureCount": 6,
+      "primaryExpectation": "existing_topic:personal-knowledge-ops"
+    },
+    {
+      "fixtureId": "dev_low_value_noise_misc_001",
+      "split": "dev",
+      "scenarioFamily": "low_value_noise",
+      "difficulty": "medium",
+      "captureCount": 7,
+      "primaryExpectation": "mixed:discard+inbox"
+    },
+    {
+      "fixtureId": "dev_bilingual_mixed_eval_001",
+      "split": "dev",
+      "scenarioFamily": "bilingual_or_mixed_language",
+      "difficulty": "hard",
+      "captureCount": 7,
+      "primaryExpectation": "split_existing_topics:prompt-eval-experimentation,python-analysis-sidecar"
+    },
+    {
+      "fixtureId": "holdout_new_topic_support_macro_001",
+      "split": "holdout",
+      "scenarioFamily": "writing_planning",
+      "difficulty": "hard",
+      "captureCount": 6,
+      "primaryExpectation": "new_topic:support-macro-library"
+    },
+    {
+      "fixtureId": "holdout_import_runtime_overlap_001",
+      "split": "holdout",
+      "scenarioFamily": "topic_overlap_ambiguous",
+      "difficulty": "hard",
+      "captureCount": 8,
+      "primaryExpectation": "mixed:topic+topic+inbox"
+    }
+  ]
+}

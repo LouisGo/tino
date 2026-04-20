@@ -37,12 +37,16 @@ const MARKDOWN_SYNTAX_HIGHLIGHT_PLUGIN: [typeof rehypeHighlight, RehypeHighlight
   MARKDOWN_SYNTAX_HIGHLIGHT_OPTIONS,
 ];
 
+type MarkdownTextPreviewSize = "default" | "chat";
+
 export function MarkdownTextPreview({
   markdown,
   highlightQuery,
+  size = "default",
 }: {
   markdown: string;
   highlightQuery: string;
+  size?: MarkdownTextPreviewSize;
 }) {
   const highlightPlugin = useMemo(
     () => createRehypeHighlightPlugin(highlightQuery),
@@ -54,7 +58,12 @@ export function MarkdownTextPreview({
   );
 
   return (
-    <div className="app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] text-[13px] leading-[1.7]">
+    <div
+      className={cn(
+        "app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] leading-[1.7]",
+        size === "chat" ? "text-[15px]" : "text-[13px]",
+      )}
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={rehypePlugins}

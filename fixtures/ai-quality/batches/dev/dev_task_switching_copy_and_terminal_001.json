@@ -1,0 +1,144 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_task_switching_copy_and_terminal_001",
+  "split": "dev",
+  "scenarioFamily": "task_switching_interruptions",
+  "difficulty": "hard",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "product-writing-playbook",
+    "rust-background-compiler",
+    "personal-knowledge-ops",
+    "weekly-product-ops",
+    "prompt-eval-experimentation"
+  ],
+  "notes": [
+    "Two real tasks plus one low-value interruption are mixed into the same batch.",
+    "The correct result requires one durable copywriting cluster, one inbox cluster, and one discard."
+  ],
+  "batch": {
+    "id": "batch_dev_task_switching_copy_and_terminal_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-19T09:26:00Z",
+    "triggerReason": "capture_count",
+    "captureCount": 8,
+    "firstCapturedAt": "2026-04-19T09:12:00Z",
+    "lastCapturedAt": "2026-04-19T09:25:00Z",
+    "sourceIds": [
+      "cap_taskswitch_001",
+      "cap_taskswitch_002",
+      "cap_taskswitch_003",
+      "cap_taskswitch_004",
+      "cap_taskswitch_005",
+      "cap_taskswitch_006",
+      "cap_taskswitch_007",
+      "cap_taskswitch_008"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_taskswitch_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T09:12:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Figma",
+      "sourceAppBundleId": "com.figma.Desktop",
+      "preview": "The clipboard should feel like a quiet inbox, not a dashboard.",
+      "rawText": "The clipboard should feel like a quiet inbox, not a dashboard. The product promise is low-friction capture first, organization second.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_taskswitch_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T09:14:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Google Docs",
+      "sourceAppBundleId": "com.google.Chrome",
+      "preview": "Capture first, organize later.",
+      "rawText": "Capture first, organize later.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_taskswitch_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T09:16:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Terminal",
+      "sourceAppBundleId": "com.apple.Terminal",
+      "preview": "cargo check --manifest-path src-tauri/Cargo.toml",
+      "rawText": "cargo check --manifest-path src-tauri/Cargo.toml",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_taskswitch_004",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T09:18:00Z",
+      "source": "clipboard",
+      "sourceAppName": "VS Code",
+      "sourceAppBundleId": "com.microsoft.VSCode",
+      "preview": "error[E0308]: expected Option<String>, found String in ipc_schema.rs",
+      "rawText": "error[E0308]: expected Option<String>, found String in ipc_schema.rs",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_taskswitch_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T09:20:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Need warmer but still technical tone for the homepage.",
+      "rawText": "Need warmer but still technical tone for the homepage. Avoid polished enterprise language; it should sound like a tool for serious personal workflows.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_taskswitch_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T09:22:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Reminders",
+      "sourceAppBundleId": "com.apple.reminders",
+      "preview": "buy HDMI adapter",
+      "rawText": "buy HDMI adapter",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_taskswitch_007",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T09:23:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "rename screenshots before uploading",
+      "rawText": "rename screenshots before uploading",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_taskswitch_008",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-19T09:25:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Google Docs",
+      "sourceAppBundleId": "com.google.Chrome",
+      "preview": "Background AI compiles scattered fragments into topics.",
+      "rawText": "Background AI compiles scattered fragments into topics. The homepage should promise calm synthesis, not manual filing work.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    }
+  ]
+}

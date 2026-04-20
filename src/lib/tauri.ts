@@ -25,6 +25,10 @@ import type {
   ClipboardSourceAppOption as RustClipboardSourceAppOption,
   ClipboardSourceAppRule as RustClipboardSourceAppRule,
   DashboardSnapshot as RustDashboardSnapshot,
+  HomeChatConversationDetail as RustHomeChatConversationDetail,
+  HomeChatConversationSummary as RustHomeChatConversationSummary,
+  HomeChatConversationsUpdated as RustHomeChatConversationsUpdated,
+  HomeChatMessage as RustHomeChatMessage,
   PinnedClipboardCapture as RustPinnedClipboardCapture,
   RuntimeProviderProfile as RustRuntimeProviderProfile,
 } from "@/bindings/tauri";
@@ -41,6 +45,13 @@ import type {
   DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
+  HomeChatConversationDetail,
+  HomeChatConversationSummary,
+  HomeChatConversationsUpdatedPayload,
+  HomeChatMessage,
+  HomeChatConversationTitleSource,
+  HomeChatConversationTitleStatus,
+  HomeChatMessageStatus,
   PinnedClipboardCapture,
   RuntimeProviderProfile,
   SettingsDraft,
@@ -193,6 +204,8 @@ const mockSnapshot: DashboardSnapshot = {
 
 let mockRecentCaptures = [...mockSnapshot.recentCaptures];
 let mockPinnedCaptures: PinnedClipboardCapture[] = [];
+let mockHomeChatIdCounter = 0;
+const mockHomeChatConversations: HomeChatConversationDetail[] = [];
 const mockClipboardSourceApps: ClipboardSourceAppOption[] = [
   {
     bundleId: "com.apple.Safari",
@@ -225,6 +238,220 @@ function getMockSnapshot(): DashboardSnapshot {
     ...mockSnapshot,
     recentCaptures: mockRecentCaptures,
   };
+}
+
+function createMockHomeChatId(prefix: string) {
+  mockHomeChatIdCounter += 1;
+  return `${prefix}_${mockHomeChatIdCounter}`;
+}
+
+function buildMockHomeChatPreview(text: string) {
+  const collapsed = text.trim().replace(/\s+/g, " ");
+  if (!collapsed) {
+    return null;
+  }
+
+  return collapsed.length > 120 ? `${collapsed.slice(0, 119)}…` : collapsed;
+}
+
+function getMockHomeChatConversationDetail(
+  conversationId: string,
+): HomeChatConversationDetail {
+  const detail = mockHomeChatConversations.find(
+    (item) => item.conversation.id === conversationId,
+  );
+  if (!detail) {
+    throw new Error("Conversation not found.");
+  }
+
+  return structuredClone(detail);
+}
+
+function upsertMockHomeChatConversation(detail: HomeChatConversationDetail) {
+  const existingIndex = mockHomeChatConversations.findIndex(
+    (item) => item.conversation.id === detail.conversation.id,
+  );
+
+  if (existingIndex >= 0) {
+    mockHomeChatConversations[existingIndex] = structuredClone(detail);
+    return;
+  }
+
+  mockHomeChatConversations.unshift(structuredClone(detail));
+}
+
+function sortMockHomeChatConversations() {
+  mockHomeChatConversations.sort((left, right) =>
+    right.conversation.lastMessageAt.localeCompare(left.conversation.lastMessageAt));
+}
+
+function createMockConversation(
+  initialUserMessage: string,
+): HomeChatConversationDetail {
+  const now = nowIsoString();
+  const conversationId = createMockHomeChatId("conv");
+  const message: HomeChatMessage = {
+    id: createMockHomeChatId("msg"),
+    conversationId,
+    ordinal: 1,
+    role: "user",
+    content: initialUserMessage.trim(),
+    reasoningText: null,
+    status: "completed",
+    errorMessage: null,
+    providerLabel: null,
+    responseModel: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const detail: HomeChatConversationDetail = {
+    conversation: {
+      id: conversationId,
+      title: null,
+      titleStatus: "pending",
+      titleSource: null,
+      previewText: buildMockHomeChatPreview(message.content),
+      messageCount: 1,
+      createdAt: now,
+      updatedAt: now,
+      lastMessageAt: now,
+    },
+    messages: [message],
+  };
+  upsertMockHomeChatConversation(detail);
+  sortMockHomeChatConversations();
+  return structuredClone(detail);
+}
+
+function appendMockConversationUserMessage(
+  conversationId: string,
+  userMessage: string,
+): HomeChatConversationDetail {
+  const detail = getMockHomeChatConversationDetail(conversationId);
+  const now = nowIsoString();
+  detail.messages.push({
+    id: createMockHomeChatId("msg"),
+    conversationId,
+    ordinal: detail.messages.length + 1,
+    role: "user",
+    content: userMessage.trim(),
+    reasoningText: null,
+    status: "completed",
+    errorMessage: null,
+    providerLabel: null,
+    responseModel: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  detail.conversation.previewText = buildMockHomeChatPreview(userMessage);
+  detail.conversation.messageCount = detail.messages.length;
+  detail.conversation.updatedAt = now;
+  detail.conversation.lastMessageAt = now;
+  upsertMockHomeChatConversation(detail);
+  sortMockHomeChatConversations();
+  return structuredClone(detail);
+}
+
+function replaceMockLatestAssistantMessage(options: {
+  conversationId: string;
+  content: string;
+  reasoningText?: string | null;
+  status: HomeChatMessageStatus;
+  errorMessage?: string | null;
+  providerLabel?: string | null;
+  responseModel?: string | null;
+}): HomeChatConversationDetail {
+  const detail = getMockHomeChatConversationDetail(options.conversationId);
+  const now = nowIsoString();
+  const latestMessage = detail.messages.at(-1);
+  const nextMessage: HomeChatMessage = {
+    id:
+      latestMessage?.role === "assistant"
+        ? latestMessage.id
+        : createMockHomeChatId("msg"),
+    conversationId: options.conversationId,
+    ordinal:
+      latestMessage?.role === "assistant"
+        ? latestMessage.ordinal
+        : detail.messages.length + 1,
+    role: "assistant",
+    content: options.content,
+    reasoningText: options.reasoningText ?? null,
+    status: options.status,
+    errorMessage: options.errorMessage ?? null,
+    providerLabel: options.providerLabel ?? null,
+    responseModel: options.responseModel ?? null,
+    createdAt:
+      latestMessage?.role === "assistant"
+        ? latestMessage.createdAt
+        : now,
+    updatedAt: now,
+  };
+
+  if (latestMessage?.role === "assistant") {
+    detail.messages[detail.messages.length - 1] = nextMessage;
+  } else {
+    detail.messages.push(nextMessage);
+  }
+
+  detail.conversation.previewText =
+    buildMockHomeChatPreview(options.content)
+    ?? buildMockHomeChatPreview(options.errorMessage ?? "");
+  detail.conversation.messageCount = detail.messages.length;
+  detail.conversation.updatedAt = now;
+  detail.conversation.lastMessageAt = now;
+  upsertMockHomeChatConversation(detail);
+  sortMockHomeChatConversations();
+  return structuredClone(detail);
+}
+
+function rewriteMockLatestUserMessage(
+  conversationId: string,
+  userMessage: string,
+): HomeChatConversationDetail {
+  const detail = getMockHomeChatConversationDetail(conversationId);
+  const latestUserIndex = [...detail.messages]
+    .map((message, index) => ({ message, index }))
+    .reverse()
+    .find((entry) => entry.message.role === "user")?.index;
+
+  if (latestUserIndex === undefined) {
+    throw new Error("No user message found for the conversation.");
+  }
+
+  const now = nowIsoString();
+  detail.messages = detail.messages.slice(0, latestUserIndex + 1);
+  detail.messages[latestUserIndex] = {
+    ...detail.messages[latestUserIndex],
+    content: userMessage.trim(),
+    status: "completed",
+    errorMessage: null,
+    updatedAt: now,
+  };
+  detail.conversation.previewText = buildMockHomeChatPreview(userMessage);
+  detail.conversation.messageCount = detail.messages.length;
+  detail.conversation.updatedAt = now;
+  detail.conversation.lastMessageAt = now;
+  upsertMockHomeChatConversation(detail);
+  sortMockHomeChatConversations();
+  return structuredClone(detail);
+}
+
+function updateMockConversationTitle(options: {
+  conversationId: string;
+  title: string;
+  titleStatus: HomeChatConversationTitleStatus;
+  titleSource: HomeChatConversationTitleSource;
+}): HomeChatConversationSummary {
+  const detail = getMockHomeChatConversationDetail(options.conversationId);
+  const now = nowIsoString();
+  detail.conversation.title = options.title.trim();
+  detail.conversation.titleStatus = options.titleStatus;
+  detail.conversation.titleSource = options.titleSource;
+  detail.conversation.updatedAt = now;
+  upsertMockHomeChatConversation(detail);
+  sortMockHomeChatConversations();
+  return structuredClone(detail.conversation);
 }
 
 function normalizeClipboardCapture(capture: RustCapturePreview): ClipboardCapture {
@@ -351,6 +578,25 @@ function normalizeDashboardSnapshot(snapshot: RustDashboardSnapshot): DashboardS
   };
 }
 
+function normalizeHomeChatMessage(message: RustHomeChatMessage): HomeChatMessage {
+  return message;
+}
+
+function normalizeHomeChatConversationSummary(
+  summary: RustHomeChatConversationSummary,
+): HomeChatConversationSummary {
+  return summary;
+}
+
+function normalizeHomeChatConversationDetail(
+  detail: RustHomeChatConversationDetail,
+): HomeChatConversationDetail {
+  return {
+    conversation: normalizeHomeChatConversationSummary(detail.conversation),
+    messages: detail.messages.map(normalizeHomeChatMessage),
+  };
+}
+
 function normalizeClipboardBoardBootstrap(
   bootstrap: RustClipboardBoardBootstrap,
 ): ClipboardBoardBootstrap {
@@ -381,6 +627,12 @@ function normalizeClipboardCapturesUpdatedPayload(
   };
 }
 
+function normalizeHomeChatConversationsUpdatedPayload(
+  payload: RustHomeChatConversationsUpdated,
+): HomeChatConversationsUpdatedPayload {
+  return payload;
+}
+
 export const appSettingsChangedEvent = {
   listen: (
     callback: (event: { payload: AppSettingsChangedPayload }) => void | Promise<void>,
@@ -405,6 +657,17 @@ export const clipboardCapturesUpdatedEvent = {
     tauriEvents.clipboardCapturesUpdated.emit(payload),
 };
 
+export const homeChatConversationsUpdatedEvent = {
+  listen: (
+    callback: (event: { payload: HomeChatConversationsUpdatedPayload }) => void | Promise<void>,
+  ) =>
+    tauriEvents.homeChatConversationsUpdated.listen((event) =>
+      callback({
+        ...event,
+        payload: normalizeHomeChatConversationsUpdatedPayload(event.payload),
+      })),
+};
+
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   if (!isTauriRuntime()) {
     return getMockSnapshot();
@@ -412,6 +675,120 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
 
   return normalizeDashboardSnapshot(
     await unwrapTauriResult(tauriCommands.getDashboardSnapshot()),
+  );
+}
+
+export async function listHomeChatConversations(): Promise<HomeChatConversationSummary[]> {
+  if (!isTauriRuntime()) {
+    sortMockHomeChatConversations();
+    return mockHomeChatConversations.map((item) => structuredClone(item.conversation));
+  }
+
+  const conversations = await unwrapTauriResult(tauriCommands.listHomeChatConversations());
+  return conversations.map(normalizeHomeChatConversationSummary);
+}
+
+export async function getHomeChatConversation(
+  conversationId: string,
+): Promise<HomeChatConversationDetail> {
+  if (!isTauriRuntime()) {
+    return getMockHomeChatConversationDetail(conversationId);
+  }
+
+  return normalizeHomeChatConversationDetail(
+    await unwrapTauriResult(tauriCommands.getHomeChatConversation(conversationId)),
+  );
+}
+
+export async function createHomeChatConversation(
+  initialUserMessage: string,
+): Promise<HomeChatConversationDetail> {
+  if (!isTauriRuntime()) {
+    return createMockConversation(initialUserMessage);
+  }
+
+  return normalizeHomeChatConversationDetail(
+    await unwrapTauriResult(tauriCommands.createHomeChatConversation({
+      initialUserMessage,
+    })),
+  );
+}
+
+export async function appendHomeChatUserMessage(
+  conversationId: string,
+  userMessage: string,
+): Promise<HomeChatConversationDetail> {
+  if (!isTauriRuntime()) {
+    return appendMockConversationUserMessage(conversationId, userMessage);
+  }
+
+  return normalizeHomeChatConversationDetail(
+    await unwrapTauriResult(tauriCommands.appendHomeChatUserMessage({
+      conversationId,
+      userMessage,
+    })),
+  );
+}
+
+export async function replaceLatestHomeChatAssistantMessage(options: {
+  conversationId: string;
+  content: string;
+  reasoningText?: string | null;
+  status: HomeChatMessageStatus;
+  errorMessage?: string | null;
+  providerLabel?: string | null;
+  responseModel?: string | null;
+}): Promise<HomeChatConversationDetail> {
+  if (!isTauriRuntime()) {
+    return replaceMockLatestAssistantMessage(options);
+  }
+
+  return normalizeHomeChatConversationDetail(
+    await unwrapTauriResult(tauriCommands.replaceLatestHomeChatAssistantMessage({
+      conversationId: options.conversationId,
+      content: options.content,
+      reasoningText: options.reasoningText ?? null,
+      status: options.status,
+      errorMessage: options.errorMessage ?? null,
+      providerLabel: options.providerLabel ?? null,
+      responseModel: options.responseModel ?? null,
+    })),
+  );
+}
+
+export async function rewriteLatestHomeChatUserMessage(
+  conversationId: string,
+  userMessage: string,
+): Promise<HomeChatConversationDetail> {
+  if (!isTauriRuntime()) {
+    return rewriteMockLatestUserMessage(conversationId, userMessage);
+  }
+
+  return normalizeHomeChatConversationDetail(
+    await unwrapTauriResult(tauriCommands.rewriteLatestHomeChatUserMessage({
+      conversationId,
+      userMessage,
+    })),
+  );
+}
+
+export async function updateHomeChatConversationTitle(options: {
+  conversationId: string;
+  title: string;
+  titleStatus: HomeChatConversationTitleStatus;
+  titleSource: HomeChatConversationTitleSource;
+}): Promise<HomeChatConversationSummary> {
+  if (!isTauriRuntime()) {
+    return updateMockConversationTitle(options);
+  }
+
+  return normalizeHomeChatConversationSummary(
+    await unwrapTauriResult(tauriCommands.updateHomeChatConversationTitle({
+      conversationId: options.conversationId,
+      title: options.title,
+      titleStatus: options.titleStatus,
+      titleSource: options.titleSource,
+    })),
   );
 }
 

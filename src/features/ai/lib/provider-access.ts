@@ -1,6 +1,7 @@
 import {
   APICallError,
   generateText,
+  type ModelMessage,
   NoObjectGeneratedError,
   Output,
   RetryError,
@@ -53,8 +54,33 @@ export type StructuredTextRequest = {
   timeoutMs?: number;
 };
 
+export type StructuredTextMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type StructuredTextStreamProgress = StructuredObjectTextStreamProgress;
+
+export type StreamingTextRequest = {
+  systemPrompt?: string;
+  userPrompt?: string;
+  messages?: StructuredTextMessage[];
+  timeoutMs?: number;
+  abortSignal?: AbortSignal;
+  onTextStream?: (progress: StructuredTextStreamProgress) => void;
+};
+
 export type StructuredTextResult = ProviderCallMetadata & {
   text: string;
+};
+
+export type StreamingTextResult = StructuredTextResult & {
+  eventCount: number;
+  firstReasoningLatencyMs: number | null;
+  firstTextLatencyMs: number | null;
+  reasoningChars: number;
+  reasoningText: string;
+  receivedChars: number;
 };
 
 export type ProviderCallMetadata = {
@@ -86,6 +112,7 @@ export interface AiObjectGenerator {
     request: StructuredObjectRequest<SCHEMA>,
   ): Promise<StructuredObjectResult<T>>;
   generateText(request: StructuredTextRequest): Promise<StructuredTextResult>;
+  streamText(request: StreamingTextRequest): Promise<StreamingTextResult>;
 }
 
 export function resolveProviderAccessConfig(settings: ProviderAccessConfig) {
@@ -393,6 +420,207 @@ export function createAiObjectGenerator(settings: ProviderAccessConfig): AiObjec
         throw normalizedError;
       }
     },
+
+    async streamText(request: StreamingTextRequest) {
+      const startedAt = performance.now();
+      const timeoutMs = request.timeoutMs ?? defaultRequestTimeoutMs;
+      const chunkTypeCounts: Record<string, number> = {};
+      let eventCount = 0;
+      let firstReasoningLatencyMs: number | null = null;
+      let firstTextLatencyMs: number | null = null;
+      let lastEventType: string | null = null;
+      let reasoningChars = 0;
+      let reasoningText = "";
+      let receivedChars = 0;
+      let streamedText = "";
+      const promptInput = resolveStreamingTextPrompt(request);
+
+      try {
+        logger.info("Starting provider streamed text generation", {
+          apiMode: access.apiMode,
+          maxRetries: defaultProviderMaxRetries,
+          messageCount: promptInput.mode === "messages" ? promptInput.messages.length : undefined,
+          model: access.model,
+          promptChars:
+            promptInput.mode === "prompt"
+              ? promptInput.userPrompt.length
+              : promptInput.messages.reduce((total, message) => total + message.content.length, 0),
+          providerLabel: access.providerLabel,
+          timeoutMs,
+        });
+
+        request.onTextStream?.({
+          eventCount,
+          firstReasoningLatencyMs,
+          firstTextLatencyMs,
+          lastEventType,
+          reasoningChars,
+          reasoningText,
+          receivedChars,
+          text: streamedText,
+        });
+
+        const streamResult = streamText({
+          model,
+          system: request.systemPrompt,
+          ...(promptInput.mode === "messages"
+            ? { messages: promptInput.messages }
+            : { prompt: promptInput.userPrompt }),
+          timeout: timeoutMs,
+          abortSignal: request.abortSignal,
+          maxRetries: defaultProviderMaxRetries,
+          includeRawChunks: true,
+          experimental_include: { requestBody: true },
+          onChunk: ({ chunk }) => {
+            eventCount += 1;
+            lastEventType = resolveProviderChunkType(chunk);
+            incrementChunkTypeCount(chunkTypeCounts, lastEventType);
+
+            const reasoningDelta =
+              chunk.type === "reasoning-delta"
+                ? chunk.text
+                : extractDeepSeekReasoningDeltaFromRawChunk(access, chunk);
+
+            if (reasoningDelta) {
+              reasoningChars += reasoningDelta.length;
+              reasoningText = appendStreamPreviewText(reasoningText, reasoningDelta);
+
+              if (firstReasoningLatencyMs == null) {
+                firstReasoningLatencyMs = Math.round(performance.now() - startedAt);
+                logger.info("Provider stream received first reasoning delta", {
+                  apiMode: access.apiMode,
+                  eventCount,
+                  firstReasoningLatencyMs,
+                  model: access.model,
+                  providerLabel: access.providerLabel,
+                  reasoningSource: chunk.type,
+                });
+              }
+
+              request.onTextStream?.({
+                eventCount,
+                firstReasoningLatencyMs,
+                firstTextLatencyMs,
+                lastEventType,
+                reasoningChars,
+                reasoningText,
+                receivedChars,
+                text: streamedText,
+              });
+              return;
+            }
+
+            if (chunk.type !== "text-delta") {
+              request.onTextStream?.({
+                eventCount,
+                firstReasoningLatencyMs,
+                firstTextLatencyMs,
+                lastEventType,
+                reasoningChars,
+                reasoningText,
+                receivedChars,
+                text: streamedText,
+              });
+              return;
+            }
+
+            receivedChars += chunk.text.length;
+            streamedText = appendStreamPreviewText(streamedText, chunk.text);
+
+            if (firstTextLatencyMs == null) {
+              firstTextLatencyMs = Math.round(performance.now() - startedAt);
+              logger.info("Provider stream received first text delta", {
+                apiMode: access.apiMode,
+                eventCount,
+                firstTextLatencyMs,
+                model: access.model,
+                providerLabel: access.providerLabel,
+              });
+            }
+
+            request.onTextStream?.({
+              eventCount,
+              firstReasoningLatencyMs,
+              firstTextLatencyMs,
+              lastEventType,
+              reasoningChars,
+              reasoningText,
+              receivedChars,
+              text: streamedText,
+            });
+          },
+          onError: ({ error }) => {
+            logger.warn("Streamed text generation emitted an error chunk", {
+              apiMode: access.apiMode,
+              errorMessage: error instanceof Error ? error.message : String(error),
+              errorName: error instanceof Error ? error.name : undefined,
+              model: access.model,
+              providerLabel: access.providerLabel,
+            });
+          },
+        });
+        const steps = await Promise.resolve(streamResult.steps);
+        const finalStep = steps.at(-1);
+
+        if (!finalStep) {
+          throw new Error("Provider stream completed without a final step.");
+        }
+
+        const metadata = buildProviderCallMetadata({
+          access,
+          durationMs: performance.now() - startedAt,
+          finishReason: finalStep.finishReason,
+          inputTokens: finalStep.usage.inputTokens,
+          outputTokens: finalStep.usage.outputTokens,
+          responseModel: finalStep.response.modelId,
+        });
+
+        logger.info("Provider streamed text generated", {
+          ...metadata,
+          chunkSummary: summarizeChunkTypes(chunkTypeCounts),
+          eventCount,
+          firstReasoningLatencyMs,
+          firstTextLatencyMs,
+          reasoningChars,
+          reasoningPreviewLength: reasoningText.length,
+          responseId: finalStep.response.id,
+          streamedTextLength: receivedChars,
+          textPreview: truncateText(finalStep.text, defaultTextPreviewCharLimit),
+        });
+
+        return {
+          ...metadata,
+          text: finalStep.text,
+          eventCount,
+          firstReasoningLatencyMs,
+          firstTextLatencyMs,
+          reasoningChars,
+          reasoningText,
+          receivedChars,
+        };
+      } catch (error) {
+        if (request.abortSignal?.aborted && isAbortLikeError(error)) {
+          throw new Error("Request aborted by user.");
+        }
+
+        const normalizedError = normalizeProviderAccessError(error, {
+          baseUrl: access.baseUrl,
+          model: access.model,
+        });
+        logger.error("Provider streamed text generation failed", {
+          apiMode: access.apiMode,
+          baseUrl: access.baseUrl,
+          chunkSummary: summarizeChunkTypes(chunkTypeCounts),
+          errorMessage: normalizedError.message,
+          errorName: normalizedError.name,
+          maxRetries: defaultProviderMaxRetries,
+          model: access.model,
+          providerLabel: access.providerLabel,
+          providerError: extractProviderErrorDetails(error),
+        });
+        throw normalizedError;
+      }
+    },
   };
 }
 
@@ -554,6 +782,30 @@ function truncateText(value: string, limit: number) {
   }
 
   return `${value.slice(0, limit - 1)}...`;
+}
+
+function resolveStreamingTextPrompt(request: StreamingTextRequest):
+  | { mode: "prompt"; userPrompt: string }
+  | { mode: "messages"; messages: ModelMessage[] } {
+  if (request.messages?.length) {
+    return {
+      mode: "messages",
+      messages: request.messages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+    };
+  }
+
+  const userPrompt = request.userPrompt?.trim() ?? "";
+  if (!userPrompt) {
+    throw new Error("A user prompt or messages array is required.");
+  }
+
+  return {
+    mode: "prompt",
+    userPrompt,
+  };
 }
 
 function resolveProviderFetch() {

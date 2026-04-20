@@ -1,0 +1,116 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "holdout_new_topic_support_macro_001",
+  "split": "holdout",
+  "scenarioFamily": "writing_planning",
+  "difficulty": "hard",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "product-writing-playbook",
+    "weekly-product-ops",
+    "tauri-macos-permissions",
+    "prompt-eval-experimentation",
+    "customer-research-synthesis"
+  ],
+  "notes": [
+    "No current topic exactly matches the support macro concept.",
+    "This is a holdout new-topic precision case and should not be overfit by prompt repair."
+  ],
+  "batch": {
+    "id": "batch_holdout_new_topic_support_macro_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-20T04:23:00Z",
+    "triggerReason": "max_wait",
+    "captureCount": 6,
+    "firstCapturedAt": "2026-04-20T04:12:00Z",
+    "lastCapturedAt": "2026-04-20T04:22:00Z",
+    "sourceIds": [
+      "cap_supportmacro_001",
+      "cap_supportmacro_002",
+      "cap_supportmacro_003",
+      "cap_supportmacro_004",
+      "cap_supportmacro_005",
+      "cap_supportmacro_006"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_supportmacro_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T04:12:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Zendesk",
+      "sourceAppBundleId": "com.zendesk.zendesk",
+      "preview": "Thanks for reporting the duplicate clipboard capture. Here is how to verify the retention window and filter rules.",
+      "rawText": "Thanks for reporting the duplicate clipboard capture. Here is how to verify the retention window and filter rules before we inspect the queue state.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_supportmacro_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T04:14:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notion",
+      "sourceAppBundleId": "notion.id",
+      "preview": "Macros should sound calm, technical, and specific about the next diagnostic step.",
+      "rawText": "Macros should sound calm, technical, and specific about the next diagnostic step. Avoid generic empathy fluff when we already know the likely failure mode.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_supportmacro_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T04:16:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Google Docs",
+      "sourceAppBundleId": "com.google.Chrome",
+      "preview": "Support macros: permission reset, knowledge root missing, AI not configured.",
+      "rawText": "Support macros: permission reset, knowledge root missing, AI not configured.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_supportmacro_004",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T04:18:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "Need three reusable replies before the tester wave starts.",
+      "rawText": "Need three reusable replies before the tester wave starts. The responses should route people to the right diagnostic step in under thirty seconds.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_supportmacro_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T04:20:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Group macros by failure mode, not by incoming channel.",
+      "rawText": "Group macros by failure mode, not by incoming channel. The same root problem can show up from Slack, email, or a form.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_supportmacro_006",
+      "contentKind": "rich_text",
+      "capturedAt": "2026-04-20T04:22:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notion",
+      "sourceAppBundleId": "notion.id",
+      "preview": "Reply structure: symptom, likely cause, next check, escalation rule.",
+      "rawText": "Reply structure: symptom, likely cause, next check, escalation rule.",
+      "rawRich": "<ol><li>symptom</li><li>likely cause</li><li>next check</li><li>escalation rule</li></ol>",
+      "rawRichFormat": "html",
+      "linkUrl": null
+    }
+  ]
+}

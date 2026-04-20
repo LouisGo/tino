@@ -1,0 +1,130 @@
+{
+  "fixtureVersion": "tino.ai_quality.batch_fixture.v0.1",
+  "fixtureId": "dev_bilingual_mixed_eval_001",
+  "split": "dev",
+  "scenarioFamily": "bilingual_or_mixed_language",
+  "difficulty": "hard",
+  "topicIndexRef": "topic-index.v0.1",
+  "availableTopicSlugs": [
+    "prompt-eval-experimentation",
+    "python-analysis-sidecar",
+    "multilingual-prompting",
+    "personal-knowledge-ops",
+    "link-triage-watchlist"
+  ],
+  "notes": [
+    "Chinese-English mixed evaluation planning with one Python-role statement embedded.",
+    "The system should not confuse bilingual wording with topic ambiguity."
+  ],
+  "batch": {
+    "id": "batch_dev_bilingual_mixed_eval_001",
+    "runtimeState": "ready",
+    "createdAt": "2026-04-20T02:05:00Z",
+    "triggerReason": "max_wait",
+    "captureCount": 7,
+    "firstCapturedAt": "2026-04-20T01:54:00Z",
+    "lastCapturedAt": "2026-04-20T02:04:00Z",
+    "sourceIds": [
+      "cap_bilingual_001",
+      "cap_bilingual_002",
+      "cap_bilingual_003",
+      "cap_bilingual_004",
+      "cap_bilingual_005",
+      "cap_bilingual_006",
+      "cap_bilingual_007"
+    ]
+  },
+  "captures": [
+    {
+      "id": "cap_bilingual_001",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T01:54:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "先把 mock batch 和 golden 固定，再谈 prompt polish。",
+      "rawText": "先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了只是主观印象。",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_bilingual_002",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T01:56:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "Holdout cases should never become prompt-by-prompt repair targets.",
+      "rawText": "Holdout cases should never become prompt-by-prompt repair targets. They are for regression detection, not for case memorization.",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_bilingual_003",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T01:58:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notes",
+      "sourceAppBundleId": "com.apple.Notes",
+      "preview": "`false_archive_rate` 比 overall score 更重要。",
+      "rawText": "`false_archive_rate` 比 overall score 更重要。路由错了，再漂亮的 summary 也没有价值。",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_bilingual_004",
+      "contentKind": "link",
+      "capturedAt": "2026-04-20T02:00:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Safari",
+      "sourceAppBundleId": "com.apple.Safari",
+      "preview": "https://eugeneyan.com/writing/llm-evaluators/",
+      "rawText": "https://eugeneyan.com/writing/llm-evaluators/",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": "https://eugeneyan.com/writing/llm-evaluators/"
+    },
+    {
+      "id": "cap_bilingual_005",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T02:01:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Slack",
+      "sourceAppBundleId": "com.tinyspeck.slackmacgap",
+      "preview": "Python 只做 analysis layer, not runtime source of truth.",
+      "rawText": "Python 只做 analysis layer, not runtime source of truth. 先把 TS replay runner 和 artifacts 稳定下来。",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_bilingual_006",
+      "contentKind": "plain_text",
+      "capturedAt": "2026-04-20T02:03:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Obsidian",
+      "sourceAppBundleId": "md.obsidian",
+      "preview": "不要再凭感觉说结果更顺了，要看 case-by-case diff。",
+      "rawText": "不要再凭感觉说结果更顺了，要看 case-by-case diff。每一轮实验都要能说明哪些场景进步，哪些场景退化。",
+      "rawRich": null,
+      "rawRichFormat": null,
+      "linkUrl": null
+    },
+    {
+      "id": "cap_bilingual_007",
+      "contentKind": "rich_text",
+      "capturedAt": "2026-04-20T02:04:00Z",
+      "source": "clipboard",
+      "sourceAppName": "Notion",
+      "sourceAppBundleId": "notion.id",
+      "preview": "schema_valid_rate >= 98%; source_assignment_integrity = 100%",
+      "rawText": "schema_valid_rate >= 98%; source_assignment_integrity = 100%",
+      "rawRich": "<ul><li>schema_valid_rate >= 98%</li><li>source_assignment_integrity = 100%</li></ul>",
+      "rawRichFormat": "html",
+      "linkUrl": null
+    }
+  ]
+}

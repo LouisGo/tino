@@ -1,0 +1,210 @@
+{
+  "createdAt": "2026-04-20T15:54:51.231Z",
+  "experimentId": "exp-20260420-007",
+  "fixtureChecksum": "0b674b22d6031efe7329625cc9ae9c9e36ad5c3b4de92586a732d08fc160675b",
+  "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+  "generationMode": "live",
+  "model": "deepseek-chat",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_duplicate_near_duplicate_retention_001_1776700527097",
+    "batchId": "batch_dev_duplicate_near_duplicate_retention_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-20T15:55:27.097Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "cluster_retention_durability_001",
+        "sourceIds": [
+          "cap_retentiondup_001",
+          "cap_retentiondup_002",
+          "cap_retentiondup_003",
+          "cap_retentiondup_004",
+          "cap_retentiondup_005",
+          "cap_retentiondup_006"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "personal-knowledge-ops",
+        "topicNameSuggestion": "Personal Knowledge Ops",
+        "title": "Clipboard retention as a durable user asset",
+        "summary": "Multiple captures reinforce that clipboard history should be treated as a durable user asset, retaining data for 90 days and surviving app upgrades and reinstalls, not as disposable cache.",
+        "keyPoints": [
+          "Clipboard history should retain data for 90 days.",
+          "Retention must survive app upgrades and reinstalls.",
+          "Retention data is a durable user asset, not temporary app cache.",
+          "Retention semantics should be consistent across preview and production channels."
+        ],
+        "tags": [
+          "retention",
+          "clipboard",
+          "durable",
+          "upgrade",
+          "persistence"
+        ],
+        "confidence": 0.95,
+        "reason": "Cluster contains durable knowledge about retention semantics and persistence rules, which aligns with the 'Personal Knowledge Ops' topic covering durable capture retention and controlled persistence semantics. No owners, deadlines, or actionable tasks are present.",
+        "possibleTopics": [
+          {
+            "topicSlug": "personal-knowledge-ops",
+            "topicName": "Personal Knowledge Ops",
+            "reason": "Directly covers rules for durable capture retention and controlled persistence semantics."
+          }
+        ],
+        "missingContext": []
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "cluster_retention_durability_001",
+        "destination": "topic",
+        "filePath": "topics/personal-knowledge-ops.md",
+        "topicName": "Personal Knowledge Ops",
+        "topicSlug": "personal-knowledge-ops"
+      }
+    ]
+  },
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_duplicate_near_duplicate_retention_001\ncapture_count: 6\ntrigger_reason: capture_count\nwindow: 2026-04-18T14:58:00Z -> 2026-04-18T15:09:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n2. Rust Background Compiler [rust-background-compiler]\n   summary: Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.\n   recent_tags: rust, compiler, batch, runtime\n   last_updated_at: 2026-04-19T10:05:00Z\n3. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n4. Weekly Product Ops [weekly-product-ops]\n   summary: Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.\n   recent_tags: meeting, owners, timeline, release\n   last_updated_at: 2026-04-19T05:50:00Z\n5. Product Writing Playbook [product-writing-playbook]\n   summary: Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.\n   recent_tags: copywriting, messaging, headline, launch\n   last_updated_at: 2026-04-17T14:40:00Z\n\nCaptures\ncapture_1:\nid: cap_retentiondup_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T14:58:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Clipboard history should retain 90 days and survive upgrades.\nraw_text:\n  Clipboard history should retain 90 days and survive upgrades.\n\ncapture_2:\nid: cap_retentiondup_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:00:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Clipboard history needs to survive app upgrades for the full 90-day window.\nraw_text:\n  Clipboard history needs to survive app upgrades for the full 90-day window.\n\ncapture_3:\nid: cap_retentiondup_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:02:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Retention data is a durable user asset, not disposable cache.\nraw_text:\n  Retention data is a durable user asset, not disposable cache.\n\ncapture_4:\nid: cap_retentiondup_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:05:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: Do not tie clipboard history lifetime to bundle reinstall.\nraw_text:\n  Do not tie clipboard history lifetime to bundle reinstall. App upgrades and re-installs should not silently erase retained captures.\n\ncapture_5:\nid: cap_retentiondup_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:07:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Clipboard retention is a durable asset, not just temporary app cache.\nraw_text:\n  Clipboard retention is a durable asset, not just temporary app cache.\n\ncapture_6:\nid: cap_retentiondup_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T15:09:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Preview and production channels can differ, but retention semantics should not.\nraw_text:\n  Preview and production channels can differ, but retention semantics should not. The user's retained history is still the same long-lived asset.\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Only create a new topic when none of the listed topics is a reasonable broader home.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v2",
+  "provider": {
+    "baseUrl": "https://api.deepseek.com/v1",
+    "label": "deepseek:deepseek-chat",
+    "vendor": "deepseek"
+  },
+  "providerMetadata": {
+    "apiMode": "chat",
+    "durationMs": 17895,
+    "finishReason": "stop",
+    "inputTokens": 1904,
+    "model": "deepseek-chat",
+    "outputTokens": 387,
+    "providerLabel": "deepseek:deepseek-chat",
+    "responseModel": "deepseek-chat"
+  },
+  "rawResponseText": "```json\n{\n    \"clusters\": [\n        {\n            \"clusterId\": \"cluster_retention_durability_001\",\n            \"sourceIds\": [\"cap_retentiondup_001\", \"cap_retentiondup_002\", \"cap_retentiondup_003\", \"cap_retentiondup_004\", \"cap_retentiondup_005\", \"cap_retentiondup_006\"],\n            \"decision\": \"archive_to_topic\",\n            \"topicSlugSuggestion\": \"personal-knowledge-ops\",\n            \"topicNameSuggestion\": \"Personal Knowledge Ops\",\n            \"title\": \"Clipboard retention as a durable user asset\",\n            \"summary\": \"Multiple captures reinforce that clipboard history should be treated as a durable user asset, retaining data for 90 days and surviving app upgrades and reinstalls, not as disposable cache.\",\n            \"keyPoints\": [\n                \"Clipboard history should retain data for 90 days.\",\n                \"Retention must survive app upgrades and reinstalls.\",\n                \"Retention data is a durable user asset, not temporary app cache.\",\n                \"Retention semantics should be consistent across preview and production channels.\"\n            ],\n            \"tags\": [\"retention\", \"clipboard\", \"durable\", \"upgrade\", \"persistence\"],\n            \"confidence\": 0.95,\n            \"reason\": \"Cluster contains durable knowledge about retention semantics and persistence rules, which aligns with the 'Personal Knowledge Ops' topic covering durable capture retention and controlled persistence semantics. No owners, deadlines, or actionable tasks are present.\",\n            \"possibleTopics\": [\n                {\n                    \"topicSlug\": \"personal-knowledge-ops\",\n                    \"topicName\": \"Personal Knowledge Ops\",\n                    \"reason\": \"Directly covers rules for durable capture retention and controlled persistence semantics.\"\n                }\n            ],\n            \"missingContext\": []\n        }\n    ]\n}\n```",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_duplicate_near_duplicate_retention_001_96ae40eb",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_retention_semantics",
+        "overlapCount": 6,
+        "predictedClusterId": "cluster_retention_durability_001"
+      }
+    ],
+    "criticalFailures": [],
+    "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+    "metrics": {
+      "clusterPairwiseF1": 1,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      }
+    },
+    "overallScore": 0.8666666666666666,
+    "pairwiseCounts": {
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "truePositive": 15
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "rust-background-compiler",
+      "topicName": "Rust Background Compiler",
+      "topicSummary": "Rust-owned batch scheduling, retries, state machine transitions, background compile execution, and persistence control.",
+      "recentTags": [
+        "rust",
+        "compiler",
+        "batch",
+        "runtime"
+      ],
+      "lastUpdatedAt": "2026-04-19T10:05:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "weekly-product-ops",
+      "topicName": "Weekly Product Ops",
+      "topicSummary": "Recurring product meetings, owner assignments, release checklists, and near-term execution coordination.",
+      "recentTags": [
+        "meeting",
+        "owners",
+        "timeline",
+        "release"
+      ],
+      "lastUpdatedAt": "2026-04-19T05:50:00Z"
+    },
+    {
+      "topicSlug": "product-writing-playbook",
+      "topicName": "Product Writing Playbook",
+      "topicSummary": "Headline experiments, messaging structures, launch copy, and product narrative rules across surfaces.",
+      "recentTags": [
+        "copywriting",
+        "messaging",
+        "headline",
+        "launch"
+      ],
+      "lastUpdatedAt": "2026-04-17T14:40:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": true,
+  "validationErrors": []
+}
