@@ -193,9 +193,7 @@ pub fn normalize_home_chat_content(input: &str) -> String {
 }
 
 pub fn normalize_home_chat_optional_content(input: Option<&str>) -> Option<String> {
-    let normalized = input
-        .map(normalize_home_chat_content)
-        .unwrap_or_default();
+    let normalized = input.map(normalize_home_chat_content).unwrap_or_default();
 
     if normalized.is_empty() {
         None
@@ -225,6 +223,9 @@ fn collapse_whitespace(input: &str, limit: usize) -> String {
         return value;
     }
 
-    value = value.chars().take(limit.saturating_sub(1)).collect::<String>();
+    value = value
+        .chars()
+        .take(limit.saturating_sub(1))
+        .collect::<String>();
     format!("{value}…")
 }

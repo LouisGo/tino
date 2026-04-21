@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, fs, path::Path};
 use uuid::Uuid;
 
+use crate::ai::batch_store::load_stored_batches;
+use crate::ai::capability::background_compile_enabled;
 use crate::backend::clipboard_history::legacy::enforce_clipboard_retention;
 use crate::backend::clipboard_history::write::{
     persist_capture_preview, promote_capture_reuse_with_fallback,
 };
-use crate::ai::batch_store::load_stored_batches;
-use crate::ai::capability::background_compile_enabled;
 use crate::clipboard::preview::{build_capture_preview, should_persist_capture_history};
 use crate::clipboard::{
     preview::hydrate_capture_preview_assets,

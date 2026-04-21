@@ -24,7 +24,9 @@ impl AppState {
         &self,
         initial_user_message: &str,
     ) -> Result<HomeChatConversationDetail, String> {
-        let detail = self.chat_store()?.create_conversation(initial_user_message)?;
+        let detail = self
+            .chat_store()?
+            .create_conversation(initial_user_message)?;
         self.emit_home_chat_updated(HomeChatConversationsUpdated::conversation_created(
             detail.conversation.id.clone(),
         ));

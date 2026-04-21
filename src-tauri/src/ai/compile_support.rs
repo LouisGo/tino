@@ -118,10 +118,7 @@ fn extract_batch_terms(batch: &StoredBatchFile) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        ai::batch_store::StoredBatchFile,
-        clipboard::types::CaptureRecord,
-    };
+    use crate::{ai::batch_store::StoredBatchFile, clipboard::types::CaptureRecord};
 
     use super::{is_complex_batch, is_weak_placeholder_capture};
 

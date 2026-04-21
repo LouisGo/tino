@@ -1,8 +1,9 @@
 use crate::app_state::AppState;
 use crate::home_chat::{
-    AppendHomeChatUserMessageRequest, CreateHomeChatConversationRequest, HomeChatConversationDetail,
-    HomeChatConversationSummary, ReplaceLatestHomeChatAssistantMessageRequest,
-    RewriteLatestHomeChatUserMessageRequest, UpdateHomeChatConversationTitleRequest,
+    AppendHomeChatUserMessageRequest, CreateHomeChatConversationRequest,
+    HomeChatConversationDetail, HomeChatConversationSummary,
+    ReplaceLatestHomeChatAssistantMessageRequest, RewriteLatestHomeChatUserMessageRequest,
+    UpdateHomeChatConversationTitleRequest,
 };
 use crate::storage::interactive_chat_store::AssistantMessageUpdate;
 use tauri::State;
@@ -59,8 +60,10 @@ pub async fn append_home_chat_user_message(
     }
 
     let state = state.inner().clone();
-    run_blocking_command(move || state.append_home_chat_user_message(&conversation_id, &user_message))
-        .await
+    run_blocking_command(move || {
+        state.append_home_chat_user_message(&conversation_id, &user_message)
+    })
+    .await
 }
 
 #[tauri::command]

@@ -80,7 +80,9 @@ impl InteractiveChatStore {
         let message_id = Uuid::now_v7().to_string();
         let preview_text = build_home_chat_preview(&normalized_message);
         let mut connection = self.open_connection()?;
-        let tx = connection.transaction().map_err(|error| error.to_string())?;
+        let tx = connection
+            .transaction()
+            .map_err(|error| error.to_string())?;
 
         tx.execute(
             r#"
@@ -145,7 +147,9 @@ impl InteractiveChatStore {
         let normalized_message = normalize_home_chat_content(user_message);
         let now = now_rfc3339();
         let mut connection = self.open_connection()?;
-        let tx = connection.transaction().map_err(|error| error.to_string())?;
+        let tx = connection
+            .transaction()
+            .map_err(|error| error.to_string())?;
         let next_ordinal = self.next_message_ordinal(&tx, conversation_id)?;
 
         tx.execute(
@@ -198,11 +202,16 @@ impl InteractiveChatStore {
         let normalized_provider = normalize_home_chat_optional_content(assistant.provider_label);
         let normalized_response_model =
             normalize_home_chat_optional_content(assistant.response_model);
-        let preview_text = build_home_chat_preview(&normalized_content)
-            .or_else(|| normalized_error.as_ref().and_then(|value| build_home_chat_preview(value)));
+        let preview_text = build_home_chat_preview(&normalized_content).or_else(|| {
+            normalized_error
+                .as_ref()
+                .and_then(|value| build_home_chat_preview(value))
+        });
         let now = now_rfc3339();
         let mut connection = self.open_connection()?;
-        let tx = connection.transaction().map_err(|error| error.to_string())?;
+        let tx = connection
+            .transaction()
+            .map_err(|error| error.to_string())?;
         let latest_message = self.latest_message_meta(&tx, conversation_id)?;
 
         if matches!(
@@ -286,8 +295,11 @@ impl InteractiveChatStore {
         let normalized_message = normalize_home_chat_content(user_message);
         let now = now_rfc3339();
         let mut connection = self.open_connection()?;
-        let tx = connection.transaction().map_err(|error| error.to_string())?;
-        let latest_user = self.latest_user_message_meta(&tx, conversation_id)?
+        let tx = connection
+            .transaction()
+            .map_err(|error| error.to_string())?;
+        let latest_user = self
+            .latest_user_message_meta(&tx, conversation_id)?
             .ok_or_else(|| "No user message found for the conversation.".to_string())?;
 
         tx.execute(
@@ -467,7 +479,12 @@ impl InteractiveChatStore {
                 last_message_at = ?3
             WHERE id = ?4
             "#,
-            params![preview_text.as_deref(), message_count, timestamp, conversation_id],
+            params![
+                preview_text.as_deref(),
+                message_count,
+                timestamp,
+                conversation_id
+            ],
         )
         .map_err(|error| error.to_string())?;
 
@@ -492,7 +509,9 @@ impl InteractiveChatStore {
                 Ok(MessageMeta {
                     id: row.get(0)?,
                     ordinal: row.get(1)?,
-                    role: HomeChatMessageRole::from_storage_label(row.get::<_, String>(2)?.as_str()),
+                    role: HomeChatMessageRole::from_storage_label(
+                        row.get::<_, String>(2)?.as_str(),
+                    ),
                 })
             },
         )
@@ -518,7 +537,9 @@ impl InteractiveChatStore {
                 Ok(MessageMeta {
                     id: row.get(0)?,
                     ordinal: row.get(1)?,
-                    role: HomeChatMessageRole::from_storage_label(row.get::<_, String>(2)?.as_str()),
+                    role: HomeChatMessageRole::from_storage_label(
+                        row.get::<_, String>(2)?.as_str(),
+                    ),
                 })
             },
         )

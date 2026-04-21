@@ -182,7 +182,10 @@ fn process_batch_compile(
         &audit_event(
             Some(batch.id.clone()),
             BatchCompileRuntimeStatus::Running,
-            format!("background compiler started batch {} attempt {}", batch.id, attempt),
+            format!(
+                "background compiler started batch {} attempt {}",
+                batch.id, attempt
+            ),
         )?,
     )?;
 
@@ -335,12 +338,15 @@ fn persist_compiled_decisions(
             .source_capture_ids
             .iter()
             .map(|source_id| {
-                captures_by_id.get(source_id.as_str()).copied().ok_or_else(|| {
-                    AppError::internal(format!(
-                        "compile decision {} references missing source capture {}",
-                        decision.decision_id, source_id
-                    ))
-                })
+                captures_by_id
+                    .get(source_id.as_str())
+                    .copied()
+                    .ok_or_else(|| {
+                        AppError::internal(format!(
+                            "compile decision {} references missing source capture {}",
+                            decision.decision_id, source_id
+                        ))
+                    })
             })
             .collect::<AppResult<Vec<_>>>()?;
 
@@ -555,7 +561,10 @@ fn now_rfc3339() -> AppResult<String> {
 fn is_background_candidate_status(status: &str) -> bool {
     matches!(
         status.trim(),
-        BATCH_STATUS_PENDING_AI | BATCH_STATUS_READY | BATCH_STATUS_RUNNING | BATCH_STATUS_PERSISTING
+        BATCH_STATUS_PENDING_AI
+            | BATCH_STATUS_READY
+            | BATCH_STATUS_RUNNING
+            | BATCH_STATUS_PERSISTING
     )
 }
 
@@ -693,7 +702,11 @@ mod tests {
                 last_captured_at: "2026-04-13T12:00:00+08:00".into(),
                 source_ids: vec!["cap_text".into(), "cap_link".into()],
                 captures: vec![
-                    sample_capture("cap_text", "plain_text", "Rust background compile should persist real knowledge."),
+                    sample_capture(
+                        "cap_text",
+                        "plain_text",
+                        "Rust background compile should persist real knowledge.",
+                    ),
                     sample_capture("cap_link", "link", "https://example.com/reference"),
                 ],
             },
@@ -717,11 +730,17 @@ mod tests {
         let job = load_job(&root, "batch_topic")
             .expect("job should load")
             .expect("job should exist");
-        assert_eq!(job.status, crate::ai::contracts::BatchCompileJobStatus::Persisted);
+        assert_eq!(
+            job.status,
+            crate::ai::contracts::BatchCompileJobStatus::Persisted
+        );
         assert_eq!(job.persisted_writes.len(), 2);
 
         let runtime = load_or_bootstrap_runtime(&root).expect("runtime should load");
-        assert_eq!(runtime.status, crate::ai::contracts::BatchCompileRuntimeStatus::Idle);
+        assert_eq!(
+            runtime.status,
+            crate::ai::contracts::BatchCompileRuntimeStatus::Idle
+        );
 
         let _ = fs::remove_dir_all(root);
     }
@@ -754,7 +773,10 @@ mod tests {
         let job = load_job(&root, "batch_retry")
             .expect("job should load")
             .expect("job should exist");
-        assert_eq!(job.status, crate::ai::contracts::BatchCompileJobStatus::Failed);
+        assert_eq!(
+            job.status,
+            crate::ai::contracts::BatchCompileJobStatus::Failed
+        );
         assert_eq!(job.attempt, 1);
 
         let runtime = load_or_bootstrap_runtime(&root).expect("runtime should load");
@@ -833,21 +855,12 @@ mod tests {
             .next()
             .expect("topic file should exist");
         let topic_content = fs::read_to_string(topic_path).expect("topic file should read");
-        assert_eq!(
-            topic_content.matches("Source IDs: `cap_text`").count(),
-            1
-        );
+        assert_eq!(topic_content.matches("Source IDs: `cap_text`").count(), 1);
 
         let inbox_content =
             fs::read_to_string(single_inbox_file(&root)).expect("inbox file should read");
-        assert_eq!(
-            inbox_content
-                .matches("Source IDs: `cap_link`")
-                .count(),
-            1
-        );
+        assert_eq!(inbox_content.matches("Source IDs: `cap_link`").count(), 1);
 
         let _ = fs::remove_dir_all(root);
     }
-
 }
