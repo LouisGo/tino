@@ -20,18 +20,18 @@ use tauri_specta::Event as _;
 #[cfg(test)]
 use uuid::Uuid;
 
-mod link_metadata;
 mod chat;
+mod link_metadata;
 mod ocr;
 pub(crate) mod runtime;
 mod settings;
 mod shortcuts;
 
-use crate::app_idle::AppTaskScheduler;
 use crate::ai::{
     background_compiler::{has_background_compile_candidates, run_background_compile_cycle},
     capability::background_compile_enabled,
 };
+use crate::app_idle::AppTaskScheduler;
 use crate::backend::clipboard_history::legacy::{
     enforce_clipboard_retention, reconcile_clipboard_history as reconcile_clipboard_history_legacy,
 };
@@ -58,6 +58,7 @@ use crate::clipboard::types::{
 use crate::error::{AppError, AppResult};
 use crate::ipc_events::{AppSettingsChanged, ClipboardCapturesUpdated};
 use crate::runtime_profile;
+use crate::runtime_provider::validate_runtime_provider_profiles;
 use crate::storage::app_paths::bootstrap_durable_app_storage;
 use crate::storage::knowledge_root::ensure_knowledge_root_layout;
 use runtime::{
@@ -453,6 +454,7 @@ impl AppState {
         }
 
         let normalized = next.normalized(&self.shared.default_knowledge_root);
+        validate_runtime_provider_profiles(&normalized.runtime_provider_profiles)?;
         let next_revision = previous_settings.revision.saturating_add(1);
         let normalized = AppSettings {
             revision: next_revision,

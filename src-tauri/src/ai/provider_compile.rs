@@ -19,8 +19,8 @@ use crate::{
     error::{AppError, AppResult},
     locale::AppLocale,
     runtime_provider::{
-        RuntimeProviderProfile, RuntimeProviderVendor, DEFAULT_DEEPSEEK_CHAT_MODEL,
-        DEFAULT_DEEPSEEK_REASONER_MODEL,
+        validate_runtime_provider_profile, RuntimeProviderProfile, RuntimeProviderVendor,
+        DEFAULT_DEEPSEEK_CHAT_MODEL, DEFAULT_DEEPSEEK_REASONER_MODEL,
     },
 };
 
@@ -312,6 +312,8 @@ fn request_provider_json(
     system_prompt: &str,
     user_prompt: &str,
 ) -> AppResult<String> {
+    validate_runtime_provider_profile(profile)?;
+
     let base_url = profile.base_url.trim().trim_end_matches('/');
     if base_url.is_empty() {
         return Err(AppError::validation(

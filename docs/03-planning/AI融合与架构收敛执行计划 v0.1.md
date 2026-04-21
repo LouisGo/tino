@@ -45,13 +45,13 @@
 
 - [x] 将 `src-tauri/src/commands/ai.rs` 收敛为 IPC adapter
 - [x] 抽离 legacy review DTO / 持久化桥接 / Markdown 写入桥到 `src-tauri/src/ai/legacy_review.rs`
-- [ ] 明确 `ai_ops`、`background compiler`、`topic index`、`knowledge writer`、`feedback store` 依赖方向
+- [~] 明确 `ai_ops`、`background compiler`、`topic index`、`knowledge writer`、`feedback store` 依赖方向
 
 ### Phase 2. Capability 抽象统一
 
-状态：未开始
+状态：进行中
 
-- [ ] 对齐 Renderer `provider-access` 与 Rust `provider_compile` 的配置语义
+- [~] 对齐 Renderer `provider-access` 与 Rust `provider_compile` 的配置语义
 - [ ] 对齐模型选择、超时、错误模型、能力可用性表达
 - [ ] 明确哪些能力只允许 Renderer 用，哪些允许 Background Compiler 用
 
@@ -115,4 +115,8 @@
 - 已新增 `src-tauri/src/ai/legacy_review.rs` 承接 legacy review DTO、bridge 与持久化桥接逻辑
 - 已同步 `技术冻结记录` 与 `Tino AI Rethink 与模块开发基线 v1`
 - 已通过 `cargo check`、`pnpm gen:bindings`、`pnpm typecheck`
-- 当前下一步：继续明确 `legacy review` 与 `background compiler / ai_ops` 的模块边界，并补 `graphify` 与后续 provider capability 收敛
+- 已将 `get_topic_index_entries` 从 legacy review surface 挪到 `ai_ops`，收敛其模块归属
+- 已新增 `src-tauri/src/ai/ops.rs`，将 `ai_ops` 读写逻辑从 command adapter 下沉到领域模块
+- 已将 Runtime Provider 配置校验下沉到 Rust authoritative save path：保存设置时会统一拒绝 `非 HTTPS baseUrl`、`带 credentials 的 baseUrl`、`model 内空白`、`apiKey 内空白`、`过短 apiKey`
+- 后台 capability 可用性判断现在与 Rust provider 校验共享同一套标准，避免设置页 UX 校验与 Rust background compiler 长期双轨漂移
+- 当前下一步：继续对齐 `Renderer provider-access` 与 `Rust provider_compile` 的模型选择、超时和错误语义，并补 `graphify` 与整体验证收口

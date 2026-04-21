@@ -1,13 +1,17 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::collections::HashSet;
+use url::Url;
 use uuid::Uuid;
+
+use crate::error::{AppError, AppResult};
 
 pub const DEFAULT_OPENAI_PROVIDER_BASE_URL: &str = "https://api.openai.com/v1";
 pub const DEFAULT_DEEPSEEK_PROVIDER_BASE_URL: &str = "https://api.deepseek.com/v1";
 pub const DEFAULT_OPENAI_PROVIDER_MODEL: &str = "gpt-5.4";
 pub const DEFAULT_DEEPSEEK_CHAT_MODEL: &str = "deepseek-chat";
 pub const DEFAULT_DEEPSEEK_REASONER_MODEL: &str = "deepseek-reasoner";
+const RUNTIME_PROVIDER_MIN_API_KEY_LEN: usize = 12;
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -59,8 +63,12 @@ impl RuntimeProviderProfile {
         self
     }
 
+    pub fn validate(&self) -> AppResult<()> {
+        validate_runtime_provider_profile(self)
+    }
+
     pub fn is_configured(&self) -> bool {
-        !self.api_key.trim().is_empty()
+        !self.api_key.trim().is_empty() && self.validate().is_ok()
     }
 
     pub fn effective_model(&self) -> String {
@@ -133,6 +141,18 @@ pub fn resolve_active_runtime_provider_id(
         .unwrap_or_else(generate_runtime_provider_profile_id)
 }
 
+pub fn validate_runtime_provider_profiles(profiles: &[RuntimeProviderProfile]) -> AppResult<()> {
+    for (index, profile) in profiles.iter().enumerate() {
+        validate_runtime_provider_profile_with_context(profile, index + 1)?;
+    }
+
+    Ok(())
+}
+
+pub fn validate_runtime_provider_profile(profile: &RuntimeProviderProfile) -> AppResult<()> {
+    validate_runtime_provider_profile_with_context(profile, 1)
+}
+
 pub fn infer_runtime_provider_vendor(base_url: &str, model: &str) -> RuntimeProviderVendor {
     if is_deepseek_runtime_provider_model(model) {
         return RuntimeProviderVendor::Deepseek;
@@ -144,9 +164,7 @@ pub fn infer_runtime_provider_vendor(base_url: &str, model: &str) -> RuntimeProv
     }
 }
 
-pub fn resolve_runtime_provider_effective_model(
-    profile: &RuntimeProviderProfile,
-) -> String {
+pub fn resolve_runtime_provider_effective_model(profile: &RuntimeProviderProfile) -> String {
     let trimmed_model = profile.model.trim();
     if trimmed_model.is_empty() {
         profile.vendor.default_model().to_string()
@@ -181,6 +199,10 @@ fn normalize_runtime_provider_base_url(value: &str, vendor: RuntimeProviderVendo
     trimmed_value.to_string()
 }
 
+fn normalize_runtime_provider_api_key(value: &str) -> String {
+    value.trim().to_string()
+}
+
 fn normalize_runtime_provider_model(value: &str) -> String {
     value.trim().to_string()
 }
@@ -209,4 +231,172 @@ fn runtime_provider_host(base_url: &str) -> Option<&str> {
         .trim();
 
     (!host.is_empty()).then_some(host)
+}
+
+fn validate_runtime_provider_profile_with_context(
+    profile: &RuntimeProviderProfile,
+    index: usize,
+) -> AppResult<()> {
+    let profile_context = runtime_provider_profile_context(profile, index);
+    let base_url = normalize_runtime_provider_base_url(&profile.base_url, profile.vendor);
+    let api_key = normalize_runtime_provider_api_key(&profile.api_key);
+    let model = normalize_runtime_provider_model(&profile.model);
+
+    validate_runtime_provider_base_url(&base_url, &profile_context)?;
+    validate_runtime_provider_model(&model, &profile_context)?;
+    validate_runtime_provider_api_key(&api_key, &profile_context)?;
+    Ok(())
+}
+
+fn runtime_provider_profile_context(profile: &RuntimeProviderProfile, index: usize) -> String {
+    let trimmed_name = profile.name.trim();
+    if trimmed_name.is_empty() {
+        format!("runtime provider #{index}")
+    } else {
+        format!("runtime provider \"{trimmed_name}\"")
+    }
+}
+
+fn validate_runtime_provider_base_url(base_url: &str, profile_context: &str) -> AppResult<()> {
+    let parsed_url = Url::parse(base_url).map_err(|_| {
+        AppError::validation(format!("{profile_context} baseUrl must be a valid URL"))
+    })?;
+
+    if parsed_url.scheme() != "https" {
+        return Err(AppError::validation(format!(
+            "{profile_context} baseUrl must use https"
+        )));
+    }
+
+    if !parsed_url.username().is_empty() || parsed_url.password().is_some() {
+        return Err(AppError::validation(format!(
+            "{profile_context} baseUrl cannot include credentials"
+        )));
+    }
+
+    Ok(())
+}
+
+fn validate_runtime_provider_model(model: &str, profile_context: &str) -> AppResult<()> {
+    if model.is_empty() {
+        return Ok(());
+    }
+
+    if model.chars().any(char::is_whitespace) {
+        return Err(AppError::validation(format!(
+            "{profile_context} model cannot contain whitespace"
+        )));
+    }
+
+    Ok(())
+}
+
+fn validate_runtime_provider_api_key(api_key: &str, profile_context: &str) -> AppResult<()> {
+    if api_key.is_empty() {
+        return Ok(());
+    }
+
+    if api_key.chars().any(char::is_whitespace) {
+        return Err(AppError::validation(format!(
+            "{profile_context} apiKey cannot contain whitespace"
+        )));
+    }
+
+    if api_key.chars().count() < RUNTIME_PROVIDER_MIN_API_KEY_LEN {
+        return Err(AppError::validation(format!(
+            "{profile_context} apiKey must be at least {RUNTIME_PROVIDER_MIN_API_KEY_LEN} characters"
+        )));
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        default_runtime_provider_profile, validate_runtime_provider_profile,
+        validate_runtime_provider_profiles, RuntimeProviderVendor,
+    };
+
+    #[test]
+    fn rejects_non_https_runtime_provider_base_url() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.base_url = "http://api.openai.com/v1".into();
+
+        let error = validate_runtime_provider_profile(&profile).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "runtime provider \"Provider 1\" baseUrl must use https"
+        );
+    }
+
+    #[test]
+    fn rejects_runtime_provider_base_url_with_credentials() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.base_url = "https://user:secret@api.openai.com/v1".into();
+
+        let error = validate_runtime_provider_profile(&profile).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "runtime provider \"Provider 1\" baseUrl cannot include credentials"
+        );
+    }
+
+    #[test]
+    fn rejects_runtime_provider_model_with_whitespace() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.model = "gpt 5.4".into();
+
+        let error = validate_runtime_provider_profile(&profile).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "runtime provider \"Provider 1\" model cannot contain whitespace"
+        );
+    }
+
+    #[test]
+    fn rejects_runtime_provider_api_key_with_whitespace() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.api_key = "sk-test-1234 5678".into();
+
+        let error = validate_runtime_provider_profile(&profile).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "runtime provider \"Provider 1\" apiKey cannot contain whitespace"
+        );
+    }
+
+    #[test]
+    fn rejects_runtime_provider_api_key_that_is_too_short() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.api_key = "short-key".into();
+
+        let error = validate_runtime_provider_profile(&profile).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "runtime provider \"Provider 1\" apiKey must be at least 12 characters"
+        );
+    }
+
+    #[test]
+    fn accepts_normalized_runtime_provider_profiles() {
+        let mut openai = default_runtime_provider_profile(1);
+        openai.api_key = "  sk-test-12345678901234567890  ".into();
+        openai.base_url = " https://api.openai.com/v1/ ".into();
+        openai.model = " gpt-5.4-mini ".into();
+
+        let mut deepseek = default_runtime_provider_profile(2);
+        deepseek.vendor = RuntimeProviderVendor::Deepseek;
+        deepseek.name = "DeepSeek".into();
+        deepseek.api_key = "sk-test-abcdefghijklmnop".into();
+        deepseek.base_url = "https://api.deepseek.com/v1".into();
+        deepseek.model = "deepseek-chat".into();
+
+        let profiles = vec![
+            openai.normalized("Provider 1"),
+            deepseek.normalized("Provider 2"),
+        ];
+
+        validate_runtime_provider_profiles(&profiles).expect("profiles should validate");
+    }
 }
