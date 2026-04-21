@@ -173,6 +173,11 @@ pub fn resolve_runtime_provider_effective_model(profile: &RuntimeProviderProfile
     }
 }
 
+pub fn uses_deepseek_background_compile_models(profile: &RuntimeProviderProfile) -> bool {
+    profile.vendor == RuntimeProviderVendor::Deepseek
+        || is_deepseek_runtime_provider_model(&resolve_runtime_provider_effective_model(profile))
+}
+
 fn default_runtime_provider_profile_name(index: usize) -> String {
     format!("Provider {index}")
 }
@@ -211,7 +216,7 @@ fn generate_runtime_provider_profile_id() -> String {
     format!("provider_{}", Uuid::now_v7().simple())
 }
 
-fn is_deepseek_runtime_provider_model(value: &str) -> bool {
+pub fn is_deepseek_runtime_provider_model(value: &str) -> bool {
     value.trim().to_lowercase().starts_with("deepseek-")
 }
 
@@ -314,8 +319,9 @@ fn validate_runtime_provider_api_key(api_key: &str, profile_context: &str) -> Ap
 #[cfg(test)]
 mod tests {
     use super::{
-        default_runtime_provider_profile, validate_runtime_provider_profile,
-        validate_runtime_provider_profiles, RuntimeProviderVendor,
+        default_runtime_provider_profile, uses_deepseek_background_compile_models,
+        validate_runtime_provider_profile, validate_runtime_provider_profiles,
+        RuntimeProviderVendor,
     };
 
     #[test]
@@ -398,5 +404,24 @@ mod tests {
         ];
 
         validate_runtime_provider_profiles(&profiles).expect("profiles should validate");
+    }
+
+    #[test]
+    fn explicit_deepseek_model_enables_deepseek_background_compile_mode() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.vendor = RuntimeProviderVendor::Openai;
+        profile.model = "deepseek-chat".into();
+
+        assert!(uses_deepseek_background_compile_models(&profile));
+    }
+
+    #[test]
+    fn host_alone_does_not_switch_background_compile_to_deepseek_models() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.vendor = RuntimeProviderVendor::Openai;
+        profile.base_url = "https://api.deepseek.com/v1".into();
+        profile.model = String::new();
+
+        assert!(!uses_deepseek_background_compile_models(&profile));
     }
 }

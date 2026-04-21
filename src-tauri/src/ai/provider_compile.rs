@@ -20,8 +20,9 @@ use crate::{
     error::{AppError, AppResult},
     locale::AppLocale,
     runtime_provider::{
-        validate_runtime_provider_profile, RuntimeProviderProfile, RuntimeProviderVendor,
-        DEFAULT_DEEPSEEK_CHAT_MODEL, DEFAULT_DEEPSEEK_REASONER_MODEL,
+        uses_deepseek_background_compile_models, validate_runtime_provider_profile,
+        RuntimeProviderProfile, RuntimeProviderVendor, DEFAULT_DEEPSEEK_CHAT_MODEL,
+        DEFAULT_DEEPSEEK_REASONER_MODEL,
     },
 };
 
@@ -1365,7 +1366,7 @@ fn select_background_compile_model(
     profile: &RuntimeProviderProfile,
     batch: &StoredBatchFile,
 ) -> SelectedModel {
-    if profile.vendor != RuntimeProviderVendor::Deepseek {
+    if !uses_deepseek_background_compile_models(profile) {
         return SelectedModel {
             model: profile.effective_model(),
         };
@@ -1383,14 +1384,18 @@ fn select_background_compile_model(
 fn build_source_label(profile: &RuntimeProviderProfile, model: &str) -> String {
     let provider_name = profile.name.trim();
     if provider_name.is_empty() {
-        format!("{} · {model}", provider_vendor_label(profile.vendor))
+        format!("{} · {model}", provider_vendor_label(profile))
     } else {
         format!("{provider_name} · {model}")
     }
 }
 
-fn provider_vendor_label(vendor: RuntimeProviderVendor) -> &'static str {
-    match vendor {
+fn provider_vendor_label(profile: &RuntimeProviderProfile) -> &'static str {
+    if uses_deepseek_background_compile_models(profile) {
+        return "DeepSeek";
+    }
+
+    match profile.vendor {
         RuntimeProviderVendor::Openai => "OpenAI",
         RuntimeProviderVendor::Deepseek => "DeepSeek",
     }
@@ -1651,8 +1656,7 @@ mod tests {
     use super::{
         normalize_provider_decisions, normalize_provider_response_parse_error,
         sanitize_capture_text_for_prompt, select_background_compile_model,
-        should_discard_locally_as_sensitive,
-        Value,
+        should_discard_locally_as_sensitive, Value,
     };
 
     fn sample_capture(id: &str, content_kind: &str, raw_text: &str) -> CaptureRecord {
@@ -1691,6 +1695,17 @@ mod tests {
         }
     }
 
+    fn explicit_deepseek_model_profile() -> RuntimeProviderProfile {
+        RuntimeProviderProfile {
+            id: "provider_2".into(),
+            name: "Relay".into(),
+            vendor: RuntimeProviderVendor::Openai,
+            base_url: "https://example.com/v1".into(),
+            api_key: "sk-test-12345678901234567890".into(),
+            model: "deepseek-chat".into(),
+        }
+    }
+
     #[test]
     fn complex_batches_use_reasoner() {
         let batch = StoredBatchFile {
@@ -1710,6 +1725,29 @@ mod tests {
 
         assert_eq!(
             select_background_compile_model(&deepseek_profile(), &batch).model,
+            "deepseek-reasoner"
+        );
+    }
+
+    #[test]
+    fn explicit_deepseek_model_uses_reasoner_even_when_vendor_stays_openai() {
+        let batch = StoredBatchFile {
+            id: "batch_1b".into(),
+            status: "ready".into(),
+            created_at: "2026-04-13T12:00:00+08:00".into(),
+            trigger_reason: "capture_count".into(),
+            capture_count: 2,
+            first_captured_at: "2026-04-13T12:00:00+08:00".into(),
+            last_captured_at: "2026-04-13T12:01:00+08:00".into(),
+            source_ids: vec!["cap_1".into(), "cap_2".into()],
+            captures: vec![
+                sample_capture("cap_1", "rich_text", "Line 1\nLine 2"),
+                sample_capture("cap_2", "link", "https://example.com"),
+            ],
+        };
+
+        assert_eq!(
+            select_background_compile_model(&explicit_deepseek_model_profile(), &batch).model,
             "deepseek-reasoner"
         );
     }

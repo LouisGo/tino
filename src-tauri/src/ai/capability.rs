@@ -15,7 +15,7 @@ use crate::{
     },
     app_state::AppSettings,
     error::{AppError, AppResult},
-    runtime_provider::RuntimeProviderProfile,
+    runtime_provider::{uses_deepseek_background_compile_models, RuntimeProviderProfile},
 };
 
 #[cfg(test)]
@@ -40,13 +40,10 @@ pub fn resolve_background_compile_capability(settings: &AppSettings) -> AiCapabi
         .unwrap_or(false);
 
     if let Some(provider) = active_provider.filter(|provider| provider.is_configured()) {
-        let source_reason = match provider.vendor {
-            crate::runtime_provider::RuntimeProviderVendor::Deepseek => {
-                "Background compile uses the active DeepSeek profile and auto-selects deepseek-chat for simple batches or deepseek-reasoner for complex batches."
-            }
-            crate::runtime_provider::RuntimeProviderVendor::Openai => {
-                "Background compile uses the active provider profile over the OpenAI-compatible chat completions API."
-            }
+        let source_reason = if uses_deepseek_background_compile_models(provider) {
+            "Background compile uses the active DeepSeek-compatible profile and auto-selects deepseek-chat for simple batches or deepseek-reasoner for complex batches."
+        } else {
+            "Background compile uses the active provider profile over the OpenAI-compatible chat completions API."
         };
 
         return AiCapabilitySnapshot {
@@ -449,6 +446,35 @@ mod tests {
         assert_eq!(
             capability.background_source_kind,
             BackgroundCompileSourceKind::ProviderProfile
+        );
+    }
+
+    #[test]
+    fn explicit_deepseek_model_marks_capability_as_deepseek_compatible() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.name = "Relay".into();
+        profile.vendor = crate::runtime_provider::RuntimeProviderVendor::Openai;
+        profile.api_key = "sk-test-12345678901234567890".into();
+        profile.model = "deepseek-chat".into();
+        let settings = AppSettings {
+            revision: 0,
+            knowledge_root: "/tmp/tino-tests".into(),
+            runtime_provider_profiles: vec![profile.clone()],
+            active_runtime_provider_id: profile.id,
+            locale_preference: AppLocalePreference::default(),
+            clipboard_history_days: 7,
+            clipboard_capture_enabled: true,
+            clipboard_excluded_source_apps: Vec::new(),
+            clipboard_excluded_keywords: Vec::new(),
+            shortcut_overrides: Default::default(),
+        };
+
+        let capability = resolve_background_compile_capability(&settings);
+        assert_eq!(
+            capability.background_source_reason.as_deref(),
+            Some(
+                "Background compile uses the active DeepSeek-compatible profile and auto-selects deepseek-chat for simple batches or deepseek-reasoner for complex batches."
+            )
         );
     }
 
