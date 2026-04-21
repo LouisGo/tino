@@ -5,15 +5,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { queryKeys } from "@/app/query-keys"
 import type { FloatingFeedbackStatus } from "@/components/feedback/floating-feedback-card"
-import { buildMockBatchReview } from "@/features/ai/lib/mock-review"
+import { buildMockBatchReview } from "./mock-review"
 import { resolveProviderAccessConfig, type ProviderCallMetadata } from "@/features/ai/lib/provider-access"
 import { isMockAiBatchId } from "@/features/ai/lib/mock-fixtures"
-import { transitionBatchRuntimeState } from "@/features/ai/runtime/batch-state-machine"
+import { transitionBatchRuntimeState } from "./batch-state-machine"
 import {
   isLiveBatchReviewError,
   runLiveBatchReview,
   type LiveBatchReviewProgress,
-} from "@/features/ai/runtime/live-batch-review"
+} from "./live-batch-review"
 import { resolveActiveRuntimeProvider } from "@/features/settings/lib/runtime-provider"
 import { usePersistedAppSettings } from "@/hooks/use-persisted-app-settings"
 import { createRendererLogger } from "@/lib/logger"

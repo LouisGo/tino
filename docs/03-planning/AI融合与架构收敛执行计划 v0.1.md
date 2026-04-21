@@ -57,10 +57,10 @@
 
 ### Phase 3. Legacy Review 降级
 
-状态：未开始
+状态：进行中
 
-- [ ] 将 `batch-review-engine` 与 `ai-quality replay` 明确收敛为 benchmark/tooling
-- [ ] 不再让 review DTO 成为主产品语义中心
+- [~] 将 `batch-review-engine` 与 `ai-quality replay` 明确收敛为 benchmark/tooling
+- [~] 不再让 review DTO 成为主产品语义中心
 - [ ] 把 legacy bridge 与主 runtime 的共享逻辑统一到 Rust helper
 
 ### Phase 4. AI Ops 补齐
@@ -122,4 +122,5 @@
 - 当 active provider 配置无效时，Rust capability snapshot / compile refusal 现在会直接返回权威失败原因，不再只给泛化的“provider 未配置”文案
 - Rust background compile 的 provider 错误语义已开始向 Renderer `provider-access` 收敛：超时与非 JSON 响应现在会返回更明确的配置/兼容性排障文案，并在根路径 relay 场景给出 `/v1` 提示
 - Rust background compile 对 DeepSeek 语义的判断不再只依赖 `vendor`：显式 `deepseek-* model` 现在也会触发 DeepSeek 背景编译选模与 capability reason；仅 `host` 指向 DeepSeek 不会偷偷改写默认模型
-- 当前下一步：继续对齐 `Renderer provider-access` 与 `Rust provider_compile` 的模型选择、超时和错误语义，并补 `graphify` 与整体验证收口
+- Renderer legacy `/ai review` 相关模块已整体重定位到 `src/features/ai/legacy-review/`，将 `review workspace / batch-review-engine / live-batch-review / batch-state-machine / mock-review` 从默认 AI 语义中心降级为显式 legacy tooling
+- 当前下一步：继续处理 `ai-quality replay` 与其它 review-first 资产的 tooling 化，并开始补 AI Ops 对 Rust-owned runtime / write / feedback 信息的消费入口

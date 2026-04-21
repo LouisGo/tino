@@ -3,7 +3,7 @@ import {
   type ModelBatchDecision,
   modelBatchDecisionSchema,
 } from "../schemas/model-output"
-import { buildBatchDecisionReview } from "../runtime/batch-review-engine"
+import { buildBatchDecisionReview } from "./batch-review-engine"
 
 export function buildMockBatchReview(payload: AiBatchPayload) {
   const parsed = modelBatchDecisionSchema.parse(buildMockModelOutput(payload))

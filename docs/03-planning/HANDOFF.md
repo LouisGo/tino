@@ -1,7 +1,7 @@
 # Tino Handoff
 
 > 最后更新：2026-04-21
-> 当前基线提交：`40bcef9` + working tree deepseek compatibility convergence
+> 当前基线提交：`d2df632` + working tree legacy-review relocation
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
 
@@ -66,6 +66,7 @@
 - 当 active provider 配置无效时，AI capability snapshot 与 background compile refusal 现在会返回 Rust 侧权威失败原因，方便后续 AI Ops 与设置排障直接消费
 - Rust background compile 对 provider timeout / non-JSON response 的报错已开始向 Renderer `provider-access` 收敛；当 relay baseUrl 设在根路径时，错误会明确提示尝试补 `/v1`
 - Rust background compile 对 DeepSeek 兼容语义的判断现在会吸收显式 `deepseek-* model` 信号，而不是只看 `vendor`；但仅 host 命中 DeepSeek 不会静默替换默认模型，避免后台与交互式配置语义再次漂移
+- Renderer 侧 legacy `/ai review` 模块现已整体收敛到 `src/features/ai/legacy-review/`；`ai-review-page.tsx` 仍保留为 legacy tooling surface，但 review-first 逻辑不再占据 `features/ai` 的默认结构中心
 - provider-bound background compile 现在会先做最小本地安全防护：明显 token / credential capture 先本地丢弃，不进入外部模型请求
 - provider-bound background compile 现在也会做最小落库质量守门：输出语言跟随当前 `localePreference`，topic 复用时允许保留原 slug 但按当前 locale 更新显示名；单条祝福/鸡汤不直接入 `topic`，明显 OCR 乱码片段直接丢弃
 - 后台 compile 的 queue / batch gate 已切到 capability boundary；当前没有可用 provider-backed background capability 时会停在 `AwaitingCapability`

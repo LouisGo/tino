@@ -36,9 +36,9 @@ import { AiWorkInProgressBadge } from "@/features/ai/components/ai-work-in-progr
 import {
   useAiReviewWorkspace,
   type ValueFeedback,
-} from "@/features/ai/hooks/use-ai-review-workspace"
+} from "@/features/ai/legacy-review/use-ai-review-workspace"
 import { isMockAiBatchId } from "@/features/ai/lib/mock-fixtures"
-import { formatBatchRuntimeStateLabel } from "@/features/ai/runtime/batch-state-machine"
+import { formatBatchRuntimeStateLabel } from "@/features/ai/legacy-review/batch-state-machine"
 import { getAiBatchPayload, getReadyAiBatches } from "@/lib/tauri-ai"
 import { formatRelativeTimestamp } from "@/lib/time"
 import type {
@@ -79,6 +79,8 @@ const feedbackReasonOptions = [
   "Saved time",
   "Need more context",
 ] as const
+
+// Legacy review-first tooling surface kept for debugging and benchmark calibration.
 
 export function AiReviewPage() {
   const [requestedBatchId, setRequestedBatchId] = useState<string | null>(null)
