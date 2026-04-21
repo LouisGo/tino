@@ -157,12 +157,6 @@ impl AppSettings {
             .find(|profile| profile.id == self.active_runtime_provider_id)
             .or_else(|| self.runtime_provider_profiles.first())
     }
-
-    pub(super) fn ai_enabled(&self) -> bool {
-        self.active_runtime_provider()
-            .map(|provider| provider.is_configured())
-            .unwrap_or(false)
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

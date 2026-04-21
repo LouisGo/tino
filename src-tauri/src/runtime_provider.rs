@@ -5,6 +5,9 @@ use uuid::Uuid;
 
 pub const DEFAULT_OPENAI_PROVIDER_BASE_URL: &str = "https://api.openai.com/v1";
 pub const DEFAULT_DEEPSEEK_PROVIDER_BASE_URL: &str = "https://api.deepseek.com/v1";
+pub const DEFAULT_OPENAI_PROVIDER_MODEL: &str = "gpt-5.4";
+pub const DEFAULT_DEEPSEEK_CHAT_MODEL: &str = "deepseek-chat";
+pub const DEFAULT_DEEPSEEK_REASONER_MODEL: &str = "deepseek-reasoner";
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -19,6 +22,13 @@ impl RuntimeProviderVendor {
         match self {
             Self::Openai => DEFAULT_OPENAI_PROVIDER_BASE_URL,
             Self::Deepseek => DEFAULT_DEEPSEEK_PROVIDER_BASE_URL,
+        }
+    }
+
+    pub fn default_model(self) -> &'static str {
+        match self {
+            Self::Openai => DEFAULT_OPENAI_PROVIDER_MODEL,
+            Self::Deepseek => DEFAULT_DEEPSEEK_CHAT_MODEL,
         }
     }
 }
@@ -51,6 +61,10 @@ impl RuntimeProviderProfile {
 
     pub fn is_configured(&self) -> bool {
         !self.api_key.trim().is_empty()
+    }
+
+    pub fn effective_model(&self) -> String {
+        resolve_runtime_provider_effective_model(self)
     }
 }
 
@@ -127,6 +141,17 @@ pub fn infer_runtime_provider_vendor(base_url: &str, model: &str) -> RuntimeProv
     match runtime_provider_host(base_url) {
         Some("api.deepseek.com") => RuntimeProviderVendor::Deepseek,
         _ => RuntimeProviderVendor::Openai,
+    }
+}
+
+pub fn resolve_runtime_provider_effective_model(
+    profile: &RuntimeProviderProfile,
+) -> String {
+    let trimmed_model = profile.model.trim();
+    if trimmed_model.is_empty() {
+        profile.vendor.default_model().to_string()
+    } else {
+        trimmed_model.to_string()
     }
 }
 

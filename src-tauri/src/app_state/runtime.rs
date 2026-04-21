@@ -7,6 +7,8 @@ use crate::backend::clipboard_history::legacy::enforce_clipboard_retention;
 use crate::backend::clipboard_history::write::{
     persist_capture_preview, promote_capture_reuse_with_fallback,
 };
+use crate::ai::batch_store::load_stored_batches;
+use crate::ai::capability::background_compile_enabled;
 use crate::clipboard::preview::{build_capture_preview, should_persist_capture_history};
 use crate::clipboard::{
     preview::hydrate_capture_preview_assets,
@@ -15,8 +17,7 @@ use crate::clipboard::{
 use crate::ipc_events::ClipboardCapturesUpdated;
 use crate::storage::capture_history_store::CaptureHistoryUpsert;
 use crate::storage::knowledge_root::{
-    batch_file_path, batches_dir_path, ensure_knowledge_root_layout, queue_file_path,
-    runtime_file_path,
+    batch_file_path, ensure_knowledge_root_layout, queue_file_path, runtime_file_path,
 };
 
 use super::{
@@ -169,7 +170,7 @@ pub(super) fn enqueue_capture(
     Ok(queue_depth)
 }
 
-pub(super) fn queue_depth_for_root(knowledge_root: &Path) -> Result<usize, String> {
+pub(crate) fn queue_depth_for_root(knowledge_root: &Path) -> Result<usize, String> {
     Ok(load_queue_state(knowledge_root)?.pending.len())
 }
 
@@ -221,31 +222,15 @@ pub(super) fn build_batch_file(
     })
 }
 
-pub(super) fn count_ready_batches(knowledge_root: &Path) -> Result<usize, String> {
-    let batches_dir = batches_dir_path(knowledge_root);
-    if !batches_dir.exists() {
-        return Ok(0);
-    }
-
-    let entries = fs::read_dir(batches_dir).map_err(|error| error.to_string())?;
-    let mut count = 0;
-
-    for entry in entries {
-        let entry = entry.map_err(|error| error.to_string())?;
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-            continue;
-        }
-
-        let bytes = fs::read(&path).map_err(|error| error.to_string())?;
-        let batch =
-            serde_json::from_slice::<BatchFile>(&bytes).map_err(|error| error.to_string())?;
-        if matches!(batch.status.trim(), "pending_ai" | "ready") {
-            count += 1;
-        }
-    }
-
-    Ok(count)
+pub(crate) fn count_ready_batches(knowledge_root: &Path) -> Result<usize, String> {
+    load_stored_batches(knowledge_root)
+        .map(|batches| {
+            batches
+                .into_iter()
+                .filter(|batch| matches!(batch.status.trim(), "pending_ai" | "ready"))
+                .count()
+        })
+        .map_err(|error| error.to_string())
 }
 
 pub(super) fn parse_captured_at(captured_at: &str) -> Result<DateTime<FixedOffset>, String> {
@@ -359,6 +344,10 @@ impl AppState {
             self.emit_clipboard_updated(ClipboardCapturesUpdated::runtime_state_changed());
         }
 
+        if ready_batch_count > 0 {
+            self.request_background_compile();
+        }
+
         Ok(())
     }
 
@@ -370,7 +359,7 @@ impl AppState {
         let mut queue_state = ensure_queue_state(&knowledge_root)?;
         let ready_batch_count_before = count_ready_batches(&knowledge_root)?;
 
-        if !settings.ai_enabled() {
+        if !background_compile_enabled(&settings) {
             self.update_runtime_batch_metrics(
                 queue_state.pending.len(),
                 ready_batch_count_before,
@@ -661,5 +650,74 @@ impl AppState {
         ensure_knowledge_root_layout(&knowledge_root)?;
         let runtime_path = runtime_file_path(&knowledge_root);
         write_json_file(&runtime_path, &runtime)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use serde_json::json;
+    use uuid::Uuid;
+
+    use crate::storage::knowledge_root::{batch_file_path, ensure_knowledge_root_layout};
+
+    use super::count_ready_batches;
+
+    fn unique_root() -> std::path::PathBuf {
+        std::env::temp_dir().join(format!(
+            "tino-app-runtime-tests-{}",
+            Uuid::now_v7().simple()
+        ))
+    }
+
+    #[test]
+    fn count_ready_batches_accepts_manual_replay_batches() {
+        let root = unique_root();
+        ensure_knowledge_root_layout(&root).expect("knowledge root should initialize");
+
+        let batch = json!({
+            "id": "batch_manual_replay",
+            "status": "ready",
+            "createdAt": "2026-04-14T01:30:00+08:00",
+            "triggerReason": "manual_replay",
+            "captureCount": 1,
+            "firstCapturedAt": "2026-04-14T01:20:00+08:00",
+            "lastCapturedAt": "2026-04-14T01:20:00+08:00",
+            "sourceIds": ["cap_1"],
+            "captures": [{
+                "id": "cap_1",
+                "source": "clipboard",
+                "sourceAppName": "Arc",
+                "sourceAppBundleId": "company.thebrowser.Browser",
+                "sourceAppIconPath": null,
+                "capturedAt": "2026-04-14T01:20:00+08:00",
+                "contentKind": "plain_text",
+                "rawText": "manual replay batch",
+                "rawRich": null,
+                "rawRichFormat": null,
+                "linkUrl": null,
+                "linkMetadata": null,
+                "assetPath": null,
+                "thumbnailPath": null,
+                "imageWidth": null,
+                "imageHeight": null,
+                "byteSize": null,
+                "hash": "hash-cap-1"
+            }]
+        });
+
+        fs::write(
+            batch_file_path(&root, "batch_manual_replay"),
+            serde_json::to_vec_pretty(&batch).expect("batch should serialize"),
+        )
+        .expect("batch should write");
+
+        assert_eq!(
+            count_ready_batches(&root).expect("batch count should load"),
+            1
+        );
+
+        fs::remove_dir_all(root).expect("temp root should clean up");
     }
 }

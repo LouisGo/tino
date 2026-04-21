@@ -1,3 +1,4 @@
+mod ai;
 mod app_idle;
 mod app_state;
 mod backend;

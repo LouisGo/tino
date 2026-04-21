@@ -7,8 +7,13 @@ use specta::Type;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     fs, mem,
+    panic::AssertUnwindSafe,
     path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    thread,
 };
 use tauri::{AppHandle, Manager};
 use tauri_specta::Event as _;
@@ -18,11 +23,15 @@ use uuid::Uuid;
 mod link_metadata;
 mod chat;
 mod ocr;
-mod runtime;
+pub(crate) mod runtime;
 mod settings;
 mod shortcuts;
 
 use crate::app_idle::AppTaskScheduler;
+use crate::ai::{
+    background_compiler::{has_background_compile_candidates, run_background_compile_cycle},
+    capability::background_compile_enabled,
+};
 use crate::backend::clipboard_history::legacy::{
     enforce_clipboard_retention, reconcile_clipboard_history as reconcile_clipboard_history_legacy,
 };
@@ -142,6 +151,11 @@ struct LinkMetadataRuntime {
     backfill_queued: AtomicBool,
 }
 
+#[derive(Debug, Default)]
+struct AiBackgroundCompileRuntime {
+    running: AtomicBool,
+}
+
 #[derive(Debug)]
 struct SharedState {
     app_handle: AppHandle,
@@ -158,6 +172,7 @@ struct SharedState {
     #[cfg(target_os = "macos")]
     image_ocr: ImageOcrRuntime,
     link_metadata: LinkMetadataRuntime,
+    ai_background_compile: AiBackgroundCompileRuntime,
     inner: Mutex<StateData>,
 }
 
@@ -230,6 +245,7 @@ impl AppState {
                 #[cfg(target_os = "macos")]
                 image_ocr: Self::create_image_ocr_runtime(),
                 link_metadata: Self::create_link_metadata_runtime(),
+                ai_background_compile: AiBackgroundCompileRuntime::default(),
                 inner: Mutex::new(StateData {
                     settings,
                     runtime,
@@ -244,6 +260,7 @@ impl AppState {
         state.persist_runtime_snapshot()?;
         state.request_image_ocr_backfill();
         state.request_link_metadata_backfill();
+        state.request_background_compile();
 
         Ok(state)
     }
@@ -337,6 +354,70 @@ impl AppState {
 
     pub fn clipboard_source_app_icons_dir(&self) -> PathBuf {
         clipboard_app_icons_dir_path(&self.shared.clipboard_cache_dir)
+    }
+
+    pub fn app_data_dir(&self) -> PathBuf {
+        self.shared.app_data_dir.clone()
+    }
+
+    pub fn request_background_compile(&self) {
+        let settings = match self.current_settings() {
+            Ok(settings) => settings,
+            Err(error) => {
+                warn!("failed to read settings before scheduling background compile: {error}");
+                return;
+            }
+        };
+        if !background_compile_enabled(&settings) {
+            return;
+        }
+
+        let knowledge_root = settings.knowledge_root_path();
+        let has_backlog = match has_background_compile_candidates(&knowledge_root) {
+            Ok(has_backlog) => has_backlog,
+            Err(error) => {
+                warn!("failed to inspect AI compile backlog before scheduling compile: {error}");
+                return;
+            }
+        };
+        if !has_backlog {
+            return;
+        }
+
+        if self
+            .shared
+            .ai_background_compile
+            .running
+            .swap(true, Ordering::AcqRel)
+        {
+            return;
+        }
+
+        let state = self.clone();
+        thread::spawn(move || {
+            let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                if let Err(error) = run_background_compile_cycle(&settings) {
+                    warn!("background compiler cycle failed: {error}");
+                }
+            }));
+
+            if let Err(payload) = result {
+                warn!(
+                    "background compiler task panicked: {}",
+                    panic_payload_message(&payload)
+                );
+            }
+
+            if let Err(error) = state.run_periodic_maintenance() {
+                warn!("failed to refresh runtime state after background compile: {error}");
+            }
+
+            state
+                .shared
+                .ai_background_compile
+                .running
+                .store(false, Ordering::Release);
+        });
     }
 
     pub fn record_app_activity(&self) -> Result<(), String> {
@@ -434,6 +515,7 @@ impl AppState {
             self.request_image_ocr_backfill();
             self.request_link_metadata_backfill();
         }
+        self.request_background_compile();
 
         if let Err(error) = (AppSettingsChanged {
             previous: Some(previous_settings),
@@ -464,7 +546,7 @@ impl AppState {
             let state = self.lock_state()?;
             (
                 state.settings.locale_preference.resolved(),
-                state.settings.ai_enabled(),
+                background_compile_enabled(&state.settings),
                 state.runtime.watch_status.clone(),
                 state.runtime.queue_depth,
                 state.runtime.ready_batch_count,
@@ -498,7 +580,7 @@ impl AppState {
                     )
                 } else {
                     format!(
-                        "AI 队列已暂停，待处理 {} · 就绪批次 {}，等待完成提供方配置",
+                        "AI 队列已暂停，待处理 {} · 就绪批次 {}，等待后台能力就绪",
                         queue_depth, ready_batch_count
                     )
                 }
@@ -511,7 +593,7 @@ impl AppState {
                     )
                 } else {
                     format!(
-                        "AI queue paused with {} pending · ready batches {} until provider setup completes",
+                        "AI queue paused with {} pending · ready batches {} until background capability is available",
                         queue_depth, ready_batch_count
                     )
                 }
@@ -766,13 +848,14 @@ impl AppState {
             &mut stored_capture,
         )?;
 
-        let queue_depth = if settings.ai_enabled() {
+        let background_compile_ready = background_compile_enabled(&settings);
+        let queue_depth = if background_compile_ready {
             enqueue_capture(&knowledge_root, &stored_capture)?
         } else {
             queue_depth_for_root(&knowledge_root)?
         };
 
-        let status = if settings.ai_enabled() {
+        let status = if background_compile_ready {
             "queued"
         } else {
             "archived"
@@ -794,7 +877,7 @@ impl AppState {
 
         self.spawn_image_ocr_for_capture(&stored_capture.id, stored_capture.asset_path.as_deref());
 
-        Ok(if settings.ai_enabled() {
+        Ok(if background_compile_ready {
             CaptureProcessingResult::Queued {
                 path: archive_path,
                 queue_depth,

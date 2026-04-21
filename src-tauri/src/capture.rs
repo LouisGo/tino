@@ -403,6 +403,7 @@ fn flush_ready_batches(state: &AppState) {
     match state.promote_ready_batches() {
         Ok(created_batches) => {
             if created_batches.is_empty() {
+                state.request_background_compile();
                 return;
             }
 
@@ -410,6 +411,7 @@ fn flush_ready_batches(state: &AppState) {
             for batch in created_batches {
                 log_promoted_batch(&batch);
             }
+            state.request_background_compile();
         }
         Err(error) => {
             error!("failed to promote ready batches: {error}");

@@ -3,8 +3,10 @@ use std::{fs, path::PathBuf};
 use specta_typescript::Typescript;
 use tauri_specta::{collect_commands, collect_events, Builder};
 
-use crate::commands::{ai, chat, shell};
-use crate::ipc_events::{AppSettingsChanged, ClipboardCapturesUpdated, HomeChatConversationsUpdated};
+use crate::commands::{ai, ai_ops, chat, shell};
+use crate::ipc_events::{
+    AppSettingsChanged, ClipboardCapturesUpdated, HomeChatConversationsUpdated,
+};
 
 pub fn builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
@@ -13,6 +15,9 @@ pub fn builder() -> Builder<tauri::Wry> {
             ai::get_ai_batch_payload,
             ai::get_topic_index_entries,
             ai::apply_batch_decision,
+            ai_ops::get_ai_system_snapshot,
+            ai_ops::record_ai_feedback_event,
+            ai_ops::preview_ai_batch_compile,
             chat::list_home_chat_conversations,
             chat::get_home_chat_conversation,
             chat::create_home_chat_conversation,

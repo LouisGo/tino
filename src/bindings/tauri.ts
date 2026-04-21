@@ -9,6 +9,9 @@ export const commands = {
 	getAiBatchPayload: (batchId: string) => typedError<AiBatchPayload, IpcError>(__TAURI_INVOKE("get_ai_batch_payload", { batchId })),
 	getTopicIndexEntries: () => typedError<TopicIndexEntry[], IpcError>(__TAURI_INVOKE("get_topic_index_entries")),
 	applyBatchDecision: (request: ApplyBatchDecisionRequest) => typedError<ApplyBatchDecisionResult, IpcError>(__TAURI_INVOKE("apply_batch_decision", { request })),
+	getAiSystemSnapshot: () => typedError<AiSystemSnapshot, string>(__TAURI_INVOKE("get_ai_system_snapshot")),
+	recordAiFeedbackEvent: (input: RecordFeedbackEventInput) => typedError<RecordFeedbackEventResult, string>(__TAURI_INVOKE("record_ai_feedback_event", { input })),
+	previewAiBatchCompile: (batchId: string) => typedError<BatchCompilePreviewResult, string>(__TAURI_INVOKE("preview_ai_batch_compile", { batchId })),
 	listHomeChatConversations: () => typedError<HomeChatConversationSummary[], string>(__TAURI_INVOKE("list_home_chat_conversations")),
 	getHomeChatConversation: (conversationId: string) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("get_home_chat_conversation", { conversationId })),
 	createHomeChatConversation: (request: CreateHomeChatConversationRequest) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("create_home_chat_conversation", { request })),
@@ -81,7 +84,30 @@ export type AiBatchSummary = {
 	sourceIds: string[],
 };
 
+export type AiCapabilitySnapshot = {
+	interactiveConfigured: boolean,
+	backgroundCompileConfigured: boolean,
+	backgroundSourceKind: BackgroundCompileSourceKind,
+	backgroundSourceLabel: string,
+	backgroundSourceReason: string | null,
+	activeProviderId: string | null,
+	activeProviderName: string | null,
+	activeVendor: RuntimeProviderVendor | null,
+};
+
 export type AiDecision = "archive_to_topic" | "send_to_inbox" | "discard";
+
+export type AiSystemPhase = "contract_reset" | "storage_reset" | "capability_boundary" | "background_compiler" | "quality_loop" | "ai_ops";
+
+export type AiSystemSnapshot = {
+	phase: AiSystemPhase,
+	capability: AiCapabilitySnapshot,
+	runtime: BatchCompilerRuntimeSnapshot,
+	feedbackEventCount: number,
+	latestQualitySnapshot: QualitySnapshot | null,
+	recentJobs: BatchCompileJob[],
+	recentWrites: PersistedKnowledgeWrite[],
+};
 
 export type AppLocale = "en-US" | "zh-CN";
 
@@ -133,6 +159,68 @@ export type ApplyBatchDecisionResult = {
 	runtimeState: AiBatchRuntimeState,
 	message: string,
 	persistedOutputs: PersistedKnowledgeOutput[],
+};
+
+export type BackgroundCompileSourceKind = "injected_mock" | "provider_profile" | "unavailable";
+
+export type BatchCompileDecision = {
+	decisionId: string,
+	disposition: BatchCompileDisposition,
+	sourceCaptureIds: string[],
+	topicSlug: string | null,
+	topicName: string | null,
+	title: string,
+	summary: string,
+	keyPoints: string[],
+	tags: string[],
+	confidence: number,
+	rationale: string,
+};
+
+export type BatchCompileDisposition = "write_topic" | "write_inbox" | "discard_noise";
+
+export type BatchCompileInput = {
+	batchId: string | null,
+	trigger: BatchCompileTrigger,
+	captureCount: number,
+	sourceCaptureIds: string[],
+	firstCapturedAt: string | null,
+	lastCapturedAt: string | null,
+};
+
+export type BatchCompileJob = {
+	id: string,
+	status: BatchCompileJobStatus,
+	queuedAt: string,
+	startedAt: string | null,
+	finishedAt: string | null,
+	attempt: number,
+	input: BatchCompileInput,
+	decisions: BatchCompileDecision[],
+	persistedWrites: PersistedKnowledgeWrite[],
+	failureReason: string | null,
+};
+
+export type BatchCompileJobStatus = "queued" | "running" | "model_complete" | "write_pending" | "persisted" | "failed" | "abandoned";
+
+export type BatchCompilePreviewResult = {
+	batchId: string,
+	sourceKind: BackgroundCompileSourceKind,
+	sourceLabel: string,
+	decisions: BatchCompileDecision[],
+};
+
+export type BatchCompileRuntimeStatus = "not_bootstrapped" | "awaiting_capability" | "idle" | "running" | "retry_backoff" | "blocked";
+
+export type BatchCompileTrigger = "capture_count" | "max_wait" | "manual_replay" | "manual_retry";
+
+export type BatchCompilerRuntimeSnapshot = {
+	status: BatchCompileRuntimeStatus,
+	observedPendingCaptureCount: number,
+	observedBatchBacklogCount: number,
+	activeJob: BatchCompileJob | null,
+	lastTransitionAt: string | null,
+	lastError: string | null,
 };
 
 export type BatchDecisionCluster = {
@@ -287,6 +375,23 @@ export type DeleteClipboardCaptureResult = {
 	deleted: boolean,
 };
 
+export type FeedbackEvent = {
+	id: string,
+	kind: FeedbackEventKind,
+	source: FeedbackEventSource,
+	jobId: string | null,
+	writeId: string | null,
+	sourceCaptureIds: string[],
+	topicSlug: string | null,
+	targetTopicSlug: string | null,
+	recordedAt: string,
+	note: string | null,
+};
+
+export type FeedbackEventKind = "topic_confirmed" | "topic_reassigned" | "routed_to_inbox" | "restored_to_topic" | "discarded_as_noise" | "knowledge_retained" | "knowledge_deleted" | "topic_viewed";
+
+export type FeedbackEventSource = "user" | "system" | "migration";
+
 export type HomeChatConversationDetail = {
 	conversation: HomeChatConversationSummary,
 	messages: HomeChatMessage[],
@@ -344,6 +449,8 @@ export type IpcError = {
 
 export type IpcErrorCode = "validation_error" | "state_conflict" | "not_found" | "permission_required" | "packaged_app_required" | "local_signing_required" | "signature_invalid" | "io_error" | "platform_error" | "internal_error";
 
+export type KnowledgeWriteDestination = "topic" | "inbox";
+
 export type LinkMetadata = {
 	title?: string | null,
 	description?: string | null,
@@ -364,6 +471,19 @@ export type PersistedKnowledgeOutput = {
 	topicName: string | null,
 };
 
+export type PersistedKnowledgeWrite = {
+	writeId: string,
+	jobId: string,
+	decisionId: string,
+	destination: KnowledgeWriteDestination,
+	knowledgePath: string,
+	topicSlug: string | null,
+	topicName: string | null,
+	title: string,
+	sourceCaptureIds: string[],
+	persistedAt: string,
+};
+
 export type PinnedClipboardCapture = {
 	capture?: CapturePreview,
 	pinnedAt?: string,
@@ -373,6 +493,40 @@ export type PossibleTopicSuggestion = {
 	topicSlug: string,
 	topicName: string,
 	reason: string | null,
+};
+
+export type QualitySnapshot = {
+	id: string,
+	generatedAt: string,
+	totalFeedbackEvents: number,
+	classificationFeedbackCount: number,
+	correctionEventCount: number,
+	correctionRate: number | null,
+	topicConfirmedCount: number,
+	topicReassignedCount: number,
+	inboxRerouteCount: number,
+	restoredToTopicCount: number,
+	discardedCount: number,
+	retainedCount: number,
+	deletedCount: number,
+	viewedCount: number,
+	lastFeedbackAt: string | null,
+};
+
+export type RecordFeedbackEventInput = {
+	kind: FeedbackEventKind,
+	source: FeedbackEventSource,
+	jobId: string | null,
+	writeId: string | null,
+	sourceCaptureIds: string[],
+	topicSlug: string | null,
+	targetTopicSlug: string | null,
+	note: string | null,
+};
+
+export type RecordFeedbackEventResult = {
+	event: FeedbackEvent,
+	qualitySnapshot: QualitySnapshot,
 };
 
 export type ReplaceLatestHomeChatAssistantMessageRequest = {

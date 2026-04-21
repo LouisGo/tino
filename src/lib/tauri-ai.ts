@@ -11,6 +11,7 @@ import type {
   AiBatchPayload as RustAiBatchPayload,
   AiBatchSummary as RustAiBatchSummary,
   ApplyBatchDecisionResult as RustApplyBatchDecisionResult,
+  BatchCompilePreviewResult as RustBatchCompilePreviewResult,
   TopicIndexEntry as RustTopicIndexEntry,
 } from "@/bindings/tauri";
 import type {
@@ -18,6 +19,7 @@ import type {
   AiBatchSummary,
   ApplyBatchDecisionRequest,
   ApplyBatchDecisionResult,
+  BatchCompilePreviewResult,
   TopicIndexEntry,
 } from "@/types/shell";
 
@@ -36,6 +38,12 @@ function normalizeTopicIndexEntries(entries: RustTopicIndexEntry[]): TopicIndexE
 function normalizeApplyBatchDecisionResult(
   result: RustApplyBatchDecisionResult,
 ): ApplyBatchDecisionResult {
+  return result;
+}
+
+function normalizeBatchCompilePreviewResult(
+  result: RustBatchCompilePreviewResult,
+): BatchCompilePreviewResult {
   return result;
 }
 
@@ -77,5 +85,11 @@ export async function applyBatchDecision(
 
   return normalizeApplyBatchDecisionResult(
     await unwrapTauriResult(tauriCommands.applyBatchDecision(request)),
+  );
+}
+
+export async function previewAiBatchCompile(batchId: string): Promise<BatchCompilePreviewResult> {
+  return normalizeBatchCompilePreviewResult(
+    await unwrapTauriResult(tauriCommands.previewAiBatchCompile(batchId)),
   );
 }

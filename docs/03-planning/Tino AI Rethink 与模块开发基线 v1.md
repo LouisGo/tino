@@ -85,6 +85,11 @@ Tino 的难点不是把文本格式化成 Markdown。
 
 > 可被推翻或重做的过渡性 legacy surface
 
+补充实现边界：
+
+- legacy `/ai review` 如继续保留，其 Rust 侧 DTO、持久化桥接、兼容命令实现应放在 `src-tauri/src/ai/*` 等 feature 模块
+- `commands/*.rs` 只保留 IPC adapter，不作为 legacy review 或 background compiler 的 feature home
+
 ## 4. Tino AI 的新目标形态
 
 Tino 的 AI 现在应被定义为：
@@ -352,6 +357,9 @@ topic 是后台编译结果，而不是前置容器。
 - Rust runtime 驱动 batch compile
 - 加重试、恢复、失败隔离
 - 接通自动知识落盘
+- 当前仓库已接上 provider-backed background compile 主链路
+- DeepSeek 背景编译采用“简单批次 `deepseek-chat` / 复杂批次 `deepseek-reasoner`”的自动选模
+- provider-bound compile 需要最小本地安全防护；明显 token / credential capture 不应发往外部模型
 
 ### Phase E. Quality Loop
 
@@ -377,7 +385,7 @@ topic 是后台编译结果，而不是前置容器。
 
 它的正确理解是：
 
-> 输入侧和原始归档链路已经真实跑通；provider settings 与手动 live run 只完成了过渡期能力接入；真正缺的仍然是 Rust-owned background compiler、正式 topic index、feedback memory、quality metrics，以及新的 AI Ops 次级入口。
+> 输入侧和原始归档链路已经真实跑通；provider settings 不再只是过渡 UI，Rust-owned background compiler 现在也已接上真实 provider-backed compile；当前真正缺的主要是落库质量层、feedback memory、quality metrics，以及新的 AI Ops 次级入口。
 
 ## 11. 文档维护规则
 

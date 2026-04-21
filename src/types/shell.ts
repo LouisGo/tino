@@ -1,8 +1,21 @@
 import type {
+  AiCapabilitySnapshot as RustAiCapabilitySnapshot,
+  AiSystemPhase as RustAiSystemPhase,
+  AiSystemSnapshot as RustAiSystemSnapshot,
+  BackgroundCompileSourceKind as RustBackgroundCompileSourceKind,
   AiBatchCapture as RustAiBatchCapture,
   AiBatchPayload as RustAiBatchPayload,
   AiBatchRuntimeState as RustAiBatchRuntimeState,
   AiBatchSummary as RustAiBatchSummary,
+  BatchCompileDecision as RustBatchCompileDecision,
+  BatchCompileDisposition as RustBatchCompileDisposition,
+  BatchCompileInput as RustBatchCompileInput,
+  BatchCompileJob as RustBatchCompileJob,
+  BatchCompileJobStatus as RustBatchCompileJobStatus,
+  BatchCompilePreviewResult as RustBatchCompilePreviewResult,
+  BatchCompileRuntimeStatus as RustBatchCompileRuntimeStatus,
+  BatchCompileTrigger as RustBatchCompileTrigger,
+  BatchCompilerRuntimeSnapshot as RustBatchCompilerRuntimeSnapshot,
   AiDecision as RustAiDecision,
   ApplyBatchDecisionRequest as RustApplyBatchDecisionRequest,
   ApplyBatchDecisionResult as RustApplyBatchDecisionResult,
@@ -25,6 +38,9 @@ import type {
   ClipboardSourceAppRule as RustClipboardSourceAppRule,
   DashboardSnapshot as RustDashboardSnapshot,
   DeleteClipboardCaptureResult as RustDeleteClipboardCaptureResult,
+  FeedbackEvent as RustFeedbackEvent,
+  FeedbackEventKind as RustFeedbackEventKind,
+  FeedbackEventSource as RustFeedbackEventSource,
   HomeChatConversationDetail as RustHomeChatConversationDetail,
   HomeChatConversationSummary as RustHomeChatConversationSummary,
   HomeChatConversationTitleSource as RustHomeChatConversationTitleSource,
@@ -34,7 +50,12 @@ import type {
   HomeChatMessage as RustHomeChatMessage,
   HomeChatMessageRole as RustHomeChatMessageRole,
   HomeChatMessageStatus as RustHomeChatMessageStatus,
+  KnowledgeWriteDestination as RustKnowledgeWriteDestination,
   PinnedClipboardCapture as RustPinnedClipboardCapture,
+  PersistedKnowledgeWrite as RustPersistedKnowledgeWrite,
+  QualitySnapshot as RustQualitySnapshot,
+  RecordFeedbackEventInput as RustRecordFeedbackEventInput,
+  RecordFeedbackEventResult as RustRecordFeedbackEventResult,
   ReviewAction as RustReviewAction,
   ReviewFeedbackRecord as RustReviewFeedbackRecord,
   RuntimeProviderProfile as RustRuntimeProviderProfile,
@@ -153,6 +174,27 @@ export type HomeChatConversationDetail = RustHomeChatConversationDetail;
 export type HomeChatConversationsUpdatedReason = RustHomeChatConversationsUpdatedReason;
 export type HomeChatConversationsUpdatedPayload = RustHomeChatConversationsUpdated;
 
+export type AiSystemPhase = RustAiSystemPhase;
+export type BackgroundCompileSourceKind = RustBackgroundCompileSourceKind;
+export type BatchCompileTrigger = RustBatchCompileTrigger;
+export type BatchCompileRuntimeStatus = RustBatchCompileRuntimeStatus;
+export type BatchCompileJobStatus = RustBatchCompileJobStatus;
+export type BatchCompileDisposition = RustBatchCompileDisposition;
+export type BatchCompileInput = RustBatchCompileInput;
+export type BatchCompileDecision = RustBatchCompileDecision;
+export type BatchCompileJob = RustBatchCompileJob;
+export type BatchCompilePreviewResult = RustBatchCompilePreviewResult;
+export type KnowledgeWriteDestination = RustKnowledgeWriteDestination;
+export type PersistedKnowledgeWrite = RustPersistedKnowledgeWrite;
+export type FeedbackEventKind = RustFeedbackEventKind;
+export type FeedbackEventSource = RustFeedbackEventSource;
+export type FeedbackEvent = RustFeedbackEvent;
+export type RecordFeedbackEventInput = RustRecordFeedbackEventInput;
+export type QualitySnapshot = RustQualitySnapshot;
+export type RecordFeedbackEventResult = RustRecordFeedbackEventResult;
+export type AiCapabilitySnapshot = RustAiCapabilitySnapshot;
+export type BatchCompilerRuntimeSnapshot = RustBatchCompilerRuntimeSnapshot;
+export type AiSystemSnapshot = RustAiSystemSnapshot;
 export type AiBatchRuntimeState = RustAiBatchRuntimeState;
 export type AiDecision = RustAiDecision;
 export type ReviewAction = RustReviewAction;

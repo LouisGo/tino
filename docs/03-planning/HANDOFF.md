@@ -1,7 +1,7 @@
 # Tino Handoff
 
-> 最后更新：2026-04-20
-> 当前基线提交：`5630611` + working tree AI rethink planning updates
+> 最后更新：2026-04-21
+> 当前基线提交：`ff92818` + working tree AI rethink merge
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
 
@@ -15,6 +15,8 @@
 
 按任务再读：
 
+- AI 融合、边界收敛、重构执行：  
+  [AI融合与架构收敛执行计划 v0.1](/Users/lou/Learn/tino/docs/03-planning/AI%E8%9E%8D%E5%90%88%E4%B8%8E%E6%9E%B6%E6%9E%84%E6%94%B6%E6%95%9B%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92%20v0.1.md)
 - AI 模块开发、runtime、能力边界、反馈记忆：  
   [Tino AI Rethink 与模块开发基线 v1](/Users/lou/Learn/tino/docs/03-planning/Tino%20AI%20Rethink%20%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%BC%80%E5%8F%91%E5%9F%BA%E7%BA%BF%20v1.md)
 - 里程碑与任务拆解：  
@@ -48,6 +50,22 @@
 - Renderer 侧交互式 provider access layer 与首页即时 AI 调用入口
 - 首页 `HomeChatWorkspace` 已升级为可复用组件：支持多会话、SQLite 持久化、首问后建会话、首条消息异步生成标题
 - 首页 chat 视觉与交互基线已调整为 Gemini-like 双态：空态沿用原首页 banner / background 语义，首问后 composer 沉底，消息流与 reasoning 展示在上方
+- Phase A contract reset 已起步：Rust-owned `AiSystemSnapshot` / `BatchCompile*` / `FeedbackEvent` / `QualitySnapshot` IPC 类型
+- 应用稳定持久化目录下的 `ai-memory.db` 已建立，用于 feedback event 与 quality snapshot 的本地 SQLite 骨架
+- `get_ai_system_snapshot` / `record_ai_feedback_event` 已存在，用于后续 AI Ops 与纠错回路接线
+- Phase B storage reset 已起步：`_system/ai/runtime.json`、`_system/ai/jobs/*.json`、`_system/ai/writes.jsonl`、`_system/ai/job-audit.jsonl` 路径已冻结
+- 正式 `topic-index.json` 资产已建立，当前读取会优先走该资产而不是长期依赖扫 `topics/`
+- legacy `applyBatchDecision` 持久化路径现在会顺手回填 `topic-index`、compile job snapshot、write log、job audit
+- Phase C capability boundary 已起步：background compile 的 batch 读取、topic index 读取、能力解析已从 legacy `/ai review` 语义中独立出来，当前支持 provider-backed compile source
+- `preview_ai_batch_compile` 已存在，并与 Rust background compile 共用同一条 provider-backed capability path
+- Phase D Rust background compiler 已接上：会在启动、batch promotion、周期维护后自动挑选 ready batch、通过 active provider profile 真实调用模型、落盘到 `topics/` / `_inbox/`
+- DeepSeek 背景编译当前采用 batch 复杂度选模：简单批次走 `deepseek-chat`，复杂批次走 `deepseek-reasoner`
+- AI 融合与边界收敛执行已启动：legacy `/ai review` Rust bridge 已从 `commands/ai.rs` 下沉到 `src-tauri/src/ai/legacy_review.rs`
+- provider-bound background compile 现在会先做最小本地安全防护：明显 token / credential capture 先本地丢弃，不进入外部模型请求
+- provider-bound background compile 现在也会做最小落库质量守门：输出语言跟随当前 `localePreference`，topic 复用时允许保留原 slug 但按当前 locale 更新显示名；单条祝福/鸡汤不直接入 `topic`，明显 OCR 乱码片段直接丢弃
+- 后台 compile 的 queue / batch gate 已切到 capability boundary；当前没有可用 provider-backed background capability 时会停在 `AwaitingCapability`
+- `_system/ai/runtime.json` 现在会真实记录 `Idle / Running / RetryBackoff` 迁移，`jobs/*.json`、`writes.jsonl`、`job-audit.jsonl` 由后台编译主链路直接写入
+- topic / inbox 的 Markdown merge 逻辑已抽成共享 Rust helper，legacy `applyBatchDecision` 与新的后台编译落盘保持同一套文件语义
 - `_system/runtime.json`
 - `_system/queue.json`
 - `_system/batches/*.json`
@@ -62,9 +80,8 @@
 
 当前仍未真实存在：
 
-- Rust-owned background compiler
-- 正式 topic index 资产
-- feedback memory / quality metrics SQLite
+- 接到真实用户纠错路径的 feedback memory 回路
+- 后台 compile 成功/失败驱动的正式 quality metrics 流
 - 新的 AI Ops 次级入口
 - 历史补跑
 
@@ -161,4 +178,4 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 当前仓库的正确理解不是“AI 已经接完”，而是：
 
-> 输入侧和原始归档链路已经真实可用；provider settings 与 legacy `/ai` 只完成了过渡期能力接入；后续 AI 开发应围绕 `Rust-owned background compiler + feedback memory + controlled persistence + AI Ops` 推进，而不是继续扩旧 `/ai review` 方案。
+> 输入侧和原始归档链路已经真实可用；Rust-owned background compiler 现在也已能通过 active provider profile 真实调用模型并落盘；后续 AI 开发重点已经收敛到 `落库质量 + feedback memory + controlled persistence + AI Ops`，而不是继续扩旧 `/ai review` 方案。

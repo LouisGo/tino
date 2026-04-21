@@ -1,6 +1,7 @@
 use crate::error::{AppError, IpcError, IpcResult};
 
 pub mod ai;
+pub mod ai_ops;
 pub mod chat;
 pub mod shell;
 
