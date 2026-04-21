@@ -63,6 +63,7 @@
 - AI 融合与边界收敛执行已启动：legacy `/ai review` Rust bridge 已从 `commands/ai.rs` 下沉到 `src-tauri/src/ai/legacy_review.rs`
 - Runtime Provider 配置现在由 Rust authoritative save path 做最终校验：保存设置时会拒绝 `非 HTTPS baseUrl`、`带 credentials 的 baseUrl`、`model 内空白`、`apiKey 内空白`、`过短 apiKey`
 - Background compile capability 对 active provider 的可用性判断已切到与 Rust provider 校验同一套标准，Renderer 表单校验只保留为 UX 层，不再是唯一防线
+- 当 active provider 配置无效时，AI capability snapshot 与 background compile refusal 现在会返回 Rust 侧权威失败原因，方便后续 AI Ops 与设置排障直接消费
 - provider-bound background compile 现在会先做最小本地安全防护：明显 token / credential capture 先本地丢弃，不进入外部模型请求
 - provider-bound background compile 现在也会做最小落库质量守门：输出语言跟随当前 `localePreference`，topic 复用时允许保留原 slug 但按当前 locale 更新显示名；单条祝福/鸡汤不直接入 `topic`，明显 OCR 乱码片段直接丢弃
 - 后台 compile 的 queue / batch gate 已切到 capability boundary；当前没有可用 provider-backed background capability 时会停在 `AwaitingCapability`

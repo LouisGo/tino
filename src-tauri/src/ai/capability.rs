@@ -15,6 +15,7 @@ use crate::{
     },
     app_state::AppSettings,
     error::{AppError, AppResult},
+    runtime_provider::RuntimeProviderProfile,
 };
 
 #[cfg(test)]
@@ -76,12 +77,13 @@ pub fn resolve_background_compile_capability(settings: &AppSettings) -> AiCapabi
 
     #[cfg(not(test))]
     {
+        let unavailable_reason = background_compile_unavailable_reason(active_provider);
         AiCapabilitySnapshot {
             interactive_configured,
             background_compile_configured: false,
             background_source_kind: BackgroundCompileSourceKind::Unavailable,
             background_source_label: "Unavailable".into(),
-            background_source_reason: Some(BACKGROUND_COMPILE_UNAVAILABLE_REASON.into()),
+            background_source_reason: Some(unavailable_reason),
             active_provider_id: active_provider.map(|provider| provider.id.clone()),
             active_provider_name: active_provider.map(|provider| provider.name.clone()),
             active_vendor: active_provider.map(|provider| provider.vendor),
@@ -131,8 +133,39 @@ pub fn compile_batch_with_capability(
     #[cfg(not(test))]
     {
         Err(AppError::state_conflict(
-            "background compile provider is not configured",
+            background_compile_unavailable_reason(settings.active_runtime_provider()),
         ))
+    }
+}
+
+#[cfg_attr(test, allow(dead_code))]
+fn background_compile_unavailable_reason(
+    active_provider: Option<&RuntimeProviderProfile>,
+) -> String {
+    let Some(provider) = active_provider else {
+        return BACKGROUND_COMPILE_UNAVAILABLE_REASON.into();
+    };
+
+    if provider.api_key.trim().is_empty() {
+        return BACKGROUND_COMPILE_UNAVAILABLE_REASON.into();
+    }
+
+    match provider.validate() {
+        Ok(_) => BACKGROUND_COMPILE_UNAVAILABLE_REASON.into(),
+        Err(error) => format!(
+            "Active provider {} is invalid for background compile: {}",
+            background_compile_provider_label(provider),
+            error
+        ),
+    }
+}
+
+fn background_compile_provider_label(provider: &RuntimeProviderProfile) -> String {
+    let trimmed_name = provider.name.trim();
+    if trimmed_name.is_empty() {
+        "the selected profile".into()
+    } else {
+        format!("\"{trimmed_name}\"")
     }
 }
 
@@ -302,7 +335,10 @@ mod tests {
         runtime_provider::default_runtime_provider_profile,
     };
 
-    use super::{compile_batch_with_capability, resolve_background_compile_capability};
+    use super::{
+        background_compile_unavailable_reason, compile_batch_with_capability,
+        resolve_background_compile_capability,
+    };
 
     fn sample_batch() -> StoredBatchFile {
         StoredBatchFile {
@@ -453,5 +489,18 @@ mod tests {
             .decisions
             .iter()
             .any(|decision| decision.disposition == BatchCompileDisposition::WriteInbox));
+    }
+
+    #[test]
+    fn reports_specific_reason_for_invalid_active_provider() {
+        let mut profile = default_runtime_provider_profile(1);
+        profile.api_key = "sk-test-1234 5678".into();
+
+        let reason = background_compile_unavailable_reason(Some(&profile));
+
+        assert_eq!(
+            reason,
+            "Active provider \"Provider 1\" is invalid for background compile: runtime provider \"Provider 1\" apiKey cannot contain whitespace"
+        );
     }
 }
