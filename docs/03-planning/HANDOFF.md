@@ -1,7 +1,7 @@
 # Tino Handoff
 
 > 最后更新：2026-04-21
-> 当前基线提交：`292f4f7` + working tree ai-system subscription
+> 当前基线提交：`024f7ad`
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
 
@@ -50,6 +50,7 @@
 - Renderer 侧交互式 provider access layer 与首页即时 AI 调用入口
 - 首页 `HomeChatWorkspace` 已升级为可复用组件：支持多会话、SQLite 持久化、首问后建会话、首条消息异步生成标题
 - 首页 chat 视觉与交互基线已调整为 Gemini-like 双态：空态沿用原首页 banner / background 语义，首问后 composer 沉底，消息流与 reasoning 展示在上方
+- 首页 `HomeChatWorkspace` 现在是当前默认的交互式 AI 入口，但它不是后台编译 runtime 或 AI Ops 状态的真相源
 - Phase A contract reset 已起步：Rust-owned `AiSystemSnapshot` / `BatchCompile*` / `FeedbackEvent` / `QualitySnapshot` IPC 类型
 - 应用稳定持久化目录下的 `ai-memory.db` 已建立，用于 feedback event 与 quality snapshot 的本地 SQLite 骨架
 - `get_ai_system_snapshot` / `record_ai_feedback_event` 已存在，用于后续 AI Ops 与纠错回路接线

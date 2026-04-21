@@ -167,12 +167,14 @@ Tino 的 AI 现在应被定义为：
 
 - 用户显式触发的即时 AI 交互
 - 需要快速响应的解释、改写、问答或局部操作
+- 当前可以由首页 `HomeChat` 这类直接入口承载
 
 约束：
 
 - 不作为后台编译状态真相源
 - 不持有 batch runtime 的权威状态
 - 不承担自动落盘主链路
+- 不应吞掉状态概览、设置入口与次级 AI Ops 观测面
 
 ### 5.5 Compile Contract
 
@@ -234,6 +236,11 @@ Tino 的 AI 现在应被定义为：
 - 看失败、重试、异常
 - 看反馈与质量指标
 - 提供回放与调试入口
+
+当前推荐起步形态：
+
+- 先用 Rust-owned snapshot query + typed subscription 组合保证冷启动与热同步
+- 允许先以 dashboard 次级摘要卡或轻量信息面板接入，不要求一开始就上完整 AI Ops 页面
 
 不要再把它设计成 review-first 工作台。
 
