@@ -1,4 +1,5 @@
 mod ai;
+pub mod ai_quality_replay;
 mod app_idle;
 mod app_state;
 mod backend;

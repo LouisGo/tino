@@ -1,7 +1,5 @@
-#[cfg(test)]
 use std::collections::BTreeSet;
 
-#[cfg(test)]
 use crate::ai::{
     compile_support::select_relevant_topics, contracts::BatchCompileDisposition,
     knowledge_writer::slugify_topic_value,
@@ -18,9 +16,8 @@ use crate::{
     runtime_provider::{uses_deepseek_background_compile_models, RuntimeProviderProfile},
 };
 
-#[cfg(test)]
 const BACKGROUND_COMPILE_SOURCE_LABEL: &str = "Injected Mock Compiler";
-#[cfg(test)]
+#[cfg_attr(not(test), allow(dead_code))]
 const BACKGROUND_COMPILE_SOURCE_REASON: &str =
     "Debug-stage fixed mock capability is currently wired for background compile.";
 #[cfg_attr(test, allow(dead_code))]
@@ -119,12 +116,7 @@ pub fn compile_batch_with_capability(
 
     #[cfg(test)]
     {
-        return compile_batch_with_mock(batch, topics).map(|decisions| {
-            BatchCompileCapabilityResult {
-                source_label: BACKGROUND_COMPILE_SOURCE_LABEL.into(),
-                decisions,
-            }
-        });
+        return compile_batch_with_injected_mock(batch, topics);
     }
 
     #[cfg(not(test))]
@@ -166,11 +158,10 @@ fn background_compile_provider_label(provider: &RuntimeProviderProfile) -> Strin
     }
 }
 
-#[cfg(test)]
-fn compile_batch_with_mock(
+pub fn compile_batch_with_injected_mock(
     batch: &StoredBatchFile,
     topics: &[TopicIndexEntry],
-) -> AppResult<Vec<BatchCompileDecision>> {
+) -> AppResult<BatchCompileCapabilityResult> {
     let reference_captures = batch
         .captures
         .iter()
@@ -234,10 +225,12 @@ fn compile_batch_with_mock(
         });
     }
 
-    Ok(decisions)
+    Ok(BatchCompileCapabilityResult {
+        source_label: BACKGROUND_COMPILE_SOURCE_LABEL.into(),
+        decisions,
+    })
 }
 
-#[cfg(test)]
 fn build_cluster_title(captures: &[&crate::clipboard::types::CaptureRecord]) -> String {
     captures
         .first()
@@ -246,7 +239,6 @@ fn build_cluster_title(captures: &[&crate::clipboard::types::CaptureRecord]) -> 
         .unwrap_or_else(|| "Untitled cluster".into())
 }
 
-#[cfg(test)]
 fn build_cluster_summary(captures: &[&crate::clipboard::types::CaptureRecord]) -> String {
     let summary = captures
         .iter()
@@ -263,7 +255,6 @@ fn build_cluster_summary(captures: &[&crate::clipboard::types::CaptureRecord]) -
     }
 }
 
-#[cfg(test)]
 fn build_key_points(captures: &[&crate::clipboard::types::CaptureRecord]) -> Vec<String> {
     let mut points = captures
         .iter()
@@ -279,7 +270,6 @@ fn build_key_points(captures: &[&crate::clipboard::types::CaptureRecord]) -> Vec
     points
 }
 
-#[cfg(test)]
 fn build_tags(
     captures: &[&crate::clipboard::types::CaptureRecord],
     topic: Option<&TopicIndexEntry>,
@@ -308,7 +298,6 @@ fn build_tags(
     tags.into_iter().take(5).collect()
 }
 
-#[cfg(test)]
 fn truncate_inline_text(value: &str, limit: usize) -> String {
     let compact = value.split_whitespace().collect::<Vec<_>>().join(" ");
     let mut truncated = compact.chars().take(limit).collect::<String>();

@@ -1,0 +1,268 @@
+{
+  "experimentId": "exp-codex-background-dev-20260421",
+  "mode": "mock",
+  "pipeline": "background",
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 0.7272727272727273,
+        "name": "false_archive_rate",
+        "passed": false,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.671875,
+        "name": "destination_accuracy",
+        "passed": false,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.8333333333333334,
+        "name": "topic_merge_accuracy",
+        "passed": true,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.7445255474452555,
+      "destinationAccuracy": 0.671875,
+      "falseArchiveRate": 0.7272727272727273,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 0.625,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.8333333333333334
+    },
+    "runs": 10
+  },
+  "comparison": {
+    "compareToExperimentId": "exp-codex-legacy-dev-20260421",
+    "comparedRuns": 10,
+    "improved": [
+      {
+        "after": "archive the whole batch to existing topic `prompt-eval-experimentation` (\"AI Quality Pipeline v0.1\")",
+        "before": "archive 4 captures to existing topic `python-analysis-sidecar` (\"先把 routing、clustering、topic merge 跑稳，再谈 prose polish。\"); archive 2 captures to existing topic `prompt-eval-experimentation` (\"AI Quality Pipeline v0.1\")",
+        "currentScore": 0.8666666666666666,
+        "delta": 0.2909090909090908,
+        "expected": "archive the whole batch to existing topic `prompt-eval-experimentation`",
+        "fixtureId": "dev_writing_planning_quality_pipeline_001",
+        "previousScore": 0.5757575757575758,
+        "scenario": "writing and planning notes",
+        "why": "The batch should reward structural quality concerns over writing polish."
+      },
+      {
+        "after": "archive the whole batch to existing topic `personal-knowledge-ops` (\"Clipboard history should retain 90 days and survive upgrad…\")",
+        "before": "archive 4 captures to existing topic `rust-background-compiler` (\"Retention data is a durable user asset, not disposable ...\"); archive 2 captures to existing topic `personal-knowledge-ops` (\"Clipboard history should retain 90 days and survive upg...\")",
+        "currentScore": 0.8666666666666666,
+        "delta": 0.2909090909090908,
+        "expected": "archive the whole batch to existing topic `personal-knowledge-ops`",
+        "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+        "previousScore": 0.5757575757575758,
+        "scenario": "near-duplicate durable knowledge notes",
+        "why": "The scorer should reward grouping all near-duplicates into one durable knowledge cluster."
+      },
+      {
+        "after": "archive 5 captures to existing topic `document-markdown-normalization` (\"MarkItDown solves file-to-Markdown conversion more than cl…\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+        "before": "send 4 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `document-markdown-normalization` (\"MarkItDown solves file-to-Markdown conversion more than...\")",
+        "currentScore": 0.7444444444444446,
+        "delta": 0.25757575757575774,
+        "expected": "archive the whole batch to existing topic `document-markdown-normalization`",
+        "fixtureId": "dev_focused_research_markitdown_001",
+        "previousScore": 0.48686868686868684,
+        "scenario": "focused research notes",
+        "why": "The correct durable output is a merge into document-markdown-normalization, not a generic AI quality topic."
+      },
+      {
+        "after": "archive 5 captures to existing topic `tauri-macos-permissions` (\"paste_back failed: Accessibility permission not granted fo…\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+        "before": "send 4 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `tauri-macos-permissions` (\"paste_back failed: Accessibility permission not granted...\")",
+        "currentScore": 0.7444444444444446,
+        "delta": 0.25757575757575774,
+        "expected": "archive the whole batch to existing topic `tauri-macos-permissions`",
+        "fixtureId": "dev_coding_debugging_pasteback_001",
+        "previousScore": 0.48686868686868684,
+        "scenario": "coding and debugging snippets",
+        "why": "The durable knowledge is about signing and Accessibility trust, not the one-off command text."
+      },
+      {
+        "after": "archive 6 captures to existing topic `prompt-eval-experimentation` (\"先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了…\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+        "before": "send 5 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `prompt-eval-experimentation` (\"先把 mock batch 和 golden 固定，再谈 prompt polish。\")",
+        "currentScore": 0.6785714285714286,
+        "delta": 0.2368131868131868,
+        "expected": "split into archive 6 captures to existing topic `prompt-eval-experimentation`; archive 1 captures to existing topic `python-analysis-sidecar`",
+        "fixtureId": "dev_bilingual_mixed_eval_001",
+        "previousScore": 0.4417582417582418,
+        "scenario": "bilingual mixed-language clipboard batch",
+        "why": "The system should not confuse bilingual wording with topic ambiguity."
+      },
+      {
+        "after": "archive 6 captures to existing topic `python-analysis-sidecar` (\"Use Python notebooks to cluster failure cases after each e…\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+        "before": "send 5 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `python-analysis-sidecar` (\"Use Python notebooks to cluster failure cases after eac...\")",
+        "currentScore": 0.6036630036630037,
+        "delta": 0.18288378288378293,
+        "expected": "split into archive 5 captures to existing topic `python-analysis-sidecar`; archive 2 captures to existing topic `prompt-eval-experimentation`",
+        "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+        "previousScore": 0.4207792207792208,
+        "scenario": "overlapping Python-analysis and eval-system notes",
+        "why": "Correct clustering requires separating Python-side artifact analysis from runner and metric ownership."
+      },
+      {
+        "after": "archive the whole batch to existing topic `product-writing-playbook` (\"The clipboard should feel like a quiet inbox, not a dashbo…\")",
+        "before": "archive 6 captures to existing topic `rust-background-compiler` (\"cargo check --manifest-path src-tauri/Cargo.toml\"); archive 2 captures to existing topic `product-writing-playbook` (\"The clipboard should feel like a quiet inbox, not a das...\")",
+        "currentScore": 0.6216216216216217,
+        "delta": 0.14662162162162168,
+        "expected": "split into archive 4 captures to existing topic `product-writing-playbook`; send 3 captures to inbox; discard 1 captures",
+        "fixtureId": "dev_task_switching_copy_and_terminal_001",
+        "previousScore": 0.47500000000000003,
+        "scenario": "task-switching operational notes",
+        "why": "The correct result requires one durable copywriting cluster, one inbox cluster, and one discard."
+      }
+    ],
+    "metricDiffs": [
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "schema_valid_rate"
+      },
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "source_assignment_integrity"
+      },
+      {
+        "after": 0.671875,
+        "before": 0.515625,
+        "delta": 0.15625,
+        "name": "destination_accuracy"
+      },
+      {
+        "after": 0.7272727272727273,
+        "before": 0.4090909090909091,
+        "delta": 0.3181818181818182,
+        "name": "false_archive_rate"
+      },
+      {
+        "after": 0.8333333333333334,
+        "before": 0.3333333333333333,
+        "delta": 0.5,
+        "name": "topic_merge_accuracy"
+      },
+      {
+        "after": null,
+        "before": null,
+        "delta": null,
+        "name": "new_topic_precision"
+      },
+      {
+        "after": 0.7445255474452555,
+        "before": 0.5777777777777777,
+        "delta": 0.16674776966747773,
+        "name": "cluster_pairwise_f1"
+      },
+      {
+        "after": 0.625,
+        "before": 0.359375,
+        "delta": 0.265625,
+        "name": "persist_semantic_correctness"
+      }
+    ],
+    "missingFixtureIds": [],
+    "regressed": [
+      {
+        "after": "archive 5 captures to existing topic `weekly-product-ops` (\"Friday demo needs one visible flow: queue -> batch -> topi…\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+        "before": "send 4 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `weekly-product-ops` (\"Friday demo needs one visible flow: queue -> batch -> t...\")",
+        "currentScore": 0.4444444444444444,
+        "delta": -0.14242424242424245,
+        "expected": "send the whole batch to inbox",
+        "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+        "previousScore": 0.5868686868686869,
+        "scenario": "meeting and demo actionables",
+        "why": "Correct routing is inbox because these are actionables with owners and immediate deadlines."
+      },
+      {
+        "after": "archive 6 captures to existing topic `personal-knowledge-ops` (\"482911\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+        "before": "send 5 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `personal-knowledge-ops` (\"482911\")",
+        "currentScore": 0.369047619047619,
+        "delta": -0.07747252747252753,
+        "expected": "split into discard 6 captures; send 1 captures to inbox",
+        "fixtureId": "dev_low_value_noise_misc_001",
+        "previousScore": 0.44652014652014654,
+        "scenario": "low-value mixed clipboard noise",
+        "why": "The useful note still lacks enough context for direct topic archival."
+      }
+    ],
+    "unchangedCount": 1
+  },
+  "topFailures": [
+    {
+      "actual": "archive 6 captures to existing topic `personal-knowledge-ops` (\"482911\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+      "expected": "split into discard 6 captures; send 1 captures to inbox",
+      "failures": [
+        "False archive count: 6"
+      ],
+      "fixtureId": "dev_low_value_noise_misc_001",
+      "scenario": "low-value mixed clipboard noise",
+      "score": 0.369047619047619,
+      "why": "The useful note still lacks enough context for direct topic archival."
+    },
+    {
+      "actual": "archive 5 captures to existing topic `weekly-product-ops` (\"Friday demo needs one visible flow: queue -> batch -> topi…\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+      "expected": "send the whole batch to inbox",
+      "failures": [
+        "False archive count: 5"
+      ],
+      "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+      "scenario": "meeting and demo actionables",
+      "score": 0.4444444444444444,
+      "why": "Correct routing is inbox because these are actionables with owners and immediate deadlines."
+    },
+    {
+      "actual": "archive 6 captures to existing topic `python-analysis-sidecar` (\"Use Python notebooks to cluster failure cases after each e…\"); send 1 captures to inbox (\"Reference links pending calmer compilation\")",
+      "expected": "split into archive 5 captures to existing topic `python-analysis-sidecar`; archive 2 captures to existing topic `prompt-eval-experimentation`",
+      "failures": [
+        "Wrong existing-topic merge on 3/7 source assignments."
+      ],
+      "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+      "scenario": "overlapping Python-analysis and eval-system notes",
+      "score": 0.6036630036630037,
+      "why": "Correct clustering requires separating Python-side artifact analysis from runner and metric ownership."
+    },
+    {
+      "actual": "archive the whole batch to existing topic `product-writing-playbook` (\"The clipboard should feel like a quiet inbox, not a dashbo…\")",
+      "expected": "split into archive 4 captures to existing topic `product-writing-playbook`; send 3 captures to inbox; discard 1 captures",
+      "failures": [
+        "False archive count: 4"
+      ],
+      "fixtureId": "dev_task_switching_copy_and_terminal_001",
+      "scenario": "task-switching operational notes",
+      "score": 0.6216216216216217,
+      "why": "The correct result requires one durable copywriting cluster, one inbox cluster, and one discard."
+    },
+    {
+      "actual": "send 4 captures to inbox (\"Reference links pending calmer compilation\"); archive 1 captures to existing topic `prompt-eval-experimentation` (\"maybe useful later for scorecards\")",
+      "expected": "send the whole batch to inbox",
+      "failures": [
+        "False archive count: 1"
+      ],
+      "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+      "scenario": "link-heavy sparse research batch",
+      "score": 0.6641666666666668,
+      "why": "Correct behavior is cautious inbox routing rather than optimistic archival."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "createdAt": "2026-04-21T14:54:20.667Z",
+  "experimentId": "exp-codex-background-holdout-20260421",
+  "fixtureCount": 2,
+  "fixtures": [
+    "holdout_new_topic_support_macro_001",
+    "holdout_import_runtime_overlap_001"
+  ],
+  "mode": "mock",
+  "pipeline": "background",
+  "provider": "mock",
+  "runArtifacts": [
+    {
+      "artifactPath": "runs/holdout_new_topic_support_macro_001.json",
+      "fixtureId": "holdout_new_topic_support_macro_001",
+      "overallScore": 0.5666666666666667
+    },
+    {
+      "artifactPath": "runs/holdout_import_runtime_overlap_001.json",
+      "fixtureId": "holdout_import_runtime_overlap_001",
+      "overallScore": 0.4488095238095238
+    }
+  ],
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "split": "holdout"
+}

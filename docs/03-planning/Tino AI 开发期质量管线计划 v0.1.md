@@ -1,6 +1,6 @@
 # Tino AI 开发期质量管线计划 v0.1
 
-> 日期：2026-04-20
+> 日期：2026-04-21
 > 角色：开发阶段 AI 质量闭环执行计划
 > 适用范围：mock batch、golden 标注、offline replay、scoring、experiment tracking
 > 依赖基线：
@@ -32,18 +32,21 @@
 - renderer 侧 prompt 组装、topic 选择、schema 校验、provider 调用
 - Rust 侧 `apply_batch_decision` 受控持久化边界
 - `pnpm mock:ai-review` 的近真实 mock queue / batch 注入脚本
+- `pnpm ai-quality:replay --pipeline legacy|background` 的双 replay 入口
+- headless Rust background compile replay 入口
+- scorer / report / experiment registry
+- 当前 rethink 主链路的 background mock replay 实验结果
 
 当前仍然缺失、且直接阻碍质量改进的能力：
 
-- 开发期固定 benchmark / golden set
-- 可回放的 run artifact 持久化
-- 离线 scorer 与质量报告
-- experiment id / prompt version / retrieval version 的可比较记录
-- 正式 feedback / quality SQLite
-- Rust-owned background compiler 主链路
-- 正式 topic index 资产
+- `2-3` 天真实历史的手工标注基准
+- `真实历史 replay`
+- `single-day digest` 与 `multi-day rolling-topic` 评测
+- 明确面向静默编译的新指标：thread recall / false knowledge intrusion / cross-day topic stability
+- 正式接到真实用户纠错路径的 feedback learning
+- `background --mode live` 的稳定对比基线
 
-因此，当前最迫切的任务不是再接一个新的模型入口，而是先建立开发期质量系统。
+因此，当前最迫切的任务不是再接一个新的模型入口，而是把现有 batch-level 质量系统升级成能评测真实混沌输入流的质量系统。
 
 ## 3. 先冻结的判断
 
@@ -65,19 +68,27 @@
 4. 这条内容是否应并入已有 topic，还是新建 topic
 5. 在上面都足够稳定之后，才优化标题、摘要、关键点质量
 
-### 3.3 第一版质量管线优先复用现有 TypeScript 运行链路
+补充共识：
 
-开发期第一版评测与实验 runner 默认采用：
+- 上述排序在 batch-level 评测中仍然成立
+- 但 batch-level routing 正确，不再等于最终语义质量正确
+- 后续必须继续评测 `day-level` 与 `multi-day` 的 thread 恢复能力
 
-- 直接复用现有 `live-batch-review.ts`
-- 直接复用现有 `provider-access.ts`
-- 直接复用现有 `model-output.ts`
+### 3.3 第一版质量管线采用 Node orchestrator + 双 replay 入口
+
+开发期第一版评测与实验 runner 现在固定为：
+
+- `Node / TypeScript` 继续作为 experiment orchestrator、artifact writer、scorer 与 report 入口
+- `legacy` replay pipeline 继续复用现有 `live-batch-review.ts`、`provider-access.ts`、`model-output.ts`
+- `background` replay pipeline 通过 headless Rust compile 入口直接复用当前 background compiler 的 compile 语义
+- 两条 pipeline 共用同一套 fixtures、goldens、scorer 与 experiment manifest
 
 原因：
 
-- 避免评测链路与产品链路分叉
-- 避免在开发早期复制一套近似但不一致的 prompt / parser / retrieval 逻辑
-- 先用最小成本建立真实回归能力
+- 保留 legacy benchmark 连续性，避免历史实验资产失效
+- 让评测系统能直接判断当前 rethink 主链路，而不是只评 review-first tooling
+- 避免为 background compile 再复制一套近似但不一致的 TypeScript 逻辑
+- 继续用最小改动维持统一 scorer / report / experiment registry
 
 Python 在本计划中的角色见第 `11` 节。
 
@@ -98,6 +109,36 @@ v0.1 质量集聚焦：
 
 这些类型可以保留样本占位，但不进入 v0.1 的主要 gating 指标。
 
+### 3.5 下一阶段必须从 batch replay 升级到真实历史 replay
+
+最近的 AI rethink 讨论已经形成新共识：
+
+- `20 条 / 10 分钟` 只应继续作为调度窗口
+- 它不能再被视为最终语义窗口
+- 当前 v0.1 的 batch fixtures 仍然有价值，但只能评测低层 triage / routing / merge 风险
+
+因此，下一个版本的质量管线必须新增：
+
+- 基于真实剪贴板历史的 `single-day replay`
+- 基于连续几天真实历史的 `multi-day replay`
+- 对静默 day digest / rolling topic 的质量报告
+
+补充判断：
+
+- `Day Digest` 与 `Rolling Topic` 是当前方案里技术风险最高、最容易失败的部分
+- 第一次真实历史 replay 很可能会反过来挑战我们对 digest 形态的直觉
+- 这类失败应被理解为 contract 校准信号，而不是继续往错误方向补 prompt
+
+### 3.6 real-history replay 前必须先有人类基准
+
+在任何 `single-day replay / multi-day replay` 之前，先做：
+
+- 选取 `2-3` 天本机真实剪贴板历史
+- 人工标出理想 `Day Digest` 应恢复出的 thread
+- 人工标出 `_inbox`、噪音、以及跨日应 merge 的主题
+
+没有这套基准，`Day Digest / Rolling Topic` 的 replay 结果无法判断是“已经足够好”还是“只是看起来像样”。
+
 ## 4. 质量对象分层
 
 开发期质量必须按链路分层，而不是只看最后生成的文章或 section。
@@ -109,6 +150,7 @@ v0.1 质量集聚焦：
 - 哪些 capture 应该被放在同一批次
 - 哪些 capture 应该被保留为未来批次
 - 当前按 `20 条 / 10 分钟` 的触发是否把语义会话切碎
+- 当前小 batch 应承担哪些 triage 职责，哪些语义职责必须上移到 day-level / multi-day
 
 ### 4.2 Compile Decision
 
@@ -137,9 +179,26 @@ v0.1 质量集聚焦：
 - key points 是否被 source 支撑
 - “why it landed here” 是否有解释价值
 
+### 4.5 Day-Level / Multi-Day Convergence
+
+问题：
+
+- `Day Digest` 是否恢复出了当天真正有价值的 thread
+- 日内 task switching 是否被错误压扁成一条 thread
+- `Rolling Topic` 是否错误放大了日级误聚类
+- 跨日 merge 之后，topic 稳定性与可解释性是否仍可接受
+
 ## 5. v0.1 交付物
 
-本计划要求至少交付以下 5 个资产。
+本计划要求至少交付以下 6 个资产。
+
+### D0. 真实历史手工标注基准
+
+目标：
+
+- 给 `single-day digest` 与 `multi-day rolling-topic` replay 提供判断标准
+- 明确什么叫“理想的 day digest”，避免评测阶段空转
+- 形成后续 scorer 与 benchmark 的人工参考底座
 
 ### D1. 开发期 Mock Batch 语料集
 
@@ -178,6 +237,14 @@ v0.1 质量集聚焦：
 - 给每次试验一个唯一 id
 - 记录 prompt 版本、retrieval 版本、模型配置、schema 版本、runner 版本
 - 确保未来 A/B 对比有严格输入输出归档
+
+### 5.1 评测前的运行保护
+
+在 `triage -> day digest -> rolling topic` contract reset 期间：
+
+- 旧的小 batch 直写 `topics/` 不应继续作为 live correctness 真相
+- 如需保留现有 provider-backed background compile 运行，应暂停最终知识层落盘、降级为 dev-only，或重定向到独立审计沙盒
+- 否则 live 数据会继续被旧语义污染，导致 replay 评测与真实结果无法比较
 
 ## 6. Mock Batch 数据集计划
 
@@ -571,12 +638,12 @@ v0.1 采用加权总分，但总分只作为排序参考，不作为唯一准入
 
 ### 11.1 v0.1 默认选择
 
-v0.1 质量管线默认使用 `TypeScript / Node`，原因：
+v0.1 质量管线默认使用 `Node orchestrator + Rust/TypeScript replay workers`，原因：
 
-- 直接复用现有 `live-batch-review.ts`
-- 直接复用现有 `provider-access.ts`
-- 直接复用现有 schema 和校验逻辑
-- 避免在开发早期出现“产品链路”和“评测链路”两套实现漂移
+- `Node / TypeScript` 已经具备 fixtures、goldens、scoring、artifact/report 输出能力
+- legacy replay 仍可直接复用现有 `live-batch-review.ts`、`provider-access.ts`、schema 校验逻辑
+- current rethink 主链路必须由 Rust headless replay 直接评测，不能再只靠 renderer mock review 近似
+- 避免在开发期出现“当前 background compile”和“评测用伪 background compile”两套实现漂移
 
 ### 11.2 Python 的适用位置
 
@@ -601,7 +668,7 @@ Python 在后续阶段适合承担：
 
 后续质量管线开发默认优先复用：
 
-- `src/features/ai/runtime/live-batch-review.ts`
+- `src/features/ai/legacy-review/live-batch-review.ts`
 - `src/features/ai/schemas/model-output.ts`
 - `src/features/ai/lib/provider-access.ts`
 - `src-tauri/src/commands/ai.rs`

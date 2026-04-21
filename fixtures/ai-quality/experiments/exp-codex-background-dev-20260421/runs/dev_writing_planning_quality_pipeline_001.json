@@ -1,0 +1,127 @@
+{
+  "createdAt": "2026-04-21T14:53:51.554Z",
+  "experimentId": "exp-codex-background-dev-20260421",
+  "fixtureChecksum": "c2ef6b6594d19f8d1c65662a01fc7d1940cac2febcf7e63b5ecf04a6787c0eb7",
+  "fixtureId": "dev_writing_planning_quality_pipeline_001",
+  "generationMode": "mock",
+  "model": null,
+  "parsedReview": {
+    "clusters": [
+      {
+        "clusterId": "batch_dev_writing_planning_quality_pipeline_001_knowledge",
+        "confidence": 0.82,
+        "decision": "archive_to_topic",
+        "keyPoints": [
+          "AI Quality Pipeline v0.1",
+          "fixtures, goldens, replay runner, scorer, experiment registry",
+          "先把 routing、clustering、topic merge 跑稳，再谈 prose polish。开发期第一优先级是结构决策正确，不是文章看起来更顺。",
+          "Dev and holdout must be split before prompt tuning starts. Otherwise we will end up repairing specific cases instead of …"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch overlaps with an existing topic and includes enough textual evidence to persist directly.",
+        "sourceIds": [
+          "cap_qualityplan_001",
+          "cap_qualityplan_002",
+          "cap_qualityplan_003",
+          "cap_qualityplan_004",
+          "cap_qualityplan_005",
+          "cap_qualityplan_006"
+        ],
+        "summary": "AI Quality Pipeline v0.1 fixtures, goldens, replay runner, scorer, experiment registry",
+        "tags": [
+          "eval",
+          "golden",
+          "google-docs",
+          "notes",
+          "notion"
+        ],
+        "title": "AI Quality Pipeline v0.1",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "topicSlugSuggestion": "prompt-eval-experimentation"
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_writing_planning_quality_pipeline_001_knowledge",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      }
+    ]
+  },
+  "pipeline": "background",
+  "pipelineMetadata": {
+    "sourceKind": "injected_mock",
+    "sourceLabel": "Injected Mock Compiler"
+  },
+  "promptText": null,
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "provider": "mock",
+  "providerMetadata": null,
+  "rawResponseText": "{\n  \"decisions\": [\n    {\n      \"confidence\": 0.82,\n      \"decisionId\": \"batch_dev_writing_planning_quality_pipeline_001_knowledge\",\n      \"disposition\": \"write_topic\",\n      \"keyPoints\": [\n        \"AI Quality Pipeline v0.1\",\n        \"fixtures, goldens, replay runner, scorer, experiment registry\",\n        \"先把 routing、clustering、topic merge 跑稳，再谈 prose polish。开发期第一优先级是结构决策正确，不是文章看起来更顺。\",\n        \"Dev and holdout must be split before prompt tuning starts. Otherwise we will end up repairing specific cases instead of …\"\n      ],\n      \"rationale\": \"The batch overlaps with an existing topic and includes enough textual evidence to persist directly.\",\n      \"sourceCaptureIds\": [\n        \"cap_qualityplan_001\",\n        \"cap_qualityplan_002\",\n        \"cap_qualityplan_003\",\n        \"cap_qualityplan_004\",\n        \"cap_qualityplan_005\",\n        \"cap_qualityplan_006\"\n      ],\n      \"summary\": \"AI Quality Pipeline v0.1 fixtures, goldens, replay runner, scorer, experiment registry\",\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"google-docs\",\n        \"notes\",\n        \"notion\"\n      ],\n      \"title\": \"AI Quality Pipeline v0.1\",\n      \"topicName\": \"Prompt Eval Experimentation\",\n      \"topicSlug\": \"prompt-eval-experimentation\"\n    }\n  ]\n}",
+  "retrievalVersion": "tino.background_compile.topic_select.v1",
+  "runId": "run_dev_writing_planning_quality_pipeline_001_6ae0fdc0",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_quality_pipeline_plan",
+        "overlapCount": 6,
+        "predictedClusterId": "batch_dev_writing_planning_quality_pipeline_001_knowledge"
+      }
+    ],
+    "criticalFailures": [],
+    "fixtureId": "dev_writing_planning_quality_pipeline_001",
+    "metrics": {
+      "clusterPairwiseF1": 1,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      }
+    },
+    "overallScore": 0.8666666666666666,
+    "pairwiseCounts": {
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "truePositive": 15
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": null,
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

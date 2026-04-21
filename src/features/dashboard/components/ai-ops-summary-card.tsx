@@ -28,7 +28,9 @@ export function AiOpsSummaryCard() {
   const phaseLabel = snapshot
     ? formatPhaseLabel(tDashboard, snapshot.phase)
     : tDashboard("aiOps.phase.loading");
-  const sourceLabel = snapshot ? resolveSourceLabel(snapshot, tDashboard) : null;
+  const sourceLabel = snapshot
+    ? resolveSourceLabel(snapshot, tDashboard)
+    : tDashboard("aiOps.summary.unconfiguredSource");
   const summary = resolveSummaryCopy(snapshot, aiSystemQuery.isError, tDashboard);
   const latestWrite = snapshot ? resolveLatestWrite(snapshot) : null;
   const activityCopy = snapshot ? resolveActivityCopy(snapshot, tDashboard) : null;
@@ -37,7 +39,7 @@ export function AiOpsSummaryCard() {
   return (
     <section
       aria-label={tDashboard("aiOps.label")}
-      className="w-full min-w-0 rounded-[1.4rem] border border-border/65 bg-background/72 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-sm md:w-[23rem] md:flex-none"
+      className="w-full min-w-0 rounded-[1.2rem] border border-border/60 bg-background/88 p-4 shadow-[0_20px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-md md:w-[20.75rem] md:flex-none"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -45,64 +47,48 @@ export function AiOpsSummaryCard() {
             <Activity className="size-3.5" />
             <span>{tDashboard("aiOps.label")}</span>
           </div>
-          <p className="mt-2 text-sm font-semibold text-foreground">
-            {sourceLabel
-              ? tDashboard("aiOps.titleWithSource", {
-                  values: {
-                    phase: phaseLabel,
-                    source: sourceLabel,
-                  },
-                })
-              : tDashboard("aiOps.title", {
-                  values: {
-                    phase: phaseLabel,
-                  },
-                })}
+          <p className="mt-2 text-[0.95rem] font-semibold leading-5 text-foreground">
+            {phaseLabel}
           </p>
+          <p className="mt-1 truncate text-[0.75rem] text-foreground/52">{sourceLabel}</p>
         </div>
         <Badge variant={runtimeBadgeVariant} className="shrink-0">
           {runtimeLabel}
         </Badge>
       </div>
 
-      <p className="mt-2 line-clamp-2 text-[0.8rem] leading-5 text-foreground/64">
+      <p className="mt-3 max-w-[32ch] text-[0.78rem] leading-5 text-foreground/60">
         {summary}
       </p>
 
-      <dl className="mt-4 grid grid-cols-2 gap-2.5">
-        <MetricTile
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border/50 pt-3 sm:grid-cols-4">
+        <MetricStat
           label={tDashboard("aiOps.metrics.pending")}
           value={formatMetricValue(snapshot?.runtime.observedPendingCaptureCount)}
         />
-        <MetricTile
+        <MetricStat
           label={tDashboard("aiOps.metrics.backlog")}
           value={formatMetricValue(snapshot?.runtime.observedBatchBacklogCount)}
         />
-        <MetricTile
+        <MetricStat
           label={tDashboard("aiOps.metrics.feedback")}
           value={formatMetricValue(snapshot?.feedbackEventCount)}
         />
-        <MetricTile
+        <MetricStat
           label={tDashboard("aiOps.metrics.correctionRate")}
           value={correctionRate}
         />
       </dl>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Badge variant="outline">{phaseLabel}</Badge>
-        {sourceLabel ? (
-          <Badge variant="secondary" className="max-w-full truncate">
-            {sourceLabel}
-          </Badge>
-        ) : null}
-      </div>
-
-      <div className="mt-4 border-t border-border/55 pt-3">
-        <p className="text-[0.76rem] leading-5 text-foreground/62">
+      <div className="mt-4 rounded-[1rem] border border-border/45 bg-muted/30 px-3 py-2.5">
+        <p className="text-[0.68rem] font-semibold tracking-[0.12em] text-foreground/42 uppercase">
+          {tDashboard("aiOps.activityLabel")}
+        </p>
+        <p className="mt-1 text-[0.76rem] leading-5 text-foreground/66">
           {activityCopy ?? tDashboard("aiOps.summary.noActivity")}
         </p>
         {latestWrite ? (
-          <p className="mt-1 truncate text-[0.72rem] text-foreground/48">
+          <p className="mt-1 truncate text-[0.7rem] text-foreground/46">
             {latestWrite.knowledgePath}
           </p>
         ) : null}
@@ -111,11 +97,13 @@ export function AiOpsSummaryCard() {
   );
 }
 
-function MetricTile({ label, value }: { label: string; value: string }) {
+function MetricStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[1rem] border border-border/55 bg-background/70 px-3 py-2.5">
+    <div className="min-w-0">
       <dt className="text-[0.68rem] tracking-[0.12em] text-foreground/44 uppercase">{label}</dt>
-      <dd className="mt-1 text-sm font-semibold text-foreground">{value}</dd>
+      <dd className="mt-1 truncate text-[0.96rem] font-semibold leading-none text-foreground">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -165,6 +153,13 @@ function resolveRuntimeBadgeVariant(
     || snapshot.runtime.status === "blocked"
   ) {
     return "warning";
+  }
+
+  if (
+    snapshot.runtime.status === "not_bootstrapped"
+    || snapshot.runtime.status === "retry_backoff"
+  ) {
+    return "secondary";
   }
 
   return "success";

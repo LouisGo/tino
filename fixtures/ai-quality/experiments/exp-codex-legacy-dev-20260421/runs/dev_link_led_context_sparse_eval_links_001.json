@@ -1,0 +1,266 @@
+{
+  "createdAt": "2026-04-21T14:53:42.535Z",
+  "experimentId": "exp-codex-legacy-dev-20260421",
+  "fixtureChecksum": "b6c16315ad3e3970cc7dc6f695bc707f25d9833457578b2569a9d2f5378b4bea",
+  "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_link_led_context_sparse_eval_links_001_1776783222535",
+    "batchId": "batch_dev_link_led_context_sparse_eval_links_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-21T14:53:42.535Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_primary",
+        "sourceIds": [
+          "cap_evalinks_004"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "maybe useful later for scorecards",
+        "summary": "maybe useful later for scorecards",
+        "keyPoints": [
+          "maybe useful later for scorecards"
+        ],
+        "tags": [
+          "eval",
+          "golden",
+          "runner",
+          "regression",
+          "plain_text"
+        ],
+        "confidence": 0.67,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "link-triage-watchlist",
+            "topicName": "Link Triage Watchlist",
+            "reason": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_secondary",
+        "sourceIds": [
+          "cap_evalinks_001",
+          "cap_evalinks_002",
+          "cap_evalinks_003",
+          "cap_evalinks_005"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Provider access references need manual confirmation",
+        "summary": "Reference links and loose follow-up notes are held for review before they influence persistence.",
+        "keyPoints": [
+          "https://platform.openai.com/docs/guides/evals",
+          "https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically",
+          "https://docs.ragas.io/en/latest/",
+          "https://humanloop.com/docs/evals"
+        ],
+        "tags": [
+          "python",
+          "notebook",
+          "analysis",
+          "artifacts",
+          "link"
+        ],
+        "confidence": 0.54,
+        "reason": "This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "link-triage-watchlist",
+            "topicName": "Link Triage Watchlist",
+            "reason": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics."
+          }
+        ],
+        "missingContext": [
+          "Need confirmation whether the external reference should become a long-term topic section."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_secondary",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-21.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "pipeline": "legacy",
+  "pipelineMetadata": null,
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, reusable assets such as libraries/playbooks/macros/templates, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- Reusable assets can justify a new topic even if they were created for an upcoming launch or tester wave, as long as the cluster is defining the reusable asset itself rather than just tracking immediate execution.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- Planning notes are still durable knowledge when they define a stable framework, evaluation rubric, architecture principle, or metrics strategy. Do not send them to inbox just because they mention v0.1, planning, or prompt tuning.\n- Prefer the most semantically direct existing topic over a broader meta topic. User-facing copy, tone, headline, and product-message guidance belongs with writing/playbook topics rather than generic knowledge-ops topics.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n- When import/conversion-library fit overlaps with runtime ownership, keep library-fit and normalization notes with the document/import topic, keep execution-boundary and scheduler-ownership notes with the runtime topic, and keep pure follow-up benchmark asks in inbox.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_link_led_context_sparse_eval_links_001\ncapture_count: 5\ntrigger_reason: capture_count\nwindow: 2026-04-18T02:32:00Z -> 2026-04-18T02:40:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n2. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n3. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n4. Multilingual Prompting [multilingual-prompting]\n   summary: Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\n   recent_tags: bilingual, locale, prompts, zh-en\n   last_updated_at: 2026-04-18T09:15:00Z\n5. Customer Research Synthesis [customer-research-synthesis]\n   summary: Interview notes, tagged insights, jobs-to-be-done patterns, and synthesized research themes.\n   recent_tags: research, insights, jtbd, synthesis\n   last_updated_at: 2026-04-17T08:05:00Z\n\nCaptures\ncapture_1:\nid: cap_evalinks_001\ncontent_kind: link\ncaptured_at: 2026-04-18T02:32:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://platform.openai.com/docs/guides/evals\nlink_url: https://platform.openai.com/docs/guides/evals\nraw_text:\n  https://platform.openai.com/docs/guides/evals\n\ncapture_2:\nid: cap_evalinks_002\ncontent_kind: link\ncaptured_at: 2026-04-18T02:34:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\nlink_url: https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\nraw_text:\n  https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\n\ncapture_3:\nid: cap_evalinks_003\ncontent_kind: link\ncaptured_at: 2026-04-18T02:36:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://docs.ragas.io/en/latest/\nlink_url: https://docs.ragas.io/en/latest/\nraw_text:\n  https://docs.ragas.io/en/latest/\n\ncapture_4:\nid: cap_evalinks_004\ncontent_kind: plain_text\ncaptured_at: 2026-04-18T02:38:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: maybe useful later for scorecards\nraw_text:\n  maybe useful later for scorecards\n\ncapture_5:\nid: cap_evalinks_005\ncontent_kind: link\ncaptured_at: 2026-04-18T02:40:00Z\nsource: clipboard\nsource_app_name: Chrome\npreview: https://humanloop.com/docs/evals\nlink_url: https://humanloop.com/docs/evals\nraw_text:\n  https://humanloop.com/docs/evals\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Create a new topic only when none of the listed topics is a reasonable broader home and the cluster defines durable knowledge or a reusable asset.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v6",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_link_led_context_sparse_eval_links_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_evalinks_004\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"maybe useful later for scorecards\",\n      \"summary\": \"maybe useful later for scorecards\",\n      \"keyPoints\": [\n        \"maybe useful later for scorecards\"\n      ],\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"runner\",\n        \"regression\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.67,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"link-triage-watchlist\",\n          \"topicName\": \"Link Triage Watchlist\",\n          \"reason\": \"Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_link_led_context_sparse_eval_links_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_evalinks_001\",\n        \"cap_evalinks_002\",\n        \"cap_evalinks_003\",\n        \"cap_evalinks_005\"\n      ],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Provider access references need manual confirmation\",\n      \"summary\": \"Reference links and loose follow-up notes are held for review before they influence persistence.\",\n      \"keyPoints\": [\n        \"https://platform.openai.com/docs/guides/evals\",\n        \"https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\",\n        \"https://docs.ragas.io/en/latest/\",\n        \"https://humanloop.com/docs/evals\"\n      ],\n      \"tags\": [\n        \"python\",\n        \"notebook\",\n        \"analysis\",\n        \"artifacts\",\n        \"link\"\n      ],\n      \"confidence\": 0.54,\n      \"reason\": \"This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"link-triage-watchlist\",\n          \"topicName\": \"Link Triage Watchlist\",\n          \"reason\": \"Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\"\n        }\n      ],\n      \"missingContext\": [\n        \"Need confirmation whether the external reference should become a long-term topic section.\"\n      ]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_link_led_context_sparse_eval_links_001_e02ac19a",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_eval_link_watchlist",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_link_led_context_sparse_eval_links_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 1"
+    ],
+    "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.7499999999999999,
+      "destinationAccuracy": {
+        "correct": 4,
+        "rate": 0.8,
+        "total": 5
+      },
+      "falseArchiveRate": {
+        "correct": 1,
+        "rate": 0.2,
+        "total": 5
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 4,
+        "rate": 0.8,
+        "total": 5
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      }
+    },
+    "overallScore": 0.6641666666666668,
+    "pairwiseCounts": {
+      "falseNegative": 4,
+      "falsePositive": 0,
+      "truePositive": 6
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    },
+    {
+      "topicSlug": "multilingual-prompting",
+      "topicName": "Multilingual Prompting",
+      "topicSummary": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.",
+      "recentTags": [
+        "bilingual",
+        "locale",
+        "prompts",
+        "zh-en"
+      ],
+      "lastUpdatedAt": "2026-04-18T09:15:00Z"
+    },
+    {
+      "topicSlug": "customer-research-synthesis",
+      "topicName": "Customer Research Synthesis",
+      "topicSummary": "Interview notes, tagged insights, jobs-to-be-done patterns, and synthesized research themes.",
+      "recentTags": [
+        "research",
+        "insights",
+        "jtbd",
+        "synthesis"
+      ],
+      "lastUpdatedAt": "2026-04-17T08:05:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

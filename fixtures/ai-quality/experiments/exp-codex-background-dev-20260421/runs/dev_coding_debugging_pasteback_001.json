@@ -1,0 +1,157 @@
+{
+  "createdAt": "2026-04-21T14:53:51.554Z",
+  "experimentId": "exp-codex-background-dev-20260421",
+  "fixtureChecksum": "4dc3eb0f475e22a63a8e9f8a2a46f3a94fdceaf31d71e3f7dd9d16f04c38d36a",
+  "fixtureId": "dev_coding_debugging_pasteback_001",
+  "generationMode": "mock",
+  "model": null,
+  "parsedReview": {
+    "clusters": [
+      {
+        "clusterId": "batch_dev_coding_debugging_pasteback_001_knowledge",
+        "confidence": 0.82,
+        "decision": "archive_to_topic",
+        "keyPoints": [
+          "paste_back failed: Accessibility permission not granted for current signed app. The event succeeds only after re-authori…",
+          "pnpm macos:setup-local-signing",
+          "Ad-hoc signed builds can lose Accessibility trust after reinstall. We should validate paste-back only on the locally sig…",
+          "UI should explain: grant Accessibility, then reopen the signed app before retrying. Otherwise testers think paste-back i…"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch overlaps with an existing topic and includes enough textual evidence to persist directly.",
+        "sourceIds": [
+          "cap_pasteback_001",
+          "cap_pasteback_002",
+          "cap_pasteback_004",
+          "cap_pasteback_005",
+          "cap_pasteback_006"
+        ],
+        "summary": "paste_back failed: Accessibility permission not granted for current signed app. The event succeeds only after re-authorizing the installed bundle. pnpm macos:setup-local-signing",
+        "tags": [
+          "accessibility",
+          "macos",
+          "notion",
+          "plain_text",
+          "signing"
+        ],
+        "title": "paste_back failed: Accessibility permission not granted fo…",
+        "topicNameSuggestion": "Tauri macOS Permissions",
+        "topicSlugSuggestion": "tauri-macos-permissions"
+      },
+      {
+        "clusterId": "batch_dev_coding_debugging_pasteback_001_references",
+        "confidence": 0.56,
+        "decision": "send_to_inbox",
+        "keyPoints": [
+          "https://github.com/tauri-apps/tauri/issues/10627"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.",
+        "sourceIds": [
+          "cap_pasteback_003"
+        ],
+        "summary": "Link-only captures are kept in inbox until the background compiler has richer surrounding context.",
+        "tags": [
+          "link",
+          "safari"
+        ],
+        "title": "Reference links pending calmer compilation",
+        "topicNameSuggestion": null,
+        "topicSlugSuggestion": null
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_coding_debugging_pasteback_001_knowledge",
+        "destination": "topic",
+        "filePath": "topics/tauri-macos-permissions.md",
+        "topicName": "Tauri macOS Permissions",
+        "topicSlug": "tauri-macos-permissions"
+      },
+      {
+        "clusterId": "batch_dev_coding_debugging_pasteback_001_references",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-21.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "pipeline": "background",
+  "pipelineMetadata": {
+    "sourceKind": "injected_mock",
+    "sourceLabel": "Injected Mock Compiler"
+  },
+  "promptText": null,
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "provider": "mock",
+  "providerMetadata": null,
+  "rawResponseText": "{\n  \"decisions\": [\n    {\n      \"confidence\": 0.82,\n      \"decisionId\": \"batch_dev_coding_debugging_pasteback_001_knowledge\",\n      \"disposition\": \"write_topic\",\n      \"keyPoints\": [\n        \"paste_back failed: Accessibility permission not granted for current signed app. The event succeeds only after re-authori…\",\n        \"pnpm macos:setup-local-signing\",\n        \"Ad-hoc signed builds can lose Accessibility trust after reinstall. We should validate paste-back only on the locally sig…\",\n        \"UI should explain: grant Accessibility, then reopen the signed app before retrying. Otherwise testers think paste-back i…\"\n      ],\n      \"rationale\": \"The batch overlaps with an existing topic and includes enough textual evidence to persist directly.\",\n      \"sourceCaptureIds\": [\n        \"cap_pasteback_001\",\n        \"cap_pasteback_002\",\n        \"cap_pasteback_004\",\n        \"cap_pasteback_005\",\n        \"cap_pasteback_006\"\n      ],\n      \"summary\": \"paste_back failed: Accessibility permission not granted for current signed app. The event succeeds only after re-authorizing the installed bundle. pnpm macos:setup-local-signing\",\n      \"tags\": [\n        \"accessibility\",\n        \"macos\",\n        \"notion\",\n        \"plain_text\",\n        \"signing\"\n      ],\n      \"title\": \"paste_back failed: Accessibility permission not granted fo…\",\n      \"topicName\": \"Tauri macOS Permissions\",\n      \"topicSlug\": \"tauri-macos-permissions\"\n    },\n    {\n      \"confidence\": 0.56,\n      \"decisionId\": \"batch_dev_coding_debugging_pasteback_001_references\",\n      \"disposition\": \"write_inbox\",\n      \"keyPoints\": [\n        \"https://github.com/tauri-apps/tauri/issues/10627\"\n      ],\n      \"rationale\": \"The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.\",\n      \"sourceCaptureIds\": [\n        \"cap_pasteback_003\"\n      ],\n      \"summary\": \"Link-only captures are kept in inbox until the background compiler has richer surrounding context.\",\n      \"tags\": [\n        \"link\",\n        \"safari\"\n      ],\n      \"title\": \"Reference links pending calmer compilation\",\n      \"topicName\": null,\n      \"topicSlug\": null\n    }\n  ]\n}",
+  "retrievalVersion": "tino.background_compile.topic_select.v1",
+  "runId": "run_dev_coding_debugging_pasteback_001_87b20637",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_pasteback_permissions",
+        "overlapCount": 5,
+        "predictedClusterId": "batch_dev_coding_debugging_pasteback_001_knowledge"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 1/6 source assignments."
+    ],
+    "fixtureId": "dev_coding_debugging_pasteback_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.8,
+      "destinationAccuracy": {
+        "correct": 5,
+        "rate": 0.8333333333333334,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 5,
+        "rate": 0.8333333333333334,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 5,
+        "rate": 0.8333333333333334,
+        "total": 6
+      }
+    },
+    "overallScore": 0.7444444444444446,
+    "pairwiseCounts": {
+      "falseNegative": 5,
+      "falsePositive": 0,
+      "truePositive": 10
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": null,
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

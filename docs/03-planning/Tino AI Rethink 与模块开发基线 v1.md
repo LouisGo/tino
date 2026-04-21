@@ -1,11 +1,11 @@
 # Tino AI Rethink 与模块开发基线 v1
 
-> 日期：2026-04-13
+> 日期：2026-04-21
 > 角色：当前 Tino AI 模块开发的唯一执行基线
 > 适用范围：AI runtime、批处理、落库、反馈记忆、AI Ops、能力接入
 > 取代：
-> - `docs/03-planning/Tino AI Runtime 与 Agent 工程方案 v0.1.md`
-> - `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md`
+> - `docs/03-planning/archive/Tino AI Runtime 与 Agent 工程方案 v0.1.md`
+> - `docs/03-planning/archive/AI Review 当前实现与 Mock 链路说明.md`
 
 ## 1. 这份文档解决什么问题
 
@@ -56,6 +56,22 @@ Tino 的难点不是把文本格式化成 Markdown。
 
 两条路径不能继续共用 `/ai` 页面状态、React hook 状态机、或手动审阅工作台语义。
 
+### 2.4 小 batch 是调度窗口，不是最终语义窗口
+
+当前 Rust runtime 的 `20 条 / 10 分钟` 触发仍然保留，但它的正确角色已经收敛为：
+
+- queue promotion 的调度窗口
+- triage 与守门窗口
+- 局部候选聚合窗口
+
+它不应再被理解为：
+
+- 最终知识判断窗口
+- 最终 topic merge 窗口
+- 足以恢复完整工作脉络的认知窗口
+
+后续真正的语义层，应逐步上移到 `day digest / rolling topic` 一类的日级与跨日静默编译层。
+
 ## 3. 当前仓库里哪些资产还保留，哪些降级
 
 ### 3.1 保留
@@ -94,11 +110,11 @@ Tino 的难点不是把文本格式化成 Markdown。
 
 Tino 的 AI 现在应被定义为：
 
-> 一个由 Rust 持有后台编译主链路、由 Renderer 持有交互式即时 AI、由 Rust 持有知识写入权威边界、并由本地反馈记忆持续提升落库质量的后台知识编译系统。
+> 一个由 Rust 持有静默后台编译主链路、由 Renderer 持有交互式与显式意图入口、由 Rust 持有知识写入权威边界、并由本地反馈记忆与轻量 attention hint 持续提升落库质量的后台知识编译系统。
 
 对普通用户，主路径仍然是：
 
-> 被动捕获 -> 原始归档 -> 后台编译 -> 结果出现
+> 被动捕获 / 显式输入 -> 原始归档 -> 静默编译 -> day-level / multi-day 收敛 -> 结果出现
 
 而不是：
 
@@ -117,12 +133,14 @@ Tino 的 AI 现在应被定义为：
 - 轻量规则过滤
 - 保守的近重复预筛
 - queue / batch 编排
+- 统一输入适配器接入点
 
 约束：
 
 - 不在这里调用重模型
 - 不把这层做成 UI 配置堆
 - 不把“疑似重复”直接等同于“可删除”
+- 后续文件拖入、文档导入、富媒体导入，应先在这里走 `input adapter` 归一，而不是另起一套 AI 管线
 
 ### 5.2 AI Capability Layer
 
@@ -152,12 +170,15 @@ Tino 的 AI 现在应被定义为：
 - 崩溃恢复
 - 后台 compile job 执行
 - 结果落盘编排
+- 逐步承接更高层的静默 day digest / rolling topic 收敛
 
 约束：
 
 - 不依赖 React 组件是否挂载
 - 不依赖主窗口隐藏后的 renderer 存活
 - 不把后台批处理挂在 `/ai` 页按钮上
+- 当前小 batch 只是调度与 triage 单元，不再被视为最终语义单元
+- 在 `triage -> day digest -> rolling topic` contract reset 期间，旧的小 batch 直写 `topics/` 只能视为过渡或调试路径；正式知识层写入应可暂停、降级或重定向到审计沙盒，避免旧语义继续污染结果
 
 ### 5.4 Interactive AI
 
@@ -168,6 +189,7 @@ Tino 的 AI 现在应被定义为：
 - 用户显式触发的即时 AI 交互
 - 需要快速响应的解释、改写、问答或局部操作
 - 当前可以由首页 `HomeChat` 这类直接入口承载
+- 用户显式给方向、显式输入任务、显式提交材料的入口承载
 
 约束：
 
@@ -175,6 +197,24 @@ Tino 的 AI 现在应被定义为：
 - 不持有 batch runtime 的权威状态
 - 不承担自动落盘主链路
 - 不应吞掉状态概览、设置入口与次级 AI Ops 观测面
+
+### 5.4.1 Explicit Intent / Attention Hint
+
+位置：`Renderer 发起`，`Rust / 本地持久化消费`
+
+职责：
+
+- 接住用户明确表达的近期方向
+- 为静默编译提供轻量 `attention hint / focus signal`
+- 影响召回、排序、merge 优先级与建议候选
+
+约束：
+
+- 当前不做成重推荐系统或长期兴趣画像
+- `v0.1` 不做自动衰减；hint 只允许显式关闭或被新的 hint 替换
+- 不改写原始证据
+- 不直接决定 topic
+- 不成为新的真相源
 
 ### 5.5 Compile Contract
 
@@ -244,6 +284,22 @@ Tino 的 AI 现在应被定义为：
 
 不要再把它设计成 review-first 工作台。
 
+### 5.9 Silent Output Surface
+
+位置：`Renderer 首页 / dashboard / 结果消费路径`
+
+职责：
+
+- 让用户感知系统恢复出的 `Day Digest`、近期 `Rolling Topic` 变化与待确认线索
+- 给用户一个自然的轻量确认 / 纠错入口，而不是把静默系统完全藏在后台
+- 把这些纠错动作写回 feedback memory 或显式 lane
+
+约束：
+
+- 不把用户可感知输出藏在纯 AI Ops 调试面里
+- 不回退到逐批 review-first 工作台
+- 当静默编译置信度不足时，允许只展示“待确认线索”，不强行生成完整 digest
+
 ## 6. 存储基线
 
 ### 6.1 Markdown 知识资产
@@ -251,6 +307,11 @@ Tino 的 AI 现在应被定义为：
 - `daily/`：原始归档
 - `topics/`：高置信长期知识
 - `_inbox/`：低置信或暂不稳定的知识出口
+
+补充边界：
+
+- `daily/` 继续只做原始真相源，不做 AI 改写
+- 后续日级 digest、thread summary、rolling topic 一类的中间语义层允许存在，但不应污染 `daily/`
 
 ### 6.2 `_system/` 运行态资产
 
@@ -278,6 +339,7 @@ Tino 的 AI 现在应被定义为：
 - quality metrics
 - 偏好记忆
 - topic usage / retention 信号
+- attention hint / explicit focus signal（`v0.1` 采用显式关闭或替换，不做自动 TTL 衰减）
 
 不要把这层延后到 UI 都写完才考虑。
 
@@ -309,6 +371,7 @@ provider settings 可以继续保留，但只应承担：
 - compile contract
 - Rust 权威状态机
 - feedback / quality 存储结构
+- `triage -> day digest -> rolling topic` 的静默链路 contract
 
 ### 7.5 纠错率是第一指标
 
@@ -343,6 +406,8 @@ topic 是后台编译结果，而不是前置容器。
 
 ### Phase A. Contract Reset
 
+- 先手工标注 `2-3` 天真实剪贴板历史，定义理想的 `Day Digest / Rolling Topic` 长什么样
+- 允许第一次真实历史 replay 反过来推翻初始设计，不要先假设 contract 是对的
 - 定义 compile contract
 - 定义 Rust 权威状态机
 - 定义 feedback / quality event 模型
@@ -364,6 +429,7 @@ topic 是后台编译结果，而不是前置容器。
 - Rust runtime 驱动 batch compile
 - 加重试、恢复、失败隔离
 - 接通自动知识落盘
+- 在新的 `day digest / rolling topic` contract 冻结前，默认暂停或降级旧的小 batch 直写 `topics/` 语义
 - 当前仓库已接上 provider-backed background compile 主链路
 - DeepSeek 背景编译采用“简单批次 `deepseek-chat` / 复杂批次 `deepseek-reasoner`”的自动选模
 - provider-bound compile 需要最小本地安全防护；明显 token / credential capture 不应发往外部模型
@@ -392,7 +458,7 @@ topic 是后台编译结果，而不是前置容器。
 
 它的正确理解是：
 
-> 输入侧和原始归档链路已经真实跑通；provider settings 不再只是过渡 UI，Rust-owned background compiler 现在也已接上真实 provider-backed compile；当前真正缺的主要是落库质量层、feedback memory、quality metrics，以及新的 AI Ops 次级入口。
+> 输入侧和原始归档链路已经真实跑通；provider settings 不再只是过渡 UI，Rust-owned background compiler 现在也已接上真实 provider-backed compile；但当前直写 `topics/` 的小 batch 语义仍是过渡状态，不等于 `Day Digest / Rolling Topic` 已被证明正确。当前真正缺的主要是日级与跨日收敛 contract、feedback memory、quality metrics，以及用户可感知的静默输出入口。
 
 ## 11. 文档维护规则
 
@@ -402,4 +468,4 @@ topic 是后台编译结果，而不是前置容器。
 - `docs/03-planning/技术冻结记录.md`
 - 本文件
 
-如果某个旧文档继续保留但已不再指导开发，必须显式标记为 `deprecated`，不能让它和本文件并列生效。
+如果某个旧文档继续保留但已不再指导开发，必须显式标记为 `deprecated`，并优先移入 `docs/03-planning/archive/`，不能让它和本文件并列生效。

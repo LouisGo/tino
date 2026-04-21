@@ -1,0 +1,270 @@
+{
+  "createdAt": "2026-04-21T14:53:42.521Z",
+  "experimentId": "exp-codex-legacy-dev-20260421",
+  "fixtureChecksum": "f12cfdc7631073284e3314b6116251d63b7152c945bada46f69d012d74f9b0d2",
+  "fixtureId": "dev_focused_research_markitdown_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_focused_research_markitdown_001_1776783222526",
+    "batchId": "batch_dev_focused_research_markitdown_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-21T14:53:42.526Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_focused_research_markitdown_001_cluster_primary",
+        "sourceIds": [
+          "cap_markitdown_002",
+          "cap_markitdown_003"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "document-markdown-normalization",
+        "topicNameSuggestion": "Document Markdown Normalization",
+        "title": "MarkItDown solves file-to-Markdown conversion more than...",
+        "summary": "MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching. It looks useful for PDF, DOCX, PPTX, and email imports, but it does not directly answer how Tino should judge routing or topic merge quality. Possible fit: optional import adapter for dropped documents later in the roadmap, not the hot clipboard path. Clipboard captures already arrive as plain text or rich text, so the first gap is HTML normalization and source attribution.",
+        "keyPoints": [
+          "MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching.",
+          "Possible fit: optional import adapter for dropped documents, not the hot clipboard path.",
+          "Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.",
+          "If we introduce it, keep it behind an import adapter boundary instead of coupling it to runtime evaluation."
+        ],
+        "tags": [
+          "markdown",
+          "ingestion",
+          "markitdown",
+          "html",
+          "plain_text"
+        ],
+        "confidence": 0.83,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "document-markdown-normalization",
+            "topicName": "Document Markdown Normalization",
+            "reason": "Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_focused_research_markitdown_001_cluster_secondary",
+        "sourceIds": [
+          "cap_markitdown_004",
+          "cap_markitdown_005",
+          "cap_markitdown_006",
+          "cap_markitdown_001"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Provider access references need manual confirmation",
+        "summary": "Reference links and loose follow-up notes are held for review before they influence persistence.",
+        "keyPoints": [
+          "Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.",
+          "If we introduce it, keep it behind an import adapter boundary instead of coupling it to runtime evaluation.",
+          "结论：对 clipboard 主链路帮助有限，对文档导入链路更有帮助。",
+          "https://github.com/microsoft/markitdown"
+        ],
+        "tags": [
+          "eval",
+          "golden",
+          "runner",
+          "regression",
+          "rich_text"
+        ],
+        "confidence": 0.54,
+        "reason": "This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.",
+        "possibleTopics": [
+          {
+            "topicSlug": "document-markdown-normalization",
+            "topicName": "Document Markdown Normalization",
+            "reason": "Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion."
+          },
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          }
+        ],
+        "missingContext": [
+          "Need confirmation whether the external reference should become a long-term topic section."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_focused_research_markitdown_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/document-markdown-normalization.md",
+        "topicName": "Document Markdown Normalization",
+        "topicSlug": "document-markdown-normalization"
+      },
+      {
+        "clusterId": "batch_dev_focused_research_markitdown_001_cluster_secondary",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-21.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "pipeline": "legacy",
+  "pipelineMetadata": null,
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, reusable assets such as libraries/playbooks/macros/templates, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- Reusable assets can justify a new topic even if they were created for an upcoming launch or tester wave, as long as the cluster is defining the reusable asset itself rather than just tracking immediate execution.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- Planning notes are still durable knowledge when they define a stable framework, evaluation rubric, architecture principle, or metrics strategy. Do not send them to inbox just because they mention v0.1, planning, or prompt tuning.\n- Prefer the most semantically direct existing topic over a broader meta topic. User-facing copy, tone, headline, and product-message guidance belongs with writing/playbook topics rather than generic knowledge-ops topics.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n- When import/conversion-library fit overlaps with runtime ownership, keep library-fit and normalization notes with the document/import topic, keep execution-boundary and scheduler-ownership notes with the runtime topic, and keep pure follow-up benchmark asks in inbox.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_focused_research_markitdown_001\ncapture_count: 6\ntrigger_reason: max_wait\nwindow: 2026-04-20T00:07:00Z -> 2026-04-20T00:17:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Document Markdown Normalization [document-markdown-normalization]\n   summary: Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.\n   recent_tags: markdown, ingestion, markitdown, html\n   last_updated_at: 2026-04-19T08:30:00Z\n2. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n3. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n4. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n5. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n\nCaptures\ncapture_1:\nid: cap_markitdown_001\ncontent_kind: link\ncaptured_at: 2026-04-20T00:07:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://github.com/microsoft/markitdown\nlink_url: https://github.com/microsoft/markitdown\nraw_text:\n  https://github.com/microsoft/markitdown\n\ncapture_2:\nid: cap_markitdown_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T00:09:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching.\nraw_text:\n  MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching. It looks useful for PDF, DOCX, PPTX, and email imports, but it does not directly answer how Tino should judge routing or topic merge quality.\n\ncapture_3:\nid: cap_markitdown_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T00:10:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Possible fit: optional import adapter for dropped documents, not the hot clipboard path.\nraw_text:\n  Possible fit: optional import adapter for dropped documents later in the roadmap, not the hot clipboard path. Clipboard captures already arrive as plain text or rich text, so the first gap is HTML normalization and source attribution.\n\ncapture_4:\nid: cap_markitdown_004\ncontent_kind: rich_text\ncaptured_at: 2026-04-20T00:12:00Z\nsource: clipboard\nsource_app_name: Arc\npreview: Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.\nraw_text:\n  Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.\n\ncapture_5:\nid: cap_markitdown_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T00:14:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: If we introduce it, keep it behind an import adapter boundary instead of coupling it to runtime evaluation.\nraw_text:\n  If we introduce MarkItDown, keep it behind an import adapter boundary instead of coupling it to runtime evaluation. The evaluation problem still needs fixtures, goldens, replay, and scoring.\n\ncapture_6:\nid: cap_markitdown_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T00:17:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 结论：对 clipboard 主链路帮助有限，对文档导入链路更有帮助。\nraw_text:\n  结论：对 clipboard 主链路帮助有限，对文档导入链路更有帮助。更准确的定位是 document normalization adapter，而不是 AI quality pipeline 本身。\n\nBatch-specific calibration hints\n1. Batches about fixtures, goldens, replay runners, scorers, holdout splits, or structural quality metrics are durable evaluation-system knowledge and should merge into the evaluation topic instead of going to inbox.\n2. Import/conversion-library fit and normalization notes belong with the document/import topic; runtime ownership and scheduler-boundary notes belong with the runtime topic; pure benchmark follow-up asks belong in inbox.\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Create a new topic only when none of the listed topics is a reasonable broader home and the cluster defines durable knowledge or a reusable asset.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v6",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_focused_research_markitdown_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_markitdown_002\",\n        \"cap_markitdown_003\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"document-markdown-normalization\",\n      \"topicNameSuggestion\": \"Document Markdown Normalization\",\n      \"title\": \"MarkItDown solves file-to-Markdown conversion more than...\",\n      \"summary\": \"MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching. It looks useful for PDF, DOCX, PPTX, and email imports, but it does not directly answer how Tino should judge routing or topic merge quality. Possible fit: optional import adapter for dropped documents later in the roadmap, not the hot clipboard path. Clipboard captures already arrive as plain text or rich text, so the first gap is HTML normalization and source attribution.\",\n      \"keyPoints\": [\n        \"MarkItDown solves file-to-Markdown conversion more than clipboard semantic batching.\",\n        \"Possible fit: optional import adapter for dropped documents, not the hot clipboard path.\",\n        \"Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.\",\n        \"If we introduce it, keep it behind an import adapter boundary instead of coupling it to runtime evaluation.\"\n      ],\n      \"tags\": [\n        \"markdown\",\n        \"ingestion\",\n        \"markitdown\",\n        \"html\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.83,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"document-markdown-normalization\",\n          \"topicName\": \"Document Markdown Normalization\",\n          \"reason\": \"Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_focused_research_markitdown_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_markitdown_004\",\n        \"cap_markitdown_005\",\n        \"cap_markitdown_006\",\n        \"cap_markitdown_001\"\n      ],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Provider access references need manual confirmation\",\n      \"summary\": \"Reference links and loose follow-up notes are held for review before they influence persistence.\",\n      \"keyPoints\": [\n        \"Pros: broad format coverage. Cons: Python dependency, file-oriented, not a quality pipeline by itself.\",\n        \"If we introduce it, keep it behind an import adapter boundary instead of coupling it to runtime evaluation.\",\n        \"结论：对 clipboard 主链路帮助有限，对文档导入链路更有帮助。\",\n        \"https://github.com/microsoft/markitdown\"\n      ],\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"runner\",\n        \"regression\",\n        \"rich_text\"\n      ],\n      \"confidence\": 0.54,\n      \"reason\": \"This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"document-markdown-normalization\",\n          \"topicName\": \"Document Markdown Normalization\",\n          \"reason\": \"Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.\"\n        },\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        }\n      ],\n      \"missingContext\": [\n        \"Need confirmation whether the external reference should become a long-term topic section.\"\n      ]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_focused_research_markitdown_001_c160ced4",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_markitdown_research",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_focused_research_markitdown_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 4/6 source assignments."
+    ],
+    "fixtureId": "dev_focused_research_markitdown_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.6363636363636364,
+      "destinationAccuracy": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 2,
+        "rate": 0.3333333333333333,
+        "total": 6
+      }
+    },
+    "overallScore": 0.48686868686868684,
+    "pairwiseCounts": {
+      "falseNegative": 8,
+      "falsePositive": 0,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "document-markdown-normalization",
+      "topicName": "Document Markdown Normalization",
+      "topicSummary": "Tradeoffs among MarkItDown, HTML cleanup, rich-text stripping, and document-to-Markdown adapters for knowledge ingestion.",
+      "recentTags": [
+        "markdown",
+        "ingestion",
+        "markitdown",
+        "html"
+      ],
+      "lastUpdatedAt": "2026-04-19T08:30:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    },
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

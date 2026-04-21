@@ -1,7 +1,7 @@
 # Tino Handoff
 
 > 最后更新：2026-04-21
-> 当前基线提交：`024f7ad`
+> 当前基线提交：`d4e2c7e`
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
 
@@ -9,25 +9,18 @@
 
 必读：
 
-1. [AGENTS.md](/Users/lou/Learn/tino/AGENTS.md)
-2. [技术冻结记录](/Users/lou/Learn/tino/docs/03-planning/技术冻结记录.md)
-3. 本文
+1. `AGENTS.md`
+2. `docs/03-planning/技术冻结记录.md`
+3. `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`
+4. `docs/03-planning/Tino AI 静默编译与显式意图执行方案 v0.1.md`
+5. 本文
 
 按任务再读：
 
-- AI 融合、边界收敛、重构执行：  
-  [AI融合与架构收敛执行计划 v0.1](/Users/lou/Learn/tino/docs/03-planning/AI%E8%9E%8D%E5%90%88%E4%B8%8E%E6%9E%B6%E6%9E%84%E6%94%B6%E6%95%9B%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92%20v0.1.md)
-- AI 模块开发、runtime、能力边界、反馈记忆：  
-  [Tino AI Rethink 与模块开发基线 v1](/Users/lou/Learn/tino/docs/03-planning/Tino%20AI%20Rethink%20%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%BC%80%E5%8F%91%E5%9F%BA%E7%BA%BF%20v1.md)
-- 里程碑与任务拆解：  
-  [MVP开发任务拆解](/Users/lou/Learn/tino/docs/03-planning/MVP%E5%BC%80%E5%8F%91%E4%BB%BB%E5%8A%A1%E6%8B%86%E8%A7%A3.md)
-- 打包、环境、签名：  
-  [环境与打包流程](/Users/lou/Learn/tino/docs/03-planning/%E7%8E%AF%E5%A2%83%E4%B8%8E%E6%89%93%E5%8C%85%E6%B5%81%E7%A8%8B.md)
-- 产品目标与 AI 能力边界：  
-  [个人信息流软件需求原型文档](/Users/lou/Learn/tino/docs/02-product/%E4%B8%AA%E4%BA%BA%E4%BF%A1%E6%81%AF%E6%B5%81%E8%BD%AF%E4%BB%B6%E9%9C%80%E6%B1%82%E5%8E%9F%E5%9E%8B%E6%96%87%E6%A1%A3.md)  
-  [Tino AI 能力地图 v0.2](/Users/lou/Learn/tino/docs/02-product/Tino%20AI%20%E8%83%BD%E5%8A%9B%E5%9C%B0%E5%9B%BE%20v0.2.md)
-- legacy `/ai` / review 资产说明（deprecated）：  
-  [AI Review 当前实现与 Mock 链路说明](/Users/lou/Learn/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
+- 当前 AI 质量闭环与 replay 计划：`docs/03-planning/Tino AI 开发期质量管线计划 v0.1.md`
+- 打包、环境、签名：`docs/03-planning/环境与打包流程.md`
+- 产品目标与 AI 能力边界：`docs/02-product/个人信息流软件需求原型文档.md`、`docs/02-product/Tino AI 能力地图 v0.2.md`
+- legacy `/ai` / review 资产说明只在排查历史实现时阅读，且统一去 `docs/03-planning/archive/`
 
 ## 2. 项目一句话
 
@@ -60,6 +53,7 @@
 - Phase C capability boundary 已起步：background compile 的 batch 读取、topic index 读取、能力解析已从 legacy `/ai review` 语义中独立出来，当前支持 provider-backed compile source
 - `preview_ai_batch_compile` 已存在，并与 Rust background compile 共用同一条 provider-backed capability path
 - Phase D Rust background compiler 已接上：会在启动、batch promotion、周期维护后自动挑选 ready batch、通过 active provider profile 真实调用模型、落盘到 `topics/` / `_inbox/`
+- 上述 provider-backed background compile 证明了 Rust 主链路已跑通，但它当前仍带着“小 batch 直接落库”的过渡语义，不等于 `Day Digest / Rolling Topic` 已被证明正确
 - DeepSeek 背景编译当前采用 batch 复杂度选模：简单批次走 `deepseek-chat`，复杂批次走 `deepseek-reasoner`
 - AI 融合与边界收敛执行已启动：legacy `/ai review` Rust bridge 已从 `commands/ai.rs` 下沉到 `src-tauri/src/ai/legacy_review.rs`
 - Runtime Provider 配置现在由 Rust authoritative save path 做最终校验：保存设置时会拒绝 `非 HTTPS baseUrl`、`带 credentials 的 baseUrl`、`model 内空白`、`apiKey 内空白`、`过短 apiKey`
@@ -68,12 +62,13 @@
 - Rust background compile 对 provider timeout / non-JSON response 的报错已开始向 Renderer `provider-access` 收敛；当 relay baseUrl 设在根路径时，错误会明确提示尝试补 `/v1`
 - Rust background compile 对 DeepSeek 兼容语义的判断现在会吸收显式 `deepseek-* model` 信号，而不是只看 `vendor`；但仅 host 命中 DeepSeek 不会静默替换默认模型，避免后台与交互式配置语义再次漂移
 - Renderer 侧 legacy `/ai review` 模块现已整体收敛到 `src/features/ai/legacy-review/`；`ai-review-page.tsx` 仍保留为 legacy tooling surface，但 review-first 逻辑不再占据 `features/ai` 的默认结构中心
+- `pnpm ai-quality:replay` 现已显式区分 `--pipeline legacy|background`：`legacy` 继续用于 benchmark / compatibility，`background` 会通过 headless Rust compile 入口直接评测当前 rethink 主链路，但 scorer / goldens / experiment reports 仍保持同一套
 - Dashboard 首页现已开始消费 Rust-owned `AiSystemSnapshot`，以次级 `AI Ops` 摘要卡展示后台 runtime 状态、近期写入、feedback 计数与 quality 快照；该面板只消费 snapshot query，不在 Renderer 建立新的权威 runtime 状态
 - `aiSystemSnapshot` 的 query invalidation 现已收窄：设置变更只在 `knowledgeRoot` 或当前激活 provider 实际变化时刷新；clipboard 侧 `refreshDashboard` 事件也会同步刷新该 snapshot
 - Rust 侧现已新增 `AiSystemUpdated` typed event；后台编译周期完成、feedback 落库成功、legacy review persist 成功后都会发射该事件，Renderer 通过 `AppProviders` 统一失效 `aiSystemSnapshot` query 做热同步
 - provider-bound background compile 现在会先做最小本地安全防护：明显 token / credential capture 先本地丢弃，不进入外部模型请求
 - provider-bound background compile 现在也会做最小落库质量守门：输出语言跟随当前 `localePreference`，topic 复用时允许保留原 slug 但按当前 locale 更新显示名；单条祝福/鸡汤不直接入 `topic`，明显 OCR 乱码片段直接丢弃
-- 后台 compile 的 queue / batch gate 已切到 capability boundary；当前没有可用 provider-backed background capability 时会停在 `AwaitingCapability`
+- 后台 compile 的 queue / batch gate 已切到 capability boundary；当前没有可用 provider-backed background capability 时，新 capture 仍会进入 `daily` 原始归档，但不会进入正式 AI queue / batch，AI runtime snapshot 会停在 `AwaitingCapability`
 - `_system/ai/runtime.json` 现在会真实记录 `Idle / Running / RetryBackoff` 迁移，`jobs/*.json`、`writes.jsonl`、`job-audit.jsonl` 由后台编译主链路直接写入
 - topic / inbox 的 Markdown merge 逻辑已抽成共享 Rust helper，legacy `applyBatchDecision` 与新的后台编译落盘保持同一套文件语义
 - `_system/runtime.json`
@@ -93,6 +88,18 @@
 - 接到真实用户纠错路径的 feedback memory 回路
 - 后台 compile 成功/失败驱动的正式 quality metrics 流
 - 历史补跑
+- `Day Digest / Rolling Topic` 的正式 contract 与用户可感知输出入口
+
+本轮已形成、但尚未完成代码落地的 next-stage 共识：
+
+- 进入真实历史 replay 前，先手工标注 `2-3` 天真实剪贴板历史，定义理想的 `Day Digest / Rolling Topic`
+- 当前 `20 条 / 10 分钟` 只应继续作为 queue promotion / triage 的调度窗口，不应再被当成最终语义窗口
+- `daily/` 仍然只做原始归档；后续真正的语义层应上移到 `day digest / rolling topic` 一类的静默编译层
+- 在新 contract 冻结前，旧的小 batch 直写 `topics/` 应暂停、降级为 dev-only，或重定向到审计沙盒
+- AI 主脑应拆成 `静默 lane` 与 `显式 lane`：默认是后台静默分析，用户显式输入或显式方向只提供注意力锚点
+- `attention hint` 第一版只允许显式关闭或被新的 hint 替换，不做自动衰减
+- 后续文件拖入不应做成另一个 AI 孤岛，而应作为统一 `input adapter` 接入同一条静默编译主链路
+- 上述口径的完整描述见：`Tino AI 静默编译与显式意图执行方案 v0.1`
 
 ## 4. 当前 AI 相关旧资产必须这样理解
 
@@ -135,6 +142,12 @@ AI 策略：
 - review / 调试只作为异常兜底与开发校准层
 - 分层按触发频率与生命周期，而不是按模型强弱
 - 后台编译和交互式 AI 必须物理隔离
+- `20 条 / 10 分钟` 是调度窗口，不是最终语义窗口
+- `daily/` 之上应逐步形成日级与跨日的静默 thread / topic 收敛层
+- 用户显式给方向时，应优先落到轻量 `attention hint`，而不是直接改写静默编译真相
+- `attention hint` 在 `v0.1` 里只允许显式关闭或替换，不做自动衰减
+- 后续文件拖入、文档导入、富媒体输入都应被理解为统一输入适配器，而不是独立 AI 岛
+- 静默系统必须提供用户可感知摘要出口，而不是只在后台或 AI Ops 中自转
 
 ## 6. 默认开发顺序
 
@@ -144,7 +157,8 @@ AI 策略：
 
 如果做 AI：
 
-- `Contract -> Storage / Feedback -> Capability Boundary -> Rust Background Compiler -> Persistence -> AI Ops`
+- `手工标注 2-3 天真实历史 -> 暂停旧直写 topics 语义 -> 真实历史回放 -> triage batch 收敛 -> day digest / rolling topic contract -> attention hint -> input adapter`
+- 在上述主线内继续推进 `Contract -> Storage / Feedback -> Capability Boundary -> Rust Background Compiler -> Persistence -> AI Ops`
 - 不要先继续写 `/ai` 页面
 - 不要把 provider UI 当成 AI 模块中心
 - 不要在 Rust 状态机和反馈存储没定之前先扩 AI UI
@@ -176,15 +190,16 @@ cargo check --manifest-path src-tauri/Cargo.toml
 - `最后更新`
 - `当前基线提交`
 - `当前真实状态`
-- [技术冻结记录](/Users/lou/Learn/tino/docs/03-planning/技术冻结记录.md)
-- [Tino AI Rethink 与模块开发基线 v1](/Users/lou/Learn/tino/docs/03-planning/Tino%20AI%20Rethink%20%E4%B8%8E%E6%A8%A1%E5%9D%97%E5%BC%80%E5%8F%91%E5%9F%BA%E7%BA%BF%20v1.md)
+- `docs/03-planning/技术冻结记录.md`
+- `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`
+- `Tino AI 静默编译与显式意图执行方案 v0.1`
 
 如果只是排查 legacy `/ai` 行为，再额外参考：
 
-- [AI Review 当前实现与 Mock 链路说明](/Users/lou/Learn/tino/docs/03-planning/AI%20Review%20%E5%BD%93%E5%89%8D%E5%AE%9E%E7%8E%B0%E4%B8%8E%20Mock%20%E9%93%BE%E8%B7%AF%E8%AF%B4%E6%98%8E.md)
+- `docs/03-planning/archive/AI Review 当前实现与 Mock 链路说明.md`
 
 ## 9. 一句结论
 
 当前仓库的正确理解不是“AI 已经接完”，而是：
 
-> 输入侧和原始归档链路已经真实可用；Rust-owned background compiler 现在也已能通过 active provider profile 真实调用模型并落盘；后续 AI 开发重点已经收敛到 `落库质量 + feedback memory + controlled persistence + AI Ops`，而不是继续扩旧 `/ai review` 方案。
+> 输入侧和原始归档链路已经真实可用；Rust-owned background compiler 也已真实接上；下一阶段的关键不再是继续围绕小 batch 直接落库做优化，而是把 AI 主脑收敛到 `静默编译 + day digest / rolling topic + 轻量 attention hint + 输入适配器` 这条主线上。

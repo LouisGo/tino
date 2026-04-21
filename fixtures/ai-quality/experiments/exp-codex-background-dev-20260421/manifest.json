@@ -1,0 +1,74 @@
+{
+  "createdAt": "2026-04-21T14:53:51.564Z",
+  "experimentId": "exp-codex-background-dev-20260421",
+  "fixtureCount": 10,
+  "fixtures": [
+    "dev_focused_research_markitdown_001",
+    "dev_coding_debugging_pasteback_001",
+    "dev_writing_planning_quality_pipeline_001",
+    "dev_meeting_chat_actionables_release_sync_001",
+    "dev_link_led_context_sparse_eval_links_001",
+    "dev_topic_overlap_python_vs_eval_001",
+    "dev_task_switching_copy_and_terminal_001",
+    "dev_duplicate_near_duplicate_retention_001",
+    "dev_low_value_noise_misc_001",
+    "dev_bilingual_mixed_eval_001"
+  ],
+  "mode": "mock",
+  "pipeline": "background",
+  "provider": "mock",
+  "runArtifacts": [
+    {
+      "artifactPath": "runs/dev_focused_research_markitdown_001.json",
+      "fixtureId": "dev_focused_research_markitdown_001",
+      "overallScore": 0.7444444444444446
+    },
+    {
+      "artifactPath": "runs/dev_coding_debugging_pasteback_001.json",
+      "fixtureId": "dev_coding_debugging_pasteback_001",
+      "overallScore": 0.7444444444444446
+    },
+    {
+      "artifactPath": "runs/dev_writing_planning_quality_pipeline_001.json",
+      "fixtureId": "dev_writing_planning_quality_pipeline_001",
+      "overallScore": 0.8666666666666666
+    },
+    {
+      "artifactPath": "runs/dev_meeting_chat_actionables_release_sync_001.json",
+      "fixtureId": "dev_meeting_chat_actionables_release_sync_001",
+      "overallScore": 0.4444444444444444
+    },
+    {
+      "artifactPath": "runs/dev_link_led_context_sparse_eval_links_001.json",
+      "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+      "overallScore": 0.6641666666666668
+    },
+    {
+      "artifactPath": "runs/dev_topic_overlap_python_vs_eval_001.json",
+      "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+      "overallScore": 0.6036630036630037
+    },
+    {
+      "artifactPath": "runs/dev_task_switching_copy_and_terminal_001.json",
+      "fixtureId": "dev_task_switching_copy_and_terminal_001",
+      "overallScore": 0.6216216216216217
+    },
+    {
+      "artifactPath": "runs/dev_duplicate_near_duplicate_retention_001.json",
+      "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+      "overallScore": 0.8666666666666666
+    },
+    {
+      "artifactPath": "runs/dev_low_value_noise_misc_001.json",
+      "fixtureId": "dev_low_value_noise_misc_001",
+      "overallScore": 0.369047619047619
+    },
+    {
+      "artifactPath": "runs/dev_bilingual_mixed_eval_001.json",
+      "fixtureId": "dev_bilingual_mixed_eval_001",
+      "overallScore": 0.6785714285714286
+    }
+  ],
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "split": "dev"
+}

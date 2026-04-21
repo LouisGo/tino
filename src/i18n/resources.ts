@@ -217,6 +217,7 @@ export const enUSResources = defineLocaleSchema({
     },
     aiOps: {
       label: "AI Ops",
+      activityLabel: "Latest Activity",
       title: "{{phase}}",
       titleWithSource: "{{phase}} via {{source}}",
       metrics: {
@@ -246,14 +247,14 @@ export const enUSResources = defineLocaleSchema({
         blocked: "Blocked",
       },
       summary: {
-        loading: "Loading the Rust-owned AI runtime snapshot.",
+        loading: "Loading Rust runtime snapshot.",
         unavailable:
-          "AI Ops snapshot is temporarily unavailable. HomeChat remains the primary user-facing AI surface.",
+          "AI Ops snapshot is unavailable. HomeChat remains the main AI surface.",
         unconfigured:
-          "Background compile is not configured yet. This card only reflects the Rust-owned runtime snapshot.",
+          "Background compile is not configured. This panel only reflects the Rust runtime.",
         unconfiguredSource: "No background source",
         secondary:
-          "Secondary runtime view only. This panel observes the Rust-owned background compiler, feedback, and writes.",
+          "Secondary observer for the Rust background compiler, feedback, and writes.",
         lastError: "Last runtime error: {{message}}",
         lastWrite: "Latest persisted write {{time}}",
         lastFeedback: "Latest feedback {{time}}",
@@ -1105,6 +1106,7 @@ export const zhCNResources = {
     },
     aiOps: {
       label: "AI Ops",
+      activityLabel: "最近活动",
       title: "{{phase}}",
       titleWithSource: "{{phase}} · {{source}}",
       metrics: {
@@ -1134,14 +1136,14 @@ export const zhCNResources = {
         blocked: "阻塞中",
       },
       summary: {
-        loading: "正在加载 Rust 持有的 AI runtime 快照。",
+        loading: "正在加载 Rust runtime 快照。",
         unavailable:
-          "AI Ops 快照暂时不可用。面对用户的主 AI 入口仍然是 HomeChat，这里只负责观察 Rust 后台运行态。",
+          "AI Ops 快照暂不可用。面向用户的主 AI 入口仍然是 HomeChat。",
         unconfigured:
-          "后台编译尚未配置完成。这个卡片只反映 Rust 持有的 runtime 快照，不引入新的前端真相源。",
+          "后台编译尚未配置完成。这个面板只反映 Rust runtime。",
         unconfiguredSource: "未配置后台来源",
         secondary:
-          "这里只是次级运行态视图，用来观察 Rust-owned background compiler、反馈事件和落盘结果。",
+          "这里只做次级观察，展示 Rust 后台编译、反馈与落盘。",
         lastError: "最近一次运行时错误：{{message}}",
         lastWrite: "最近一次落盘发生在 {{time}}",
         lastFeedback: "最近一次反馈发生在 {{time}}",

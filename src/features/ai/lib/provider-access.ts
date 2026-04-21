@@ -16,6 +16,9 @@ import {
   getRuntimeProviderModelLabel,
   getRuntimeProviderVendorLabel,
   resolveRuntimeProviderEffectiveModel,
+  validateRuntimeProviderApiKey,
+  validateRuntimeProviderBaseUrl,
+  validateRuntimeProviderModel,
 } from "@/features/settings/lib/runtime-provider";
 import { createRendererLogger } from "@/lib/logger";
 import { isTauriRuntime } from "@/lib/tauri";
@@ -119,6 +122,9 @@ export function resolveProviderAccessConfig(settings: ProviderAccessConfig) {
   const baseUrl = normalizeBaseUrl(settings.baseUrl);
   const apiKey = settings.apiKey.trim();
   const model = resolveRuntimeProviderEffectiveModel(settings);
+  const baseUrlError = validateRuntimeProviderBaseUrl(baseUrl);
+  const apiKeyError = validateRuntimeProviderApiKey(apiKey);
+  const modelError = validateRuntimeProviderModel(settings.model);
   const providerHost = getProviderHost(baseUrl);
   const vendor = settings.vendor;
   const modelLabel = getRuntimeProviderModelLabel(model, vendor);
@@ -128,7 +134,12 @@ export function resolveProviderAccessConfig(settings: ProviderAccessConfig) {
     apiKey,
     apiMode: resolveRuntimeProviderApiMode({ vendor, apiKey, baseUrl, model }),
     baseUrl,
-    isConfigured: baseUrl.length > 0 && apiKey.length > 0,
+    isConfigured:
+      baseUrl.length > 0
+      && apiKey.length > 0
+      && !baseUrlError
+      && !apiKeyError
+      && !modelError,
     model,
     providerHost,
     vendor,

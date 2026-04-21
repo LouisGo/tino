@@ -1,0 +1,276 @@
+{
+  "createdAt": "2026-04-21T14:53:42.541Z",
+  "experimentId": "exp-codex-legacy-dev-20260421",
+  "fixtureChecksum": "8cf84e94a3e1f8af8741b3befb12f53285c47367bc2dcb5a89c7964425ffbc27",
+  "fixtureId": "dev_bilingual_mixed_eval_001",
+  "generationMode": "mock",
+  "model": "mock-batch-review",
+  "parsedReview": {
+    "reviewId": "review_batch_dev_bilingual_mixed_eval_001_1776783222541",
+    "batchId": "batch_dev_bilingual_mixed_eval_001",
+    "runtimeState": "review_pending",
+    "createdAt": "2026-04-21T14:53:42.541Z",
+    "modelSchemaVersion": "tino.batch_review.v1",
+    "clusters": [
+      {
+        "clusterId": "batch_dev_bilingual_mixed_eval_001_cluster_primary",
+        "sourceIds": [
+          "cap_bilingual_001",
+          "cap_bilingual_002"
+        ],
+        "decision": "archive_to_topic",
+        "topicSlugSuggestion": "prompt-eval-experimentation",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "title": "先把 mock batch 和 golden 固定，再谈 prompt polish。",
+        "summary": "先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了只是主观印象。 Holdout cases should never become prompt-by-prompt repair targets. They are for regression detection, not for case memorization.",
+        "keyPoints": [
+          "先把 mock batch 和 golden 固定，再谈 prompt polish。",
+          "Holdout cases should never become prompt-by-prompt repair targets.",
+          "`false_archive_rate` 比 overall score 更重要。",
+          "Python 只做 analysis layer, not runtime source of truth."
+        ],
+        "tags": [
+          "eval",
+          "golden",
+          "runner",
+          "regression",
+          "plain_text"
+        ],
+        "confidence": 0.83,
+        "reason": "The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "multilingual-prompting",
+            "topicName": "Multilingual Prompting",
+            "reason": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows."
+          }
+        ],
+        "missingContext": []
+      },
+      {
+        "clusterId": "batch_dev_bilingual_mixed_eval_001_cluster_secondary",
+        "sourceIds": [
+          "cap_bilingual_003",
+          "cap_bilingual_005",
+          "cap_bilingual_006",
+          "cap_bilingual_007",
+          "cap_bilingual_004"
+        ],
+        "decision": "send_to_inbox",
+        "topicSlugSuggestion": null,
+        "topicNameSuggestion": null,
+        "title": "Provider access references need manual confirmation",
+        "summary": "Reference links and loose follow-up notes are held for review before they influence persistence.",
+        "keyPoints": [
+          "`false_archive_rate` 比 overall score 更重要。",
+          "Python 只做 analysis layer, not runtime source of truth.",
+          "不要再凭感觉说结果更顺了，要看 case-by-case diff。",
+          "schema_valid_rate >= 98%; source_assignment_integrity = 100%"
+        ],
+        "tags": [
+          "python",
+          "notebook",
+          "analysis",
+          "artifacts",
+          "plain_text"
+        ],
+        "confidence": 0.54,
+        "reason": "This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.",
+        "possibleTopics": [
+          {
+            "topicSlug": "prompt-eval-experimentation",
+            "topicName": "Prompt Eval Experimentation",
+            "reason": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality."
+          },
+          {
+            "topicSlug": "python-analysis-sidecar",
+            "topicName": "Python Analysis Sidecar",
+            "reason": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen."
+          },
+          {
+            "topicSlug": "multilingual-prompting",
+            "topicName": "Multilingual Prompting",
+            "reason": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows."
+          }
+        ],
+        "missingContext": [
+          "Need confirmation whether the external reference should become a long-term topic section."
+        ]
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_bilingual_mixed_eval_001_cluster_primary",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "batch_dev_bilingual_mixed_eval_001_cluster_secondary",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-21.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "pipeline": "legacy",
+  "pipelineMetadata": null,
+  "promptText": {
+    "system": "You are Tino's background batch compiler.\nCluster related captures and choose the safest destination for each cluster.\nOptimize for durable knowledge quality, not aggressive archival.\nA false archive is worse than sending a cluster to the inbox.\n\nDecision definitions\n- archive_to_topic: durable, reusable knowledge, stable product/technical decisions, reusable assets such as libraries/playbooks/macros/templates, or long-lived reference material that should still matter weeks later.\n- send_to_inbox: actionable work, meeting prep, owner/deadline driven notes, follow-ups, sparse watchlists, or anything that still needs human triage.\n- discard: obvious low-value noise or accidental scraps with no durable value and no follow-up value.\n\nHard routing rules\n- If the cluster contains owners, deadlines, requests, TODOs, next steps, meeting prep, release coordination, demo prep, or 'need to / ask / invite / record / prepare' style language, use send_to_inbox.\n- If the cluster is mostly raw links, docs, or references with little synthesis or only vague context like 'maybe useful later', use send_to_inbox.\n- A supporting issue link or doc link should stay attached to the actionable or substantive cluster it belongs to. Do not split it into a standalone cluster unless it is clearly unrelated.\n- Repeated or near-duplicate captures usually strengthen one cluster. Do not fragment them just because the wording repeats.\n\nTopic matching rules\n- Prefer an existing topic whenever it is a reasonable broader or parent home for the cluster.\n- Do not create a new topic just because you can invent a narrower name.\n- Only create a new topic when the knowledge is clearly durable, clearly distinct from every available topic, and would still deserve its own page weeks later.\n- Reusable assets can justify a new topic even if they were created for an upcoming launch or tester wave, as long as the cluster is defining the reusable asset itself rather than just tracking immediate execution.\n- If a cluster could fit an existing topic with a broader scope, merge into that existing topic.\n- Planning notes are still durable knowledge when they define a stable framework, evaluation rubric, architecture principle, or metrics strategy. Do not send them to inbox just because they mention v0.1, planning, or prompt tuning.\n- Prefer the most semantically direct existing topic over a broader meta topic. User-facing copy, tone, headline, and product-message guidance belongs with writing/playbook topics rather than generic knowledge-ops topics.\n- When material overlaps two adjacent topics, split by durable responsibility or ownership, not by superficial keyword overlap.\n- If Python is acting as an analysis sidecar after stable artifacts are produced, keep Python notebook, pandas, and error-bucketing material with the Python analysis topic; keep runner/scorer ownership and evaluation-metric system notes with the evaluation topic.\n- When import/conversion-library fit overlaps with runtime ownership, keep library-fit and normalization notes with the document/import topic, keep execution-boundary and scheduler-ownership notes with the runtime topic, and keep pure follow-up benchmark asks in inbox.\n\nCompact calibration examples\n1. Meeting/demo prep with owners, assignments, deadlines, and a supporting issue link -> one cluster -> send_to_inbox. Do not archive it to a recurring ops topic.\n2. Four evaluation-tool links plus one vague note like 'maybe useful later for scorecards' -> one cluster -> send_to_inbox. Sparse link collections are not durable topic knowledge yet.\n3. Several near-duplicate notes about clipboard retention durability -> one cluster -> archive_to_topic using the best existing broader topic. Do not invent a narrower new topic.\n4. Mixed batch: Python notebook and pandas references for post-run analysis, plus separate notes that runner/scorer ownership stays in TypeScript -> split into Python analysis and evaluation-system clusters, then merge each into the matching existing topic.\n\nReturn one JSON object only.\nDo not use markdown fences.\nDo not add explanation before or after the JSON.\nThe JSON must match this shape exactly:\n{ \"clusters\": [{ \"clusterId\": string, \"sourceIds\": string[], \"decision\": \"archive_to_topic\" | \"send_to_inbox\" | \"discard\", \"topicSlugSuggestion\": string | null, \"topicNameSuggestion\": string | null, \"title\": string, \"summary\": string, \"keyPoints\": string[], \"tags\": string[], \"confidence\": number, \"reason\": string, \"possibleTopics\": [{ \"topicSlug\": string, \"topicName\": string, \"reason\": string | null }], \"missingContext\": string[] }] }",
+    "user": "Batch metadata\nbatch_id: batch_dev_bilingual_mixed_eval_001\ncapture_count: 7\ntrigger_reason: max_wait\nwindow: 2026-04-20T01:54:00Z -> 2026-04-20T02:04:00Z\n\nRelevant topic index entries (treat these as canonical topic candidates; prefer them over inventing a new topic)\n1. Prompt Eval Experimentation [prompt-eval-experimentation]\n   summary: Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\n   recent_tags: eval, golden, runner, regression\n   last_updated_at: 2026-04-19T12:40:00Z\n2. Python Analysis Sidecar [python-analysis-sidecar]\n   summary: Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\n   recent_tags: python, notebook, analysis, artifacts\n   last_updated_at: 2026-04-18T22:10:00Z\n3. Multilingual Prompting [multilingual-prompting]\n   summary: Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\n   recent_tags: bilingual, locale, prompts, zh-en\n   last_updated_at: 2026-04-18T09:15:00Z\n4. Personal Knowledge Ops [personal-knowledge-ops]\n   summary: Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.\n   recent_tags: daily, topics, inbox, retention\n   last_updated_at: 2026-04-18T16:00:00Z\n5. Link Triage Watchlist [link-triage-watchlist]\n   summary: Link-heavy research queues that should be reviewed before they enter durable knowledge topics.\n   recent_tags: links, triage, watchlist, review\n   last_updated_at: 2026-04-18T13:55:00Z\n\nCaptures\ncapture_1:\nid: cap_bilingual_001\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:54:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 先把 mock batch 和 golden 固定，再谈 prompt polish。\nraw_text:\n  先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了只是主观印象。\n\ncapture_2:\nid: cap_bilingual_002\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:56:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: Holdout cases should never become prompt-by-prompt repair targets.\nraw_text:\n  Holdout cases should never become prompt-by-prompt repair targets. They are for regression detection, not for case memorization.\n\ncapture_3:\nid: cap_bilingual_003\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T01:58:00Z\nsource: clipboard\nsource_app_name: Notes\npreview: `false_archive_rate` 比 overall score 更重要。\nraw_text:\n  `false_archive_rate` 比 overall score 更重要。路由错了，再漂亮的 summary 也没有价值。\n\ncapture_4:\nid: cap_bilingual_004\ncontent_kind: link\ncaptured_at: 2026-04-20T02:00:00Z\nsource: clipboard\nsource_app_name: Safari\npreview: https://eugeneyan.com/writing/llm-evaluators/\nlink_url: https://eugeneyan.com/writing/llm-evaluators/\nraw_text:\n  https://eugeneyan.com/writing/llm-evaluators/\n\ncapture_5:\nid: cap_bilingual_005\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T02:01:00Z\nsource: clipboard\nsource_app_name: Slack\npreview: Python 只做 analysis layer, not runtime source of truth.\nraw_text:\n  Python 只做 analysis layer, not runtime source of truth. 先把 TS replay runner 和 artifacts 稳定下来。\n\ncapture_6:\nid: cap_bilingual_006\ncontent_kind: plain_text\ncaptured_at: 2026-04-20T02:03:00Z\nsource: clipboard\nsource_app_name: Obsidian\npreview: 不要再凭感觉说结果更顺了，要看 case-by-case diff。\nraw_text:\n  不要再凭感觉说结果更顺了，要看 case-by-case diff。每一轮实验都要能说明哪些场景进步，哪些场景退化。\n\ncapture_7:\nid: cap_bilingual_007\ncontent_kind: rich_text\ncaptured_at: 2026-04-20T02:04:00Z\nsource: clipboard\nsource_app_name: Notion\npreview: schema_valid_rate >= 98%; source_assignment_integrity = 100%\nraw_text:\n  schema_valid_rate >= 98%; source_assignment_integrity = 100%\n\nBatch-specific calibration hints\n1. Batches about fixtures, goldens, replay runners, scorers, holdout splits, or structural quality metrics are durable evaluation-system knowledge and should merge into the evaluation topic instead of going to inbox.\n\nDecision checklist\n1. If the cluster is execution-oriented or time-bound, send it to inbox.\n2. If the cluster is link-heavy with weak synthesis, send it to inbox.\n3. If the cluster is durable and fits an existing topic, archive to that existing topic.\n4. Create a new topic only when none of the listed topics is a reasonable broader home and the cluster defines durable knowledge or a reusable asset.\n5. Keep near-duplicates together when they restate the same durable point.\n6. Use discard only for obvious noise with no follow-up value.\n\nImportant output rules\n1. Output valid JSON only.\n2. Use only sourceIds from the captures above.\n3. Do not repeat sourceIds across clusters.\n4. Assign every sourceId exactly once.\n5. Use an exact listed topic slug when you merge into an existing topic.\n6. Use null when topic suggestion is unavailable.\n7. Include missingContext and possibleTopics arrays even when empty."
+  },
+  "promptVersion": "tino.batch_review.engine.v6",
+  "provider": "mock",
+  "providerMetadata": {
+    "apiMode": "responses",
+    "durationMs": 0,
+    "finishReason": "stop",
+    "model": "mock-batch-review",
+    "providerLabel": "Mock Generator",
+    "responseModel": "mock-batch-review"
+  },
+  "rawResponseText": "{\n  \"clusters\": [\n    {\n      \"clusterId\": \"batch_dev_bilingual_mixed_eval_001_cluster_primary\",\n      \"sourceIds\": [\n        \"cap_bilingual_001\",\n        \"cap_bilingual_002\"\n      ],\n      \"decision\": \"archive_to_topic\",\n      \"topicSlugSuggestion\": \"prompt-eval-experimentation\",\n      \"topicNameSuggestion\": \"Prompt Eval Experimentation\",\n      \"title\": \"先把 mock batch 和 golden 固定，再谈 prompt polish。\",\n      \"summary\": \"先把 mock batch 和 golden 固定，再谈 prompt polish。没有固定基准时，所谓模型变好了只是主观印象。 Holdout cases should never become prompt-by-prompt repair targets. They are for regression detection, not for case memorization.\",\n      \"keyPoints\": [\n        \"先把 mock batch 和 golden 固定，再谈 prompt polish。\",\n        \"Holdout cases should never become prompt-by-prompt repair targets.\",\n        \"`false_archive_rate` 比 overall score 更重要。\",\n        \"Python 只做 analysis layer, not runtime source of truth.\"\n      ],\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"runner\",\n        \"regression\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.83,\n      \"reason\": \"The batch repeatedly discusses runtime layering, review gating, and Rust-side persistence boundaries.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"multilingual-prompting\",\n          \"topicName\": \"Multilingual Prompting\",\n          \"reason\": \"Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\"\n        }\n      ],\n      \"missingContext\": []\n    },\n    {\n      \"clusterId\": \"batch_dev_bilingual_mixed_eval_001_cluster_secondary\",\n      \"sourceIds\": [\n        \"cap_bilingual_003\",\n        \"cap_bilingual_005\",\n        \"cap_bilingual_006\",\n        \"cap_bilingual_007\",\n        \"cap_bilingual_004\"\n      ],\n      \"decision\": \"send_to_inbox\",\n      \"topicSlugSuggestion\": null,\n      \"topicNameSuggestion\": null,\n      \"title\": \"Provider access references need manual confirmation\",\n      \"summary\": \"Reference links and loose follow-up notes are held for review before they influence persistence.\",\n      \"keyPoints\": [\n        \"`false_archive_rate` 比 overall score 更重要。\",\n        \"Python 只做 analysis layer, not runtime source of truth.\",\n        \"不要再凭感觉说结果更顺了，要看 case-by-case diff。\",\n        \"schema_valid_rate >= 98%; source_assignment_integrity = 100%\"\n      ],\n      \"tags\": [\n        \"python\",\n        \"notebook\",\n        \"analysis\",\n        \"artifacts\",\n        \"plain_text\"\n      ],\n      \"confidence\": 0.54,\n      \"reason\": \"This slice includes a provider reference and incomplete follow-up context, so it should remain user-reviewed.\",\n      \"possibleTopics\": [\n        {\n          \"topicSlug\": \"prompt-eval-experimentation\",\n          \"topicName\": \"Prompt Eval Experimentation\",\n          \"reason\": \"Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.\"\n        },\n        {\n          \"topicSlug\": \"python-analysis-sidecar\",\n          \"topicName\": \"Python Analysis Sidecar\",\n          \"reason\": \"Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.\"\n        },\n        {\n          \"topicSlug\": \"multilingual-prompting\",\n          \"topicName\": \"Multilingual Prompting\",\n          \"reason\": \"Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.\"\n        }\n      ],\n      \"missingContext\": [\n        \"Need confirmation whether the external reference should become a long-term topic section.\"\n      ]\n    }\n  ]\n}",
+  "retrievalVersion": "tino.topic_lexical.v1",
+  "runId": "run_dev_bilingual_mixed_eval_001_f75f67c4",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_bilingual_eval_core",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_bilingual_mixed_eval_001_cluster_secondary"
+      },
+      {
+        "expectedClusterId": "golden_bilingual_python_boundary",
+        "overlapCount": 1,
+        "predictedClusterId": "batch_dev_bilingual_mixed_eval_001_cluster_secondary"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 5/7 source assignments."
+    ],
+    "fixtureId": "dev_bilingual_mixed_eval_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.5384615384615385,
+      "destinationAccuracy": {
+        "correct": 2,
+        "rate": 0.2857142857142857,
+        "total": 7
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 2,
+        "rate": 0.2857142857142857,
+        "total": 7
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 2,
+        "rate": 0.2857142857142857,
+        "total": 7
+      }
+    },
+    "overallScore": 0.4417582417582418,
+    "pairwiseCounts": {
+      "falseNegative": 8,
+      "falsePositive": 4,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": [
+    {
+      "topicSlug": "prompt-eval-experimentation",
+      "topicName": "Prompt Eval Experimentation",
+      "topicSummary": "Offline fixtures, golden labels, replay runs, scorecards, holdout discipline, and regression tracking for AI quality.",
+      "recentTags": [
+        "eval",
+        "golden",
+        "runner",
+        "regression"
+      ],
+      "lastUpdatedAt": "2026-04-19T12:40:00Z"
+    },
+    {
+      "topicSlug": "python-analysis-sidecar",
+      "topicName": "Python Analysis Sidecar",
+      "topicSummary": "Python used only for artifact analysis, statistics, clustering experiments, and notebooks after contracts are frozen.",
+      "recentTags": [
+        "python",
+        "notebook",
+        "analysis",
+        "artifacts"
+      ],
+      "lastUpdatedAt": "2026-04-18T22:10:00Z"
+    },
+    {
+      "topicSlug": "multilingual-prompting",
+      "topicName": "Multilingual Prompting",
+      "topicSummary": "Chinese-English mixed prompts, terminology consistency, localization boundaries, and bilingual AI workflows.",
+      "recentTags": [
+        "bilingual",
+        "locale",
+        "prompts",
+        "zh-en"
+      ],
+      "lastUpdatedAt": "2026-04-18T09:15:00Z"
+    },
+    {
+      "topicSlug": "personal-knowledge-ops",
+      "topicName": "Personal Knowledge Ops",
+      "topicSummary": "Rules for daily archive, topics, inbox, durable capture retention, and controlled persistence semantics.",
+      "recentTags": [
+        "daily",
+        "topics",
+        "inbox",
+        "retention"
+      ],
+      "lastUpdatedAt": "2026-04-18T16:00:00Z"
+    },
+    {
+      "topicSlug": "link-triage-watchlist",
+      "topicName": "Link Triage Watchlist",
+      "topicSummary": "Link-heavy research queues that should be reviewed before they enter durable knowledge topics.",
+      "recentTags": [
+        "links",
+        "triage",
+        "watchlist",
+        "review"
+      ],
+      "lastUpdatedAt": "2026-04-18T13:55:00Z"
+    }
+  ],
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

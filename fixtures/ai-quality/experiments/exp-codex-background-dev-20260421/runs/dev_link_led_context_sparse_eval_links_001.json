@@ -1,0 +1,157 @@
+{
+  "createdAt": "2026-04-21T14:53:51.555Z",
+  "experimentId": "exp-codex-background-dev-20260421",
+  "fixtureChecksum": "b6c16315ad3e3970cc7dc6f695bc707f25d9833457578b2569a9d2f5378b4bea",
+  "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+  "generationMode": "mock",
+  "model": null,
+  "parsedReview": {
+    "clusters": [
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_knowledge",
+        "confidence": 0.82,
+        "decision": "archive_to_topic",
+        "keyPoints": [
+          "maybe useful later for scorecards"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch overlaps with an existing topic and includes enough textual evidence to persist directly.",
+        "sourceIds": [
+          "cap_evalinks_004"
+        ],
+        "summary": "maybe useful later for scorecards",
+        "tags": [
+          "eval",
+          "golden",
+          "notes",
+          "plain_text",
+          "regression"
+        ],
+        "title": "maybe useful later for scorecards",
+        "topicNameSuggestion": "Prompt Eval Experimentation",
+        "topicSlugSuggestion": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_references",
+        "confidence": 0.56,
+        "decision": "send_to_inbox",
+        "keyPoints": [
+          "https://platform.openai.com/docs/guides/evals",
+          "https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically",
+          "https://docs.ragas.io/en/latest/",
+          "https://humanloop.com/docs/evals"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.",
+        "sourceIds": [
+          "cap_evalinks_001",
+          "cap_evalinks_002",
+          "cap_evalinks_003",
+          "cap_evalinks_005"
+        ],
+        "summary": "Link-only captures are kept in inbox until the background compiler has richer surrounding context.",
+        "tags": [
+          "chrome",
+          "link",
+          "safari"
+        ],
+        "title": "Reference links pending calmer compilation",
+        "topicNameSuggestion": null,
+        "topicSlugSuggestion": null
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_knowledge",
+        "destination": "topic",
+        "filePath": "topics/prompt-eval-experimentation.md",
+        "topicName": "Prompt Eval Experimentation",
+        "topicSlug": "prompt-eval-experimentation"
+      },
+      {
+        "clusterId": "batch_dev_link_led_context_sparse_eval_links_001_references",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-21.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "pipeline": "background",
+  "pipelineMetadata": {
+    "sourceKind": "injected_mock",
+    "sourceLabel": "Injected Mock Compiler"
+  },
+  "promptText": null,
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "provider": "mock",
+  "providerMetadata": null,
+  "rawResponseText": "{\n  \"decisions\": [\n    {\n      \"confidence\": 0.82,\n      \"decisionId\": \"batch_dev_link_led_context_sparse_eval_links_001_knowledge\",\n      \"disposition\": \"write_topic\",\n      \"keyPoints\": [\n        \"maybe useful later for scorecards\"\n      ],\n      \"rationale\": \"The batch overlaps with an existing topic and includes enough textual evidence to persist directly.\",\n      \"sourceCaptureIds\": [\n        \"cap_evalinks_004\"\n      ],\n      \"summary\": \"maybe useful later for scorecards\",\n      \"tags\": [\n        \"eval\",\n        \"golden\",\n        \"notes\",\n        \"plain_text\",\n        \"regression\"\n      ],\n      \"title\": \"maybe useful later for scorecards\",\n      \"topicName\": \"Prompt Eval Experimentation\",\n      \"topicSlug\": \"prompt-eval-experimentation\"\n    },\n    {\n      \"confidence\": 0.56,\n      \"decisionId\": \"batch_dev_link_led_context_sparse_eval_links_001_references\",\n      \"disposition\": \"write_inbox\",\n      \"keyPoints\": [\n        \"https://platform.openai.com/docs/guides/evals\",\n        \"https://docs.smith.langchain.com/evaluation/how_to_guides/manage_datasets_programmatically\",\n        \"https://docs.ragas.io/en/latest/\",\n        \"https://humanloop.com/docs/evals\"\n      ],\n      \"rationale\": \"The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.\",\n      \"sourceCaptureIds\": [\n        \"cap_evalinks_001\",\n        \"cap_evalinks_002\",\n        \"cap_evalinks_003\",\n        \"cap_evalinks_005\"\n      ],\n      \"summary\": \"Link-only captures are kept in inbox until the background compiler has richer surrounding context.\",\n      \"tags\": [\n        \"chrome\",\n        \"link\",\n        \"safari\"\n      ],\n      \"title\": \"Reference links pending calmer compilation\",\n      \"topicName\": null,\n      \"topicSlug\": null\n    }\n  ]\n}",
+  "retrievalVersion": "tino.background_compile.topic_select.v1",
+  "runId": "run_dev_link_led_context_sparse_eval_links_001_43394197",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_eval_link_watchlist",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_link_led_context_sparse_eval_links_001_references"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 1"
+    ],
+    "fixtureId": "dev_link_led_context_sparse_eval_links_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.7499999999999999,
+      "destinationAccuracy": {
+        "correct": 4,
+        "rate": 0.8,
+        "total": 5
+      },
+      "falseArchiveRate": {
+        "correct": 1,
+        "rate": 0.2,
+        "total": 5
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 4,
+        "rate": 0.8,
+        "total": 5
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      }
+    },
+    "overallScore": 0.6641666666666668,
+    "pairwiseCounts": {
+      "falseNegative": 4,
+      "falsePositive": 0,
+      "truePositive": 6
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": null,
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

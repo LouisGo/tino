@@ -1,0 +1,127 @@
+{
+  "createdAt": "2026-04-21T14:53:51.556Z",
+  "experimentId": "exp-codex-background-dev-20260421",
+  "fixtureChecksum": "0b674b22d6031efe7329625cc9ae9c9e36ad5c3b4de92586a732d08fc160675b",
+  "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+  "generationMode": "mock",
+  "model": null,
+  "parsedReview": {
+    "clusters": [
+      {
+        "clusterId": "batch_dev_duplicate_near_duplicate_retention_001_knowledge",
+        "confidence": 0.82,
+        "decision": "archive_to_topic",
+        "keyPoints": [
+          "Clipboard history should retain 90 days and survive upgrades.",
+          "Clipboard history needs to survive app upgrades for the full 90-day window.",
+          "Retention data is a durable user asset, not disposable cache.",
+          "Do not tie clipboard history lifetime to bundle reinstall. App upgrades and re-installs should not silently erase retain…"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch overlaps with an existing topic and includes enough textual evidence to persist directly.",
+        "sourceIds": [
+          "cap_retentiondup_001",
+          "cap_retentiondup_002",
+          "cap_retentiondup_003",
+          "cap_retentiondup_004",
+          "cap_retentiondup_005",
+          "cap_retentiondup_006"
+        ],
+        "summary": "Clipboard history should retain 90 days and survive upgrades. Clipboard history needs to survive app upgrades for the full 90-day window.",
+        "tags": [
+          "daily",
+          "inbox",
+          "notes",
+          "obsidian",
+          "plain_text"
+        ],
+        "title": "Clipboard history should retain 90 days and survive upgrad…",
+        "topicNameSuggestion": "Personal Knowledge Ops",
+        "topicSlugSuggestion": "personal-knowledge-ops"
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_duplicate_near_duplicate_retention_001_knowledge",
+        "destination": "topic",
+        "filePath": "topics/personal-knowledge-ops.md",
+        "topicName": "Personal Knowledge Ops",
+        "topicSlug": "personal-knowledge-ops"
+      }
+    ]
+  },
+  "pipeline": "background",
+  "pipelineMetadata": {
+    "sourceKind": "injected_mock",
+    "sourceLabel": "Injected Mock Compiler"
+  },
+  "promptText": null,
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "provider": "mock",
+  "providerMetadata": null,
+  "rawResponseText": "{\n  \"decisions\": [\n    {\n      \"confidence\": 0.82,\n      \"decisionId\": \"batch_dev_duplicate_near_duplicate_retention_001_knowledge\",\n      \"disposition\": \"write_topic\",\n      \"keyPoints\": [\n        \"Clipboard history should retain 90 days and survive upgrades.\",\n        \"Clipboard history needs to survive app upgrades for the full 90-day window.\",\n        \"Retention data is a durable user asset, not disposable cache.\",\n        \"Do not tie clipboard history lifetime to bundle reinstall. App upgrades and re-installs should not silently erase retain…\"\n      ],\n      \"rationale\": \"The batch overlaps with an existing topic and includes enough textual evidence to persist directly.\",\n      \"sourceCaptureIds\": [\n        \"cap_retentiondup_001\",\n        \"cap_retentiondup_002\",\n        \"cap_retentiondup_003\",\n        \"cap_retentiondup_004\",\n        \"cap_retentiondup_005\",\n        \"cap_retentiondup_006\"\n      ],\n      \"summary\": \"Clipboard history should retain 90 days and survive upgrades. Clipboard history needs to survive app upgrades for the full 90-day window.\",\n      \"tags\": [\n        \"daily\",\n        \"inbox\",\n        \"notes\",\n        \"obsidian\",\n        \"plain_text\"\n      ],\n      \"title\": \"Clipboard history should retain 90 days and survive upgrad…\",\n      \"topicName\": \"Personal Knowledge Ops\",\n      \"topicSlug\": \"personal-knowledge-ops\"\n    }\n  ]\n}",
+  "retrievalVersion": "tino.background_compile.topic_select.v1",
+  "runId": "run_dev_duplicate_near_duplicate_retention_001_251f6da3",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_retention_semantics",
+        "overlapCount": 6,
+        "predictedClusterId": "batch_dev_duplicate_near_duplicate_retention_001_knowledge"
+      }
+    ],
+    "criticalFailures": [],
+    "fixtureId": "dev_duplicate_near_duplicate_retention_001",
+    "metrics": {
+      "clusterPairwiseF1": 1,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 6,
+        "rate": 1,
+        "total": 6
+      }
+    },
+    "overallScore": 0.8666666666666666,
+    "pairwiseCounts": {
+      "falseNegative": 0,
+      "falsePositive": 0,
+      "truePositive": 15
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": null,
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

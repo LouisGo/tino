@@ -1,0 +1,163 @@
+{
+  "createdAt": "2026-04-21T14:53:51.556Z",
+  "experimentId": "exp-codex-background-dev-20260421",
+  "fixtureChecksum": "7d2c897bd4b2616232cc4baaf0c17eb931769fc80f5af7d1628a936cf39ef93a",
+  "fixtureId": "dev_low_value_noise_misc_001",
+  "generationMode": "mock",
+  "model": null,
+  "parsedReview": {
+    "clusters": [
+      {
+        "clusterId": "batch_dev_low_value_noise_misc_001_knowledge",
+        "confidence": 0.82,
+        "decision": "archive_to_topic",
+        "keyPoints": [
+          "482911",
+          "Zoom code 448-992-103",
+          "send invoice after lunch",
+          "Need filter logs for discarded sensitive snippets so we can debug false positives. Right now filtered captures disappear…"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch overlaps with an existing topic and includes enough textual evidence to persist directly.",
+        "sourceIds": [
+          "cap_noise_001",
+          "cap_noise_002",
+          "cap_noise_003",
+          "cap_noise_005",
+          "cap_noise_006",
+          "cap_noise_007"
+        ],
+        "summary": "482911 Zoom code 448-992-103",
+        "tags": [
+          "daily",
+          "finder",
+          "inbox",
+          "messages",
+          "notes"
+        ],
+        "title": "482911",
+        "topicNameSuggestion": "Personal Knowledge Ops",
+        "topicSlugSuggestion": "personal-knowledge-ops"
+      },
+      {
+        "clusterId": "batch_dev_low_value_noise_misc_001_references",
+        "confidence": 0.56,
+        "decision": "send_to_inbox",
+        "keyPoints": [
+          "https://maps.apple.com/?q=bao+house"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.",
+        "sourceIds": [
+          "cap_noise_004"
+        ],
+        "summary": "Link-only captures are kept in inbox until the background compiler has richer surrounding context.",
+        "tags": [
+          "link",
+          "safari"
+        ],
+        "title": "Reference links pending calmer compilation",
+        "topicNameSuggestion": null,
+        "topicSlugSuggestion": null
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_low_value_noise_misc_001_knowledge",
+        "destination": "topic",
+        "filePath": "topics/personal-knowledge-ops.md",
+        "topicName": "Personal Knowledge Ops",
+        "topicSlug": "personal-knowledge-ops"
+      },
+      {
+        "clusterId": "batch_dev_low_value_noise_misc_001_references",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-21.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "pipeline": "background",
+  "pipelineMetadata": {
+    "sourceKind": "injected_mock",
+    "sourceLabel": "Injected Mock Compiler"
+  },
+  "promptText": null,
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "provider": "mock",
+  "providerMetadata": null,
+  "rawResponseText": "{\n  \"decisions\": [\n    {\n      \"confidence\": 0.82,\n      \"decisionId\": \"batch_dev_low_value_noise_misc_001_knowledge\",\n      \"disposition\": \"write_topic\",\n      \"keyPoints\": [\n        \"482911\",\n        \"Zoom code 448-992-103\",\n        \"send invoice after lunch\",\n        \"Need filter logs for discarded sensitive snippets so we can debug false positives. Right now filtered captures disappear…\"\n      ],\n      \"rationale\": \"The batch overlaps with an existing topic and includes enough textual evidence to persist directly.\",\n      \"sourceCaptureIds\": [\n        \"cap_noise_001\",\n        \"cap_noise_002\",\n        \"cap_noise_003\",\n        \"cap_noise_005\",\n        \"cap_noise_006\",\n        \"cap_noise_007\"\n      ],\n      \"summary\": \"482911 Zoom code 448-992-103\",\n      \"tags\": [\n        \"daily\",\n        \"finder\",\n        \"inbox\",\n        \"messages\",\n        \"notes\"\n      ],\n      \"title\": \"482911\",\n      \"topicName\": \"Personal Knowledge Ops\",\n      \"topicSlug\": \"personal-knowledge-ops\"\n    },\n    {\n      \"confidence\": 0.56,\n      \"decisionId\": \"batch_dev_low_value_noise_misc_001_references\",\n      \"disposition\": \"write_inbox\",\n      \"keyPoints\": [\n        \"https://maps.apple.com/?q=bao+house\"\n      ],\n      \"rationale\": \"The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.\",\n      \"sourceCaptureIds\": [\n        \"cap_noise_004\"\n      ],\n      \"summary\": \"Link-only captures are kept in inbox until the background compiler has richer surrounding context.\",\n      \"tags\": [\n        \"link\",\n        \"safari\"\n      ],\n      \"title\": \"Reference links pending calmer compilation\",\n      \"topicName\": null,\n      \"topicSlug\": null\n    }\n  ]\n}",
+  "retrievalVersion": "tino.background_compile.topic_select.v1",
+  "runId": "run_dev_low_value_noise_misc_001_b8a47d65",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_noise_discard",
+        "overlapCount": 5,
+        "predictedClusterId": "batch_dev_low_value_noise_misc_001_knowledge"
+      },
+      {
+        "expectedClusterId": "golden_noise_followup_note",
+        "overlapCount": 1,
+        "predictedClusterId": "batch_dev_low_value_noise_misc_001_knowledge"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 6"
+    ],
+    "fixtureId": "dev_low_value_noise_misc_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.6666666666666666,
+      "destinationAccuracy": {
+        "correct": 0,
+        "rate": 0,
+        "total": 7
+      },
+      "falseArchiveRate": {
+        "correct": 6,
+        "rate": 0.8571428571428571,
+        "total": 7
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 0,
+        "rate": 0,
+        "total": 7
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      }
+    },
+    "overallScore": 0.369047619047619,
+    "pairwiseCounts": {
+      "falseNegative": 5,
+      "falsePositive": 5,
+      "truePositive": 10
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": null,
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

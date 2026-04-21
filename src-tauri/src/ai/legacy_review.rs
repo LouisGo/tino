@@ -421,6 +421,7 @@ pub fn apply_batch_decision(
     let persisted_job = build_persisted_job(
         &stored_batch,
         &request.review,
+        &request.feedback,
         &persisted_outputs,
         &persisted_writes,
         &saved_at,
@@ -608,7 +609,7 @@ fn persist_review_outputs(
                     PersistedKnowledgeDestination::Topic,
                     Some((&topic_slug, &topic_name)),
                 );
-                upsert_topic_markdown_file(
+                let wrote = upsert_topic_markdown_file(
                     &path,
                     &topic_name,
                     &cluster.summary,
@@ -617,14 +618,16 @@ fn persist_review_outputs(
                     &section_marker,
                     &section_markdown,
                 )?;
-                refresh_topic_index_entry(knowledge_root, &topic_slug)?;
-                persisted_outputs.push(PersistedKnowledgeOutput {
-                    cluster_id: cluster.cluster_id.clone(),
-                    destination: PersistedKnowledgeDestination::Topic,
-                    file_path: Some(relative_output_path(knowledge_root, &path)),
-                    topic_slug: Some(topic_slug),
-                    topic_name: Some(topic_name),
-                });
+                if wrote {
+                    refresh_topic_index_entry(knowledge_root, &topic_slug)?;
+                    persisted_outputs.push(PersistedKnowledgeOutput {
+                        cluster_id: cluster.cluster_id.clone(),
+                        destination: PersistedKnowledgeDestination::Topic,
+                        file_path: Some(relative_output_path(knowledge_root, &path)),
+                        topic_slug: Some(topic_slug),
+                        topic_name: Some(topic_name),
+                    });
+                }
             }
             AiDecision::SendToInbox => {
                 let path = inbox_file_path(knowledge_root, &feedback.submitted_at)?;
@@ -640,20 +643,22 @@ fn persist_review_outputs(
                     PersistedKnowledgeDestination::Inbox,
                     None,
                 );
-                upsert_inbox_markdown_file(
+                let wrote = upsert_inbox_markdown_file(
                     &path,
                     &timestamp.format("%Y-%m-%d").to_string(),
                     saved_at,
                     &section_marker,
                     &section_markdown,
                 )?;
-                persisted_outputs.push(PersistedKnowledgeOutput {
-                    cluster_id: cluster.cluster_id.clone(),
-                    destination: PersistedKnowledgeDestination::Inbox,
-                    file_path: Some(relative_output_path(knowledge_root, &path)),
-                    topic_slug: None,
-                    topic_name: None,
-                });
+                if wrote {
+                    persisted_outputs.push(PersistedKnowledgeOutput {
+                        cluster_id: cluster.cluster_id.clone(),
+                        destination: PersistedKnowledgeDestination::Inbox,
+                        file_path: Some(relative_output_path(knowledge_root, &path)),
+                        topic_slug: None,
+                        topic_name: None,
+                    });
+                }
             }
             AiDecision::Discard => {
                 persisted_outputs.push(PersistedKnowledgeOutput {
@@ -719,6 +724,7 @@ fn build_persisted_writes(
 fn build_persisted_job(
     stored_batch: &StoredBatchFile,
     review: &BatchDecisionReview,
+    feedback: &ReviewFeedbackRecord,
     outputs: &[PersistedKnowledgeOutput],
     persisted_writes: &[PersistedKnowledgeWrite],
     saved_at: &str,
@@ -731,25 +737,37 @@ fn build_persisted_job(
         .clusters
         .iter()
         .map(|cluster| {
-            let output = outputs_by_cluster_id
-                .get(cluster.cluster_id.as_str())
-                .ok_or_else(|| {
-                    AppError::internal(format!(
-                        "persisted job build missing output for cluster {}",
-                        cluster.cluster_id
-                    ))
-                })?;
+            let output = outputs_by_cluster_id.get(cluster.cluster_id.as_str());
+            let destination = output
+                .map(|output| output.destination.clone())
+                .unwrap_or_else(|| effective_persisted_destination(cluster, &feedback.action));
+            let (topic_slug, topic_name) = match destination {
+                PersistedKnowledgeDestination::Topic => (
+                    output
+                        .and_then(|output| output.topic_slug.clone())
+                        .or_else(|| Some(resolve_topic_slug(cluster))),
+                    output
+                        .and_then(|output| output.topic_name.clone())
+                        .or_else(|| {
+                            let topic_slug = resolve_topic_slug(cluster);
+                            Some(resolve_topic_name(cluster, &topic_slug))
+                        }),
+                ),
+                PersistedKnowledgeDestination::Inbox | PersistedKnowledgeDestination::Discard => {
+                    (None, None)
+                }
+            };
 
             Ok(BatchCompileDecision {
                 decision_id: cluster.cluster_id.clone(),
-                disposition: match output.destination {
+                disposition: match destination {
                     PersistedKnowledgeDestination::Topic => BatchCompileDisposition::WriteTopic,
                     PersistedKnowledgeDestination::Inbox => BatchCompileDisposition::WriteInbox,
                     PersistedKnowledgeDestination::Discard => BatchCompileDisposition::DiscardNoise,
                 },
                 source_capture_ids: cluster.source_ids.clone(),
-                topic_slug: output.topic_slug.clone(),
-                topic_name: output.topic_name.clone(),
+                topic_slug,
+                topic_name,
                 title: cluster.title.clone(),
                 summary: cluster.summary.clone(),
                 key_points: cluster.key_points.clone(),
@@ -801,6 +819,17 @@ fn resolve_effective_decision(
         },
         ReviewAction::Discard => AiDecision::Discard,
         _ => cluster_decision,
+    }
+}
+
+fn effective_persisted_destination(
+    cluster: &BatchDecisionCluster,
+    feedback_action: &ReviewAction,
+) -> PersistedKnowledgeDestination {
+    match resolve_effective_decision(cluster.decision.clone(), feedback_action) {
+        AiDecision::ArchiveToTopic => PersistedKnowledgeDestination::Topic,
+        AiDecision::SendToInbox => PersistedKnowledgeDestination::Inbox,
+        AiDecision::Discard => PersistedKnowledgeDestination::Discard,
     }
 }
 
@@ -954,4 +983,152 @@ fn build_persistence_message(outputs: &[PersistedKnowledgeOutput]) -> String {
 fn parse_rfc3339_timestamp(value: &str) -> AppResult<DateTime<FixedOffset>> {
     DateTime::parse_from_rfc3339(value.trim())
         .map_err(|error| AppError::validation(format!("invalid RFC3339 timestamp: {error}")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        build_persisted_job, persist_review_outputs, render_cluster_marker, AiBatchRuntimeState,
+        AiDecision, BatchDecisionCluster, BatchDecisionReview, ReviewAction, ReviewFeedbackRecord,
+    };
+    use crate::{ai::batch_store::StoredBatchFile, clipboard::types::CaptureRecord};
+    use std::{fs, path::PathBuf};
+    use uuid::Uuid;
+
+    fn unique_root() -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "tino-legacy-review-tests-{}",
+            Uuid::now_v7().simple()
+        ))
+    }
+
+    fn sample_capture(id: &str, raw_text: &str) -> CaptureRecord {
+        CaptureRecord {
+            id: id.into(),
+            source: "clipboard".into(),
+            source_app_name: Some("Arc".into()),
+            source_app_bundle_id: Some("company.thebrowser.Browser".into()),
+            source_app_icon_path: None,
+            captured_at: "2026-04-21T01:00:00+08:00".into(),
+            content_kind: "plain_text".into(),
+            raw_text: raw_text.into(),
+            raw_rich: None,
+            raw_rich_format: None,
+            link_url: None,
+            link_metadata: None,
+            asset_path: None,
+            thumbnail_path: None,
+            image_width: None,
+            image_height: None,
+            byte_size: None,
+            hash: format!("hash-{id}"),
+            image_bytes: None,
+            source_app_icon_bytes: None,
+        }
+    }
+
+    fn sample_batch() -> StoredBatchFile {
+        StoredBatchFile {
+            id: "batch_legacy".into(),
+            status: "ready".into(),
+            created_at: "2026-04-21T01:00:00+08:00".into(),
+            trigger_reason: "capture_count".into(),
+            capture_count: 1,
+            first_captured_at: "2026-04-21T01:00:00+08:00".into(),
+            last_captured_at: "2026-04-21T01:00:00+08:00".into(),
+            source_ids: vec!["cap_1".into()],
+            captures: vec![sample_capture(
+                "cap_1",
+                "Rust should own background compile.",
+            )],
+        }
+    }
+
+    fn sample_review() -> BatchDecisionReview {
+        BatchDecisionReview {
+            review_id: "review_1".into(),
+            batch_id: "batch_legacy".into(),
+            runtime_state: AiBatchRuntimeState::ReviewPending,
+            created_at: "2026-04-21T01:02:00+08:00".into(),
+            model_schema_version: "v1".into(),
+            clusters: vec![BatchDecisionCluster {
+                cluster_id: "cluster_1".into(),
+                source_ids: vec!["cap_1".into()],
+                decision: AiDecision::ArchiveToTopic,
+                topic_slug_suggestion: Some("rust-runtime".into()),
+                topic_name_suggestion: Some("Rust Runtime".into()),
+                title: "Rust Runtime".into(),
+                summary: "Rust owns trusted side effects.".into(),
+                key_points: vec!["Background compile should stay in Rust.".into()],
+                tags: vec!["rust".into()],
+                confidence: 0.92,
+                reason: "Strong durable overlap.".into(),
+                possible_topics: Vec::new(),
+                missing_context: Vec::new(),
+            }],
+        }
+    }
+
+    fn sample_feedback(action: ReviewAction) -> ReviewFeedbackRecord {
+        ReviewFeedbackRecord {
+            batch_id: "batch_legacy".into(),
+            review_id: "review_1".into(),
+            action,
+            edited_cluster_ids: Vec::new(),
+            note: None,
+            submitted_at: "2026-04-21T01:03:00+08:00".into(),
+        }
+    }
+
+    #[test]
+    fn persist_review_outputs_skips_existing_topic_marker() {
+        let root = unique_root();
+        let batch = sample_batch();
+        let review = sample_review();
+        let feedback = sample_feedback(ReviewAction::AcceptAll);
+        let topic_path = root.join("topics").join("rust-runtime.md");
+        fs::create_dir_all(topic_path.parent().expect("topic parent should exist"))
+            .expect("topic dir should initialize");
+        fs::write(
+            &topic_path,
+            format!(
+                "# Rust Runtime\n\n{}\n",
+                render_cluster_marker(&review.review_id, &review.clusters[0].cluster_id)
+            ),
+        )
+        .expect("topic file should write");
+
+        let outputs =
+            persist_review_outputs(&root, &batch, &review, &feedback, &feedback.submitted_at)
+                .expect("persistence should succeed");
+
+        assert!(outputs.is_empty());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn build_persisted_job_keeps_decision_when_no_new_write_was_recorded() {
+        let batch = sample_batch();
+        let review = sample_review();
+        let feedback = sample_feedback(ReviewAction::AcceptAll);
+
+        let job = build_persisted_job(
+            &batch,
+            &review,
+            &feedback,
+            &[],
+            &[],
+            "2026-04-21T01:03:00+08:00",
+        )
+        .expect("job should build");
+
+        assert_eq!(job.decisions.len(), 1);
+        assert_eq!(
+            job.decisions[0].disposition,
+            crate::ai::contracts::BatchCompileDisposition::WriteTopic
+        );
+        assert_eq!(job.persisted_writes.len(), 0);
+        assert_eq!(job.decisions[0].topic_slug.as_deref(), Some("rust-runtime"));
+    }
 }

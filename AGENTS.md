@@ -13,6 +13,8 @@ Rust is the source of truth for Tauri IPC types and commands.
 - Current behavior and phase claims live in `docs/03-planning/HANDOFF.md`.
 - Frozen architecture and responsibility boundaries live in `docs/03-planning/技术冻结记录.md`.
 - Current AI module development baseline lives in `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`.
+- Current next-stage AI execution plan for silent compilation, explicit intent, and input adapters lives in `docs/03-planning/Tino AI 静默编译与显式意图执行方案 v0.1.md`.
+- Deprecated AI planning docs should live under `docs/03-planning/archive/`, not beside active execution baselines.
 - If repo-local skill wording conflicts with current planning docs, `docs/03-planning/HANDOFF.md` and `docs/03-planning/技术冻结记录.md` win.
 - `README.md` and `docs/README.md` are pointers, not working truth.
 - Keep repo-local skills short and pointer-based. Do not duplicate them into README or handoff docs.

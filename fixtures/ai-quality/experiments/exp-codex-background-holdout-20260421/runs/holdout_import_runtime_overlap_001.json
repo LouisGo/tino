@@ -1,0 +1,171 @@
+{
+  "createdAt": "2026-04-21T14:54:20.665Z",
+  "experimentId": "exp-codex-background-holdout-20260421",
+  "fixtureChecksum": "dc663def74f51a60d7d3238d0cf15e3f6d18bf9f2d1b8f4953c55238c463d93c",
+  "fixtureId": "holdout_import_runtime_overlap_001",
+  "generationMode": "mock",
+  "model": null,
+  "parsedReview": {
+    "clusters": [
+      {
+        "clusterId": "batch_holdout_import_runtime_overlap_001_knowledge",
+        "confidence": 0.82,
+        "decision": "archive_to_topic",
+        "keyPoints": [
+          "MarkItDown is useful for dropped PDF or DOCX imports, not the live clipboard hot path. Clipboard rich-text cleanup is st…",
+          "If we add import adapters, run them inside Rust background jobs, not renderer hooks. The scheduling and retry semantics …",
+          "Need an artifact-level benchmark comparing import adapters on fidelity and cost. We should not pick a conversion library…",
+          "Ship clipboard eval first and document imports second. The import path is useful, but it should not derail the quality p…"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch overlaps with an existing topic and includes enough textual evidence to persist directly.",
+        "sourceIds": [
+          "cap_importruntime_002",
+          "cap_importruntime_003",
+          "cap_importruntime_005",
+          "cap_importruntime_006",
+          "cap_importruntime_007",
+          "cap_importruntime_008"
+        ],
+        "summary": "MarkItDown is useful for dropped PDF or DOCX imports, not the live clipboard hot path. Clipboard rich-text cleanup is still a separate normalization problem. If we add import adapters, run them inside Rust background jobs, not renderer hooks. The scheduling and retry semantics be…",
+        "tags": [
+          "html",
+          "ingestion",
+          "markdown",
+          "markitdown",
+          "notes"
+        ],
+        "title": "MarkItDown is useful for dropped PDF or DOCX imports, not …",
+        "topicNameSuggestion": "Document Markdown Normalization",
+        "topicSlugSuggestion": "document-markdown-normalization"
+      },
+      {
+        "clusterId": "batch_holdout_import_runtime_overlap_001_references",
+        "confidence": 0.56,
+        "decision": "send_to_inbox",
+        "keyPoints": [
+          "https://github.com/microsoft/markitdown",
+          "https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.",
+        "sourceIds": [
+          "cap_importruntime_001",
+          "cap_importruntime_004"
+        ],
+        "summary": "Link-only captures are kept in inbox until the background compiler has richer surrounding context.",
+        "tags": [
+          "link",
+          "safari"
+        ],
+        "title": "Reference links pending calmer compilation",
+        "topicNameSuggestion": null,
+        "topicSlugSuggestion": null
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_holdout_import_runtime_overlap_001_knowledge",
+        "destination": "topic",
+        "filePath": "topics/document-markdown-normalization.md",
+        "topicName": "Document Markdown Normalization",
+        "topicSlug": "document-markdown-normalization"
+      },
+      {
+        "clusterId": "batch_holdout_import_runtime_overlap_001_references",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-21.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "pipeline": "background",
+  "pipelineMetadata": {
+    "sourceKind": "injected_mock",
+    "sourceLabel": "Injected Mock Compiler"
+  },
+  "promptText": null,
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "provider": "mock",
+  "providerMetadata": null,
+  "rawResponseText": "{\n  \"decisions\": [\n    {\n      \"confidence\": 0.82,\n      \"decisionId\": \"batch_holdout_import_runtime_overlap_001_knowledge\",\n      \"disposition\": \"write_topic\",\n      \"keyPoints\": [\n        \"MarkItDown is useful for dropped PDF or DOCX imports, not the live clipboard hot path. Clipboard rich-text cleanup is st…\",\n        \"If we add import adapters, run them inside Rust background jobs, not renderer hooks. The scheduling and retry semantics …\",\n        \"Need an artifact-level benchmark comparing import adapters on fidelity and cost. We should not pick a conversion library…\",\n        \"Ship clipboard eval first and document imports second. The import path is useful, but it should not derail the quality p…\"\n      ],\n      \"rationale\": \"The batch overlaps with an existing topic and includes enough textual evidence to persist directly.\",\n      \"sourceCaptureIds\": [\n        \"cap_importruntime_002\",\n        \"cap_importruntime_003\",\n        \"cap_importruntime_005\",\n        \"cap_importruntime_006\",\n        \"cap_importruntime_007\",\n        \"cap_importruntime_008\"\n      ],\n      \"summary\": \"MarkItDown is useful for dropped PDF or DOCX imports, not the live clipboard hot path. Clipboard rich-text cleanup is still a separate normalization problem. If we add import adapters, run them inside Rust background jobs, not renderer hooks. The scheduling and retry semantics be…\",\n      \"tags\": [\n        \"html\",\n        \"ingestion\",\n        \"markdown\",\n        \"markitdown\",\n        \"notes\"\n      ],\n      \"title\": \"MarkItDown is useful for dropped PDF or DOCX imports, not …\",\n      \"topicName\": \"Document Markdown Normalization\",\n      \"topicSlug\": \"document-markdown-normalization\"\n    },\n    {\n      \"confidence\": 0.56,\n      \"decisionId\": \"batch_holdout_import_runtime_overlap_001_references\",\n      \"disposition\": \"write_inbox\",\n      \"keyPoints\": [\n        \"https://github.com/microsoft/markitdown\",\n        \"https://github.com/microsoft/markitdown/tree/main/packages/markitdown-mcp\"\n      ],\n      \"rationale\": \"The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.\",\n      \"sourceCaptureIds\": [\n        \"cap_importruntime_001\",\n        \"cap_importruntime_004\"\n      ],\n      \"summary\": \"Link-only captures are kept in inbox until the background compiler has richer surrounding context.\",\n      \"tags\": [\n        \"link\",\n        \"safari\"\n      ],\n      \"title\": \"Reference links pending calmer compilation\",\n      \"topicName\": null,\n      \"topicSlug\": null\n    }\n  ]\n}",
+  "retrievalVersion": "tino.background_compile.topic_select.v1",
+  "runId": "run_holdout_import_runtime_overlap_001_e2d2a900",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_import_conversion_fit",
+        "overlapCount": 2,
+        "predictedClusterId": "batch_holdout_import_runtime_overlap_001_knowledge"
+      },
+      {
+        "expectedClusterId": "golden_import_runtime_boundary",
+        "overlapCount": 3,
+        "predictedClusterId": "batch_holdout_import_runtime_overlap_001_knowledge"
+      },
+      {
+        "expectedClusterId": "golden_import_benchmark_followup",
+        "overlapCount": 1,
+        "predictedClusterId": "batch_holdout_import_runtime_overlap_001_knowledge"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 1",
+      "Wrong existing-topic merge on 5/7 source assignments."
+    ],
+    "fixtureId": "holdout_import_runtime_overlap_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.39999999999999997,
+      "destinationAccuracy": {
+        "correct": 5,
+        "rate": 0.625,
+        "total": 8
+      },
+      "falseArchiveRate": {
+        "correct": 1,
+        "rate": 1,
+        "total": 1
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 2,
+        "rate": 0.25,
+        "total": 8
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 2,
+        "rate": 0.2857142857142857,
+        "total": 7
+      }
+    },
+    "overallScore": 0.4488095238095238,
+    "pairwiseCounts": {
+      "falseNegative": 4,
+      "falsePositive": 11,
+      "truePositive": 5
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": null,
+  "split": "holdout",
+  "usedFallback": false,
+  "validationErrors": []
+}

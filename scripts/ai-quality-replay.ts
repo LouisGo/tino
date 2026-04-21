@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import crypto from "node:crypto"
 import fs from "node:fs"
 import os from "node:os"
@@ -9,6 +10,7 @@ import { generateText, Output, streamText, type FinishReason } from "ai"
 import {
   MODEL_SCHEMA_VERSION,
   modelBatchDecisionSchema,
+  type ModelBatchDecision,
 } from "../src/features/ai/schemas/model-output"
 import {
   batchReviewSchemaDescription,
@@ -18,8 +20,8 @@ import {
   type BatchReviewExecutor,
   type BatchReviewProgress,
   type BatchReviewProviderMetadata,
-} from "../src/features/ai/runtime/batch-review-engine"
-import { buildMockBatchReview } from "../src/features/ai/lib/mock-review"
+} from "../src/features/ai/legacy-review/batch-review-engine"
+import { buildMockBatchReview } from "../src/features/ai/legacy-review/mock-review"
 import {
   batchFixtureSchema,
   datasetManifestSchema,
@@ -38,27 +40,87 @@ const options = parseArgs(restArgs)
 const projectRoot = process.cwd()
 const fixturesRoot = path.join(projectRoot, "fixtures", "ai-quality")
 const experimentsRoot = path.join(fixturesRoot, "experiments")
-const defaultMode = (options.mode ?? "mock") as "mock" | "live"
+const defaultMode = (options.mode ?? "mock") as ReplayMode
+const defaultPipeline = (options.pipeline ?? "legacy") as ReplayPipeline
 const defaultSplit = (options.split ?? "dev") as "dev" | "holdout" | "all"
 const defaultProfile = (options.profile ?? "preview") as "preview" | "production"
 const runnerVersion = "tino.ai_quality.replay.v0.1"
-const retrievalVersion = "tino.topic_lexical.v1"
-const promptVersion = "tino.batch_review.engine.v6"
+const legacyRetrievalVersion = "tino.topic_lexical.v1"
+const legacyPromptVersion = "tino.batch_review.engine.v6"
+const backgroundRetrievalVersion = "tino.background_compile.topic_select.v1"
+const backgroundPromptVersion = "tino.background_compile.provider_prompt.v1"
 const comparisonDeltaThreshold = 0.01
 
-type ReplayReview = ReturnType<typeof buildMockBatchReview>
+type ReplayMode = "mock" | "live"
+type ReplayPipeline = "legacy" | "background"
+type ReplayLocale = "en-US" | "zh-CN"
+type ReplayReview = ModelBatchDecision
 type ReplayScore = ReturnType<typeof scoreFixtureRun>
 
 type ReplayArtifactSummary = {
   createdAt: string
   experimentId: string
   fixtureId: string
-  generationMode: "mock" | "live"
+  generationMode: ReplayMode
   model: string | null
   parsedReview: ReplayReview | null
+  pipeline: ReplayPipeline
+  pipelineMetadata: {
+    sourceKind: string | null
+    sourceLabel: string | null
+  } | null
   promptVersion: string
   scoringResult: ReplayScore
   validationErrors: string[]
+}
+
+type BackgroundReplayBundle = {
+  fixtures: Array<{
+    availableTopics: TopicIndexFixture["entries"]
+    batch: {
+      captureCount: number
+      createdAt: string
+      firstCapturedAt: string
+      id: string
+      lastCapturedAt: string
+      runtimeState: string
+      sourceIds: string[]
+      triggerReason: string
+    }
+    captures: BatchFixture["captures"]
+    fixtureId: string
+  }>
+  locale: ReplayLocale
+  mode: ReplayMode
+  provider: {
+    apiKey: string
+    baseUrl: string
+    model: string
+    name: string
+    vendor: "openai" | "deepseek"
+  } | null
+}
+
+type BackgroundReplayResponse = {
+  results: Array<{
+    decisions: Array<{
+      confidence: number
+      decisionId: string
+      disposition: "write_topic" | "write_inbox" | "discard_noise"
+      keyPoints: string[]
+      rationale: string
+      sourceCaptureIds: string[]
+      summary: string
+      tags: string[]
+      title: string
+      topicName: string | null
+      topicSlug: string | null
+    }>
+    error: string | null
+    fixtureId: string
+    sourceKind: "injected_mock" | "provider_profile"
+    sourceLabel: string
+  }>
 }
 
 type ReplayRunRecord = {
@@ -127,6 +189,10 @@ async function main() {
 }
 
 async function runReplay() {
+  const promptVersion =
+    defaultPipeline === "background" ? backgroundPromptVersion : legacyPromptVersion
+  const retrievalVersion =
+    defaultPipeline === "background" ? backgroundRetrievalVersion : legacyRetrievalVersion
   const manifest = readJson(
     path.join(fixturesRoot, "manifests", "dataset.v0.1.json"),
     datasetManifestSchema,
@@ -165,6 +231,21 @@ async function runReplay() {
           vendor: normalizeVendor(options.vendor ?? process.env.TINO_AI_VENDOR ?? ""),
         })
       : null
+  const replayLocale = resolveReplayLocale({
+    explicitLocale: options.locale,
+    profile: defaultProfile,
+    settingsPath: options["settings-path"],
+  })
+  const backgroundResultsByFixture =
+    defaultPipeline === "background"
+      ? runBackgroundReplayBundle({
+          fixtures,
+          liveConfig,
+          locale: replayLocale,
+          mode: defaultMode,
+          topicIndex,
+        })
+      : new Map<string, BackgroundReplayResponse["results"][number]>()
 
   const runArtifacts: Array<{
     artifactPath: string
@@ -175,7 +256,7 @@ async function runReplay() {
   const scores: ReplayScore[] = []
 
   console.log(
-    `Running AI quality replay: experiment=${experimentId} mode=${defaultMode} fixtures=${fixtures.length}`,
+    `Running AI quality replay: experiment=${experimentId} pipeline=${defaultPipeline} mode=${defaultMode} fixtures=${fixtures.length}`,
   )
 
   for (const item of fixtures) {
@@ -186,28 +267,55 @@ async function runReplay() {
       captures: item.fixture.captures,
       availableTopics: resolveAvailableTopics(item.fixture, topicIndex),
     }
-    const prompt = prepareBatchReviewPromptBundle(payload)
-    let parsedReview: ReturnType<typeof buildMockBatchReview> | null = null
+    const prompt =
+      defaultPipeline === "legacy" ? prepareBatchReviewPromptBundle(payload) : null
+    let parsedReview: ReplayReview | null = null
     let providerMetadata: BatchReviewProviderMetadata | null = null
+    let pipelineMetadata: ReplayArtifactSummary["pipelineMetadata"] = null
     let rawResponseText: string | null = null
     let usedFallback = false
     let validationErrors: string[] = []
 
     try {
-      if (defaultMode === "mock") {
-        parsedReview = buildMockBatchReview(payload)
-        providerMetadata = buildMockProviderMetadata()
-        rawResponseText = JSON.stringify({ clusters: parsedReview.clusters }, null, 2)
+      if (defaultPipeline === "legacy") {
+        if (defaultMode === "mock") {
+          parsedReview = buildMockBatchReview(payload)
+          providerMetadata = buildMockProviderMetadata()
+          rawResponseText = JSON.stringify({ clusters: parsedReview.clusters }, null, 2)
+        } else {
+          const executor = createNodeBatchReviewExecutor(liveConfig!)
+          const result = await runBatchReview(payload, executor, {
+            onProgress: createProgressLogger(item.fixture.fixtureId),
+            timeoutMs: parseOptionalPositiveInt(options.timeout) ?? 120_000,
+          })
+          parsedReview = result.review
+          providerMetadata = result.metadata
+          rawResponseText = result.rawResponseText
+          usedFallback = result.usedFallback
+        }
       } else {
-        const executor = createNodeBatchReviewExecutor(liveConfig!)
-        const result = await runBatchReview(payload, executor, {
-          onProgress: createProgressLogger(item.fixture.fixtureId),
-          timeoutMs: parseOptionalPositiveInt(options.timeout) ?? 120_000,
-        })
-        parsedReview = result.review
-        providerMetadata = result.metadata
-        rawResponseText = result.rawResponseText
-        usedFallback = result.usedFallback
+        const backgroundResult = backgroundResultsByFixture.get(item.fixture.fixtureId)
+        if (!backgroundResult) {
+          throw new Error(
+            `Background replay result was not returned for fixture ${item.fixture.fixtureId}.`,
+          )
+        }
+
+        pipelineMetadata = {
+          sourceKind: backgroundResult.sourceKind,
+          sourceLabel: backgroundResult.sourceLabel,
+        }
+        rawResponseText = JSON.stringify(
+          { decisions: backgroundResult.decisions },
+          null,
+          2,
+        )
+
+        if (backgroundResult.error) {
+          throw new Error(backgroundResult.error)
+        }
+
+        parsedReview = mapBackgroundResultToReplayReview(backgroundResult)
       }
     } catch (error) {
       validationErrors = [error instanceof Error ? error.message : String(error)]
@@ -227,20 +335,30 @@ async function runReplay() {
       fixtureChecksum: item.fixtureChecksum,
       fixtureId: item.fixture.fixtureId,
       generationMode: defaultMode,
-      model: providerMetadata?.model ?? null,
+      model:
+        defaultPipeline === "legacy"
+          ? providerMetadata?.model ?? null
+          : null,
       parsedReview,
       persistDryRunResult: persistProjection,
-      promptText: {
-        system: prompt.systemPrompt,
-        user: prompt.userPrompt,
-      },
+      pipeline: defaultPipeline,
+      pipelineMetadata,
+      promptText: prompt
+        ? {
+            system: prompt.systemPrompt,
+            user: prompt.userPrompt,
+          }
+        : null,
       promptVersion,
       provider:
         defaultMode === "mock"
           ? "mock"
           : {
               baseUrl: liveConfig?.baseUrl ?? null,
-              label: providerMetadata?.providerLabel ?? null,
+              label:
+                defaultPipeline === "legacy"
+                  ? providerMetadata?.providerLabel ?? null
+                  : null,
               vendor: liveConfig?.vendor ?? null,
             },
       providerMetadata,
@@ -250,7 +368,7 @@ async function runReplay() {
       runnerVersion,
       scoringResult,
       schemaVersion: MODEL_SCHEMA_VERSION,
-      selectedTopics: prompt.relevantTopics,
+      selectedTopics: prompt?.relevantTopics ?? null,
       split: item.fixture.split,
       usedFallback,
       validationErrors,
@@ -260,8 +378,13 @@ async function runReplay() {
       experimentId,
       fixtureId: item.fixture.fixtureId,
       generationMode: defaultMode,
-      model: providerMetadata?.model ?? null,
+      model:
+        defaultPipeline === "legacy"
+          ? providerMetadata?.model ?? null
+          : null,
       parsedReview,
+      pipeline: defaultPipeline,
+      pipelineMetadata,
       promptVersion,
       scoringResult,
       validationErrors,
@@ -305,6 +428,7 @@ async function runReplay() {
       {
         experimentId,
         mode: defaultMode,
+        pipeline: defaultPipeline,
         promptVersion,
         runnerVersion,
         summary,
@@ -321,6 +445,7 @@ async function runReplay() {
       comparison,
       experimentId,
       mode: defaultMode,
+      pipeline: defaultPipeline,
       promptVersion,
       summary,
       topFailures,
@@ -335,6 +460,7 @@ async function runReplay() {
         fixtureCount: fixtures.length,
         fixtures: fixtures.map((item) => item.fixture.fixtureId),
         mode: defaultMode,
+        pipeline: defaultPipeline,
         provider:
           defaultMode === "live"
             ? {
@@ -429,7 +555,7 @@ function buildMockProviderMetadata(): BatchReviewProviderMetadata {
 }
 
 function buildPersistProjection(
-  review: ReturnType<typeof buildMockBatchReview>,
+  review: ReplayReview,
   submittedAt: string,
 ) {
   const inboxDate = submittedAt.slice(0, 10)
@@ -485,6 +611,119 @@ function resolveTopicSlug(cluster: {
     .replace(/(^-|-$)/g, "")
 
   return normalized || "new-topic"
+}
+
+function runBackgroundReplayBundle(input: {
+  fixtures: Array<{
+    fixture: BatchFixture
+    fixtureChecksum: string
+    golden: GoldenFixture
+  }>
+  liveConfig: ReturnType<typeof resolveLiveProviderConfig> | null
+  locale: ReplayLocale
+  mode: ReplayMode
+  topicIndex: TopicIndexFixture
+}) {
+  const bundle: BackgroundReplayBundle = {
+    fixtures: input.fixtures.map((item) => ({
+      availableTopics: resolveAvailableTopics(item.fixture, input.topicIndex),
+      batch: {
+        captureCount: item.fixture.batch.captureCount,
+        createdAt: item.fixture.batch.createdAt,
+        firstCapturedAt: item.fixture.batch.firstCapturedAt,
+        id: item.fixture.batch.id,
+        lastCapturedAt: item.fixture.batch.lastCapturedAt,
+        runtimeState: item.fixture.batch.runtimeState,
+        sourceIds: item.fixture.batch.sourceIds,
+        triggerReason: item.fixture.batch.triggerReason,
+      },
+      captures: item.fixture.captures,
+      fixtureId: item.fixture.fixtureId,
+    })),
+    locale: input.locale,
+    mode: input.mode,
+    provider:
+      input.mode === "live" && input.liveConfig
+        ? {
+            apiKey: input.liveConfig.apiKey,
+            baseUrl: input.liveConfig.baseUrl,
+            model: input.liveConfig.model,
+            name: "AI Quality Replay",
+            vendor: input.liveConfig.vendor,
+          }
+        : null,
+  }
+
+  try {
+    const stdout = execFileSync(
+      "cargo",
+      [
+        "run",
+        "--quiet",
+        "--manifest-path",
+        "src-tauri/Cargo.toml",
+        "--bin",
+        "ai_quality_compile",
+        "--",
+      ],
+      {
+        cwd: projectRoot,
+        encoding: "utf8",
+        input: `${JSON.stringify(bundle)}\n`,
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    )
+    const parsed = JSON.parse(stdout) as BackgroundReplayResponse
+    return new Map(parsed.results.map((result) => [result.fixtureId, result]))
+  } catch (error) {
+    const stderr =
+      typeof error === "object"
+      && error
+      && "stderr" in error
+      && typeof error.stderr === "string"
+        ? error.stderr.trim()
+        : ""
+    const message =
+      error instanceof Error ? error.message : "Background replay command failed."
+    throw new Error(
+      stderr ? `${message}\n${stderr}` : message,
+    )
+  }
+}
+
+function mapBackgroundResultToReplayReview(
+  result: BackgroundReplayResponse["results"][number],
+): ReplayReview {
+  return {
+    clusters: result.decisions.map((decision) => ({
+      clusterId: decision.decisionId,
+      confidence: decision.confidence,
+      decision: mapBackgroundDisposition(decision.disposition),
+      keyPoints: decision.keyPoints.length ? decision.keyPoints : ["No stable key point extracted."],
+      missingContext: [],
+      possibleTopics: [],
+      reason: decision.rationale,
+      sourceIds: decision.sourceCaptureIds,
+      summary: decision.summary.trim() || "Summary unavailable.",
+      tags: decision.tags,
+      title: decision.title.trim() || "Untitled cluster",
+      topicNameSuggestion: decision.topicName,
+      topicSlugSuggestion: decision.topicSlug,
+    })),
+  }
+}
+
+function mapBackgroundDisposition(
+  disposition: BackgroundReplayResponse["results"][number]["decisions"][number]["disposition"],
+) {
+  switch (disposition) {
+    case "write_topic":
+      return "archive_to_topic" as const
+    case "write_inbox":
+      return "send_to_inbox" as const
+    case "discard_noise":
+      return "discard" as const
+  }
 }
 
 function createProgressLogger(fixtureId: string) {
@@ -682,7 +921,8 @@ function resolveLiveProviderConfig(config: {
     model: config.model.trim(),
     vendor: config.vendor,
   }
-  const settingsProvider = loadProviderFromSettings(config.settingsPath, config.profile)
+  const settings = loadRuntimeSettings(config.settingsPath, config.profile)
+  const settingsProvider = settings?.provider ?? null
 
   const vendor = explicit.vendor ?? settingsProvider?.vendor ?? null
   if (!vendor) {
@@ -714,7 +954,20 @@ function resolveLiveProviderConfig(config: {
   return normalized
 }
 
-function loadProviderFromSettings(
+function resolveReplayLocale(config: {
+  explicitLocale?: string
+  profile: "preview" | "production"
+  settingsPath?: string
+}): ReplayLocale {
+  const explicitLocale = normalizeReplayLocale(config.explicitLocale ?? "")
+  if (explicitLocale) {
+    return explicitLocale
+  }
+
+  return loadRuntimeSettings(config.settingsPath, config.profile)?.locale ?? "en-US"
+}
+
+function loadRuntimeSettings(
   explicitSettingsPath: string | undefined,
   profile: "preview" | "production",
 ) {
@@ -731,6 +984,9 @@ function loadProviderFromSettings(
 
   const raw = JSON.parse(fs.readFileSync(settingsPath, "utf8")) as {
     activeRuntimeProviderId?: string
+    localePreference?: {
+      locale?: string
+    }
     runtimeProviderProfiles?: Array<{
       apiKey?: string
       baseUrl?: string
@@ -749,7 +1005,11 @@ function loadProviderFromSettings(
     ?? null
 
   if (!activeProvider) {
-    return null
+    return {
+      locale: normalizeReplayLocale(raw.localePreference?.locale ?? "") ?? "en-US",
+      provider: null,
+      settingsPath,
+    }
   }
 
   const vendor = normalizeVendor(activeProvider.vendor ?? "")
@@ -758,11 +1018,14 @@ function loadProviderFromSettings(
   }
 
   return {
-    apiKey: activeProvider.apiKey?.trim() ?? "",
-    baseUrl: activeProvider.baseUrl?.trim() ?? defaultBaseUrlForVendor(vendor),
-    model: activeProvider.model?.trim() || defaultModelForVendor(vendor),
+    locale: normalizeReplayLocale(raw.localePreference?.locale ?? "") ?? "en-US",
+    provider: {
+      apiKey: activeProvider.apiKey?.trim() ?? "",
+      baseUrl: activeProvider.baseUrl?.trim() ?? defaultBaseUrlForVendor(vendor),
+      model: activeProvider.model?.trim() || defaultModelForVendor(vendor),
+      vendor,
+    },
     settingsPath,
-    vendor,
   }
 }
 
@@ -781,6 +1044,15 @@ function resolveDefaultSettingsPath(profile: "preview" | "production") {
 function normalizeVendor(value: string) {
   const normalized = value.trim().toLowerCase()
   if (normalized === "openai" || normalized === "deepseek") {
+    return normalized
+  }
+
+  return null
+}
+
+function normalizeReplayLocale(value: string): ReplayLocale | null {
+  const normalized = value.trim()
+  if (normalized === "en-US" || normalized === "zh-CN") {
     return normalized
   }
 
@@ -996,6 +1268,8 @@ function loadReplayArtifactSummary(
     generationMode: raw.generationMode,
     model: raw.model,
     parsedReview: raw.parsedReview ?? null,
+    pipeline: raw.pipeline ?? "legacy",
+    pipelineMetadata: raw.pipelineMetadata ?? null,
     promptVersion: raw.promptVersion,
     scoringResult: raw.scoringResult,
     validationErrors: Array.isArray(raw.validationErrors) ? raw.validationErrors : [],
@@ -1222,7 +1496,8 @@ function compactText(value: string, limit: number) {
 function buildSummaryMarkdown(input: {
   comparison: ReplayComparison | null
   experimentId: string
-  mode: "mock" | "live"
+  mode: ReplayMode
+  pipeline: ReplayPipeline
   promptVersion: string
   summary: ReturnType<typeof summarizeScores>
   topFailures: ReplayCaseNarrative[]
@@ -1283,6 +1558,7 @@ function buildSummaryMarkdown(input: {
     `# AI Quality Replay Summary`,
     ``,
     `- experiment: \`${input.experimentId}\``,
+    `- pipeline: \`${input.pipeline}\``,
     `- mode: \`${input.mode}\``,
     `- prompt_version: \`${input.promptVersion}\``,
     `- runs: \`${input.summary.runs}\``,
@@ -1349,13 +1625,15 @@ function printUsage() {
   console.log(
     [
       "Usage:",
-      "  pnpm ai-quality:replay run [--mode mock|live] [--split dev|holdout|all]",
+      "  pnpm ai-quality:replay run [--pipeline legacy|background] [--mode mock|live]",
+      "                              [--split dev|holdout|all]",
       "                              [--fixture id1,id2] [--limit N]",
       "                              [--experiment-id exp-YYYYMMDD-001]",
       "                              [--compare-to exp-YYYYMMDD-001]",
       "                              [--profile preview|production] [--settings-path PATH]",
       "                              [--vendor openai|deepseek] [--base-url URL]",
-      "                              [--api-key KEY] [--model MODEL] [--timeout MS]",
+      "                              [--api-key KEY] [--model MODEL] [--locale en-US|zh-CN]",
+      "                              [--timeout MS]",
     ].join("\n"),
   )
 }

@@ -1,0 +1,141 @@
+{
+  "createdAt": "2026-04-21T14:53:51.555Z",
+  "experimentId": "exp-codex-background-dev-20260421",
+  "fixtureChecksum": "83f0760846e68b957c8d20eb3b17f03cd9df60a93efb6b9be4a5bc1226c60533",
+  "fixtureId": "dev_task_switching_copy_and_terminal_001",
+  "generationMode": "mock",
+  "model": null,
+  "parsedReview": {
+    "clusters": [
+      {
+        "clusterId": "batch_dev_task_switching_copy_and_terminal_001_knowledge",
+        "confidence": 0.82,
+        "decision": "archive_to_topic",
+        "keyPoints": [
+          "The clipboard should feel like a quiet inbox, not a dashboard. The product promise is low-friction capture first, organi…",
+          "Capture first, organize later.",
+          "cargo check --manifest-path src-tauri/Cargo.toml",
+          "error[E0308]: expected Option<String>, found String in ipc_schema.rs"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch overlaps with an existing topic and includes enough textual evidence to persist directly.",
+        "sourceIds": [
+          "cap_taskswitch_001",
+          "cap_taskswitch_002",
+          "cap_taskswitch_003",
+          "cap_taskswitch_004",
+          "cap_taskswitch_005",
+          "cap_taskswitch_006",
+          "cap_taskswitch_007",
+          "cap_taskswitch_008"
+        ],
+        "summary": "The clipboard should feel like a quiet inbox, not a dashboard. The product promise is low-friction capture first, organization second. Capture first, organize later.",
+        "tags": [
+          "copywriting",
+          "figma",
+          "google-docs",
+          "headline",
+          "launch"
+        ],
+        "title": "The clipboard should feel like a quiet inbox, not a dashbo…",
+        "topicNameSuggestion": "Product Writing Playbook",
+        "topicSlugSuggestion": "product-writing-playbook"
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_task_switching_copy_and_terminal_001_knowledge",
+        "destination": "topic",
+        "filePath": "topics/product-writing-playbook.md",
+        "topicName": "Product Writing Playbook",
+        "topicSlug": "product-writing-playbook"
+      }
+    ]
+  },
+  "pipeline": "background",
+  "pipelineMetadata": {
+    "sourceKind": "injected_mock",
+    "sourceLabel": "Injected Mock Compiler"
+  },
+  "promptText": null,
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "provider": "mock",
+  "providerMetadata": null,
+  "rawResponseText": "{\n  \"decisions\": [\n    {\n      \"confidence\": 0.82,\n      \"decisionId\": \"batch_dev_task_switching_copy_and_terminal_001_knowledge\",\n      \"disposition\": \"write_topic\",\n      \"keyPoints\": [\n        \"The clipboard should feel like a quiet inbox, not a dashboard. The product promise is low-friction capture first, organi…\",\n        \"Capture first, organize later.\",\n        \"cargo check --manifest-path src-tauri/Cargo.toml\",\n        \"error[E0308]: expected Option<String>, found String in ipc_schema.rs\"\n      ],\n      \"rationale\": \"The batch overlaps with an existing topic and includes enough textual evidence to persist directly.\",\n      \"sourceCaptureIds\": [\n        \"cap_taskswitch_001\",\n        \"cap_taskswitch_002\",\n        \"cap_taskswitch_003\",\n        \"cap_taskswitch_004\",\n        \"cap_taskswitch_005\",\n        \"cap_taskswitch_006\",\n        \"cap_taskswitch_007\",\n        \"cap_taskswitch_008\"\n      ],\n      \"summary\": \"The clipboard should feel like a quiet inbox, not a dashboard. The product promise is low-friction capture first, organization second. Capture first, organize later.\",\n      \"tags\": [\n        \"copywriting\",\n        \"figma\",\n        \"google-docs\",\n        \"headline\",\n        \"launch\"\n      ],\n      \"title\": \"The clipboard should feel like a quiet inbox, not a dashbo…\",\n      \"topicName\": \"Product Writing Playbook\",\n      \"topicSlug\": \"product-writing-playbook\"\n    }\n  ]\n}",
+  "retrievalVersion": "tino.background_compile.topic_select.v1",
+  "runId": "run_dev_task_switching_copy_and_terminal_001_89ca4289",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_copywriting_cluster",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_task_switching_copy_and_terminal_001_knowledge"
+      },
+      {
+        "expectedClusterId": "golden_interrupted_dev_notes",
+        "overlapCount": 3,
+        "predictedClusterId": "batch_dev_task_switching_copy_and_terminal_001_knowledge"
+      },
+      {
+        "expectedClusterId": "golden_personal_noise",
+        "overlapCount": 1,
+        "predictedClusterId": "batch_dev_task_switching_copy_and_terminal_001_knowledge"
+      }
+    ],
+    "criticalFailures": [
+      "False archive count: 4"
+    ],
+    "fixtureId": "dev_task_switching_copy_and_terminal_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.4864864864864865,
+      "destinationAccuracy": {
+        "correct": 4,
+        "rate": 0.5,
+        "total": 8
+      },
+      "falseArchiveRate": {
+        "correct": 4,
+        "rate": 1,
+        "total": 4
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 4,
+        "rate": 0.5,
+        "total": 8
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 4,
+        "rate": 1,
+        "total": 4
+      }
+    },
+    "overallScore": 0.6216216216216217,
+    "pairwiseCounts": {
+      "falseNegative": 0,
+      "falsePositive": 19,
+      "truePositive": 9
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": null,
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

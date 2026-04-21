@@ -1,0 +1,163 @@
+{
+  "createdAt": "2026-04-21T14:53:51.555Z",
+  "experimentId": "exp-codex-background-dev-20260421",
+  "fixtureChecksum": "04862e32381011ae65ce50bf19994cef29cbe1823087d62c90a69943a221967d",
+  "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+  "generationMode": "mock",
+  "model": null,
+  "parsedReview": {
+    "clusters": [
+      {
+        "clusterId": "batch_dev_topic_overlap_python_vs_eval_001_knowledge",
+        "confidence": 0.82,
+        "decision": "archive_to_topic",
+        "keyPoints": [
+          "Use Python notebooks to cluster failure cases after each experiment run. That work starts only after the replay runner h…",
+          "uv run notebooks/error_buckets.py --input fixtures/ai-quality/experiments/exp-20260420-001",
+          "Do not duplicate prompt assembly in Python; consume frozen artifacts only. The runtime prompt and parser still belong to…",
+          "Need confusion matrix for destination_accuracy by scenario family. The scorer should report regressions separately for f…"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch overlaps with an existing topic and includes enough textual evidence to persist directly.",
+        "sourceIds": [
+          "cap_pyeval_001",
+          "cap_pyeval_002",
+          "cap_pyeval_003",
+          "cap_pyeval_004",
+          "cap_pyeval_006",
+          "cap_pyeval_007"
+        ],
+        "summary": "Use Python notebooks to cluster failure cases after each experiment run. That work starts only after the replay runner has already written stable JSON artifacts. uv run notebooks/error_buckets.py --input fixtures/ai-quality/experiments/exp-20260420-001",
+        "tags": [
+          "analysis",
+          "artifacts",
+          "notebook",
+          "notes",
+          "obsidian"
+        ],
+        "title": "Use Python notebooks to cluster failure cases after each e…",
+        "topicNameSuggestion": "Python Analysis Sidecar",
+        "topicSlugSuggestion": "python-analysis-sidecar"
+      },
+      {
+        "clusterId": "batch_dev_topic_overlap_python_vs_eval_001_references",
+        "confidence": 0.56,
+        "decision": "send_to_inbox",
+        "keyPoints": [
+          "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html"
+        ],
+        "missingContext": [],
+        "possibleTopics": [],
+        "reason": "The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.",
+        "sourceIds": [
+          "cap_pyeval_005"
+        ],
+        "summary": "Link-only captures are kept in inbox until the background compiler has richer surrounding context.",
+        "tags": [
+          "link",
+          "safari"
+        ],
+        "title": "Reference links pending calmer compilation",
+        "topicNameSuggestion": null,
+        "topicSlugSuggestion": null
+      }
+    ]
+  },
+  "persistDryRunResult": {
+    "mocked": true,
+    "outputs": [
+      {
+        "clusterId": "batch_dev_topic_overlap_python_vs_eval_001_knowledge",
+        "destination": "topic",
+        "filePath": "topics/python-analysis-sidecar.md",
+        "topicName": "Python Analysis Sidecar",
+        "topicSlug": "python-analysis-sidecar"
+      },
+      {
+        "clusterId": "batch_dev_topic_overlap_python_vs_eval_001_references",
+        "destination": "inbox",
+        "filePath": "_inbox/2026-04-21.md",
+        "topicName": null,
+        "topicSlug": null
+      }
+    ]
+  },
+  "pipeline": "background",
+  "pipelineMetadata": {
+    "sourceKind": "injected_mock",
+    "sourceLabel": "Injected Mock Compiler"
+  },
+  "promptText": null,
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "provider": "mock",
+  "providerMetadata": null,
+  "rawResponseText": "{\n  \"decisions\": [\n    {\n      \"confidence\": 0.82,\n      \"decisionId\": \"batch_dev_topic_overlap_python_vs_eval_001_knowledge\",\n      \"disposition\": \"write_topic\",\n      \"keyPoints\": [\n        \"Use Python notebooks to cluster failure cases after each experiment run. That work starts only after the replay runner h…\",\n        \"uv run notebooks/error_buckets.py --input fixtures/ai-quality/experiments/exp-20260420-001\",\n        \"Do not duplicate prompt assembly in Python; consume frozen artifacts only. The runtime prompt and parser still belong to…\",\n        \"Need confusion matrix for destination_accuracy by scenario family. The scorer should report regressions separately for f…\"\n      ],\n      \"rationale\": \"The batch overlaps with an existing topic and includes enough textual evidence to persist directly.\",\n      \"sourceCaptureIds\": [\n        \"cap_pyeval_001\",\n        \"cap_pyeval_002\",\n        \"cap_pyeval_003\",\n        \"cap_pyeval_004\",\n        \"cap_pyeval_006\",\n        \"cap_pyeval_007\"\n      ],\n      \"summary\": \"Use Python notebooks to cluster failure cases after each experiment run. That work starts only after the replay runner has already written stable JSON artifacts. uv run notebooks/error_buckets.py --input fixtures/ai-quality/experiments/exp-20260420-001\",\n      \"tags\": [\n        \"analysis\",\n        \"artifacts\",\n        \"notebook\",\n        \"notes\",\n        \"obsidian\"\n      ],\n      \"title\": \"Use Python notebooks to cluster failure cases after each e…\",\n      \"topicName\": \"Python Analysis Sidecar\",\n      \"topicSlug\": \"python-analysis-sidecar\"\n    },\n    {\n      \"confidence\": 0.56,\n      \"decisionId\": \"batch_dev_topic_overlap_python_vs_eval_001_references\",\n      \"disposition\": \"write_inbox\",\n      \"keyPoints\": [\n        \"https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.groupby.html\"\n      ],\n      \"rationale\": \"The batch segment is mostly references, so it should stay in inbox instead of forcing a long-term topic write.\",\n      \"sourceCaptureIds\": [\n        \"cap_pyeval_005\"\n      ],\n      \"summary\": \"Link-only captures are kept in inbox until the background compiler has richer surrounding context.\",\n      \"tags\": [\n        \"link\",\n        \"safari\"\n      ],\n      \"title\": \"Reference links pending calmer compilation\",\n      \"topicName\": null,\n      \"topicSlug\": null\n    }\n  ]\n}",
+  "retrievalVersion": "tino.background_compile.topic_select.v1",
+  "runId": "run_dev_topic_overlap_python_vs_eval_001_08027e5e",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "scoringResult": {
+    "clusterComparisons": [
+      {
+        "expectedClusterId": "golden_python_analysis_role",
+        "overlapCount": 4,
+        "predictedClusterId": "batch_dev_topic_overlap_python_vs_eval_001_knowledge"
+      },
+      {
+        "expectedClusterId": "golden_eval_runner_metrics",
+        "overlapCount": 2,
+        "predictedClusterId": "batch_dev_topic_overlap_python_vs_eval_001_knowledge"
+      }
+    ],
+    "criticalFailures": [
+      "Wrong existing-topic merge on 3/7 source assignments."
+    ],
+    "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+    "metrics": {
+      "clusterPairwiseF1": 0.5384615384615385,
+      "destinationAccuracy": {
+        "correct": 6,
+        "rate": 0.8571428571428571,
+        "total": 7
+      },
+      "falseArchiveRate": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "newTopicPrecision": {
+        "correct": 0,
+        "rate": null,
+        "total": 0
+      },
+      "persistSemanticCorrectness": {
+        "correct": 4,
+        "rate": 0.5714285714285714,
+        "total": 7
+      },
+      "schemaValid": true,
+      "sourceAssignmentIntegrity": {
+        "duplicateSourceIds": [],
+        "missingSourceIds": [],
+        "pass": true,
+        "unknownSourceIds": []
+      },
+      "topicMergeAccuracy": {
+        "correct": 4,
+        "rate": 0.5714285714285714,
+        "total": 7
+      }
+    },
+    "overallScore": 0.6036630036630037,
+    "pairwiseCounts": {
+      "falseNegative": 4,
+      "falsePositive": 8,
+      "truePositive": 7
+    }
+  },
+  "schemaVersion": "tino.batch_review.v1",
+  "selectedTopics": null,
+  "split": "dev",
+  "usedFallback": false,
+  "validationErrors": []
+}

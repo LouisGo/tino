@@ -1,0 +1,75 @@
+{
+  "experimentId": "exp-codex-legacy-holdout-20260421",
+  "mode": "mock",
+  "pipeline": "legacy",
+  "promptVersion": "tino.batch_review.engine.v6",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 0,
+        "name": "false_archive_rate",
+        "passed": true,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.6428571428571429,
+        "name": "destination_accuracy",
+        "passed": false,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.14285714285714285,
+        "name": "topic_merge_accuracy",
+        "passed": false,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.4680851063829787,
+      "destinationAccuracy": 0.6428571428571429,
+      "falseArchiveRate": 0,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 0.14285714285714285,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.14285714285714285
+    },
+    "runs": 2
+  },
+  "comparison": null,
+  "topFailures": [
+    {
+      "actual": "archive 4 captures to existing topic `weekly-product-ops` (\"Support macros: permission reset, knowledge root missin...\"); archive 2 captures to existing topic `product-writing-playbook` (\"Thanks for reporting the duplicate clipboard capture. H...\")",
+      "expected": "archive the whole batch to new topic `support-macro-library`",
+      "failures": [],
+      "fixtureId": "holdout_new_topic_support_macro_001",
+      "scenario": "writing and planning notes",
+      "score": 0.47575757575757577,
+      "why": "This is a holdout new-topic precision case and should not be overfit by prompt repair."
+    },
+    {
+      "actual": "send 6 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `document-markdown-normalization` (\"MarkItDown is useful for dropped PDF or DOCX imports, n...\")",
+      "expected": "split into archive 4 captures to existing topic `document-markdown-normalization`; archive 3 captures to existing topic `rust-background-compiler`; send 1 captures to inbox",
+      "failures": [
+        "Wrong existing-topic merge on 6/7 source assignments."
+      ],
+      "fixtureId": "holdout_import_runtime_overlap_001",
+      "scenario": "overlapping Python-analysis and eval-system notes",
+      "score": 0.5002380952380953,
+      "why": "This holdout should expose whether the model over-merges adjacent architecture concepts."
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "experimentId": "exp-codex-legacy-dev-20260421",
+  "mode": "mock",
+  "pipeline": "legacy",
+  "promptVersion": "tino.batch_review.engine.v6",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 0.4090909090909091,
+        "name": "false_archive_rate",
+        "passed": false,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.515625,
+        "name": "destination_accuracy",
+        "passed": false,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.3333333333333333,
+        "name": "topic_merge_accuracy",
+        "passed": false,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.5777777777777777,
+      "destinationAccuracy": 0.515625,
+      "falseArchiveRate": 0.4090909090909091,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 0.359375,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.3333333333333333
+    },
+    "runs": 10
+  },
+  "comparison": null,
+  "topFailures": [
+    {
+      "actual": "send 5 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `python-analysis-sidecar` (\"Use Python notebooks to cluster failure cases after eac...\")",
+      "expected": "split into archive 5 captures to existing topic `python-analysis-sidecar`; archive 2 captures to existing topic `prompt-eval-experimentation`",
+      "failures": [
+        "Wrong existing-topic merge on 5/7 source assignments."
+      ],
+      "fixtureId": "dev_topic_overlap_python_vs_eval_001",
+      "scenario": "overlapping Python-analysis and eval-system notes",
+      "score": 0.4207792207792208,
+      "why": "Correct clustering requires separating Python-side artifact analysis from runner and metric ownership."
+    },
+    {
+      "actual": "send 5 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `prompt-eval-experimentation` (\"先把 mock batch 和 golden 固定，再谈 prompt polish。\")",
+      "expected": "split into archive 6 captures to existing topic `prompt-eval-experimentation`; archive 1 captures to existing topic `python-analysis-sidecar`",
+      "failures": [
+        "Wrong existing-topic merge on 5/7 source assignments."
+      ],
+      "fixtureId": "dev_bilingual_mixed_eval_001",
+      "scenario": "bilingual mixed-language clipboard batch",
+      "score": 0.4417582417582418,
+      "why": "The system should not confuse bilingual wording with topic ambiguity."
+    },
+    {
+      "actual": "send 5 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `personal-knowledge-ops` (\"482911\")",
+      "expected": "split into discard 6 captures; send 1 captures to inbox",
+      "failures": [
+        "False archive count: 2"
+      ],
+      "fixtureId": "dev_low_value_noise_misc_001",
+      "scenario": "low-value mixed clipboard noise",
+      "score": 0.44652014652014654,
+      "why": "The useful note still lacks enough context for direct topic archival."
+    },
+    {
+      "actual": "archive 6 captures to existing topic `rust-background-compiler` (\"cargo check --manifest-path src-tauri/Cargo.toml\"); archive 2 captures to existing topic `product-writing-playbook` (\"The clipboard should feel like a quiet inbox, not a das...\")",
+      "expected": "split into archive 4 captures to existing topic `product-writing-playbook`; send 3 captures to inbox; discard 1 captures",
+      "failures": [
+        "False archive count: 4",
+        "Wrong existing-topic merge on 2/4 source assignments."
+      ],
+      "fixtureId": "dev_task_switching_copy_and_terminal_001",
+      "scenario": "task-switching operational notes",
+      "score": 0.47500000000000003,
+      "why": "The correct result requires one durable copywriting cluster, one inbox cluster, and one discard."
+    },
+    {
+      "actual": "send 4 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `document-markdown-normalization` (\"MarkItDown solves file-to-Markdown conversion more than...\")",
+      "expected": "archive the whole batch to existing topic `document-markdown-normalization`",
+      "failures": [
+        "Wrong existing-topic merge on 4/6 source assignments."
+      ],
+      "fixtureId": "dev_focused_research_markitdown_001",
+      "scenario": "focused research notes",
+      "score": 0.48686868686868684,
+      "why": "The correct durable output is a merge into document-markdown-normalization, not a generic AI quality topic."
+    }
+  ]
+}

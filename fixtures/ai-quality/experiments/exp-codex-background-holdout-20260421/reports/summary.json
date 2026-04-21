@@ -1,0 +1,157 @@
+{
+  "experimentId": "exp-codex-background-holdout-20260421",
+  "mode": "mock",
+  "pipeline": "background",
+  "promptVersion": "tino.background_compile.provider_prompt.v1",
+  "runnerVersion": "tino.ai_quality.replay.v0.1",
+  "summary": {
+    "gateResults": [
+      {
+        "actual": 1,
+        "name": "schema_valid_rate",
+        "passed": true,
+        "threshold": ">= 0.98"
+      },
+      {
+        "actual": 1,
+        "name": "source_assignment_integrity",
+        "passed": true,
+        "threshold": "= 1.00"
+      },
+      {
+        "actual": 1,
+        "name": "false_archive_rate",
+        "passed": false,
+        "threshold": "<= 0.05"
+      },
+      {
+        "actual": 0.7857142857142857,
+        "name": "destination_accuracy",
+        "passed": false,
+        "threshold": ">= 0.85"
+      },
+      {
+        "actual": 0.2857142857142857,
+        "name": "topic_merge_accuracy",
+        "passed": false,
+        "threshold": ">= 0.80"
+      }
+    ],
+    "metrics": {
+      "clusterPairwiseF1": 0.7272727272727272,
+      "destinationAccuracy": 0.7857142857142857,
+      "falseArchiveRate": 1,
+      "newTopicPrecision": null,
+      "persistSemanticCorrectness": 0.14285714285714285,
+      "schemaValidRate": 1,
+      "sourceAssignmentIntegrityRate": 1,
+      "topicMergeAccuracy": 0.2857142857142857
+    },
+    "runs": 2
+  },
+  "comparison": {
+    "compareToExperimentId": "exp-codex-legacy-holdout-20260421",
+    "comparedRuns": 2,
+    "improved": [
+      {
+        "after": "archive the whole batch to existing topic `product-writing-playbook` (\"Thanks for reporting the duplicate clipboard capture. Here…\")",
+        "before": "archive 4 captures to existing topic `weekly-product-ops` (\"Support macros: permission reset, knowledge root missin...\"); archive 2 captures to existing topic `product-writing-playbook` (\"Thanks for reporting the duplicate clipboard capture. H...\")",
+        "currentScore": 0.5666666666666667,
+        "delta": 0.09090909090909088,
+        "expected": "archive the whole batch to new topic `support-macro-library`",
+        "fixtureId": "holdout_new_topic_support_macro_001",
+        "previousScore": 0.47575757575757577,
+        "scenario": "writing and planning notes",
+        "why": "This is a holdout new-topic precision case and should not be overfit by prompt repair."
+      }
+    ],
+    "metricDiffs": [
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "schema_valid_rate"
+      },
+      {
+        "after": 1,
+        "before": 1,
+        "delta": 0,
+        "name": "source_assignment_integrity"
+      },
+      {
+        "after": 0.7857142857142857,
+        "before": 0.6428571428571429,
+        "delta": 0.1428571428571428,
+        "name": "destination_accuracy"
+      },
+      {
+        "after": 1,
+        "before": 0,
+        "delta": 1,
+        "name": "false_archive_rate"
+      },
+      {
+        "after": 0.2857142857142857,
+        "before": 0.14285714285714285,
+        "delta": 0.14285714285714285,
+        "name": "topic_merge_accuracy"
+      },
+      {
+        "after": null,
+        "before": null,
+        "delta": null,
+        "name": "new_topic_precision"
+      },
+      {
+        "after": 0.7272727272727272,
+        "before": 0.4680851063829787,
+        "delta": 0.2591876208897485,
+        "name": "cluster_pairwise_f1"
+      },
+      {
+        "after": 0.14285714285714285,
+        "before": 0.14285714285714285,
+        "delta": 0,
+        "name": "persist_semantic_correctness"
+      }
+    ],
+    "missingFixtureIds": [],
+    "regressed": [
+      {
+        "after": "archive 6 captures to existing topic `document-markdown-normalization` (\"MarkItDown is useful for dropped PDF or DOCX imports, not …\"); send 2 captures to inbox (\"Reference links pending calmer compilation\")",
+        "before": "send 6 captures to inbox (\"Provider access references need manual confirmation\"); archive 2 captures to existing topic `document-markdown-normalization` (\"MarkItDown is useful for dropped PDF or DOCX imports, n...\")",
+        "currentScore": 0.4488095238095238,
+        "delta": -0.051428571428571435,
+        "expected": "split into archive 4 captures to existing topic `document-markdown-normalization`; archive 3 captures to existing topic `rust-background-compiler`; send 1 captures to inbox",
+        "fixtureId": "holdout_import_runtime_overlap_001",
+        "previousScore": 0.5002380952380953,
+        "scenario": "overlapping Python-analysis and eval-system notes",
+        "why": "This holdout should expose whether the model over-merges adjacent architecture concepts."
+      }
+    ],
+    "unchangedCount": 0
+  },
+  "topFailures": [
+    {
+      "actual": "archive 6 captures to existing topic `document-markdown-normalization` (\"MarkItDown is useful for dropped PDF or DOCX imports, not …\"); send 2 captures to inbox (\"Reference links pending calmer compilation\")",
+      "expected": "split into archive 4 captures to existing topic `document-markdown-normalization`; archive 3 captures to existing topic `rust-background-compiler`; send 1 captures to inbox",
+      "failures": [
+        "False archive count: 1",
+        "Wrong existing-topic merge on 5/7 source assignments."
+      ],
+      "fixtureId": "holdout_import_runtime_overlap_001",
+      "scenario": "overlapping Python-analysis and eval-system notes",
+      "score": 0.4488095238095238,
+      "why": "This holdout should expose whether the model over-merges adjacent architecture concepts."
+    },
+    {
+      "actual": "archive the whole batch to existing topic `product-writing-playbook` (\"Thanks for reporting the duplicate clipboard capture. Here…\")",
+      "expected": "archive the whole batch to new topic `support-macro-library`",
+      "failures": [],
+      "fixtureId": "holdout_new_topic_support_macro_001",
+      "scenario": "writing and planning notes",
+      "score": 0.5666666666666667,
+      "why": "This is a holdout new-topic precision case and should not be overfit by prompt repair."
+    }
+  ]
+}
