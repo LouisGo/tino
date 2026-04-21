@@ -9,10 +9,9 @@ use crate::ai::{
         KnowledgeWriteDestination, PersistedKnowledgeWrite,
     },
     knowledge_writer::{
-        inbox_file_path, relative_output_path, render_inline_code_list,
-        render_source_fragments, render_tag_list, sanitize_inline_markdown,
-        slugify_topic_value, topic_file_path, upsert_inbox_markdown_file,
-        upsert_topic_markdown_file,
+        inbox_file_path, relative_output_path, render_inline_code_list, render_source_fragments,
+        render_tag_list, sanitize_inline_markdown, slugify_topic_value, topic_file_path,
+        upsert_inbox_markdown_file, upsert_topic_markdown_file,
     },
     runtime_store::{
         append_audit_event, append_write_log_entry, save_job, BatchCompilerAuditEvent,
@@ -235,15 +234,6 @@ pub fn get_ai_batch_payload(state: AppState, batch_id: String) -> IpcResult<AiBa
             .collect::<Vec<_>>(),
         available_topics: load_topic_index_entries(&knowledge_root)?,
     })
-}
-
-pub fn get_topic_index_entries(state: AppState) -> IpcResult<Vec<TopicIndexEntry>> {
-    let knowledge_root = state
-        .current_settings()
-        .map_err(AppError::from)
-        .map_err(IpcError::from)?
-        .knowledge_root_path();
-    load_topic_index_entries(&knowledge_root).map_err(IpcError::from)
 }
 
 pub fn apply_batch_decision(

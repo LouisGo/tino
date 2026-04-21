@@ -1,11 +1,7 @@
 use super::run_blocking_ipc_command;
 use crate::{
-    ai::{
-        legacy_review::{
-            self, AiBatchPayload, AiBatchSummary, ApplyBatchDecisionRequest,
-            ApplyBatchDecisionResult,
-        },
-        topic_index::TopicIndexEntry,
+    ai::legacy_review::{
+        self, AiBatchPayload, AiBatchSummary, ApplyBatchDecisionRequest, ApplyBatchDecisionResult,
     },
     app_state::AppState,
     error::IpcResult,
@@ -29,15 +25,6 @@ pub async fn get_ai_batch_payload(
 ) -> IpcResult<AiBatchPayload> {
     let state = state.inner().clone();
     run_blocking_ipc_command(move || legacy_review::get_ai_batch_payload(state, batch_id)).await
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn get_topic_index_entries(
-    state: State<'_, AppState>,
-) -> IpcResult<Vec<TopicIndexEntry>> {
-    let state = state.inner().clone();
-    run_blocking_ipc_command(move || legacy_review::get_topic_index_entries(state)).await
 }
 
 #[tauri::command]

@@ -13,8 +13,8 @@ pub fn builder() -> Builder<tauri::Wry> {
         .commands(collect_commands![
             ai::list_ready_ai_batches,
             ai::get_ai_batch_payload,
-            ai::get_topic_index_entries,
             ai::apply_batch_decision,
+            ai_ops::get_topic_index_entries,
             ai_ops::get_ai_system_snapshot,
             ai_ops::record_ai_feedback_event,
             ai_ops::preview_ai_batch_compile,

@@ -7,8 +7,8 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	listReadyAiBatches: () => typedError<AiBatchSummary[], IpcError>(__TAURI_INVOKE("list_ready_ai_batches")),
 	getAiBatchPayload: (batchId: string) => typedError<AiBatchPayload, IpcError>(__TAURI_INVOKE("get_ai_batch_payload", { batchId })),
-	getTopicIndexEntries: () => typedError<TopicIndexEntry[], IpcError>(__TAURI_INVOKE("get_topic_index_entries")),
 	applyBatchDecision: (request: ApplyBatchDecisionRequest) => typedError<ApplyBatchDecisionResult, IpcError>(__TAURI_INVOKE("apply_batch_decision", { request })),
+	getTopicIndexEntries: () => typedError<TopicIndexEntry[], IpcError>(__TAURI_INVOKE("get_topic_index_entries")),
 	getAiSystemSnapshot: () => typedError<AiSystemSnapshot, string>(__TAURI_INVOKE("get_ai_system_snapshot")),
 	recordAiFeedbackEvent: (input: RecordFeedbackEventInput) => typedError<RecordFeedbackEventResult, string>(__TAURI_INVOKE("record_ai_feedback_event", { input })),
 	previewAiBatchCompile: (batchId: string) => typedError<BatchCompilePreviewResult, string>(__TAURI_INVOKE("preview_ai_batch_compile", { batchId })),
