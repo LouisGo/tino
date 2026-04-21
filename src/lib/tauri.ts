@@ -34,6 +34,7 @@ import type {
 } from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
+  AiSystemSnapshot,
   AppSettingsChangedPayload,
   ClipboardBoardBootstrap,
   ClipboardCapture,
@@ -198,6 +199,140 @@ const mockSnapshot: DashboardSnapshot = {
       rawText: "/Users/louistation/MySpace/Notes/temp/insomnium-3.6.0-mac-arm64.dmg",
       fileMissing: false,
       byteSize: 206779187,
+    },
+  ],
+};
+
+const mockAiSystemSnapshot: AiSystemSnapshot = {
+  phase: "background_compiler",
+  capability: {
+    interactiveConfigured: true,
+    backgroundCompileConfigured: true,
+    backgroundSourceKind: "provider_profile",
+    backgroundSourceLabel: "DeepSeek Preview",
+    backgroundSourceReason:
+      "Background compile uses a DeepSeek-compatible profile and writes through the Rust runtime.",
+    activeProviderId: "provider_mock_primary",
+    activeProviderName: "DeepSeek Preview",
+    activeVendor: "deepseek",
+  },
+  runtime: {
+    status: "idle",
+    observedPendingCaptureCount: 12,
+    observedBatchBacklogCount: 2,
+    activeJob: null,
+    lastTransitionAt: minutesAgoIsoString(6),
+    lastError: null,
+  },
+  feedbackEventCount: 4,
+  latestQualitySnapshot: {
+    id: "quality_mock_001",
+    generatedAt: minutesAgoIsoString(14),
+    totalFeedbackEvents: 4,
+    classificationFeedbackCount: 3,
+    correctionEventCount: 1,
+    correctionRate: 0.25,
+    topicConfirmedCount: 2,
+    topicReassignedCount: 1,
+    inboxRerouteCount: 1,
+    restoredToTopicCount: 0,
+    discardedCount: 0,
+    retainedCount: 0,
+    deletedCount: 0,
+    viewedCount: 2,
+    lastFeedbackAt: minutesAgoIsoString(18),
+  },
+  recentJobs: [
+    {
+      id: "job_mock_002",
+      status: "running",
+      queuedAt: minutesAgoIsoString(4),
+      startedAt: minutesAgoIsoString(3),
+      finishedAt: null,
+      attempt: 1,
+      input: {
+        batchId: "batch_mock_002",
+        trigger: "capture_count",
+        captureCount: 20,
+        sourceCaptureIds: ["cap_020", "cap_021", "cap_022"],
+        firstCapturedAt: minutesAgoIsoString(18),
+        lastCapturedAt: minutesAgoIsoString(4),
+      },
+      decisions: [],
+      persistedWrites: [],
+      failureReason: null,
+    },
+    {
+      id: "job_mock_001",
+      status: "persisted",
+      queuedAt: minutesAgoIsoString(36),
+      startedAt: minutesAgoIsoString(35),
+      finishedAt: minutesAgoIsoString(31),
+      attempt: 1,
+      input: {
+        batchId: "batch_mock_001",
+        trigger: "max_wait",
+        captureCount: 9,
+        sourceCaptureIds: ["cap_011", "cap_012"],
+        firstCapturedAt: minutesAgoIsoString(52),
+        lastCapturedAt: minutesAgoIsoString(34),
+      },
+      decisions: [
+        {
+          decisionId: "decision_mock_001",
+          disposition: "write_topic",
+          sourceCaptureIds: ["cap_011", "cap_012"],
+          topicSlug: "rust-ai-runtime",
+          topicName: "Rust AI Runtime",
+          title: "Rust AI runtime notes",
+          summary: "Background compiler runtime notes were persisted into the knowledge layer.",
+          keyPoints: ["Rust owns trusted persistence."],
+          tags: ["rust", "runtime"],
+          confidence: 0.86,
+          rationale: "Strong overlap with durable runtime knowledge.",
+        },
+      ],
+      persistedWrites: [
+        {
+          writeId: "write_mock_001",
+          jobId: "job_mock_001",
+          decisionId: "decision_mock_001",
+          destination: "topic",
+          knowledgePath: "topics/rust-ai-runtime.md",
+          topicSlug: "rust-ai-runtime",
+          topicName: "Rust AI Runtime",
+          title: "Rust AI runtime notes",
+          sourceCaptureIds: ["cap_011", "cap_012"],
+          persistedAt: minutesAgoIsoString(31),
+        },
+      ],
+      failureReason: null,
+    },
+  ],
+  recentWrites: [
+    {
+      writeId: "write_mock_002",
+      jobId: "job_mock_002",
+      decisionId: "decision_mock_002",
+      destination: "inbox",
+      knowledgePath: "_inbox/2026-04-21.md",
+      topicSlug: null,
+      topicName: null,
+      title: "Loose provider relay notes",
+      sourceCaptureIds: ["cap_020"],
+      persistedAt: minutesAgoIsoString(9),
+    },
+    {
+      writeId: "write_mock_001",
+      jobId: "job_mock_001",
+      decisionId: "decision_mock_001",
+      destination: "topic",
+      knowledgePath: "topics/rust-ai-runtime.md",
+      topicSlug: "rust-ai-runtime",
+      topicName: "Rust AI Runtime",
+      title: "Rust AI runtime notes",
+      sourceCaptureIds: ["cap_011", "cap_012"],
+      persistedAt: minutesAgoIsoString(31),
     },
   ],
 };
@@ -676,6 +811,14 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   return normalizeDashboardSnapshot(
     await unwrapTauriResult(tauriCommands.getDashboardSnapshot()),
   );
+}
+
+export async function getAiSystemSnapshot(): Promise<AiSystemSnapshot> {
+  if (!isTauriRuntime()) {
+    return mockAiSystemSnapshot;
+  }
+
+  return await unwrapTauriResult(tauriCommands.getAiSystemSnapshot());
 }
 
 export async function listHomeChatConversations(): Promise<HomeChatConversationSummary[]> {

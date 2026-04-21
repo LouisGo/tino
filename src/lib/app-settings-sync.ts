@@ -24,6 +24,10 @@ export function applyIncomingAppSettingsChange(
     payload.previous,
     payload.saved,
   );
+  const shouldRefreshAiSystem = shouldInvalidateAiSystemSnapshot(
+    payload.previous,
+    payload.saved,
+  );
   const shouldRefreshClipboardHistory = shouldInvalidateClipboardHistoryQueries(
     payload.previous,
     payload.saved,
@@ -38,6 +42,7 @@ export function applyIncomingAppSettingsChange(
 
   if (
     !shouldRefreshDashboard
+    && !shouldRefreshAiSystem
     && !shouldRefreshClipboardHistory
     && !shouldRefreshPinnedClipboardData
   ) {
@@ -48,6 +53,10 @@ export function applyIncomingAppSettingsChange(
 
   if (shouldRefreshDashboard) {
     invalidations.push(queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() }));
+  }
+
+  if (shouldRefreshAiSystem) {
+    invalidations.push(queryClient.invalidateQueries({ queryKey: queryKeys.aiSystemSnapshot() }));
   }
 
   if (shouldRefreshClipboardHistory) {
@@ -110,6 +119,22 @@ function shouldInvalidateDashboardSnapshot(
   );
 }
 
+function shouldInvalidateAiSystemSnapshot(
+  previousPersisted: SettingsDraft | null,
+  savedSettings: SettingsDraft,
+) {
+  if (!previousPersisted) {
+    return true;
+  }
+
+  return (
+    previousPersisted.knowledgeRoot !== savedSettings.knowledgeRoot
+    || previousPersisted.activeRuntimeProviderId !== savedSettings.activeRuntimeProviderId
+    || stableSerialize(resolveActiveRuntimeProviderProfile(previousPersisted))
+      !== stableSerialize(resolveActiveRuntimeProviderProfile(savedSettings))
+  );
+}
+
 function shouldInvalidateClipboardHistoryQueries(
   previousPersisted: SettingsDraft | null,
   savedSettings: SettingsDraft,
@@ -131,6 +156,15 @@ function shouldInvalidatePinnedClipboardQueries(
   }
 
   return previousPersisted.knowledgeRoot !== savedSettings.knowledgeRoot;
+}
+
+function resolveActiveRuntimeProviderProfile(settings: SettingsDraft) {
+  const activeProviderId = settings.activeRuntimeProviderId.trim();
+  if (!activeProviderId) {
+    return null;
+  }
+
+  return settings.runtimeProviderProfiles.find((profile) => profile.id === activeProviderId) ?? null;
 }
 
 function stableSerialize(value: unknown): string {

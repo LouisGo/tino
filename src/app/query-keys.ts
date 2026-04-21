@@ -1,5 +1,6 @@
 export const queryKeys = {
   dashboardSnapshot: () => ["dashboard-snapshot"] as const,
+  aiSystemSnapshot: () => ["ai-system-snapshot"] as const,
   appSettings: () => ["app-settings"] as const,
   appSettingsSave: () => ["app-settings", "save"] as const,
   autostartEnabled: () => ["autostart-enabled"] as const,

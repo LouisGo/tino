@@ -13,6 +13,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { AiWorkInProgressBadge } from "@/features/ai/components/ai-work-in-progress-badge";
+import { AiOpsSummaryCard } from "@/features/dashboard/components/ai-ops-summary-card";
 import { resolveProviderAccessConfig } from "@/features/ai/lib/provider-access";
 import { HomeChatWorkspace } from "@/features/chat/components/home-chat-workspace";
 import {
@@ -89,8 +90,9 @@ export function DashboardPage() {
         <AiWorkInProgressBadge compact />
       </div>
 
-      <div className="app-page-rail flex items-start justify-between gap-4 [--app-page-rail-base:42rem] [--app-page-rail-growth:22vw]">
+      <div className="app-page-rail flex flex-wrap items-start justify-between gap-4 [--app-page-rail-base:42rem] [--app-page-rail-growth:22vw]">
         <KnowledgeRootMeta knowledgeRoot={knowledgeRoot} />
+        <AiOpsSummaryCard />
         <VersionMeta version={appVersion} />
       </div>
 

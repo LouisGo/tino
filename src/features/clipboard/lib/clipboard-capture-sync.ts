@@ -40,6 +40,7 @@ export function invalidateClipboardQueriesForUpdate(
 
   if (payload.refreshDashboard) {
     invalidations.push(queryClient.invalidateQueries({ queryKey: queryKeys.dashboardSnapshot() }));
+    invalidations.push(queryClient.invalidateQueries({ queryKey: queryKeys.aiSystemSnapshot() }));
   }
 
   return Promise.all(invalidations).then(() => undefined);

@@ -215,6 +215,52 @@ export const enUSResources = defineLocaleSchema({
         fallbackCaptureMode: "Rust clipboard poller active",
       },
     },
+    aiOps: {
+      label: "AI Ops",
+      title: "{{phase}}",
+      titleWithSource: "{{phase}} via {{source}}",
+      metrics: {
+        pending: "Pending",
+        backlog: "Backlog",
+        feedback: "Feedback",
+        correctionRate: "Correction",
+        correctionRateValue: "{{rate}}%",
+      },
+      phase: {
+        loading: "Loading phase",
+        contractReset: "Contract Reset",
+        storageReset: "Storage Reset",
+        capabilityBoundary: "Capability Boundary",
+        backgroundCompiler: "Background Compiler",
+        qualityLoop: "Quality Loop",
+        aiOps: "AI Ops",
+      },
+      status: {
+        loading: "Loading",
+        unavailable: "Unavailable",
+        notBootstrapped: "Not bootstrapped",
+        awaitingCapability: "Awaiting capability",
+        idle: "Idle",
+        running: "Running",
+        retryBackoff: "Retry backoff",
+        blocked: "Blocked",
+      },
+      summary: {
+        loading: "Loading the Rust-owned AI runtime snapshot.",
+        unavailable:
+          "AI Ops snapshot is temporarily unavailable. HomeChat remains the primary user-facing AI surface.",
+        unconfigured:
+          "Background compile is not configured yet. This card only reflects the Rust-owned runtime snapshot.",
+        unconfiguredSource: "No background source",
+        secondary:
+          "Secondary runtime view only. This panel observes the Rust-owned background compiler, feedback, and writes.",
+        lastError: "Last runtime error: {{message}}",
+        lastWrite: "Latest persisted write {{time}}",
+        lastFeedback: "Latest feedback {{time}}",
+        lastTransition: "Runtime changed {{time}}",
+        noActivity: "No runtime activity recorded yet.",
+      },
+    },
     sections: {
       workspace: {
         eyebrow: "Focus",
@@ -1055,6 +1101,52 @@ export const zhCNResources = {
         description: "{{os}} · {{captureMode}}",
         fallbackOs: "浏览器",
         fallbackCaptureMode: "Rust 剪贴板轮询器运行中",
+      },
+    },
+    aiOps: {
+      label: "AI Ops",
+      title: "{{phase}}",
+      titleWithSource: "{{phase}} · {{source}}",
+      metrics: {
+        pending: "待处理",
+        backlog: "批次积压",
+        feedback: "反馈事件",
+        correctionRate: "纠错率",
+        correctionRateValue: "{{rate}}%",
+      },
+      phase: {
+        loading: "阶段加载中",
+        contractReset: "契约重置",
+        storageReset: "存储重置",
+        capabilityBoundary: "能力边界",
+        backgroundCompiler: "后台编译器",
+        qualityLoop: "质量闭环",
+        aiOps: "AI Ops",
+      },
+      status: {
+        loading: "加载中",
+        unavailable: "不可用",
+        notBootstrapped: "未初始化",
+        awaitingCapability: "等待能力就绪",
+        idle: "空闲",
+        running: "运行中",
+        retryBackoff: "退避重试",
+        blocked: "阻塞中",
+      },
+      summary: {
+        loading: "正在加载 Rust 持有的 AI runtime 快照。",
+        unavailable:
+          "AI Ops 快照暂时不可用。面对用户的主 AI 入口仍然是 HomeChat，这里只负责观察 Rust 后台运行态。",
+        unconfigured:
+          "后台编译尚未配置完成。这个卡片只反映 Rust 持有的 runtime 快照，不引入新的前端真相源。",
+        unconfiguredSource: "未配置后台来源",
+        secondary:
+          "这里只是次级运行态视图，用来观察 Rust-owned background compiler、反馈事件和落盘结果。",
+        lastError: "最近一次运行时错误：{{message}}",
+        lastWrite: "最近一次落盘发生在 {{time}}",
+        lastFeedback: "最近一次反馈发生在 {{time}}",
+        lastTransition: "运行态最近一次切换发生在 {{time}}",
+        noActivity: "暂时还没有记录到运行态活动。",
       },
     },
     sections: {
