@@ -6,6 +6,7 @@ use reqwest::{
 };
 use serde::Serialize;
 use serde_json::{json, Value};
+use url::Url;
 
 use crate::{
     ai::{
@@ -373,11 +374,7 @@ fn request_provider_json(
         .header(CONTENT_TYPE, "application/json")
         .body(request_body_bytes)
         .send()
-        .map_err(|error| {
-            AppError::platform(format!(
-                "background compile provider request failed: {error}"
-            ))
-        })?;
+        .map_err(|error| normalize_provider_request_error(base_url, error))?;
     let status = response.status();
     let response_text = response.text().map_err(|error| {
         AppError::platform(format!(
@@ -394,12 +391,8 @@ fn request_provider_json(
         )));
     }
 
-    let payload = serde_json::from_str::<Value>(&response_text).map_err(|error| {
-        AppError::json(
-            "failed to parse background compile provider response",
-            error,
-        )
-    })?;
+    let payload = serde_json::from_str::<Value>(&response_text)
+        .map_err(|error| normalize_provider_response_parse_error(base_url, error))?;
     let content = payload
         .get("choices")
         .and_then(Value::as_array)
@@ -1595,6 +1588,54 @@ fn extract_provider_error_message(value: &str) -> Option<String> {
         .map(|message| message.to_string())
 }
 
+fn normalize_provider_request_error(base_url: &str, error: reqwest::Error) -> AppError {
+    let provider_host = provider_host_label(base_url);
+
+    if error.is_timeout() {
+        return AppError::platform(format!(
+            "background compile provider request to {provider_host} stalled or exceeded the configured timeout before a complete response arrived"
+        ));
+    }
+
+    if error.is_connect() {
+        return AppError::platform(format!(
+            "background compile could not reach {provider_host}: {error}"
+        ));
+    }
+
+    AppError::platform(format!(
+        "background compile provider request to {provider_host} failed: {error}"
+    ))
+}
+
+fn normalize_provider_response_parse_error(base_url: &str, _error: serde_json::Error) -> AppError {
+    AppError::platform(format!(
+        "background compile provider returned a non-JSON response instead of an OpenAI-compatible API payload.{}",
+        provider_base_url_v1_hint(base_url)
+    ))
+}
+
+fn provider_host_label(base_url: &str) -> String {
+    Url::parse(base_url)
+        .ok()
+        .and_then(|url| url.host_str().map(|host| host.to_string()))
+        .unwrap_or_else(|| "the selected provider".into())
+}
+
+fn provider_base_url_v1_hint(base_url: &str) -> String {
+    let pathname = Url::parse(base_url)
+        .ok()
+        .map(|url| url.path().to_string())
+        .unwrap_or_default();
+
+    if pathname.is_empty() || pathname == "/" {
+        " Try using a baseUrl that ends with /v1 if your relay follows the OpenAI path layout."
+            .into()
+    } else {
+        String::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -1608,8 +1649,10 @@ mod tests {
     };
 
     use super::{
-        normalize_provider_decisions, sanitize_capture_text_for_prompt,
-        select_background_compile_model, should_discard_locally_as_sensitive,
+        normalize_provider_decisions, normalize_provider_response_parse_error,
+        sanitize_capture_text_for_prompt, select_background_compile_model,
+        should_discard_locally_as_sensitive,
+        Value,
     };
 
     fn sample_capture(id: &str, content_kind: &str, raw_text: &str) -> CaptureRecord {
@@ -1948,5 +1991,18 @@ mod tests {
         );
         assert!(decisions[0].topic_slug.is_none());
         assert!(decisions[0].topic_name.is_none());
+    }
+
+    #[test]
+    fn non_json_provider_response_hint_mentions_v1_for_root_base_url() {
+        let parse_error = serde_json::from_str::<Value>("<html>not-json</html>")
+            .expect_err("response should be invalid json");
+
+        let error = normalize_provider_response_parse_error("https://api.openai.com", parse_error);
+
+        assert_eq!(
+            error.to_string(),
+            "background compile provider returned a non-JSON response instead of an OpenAI-compatible API payload. Try using a baseUrl that ends with /v1 if your relay follows the OpenAI path layout."
+        );
     }
 }

@@ -120,4 +120,5 @@
 - 已将 Runtime Provider 配置校验下沉到 Rust authoritative save path：保存设置时会统一拒绝 `非 HTTPS baseUrl`、`带 credentials 的 baseUrl`、`model 内空白`、`apiKey 内空白`、`过短 apiKey`
 - 后台 capability 可用性判断现在与 Rust provider 校验共享同一套标准，避免设置页 UX 校验与 Rust background compiler 长期双轨漂移
 - 当 active provider 配置无效时，Rust capability snapshot / compile refusal 现在会直接返回权威失败原因，不再只给泛化的“provider 未配置”文案
+- Rust background compile 的 provider 错误语义已开始向 Renderer `provider-access` 收敛：超时与非 JSON 响应现在会返回更明确的配置/兼容性排障文案，并在根路径 relay 场景给出 `/v1` 提示
 - 当前下一步：继续对齐 `Renderer provider-access` 与 `Rust provider_compile` 的模型选择、超时和错误语义，并补 `graphify` 与整体验证收口
