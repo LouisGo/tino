@@ -56,7 +56,7 @@ use crate::clipboard::types::{
     UpdateClipboardPinResult,
 };
 use crate::error::{AppError, AppResult};
-use crate::ipc_events::{AppSettingsChanged, ClipboardCapturesUpdated};
+use crate::ipc_events::{AiSystemUpdated, AppSettingsChanged, ClipboardCapturesUpdated};
 use crate::runtime_profile;
 use crate::runtime_provider::validate_runtime_provider_profiles;
 use crate::storage::app_paths::bootstrap_durable_app_storage;
@@ -412,6 +412,8 @@ impl AppState {
             if let Err(error) = state.run_periodic_maintenance() {
                 warn!("failed to refresh runtime state after background compile: {error}");
             }
+
+            state.emit_ai_system_updated(AiSystemUpdated::background_compile_ran());
 
             state
                 .shared
@@ -925,6 +927,12 @@ impl AppState {
 
         if let Err(error) = update.emit(&self.shared.app_handle) {
             warn!("failed to emit clipboard captures updated event: {error}");
+        }
+    }
+
+    pub fn emit_ai_system_updated(&self, update: AiSystemUpdated) {
+        if let Err(error) = update.emit(&self.shared.app_handle) {
+            warn!("failed to emit ai system updated event: {error}");
         }
     }
 

@@ -1,7 +1,7 @@
 # Tino Handoff
 
 > 最后更新：2026-04-21
-> 当前基线提交：`da80df9` + working tree ai-ops dashboard snapshot
+> 当前基线提交：`292f4f7` + working tree ai-system subscription
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
 
@@ -69,6 +69,7 @@
 - Renderer 侧 legacy `/ai review` 模块现已整体收敛到 `src/features/ai/legacy-review/`；`ai-review-page.tsx` 仍保留为 legacy tooling surface，但 review-first 逻辑不再占据 `features/ai` 的默认结构中心
 - Dashboard 首页现已开始消费 Rust-owned `AiSystemSnapshot`，以次级 `AI Ops` 摘要卡展示后台 runtime 状态、近期写入、feedback 计数与 quality 快照；该面板只消费 snapshot query，不在 Renderer 建立新的权威 runtime 状态
 - `aiSystemSnapshot` 的 query invalidation 现已收窄：设置变更只在 `knowledgeRoot` 或当前激活 provider 实际变化时刷新；clipboard 侧 `refreshDashboard` 事件也会同步刷新该 snapshot
+- Rust 侧现已新增 `AiSystemUpdated` typed event；后台编译周期完成、feedback 落库成功、legacy review persist 成功后都会发射该事件，Renderer 通过 `AppProviders` 统一失效 `aiSystemSnapshot` query 做热同步
 - provider-bound background compile 现在会先做最小本地安全防护：明显 token / credential capture 先本地丢弃，不进入外部模型请求
 - provider-bound background compile 现在也会做最小落库质量守门：输出语言跟随当前 `localePreference`，topic 复用时允许保留原 slug 但按当前 locale 更新显示名；单条祝福/鸡汤不直接入 `topic`，明显 OCR 乱码片段直接丢弃
 - 后台 compile 的 queue / batch gate 已切到 capability boundary；当前没有可用 provider-backed background capability 时会停在 `AwaitingCapability`

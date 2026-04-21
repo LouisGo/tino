@@ -14,6 +14,21 @@ pub struct AppSettingsChanged {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
+pub enum AiSystemUpdatedReason {
+    BackgroundCompileRan,
+    FeedbackRecorded,
+    LegacyReviewPersisted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[serde(rename_all = "camelCase")]
+pub struct AiSystemUpdated {
+    pub reason: AiSystemUpdatedReason,
+    pub refresh_snapshot: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub enum ClipboardCapturesUpdatedReason {
     HistoryChanged,
     PinsChanged,
@@ -74,6 +89,29 @@ impl HomeChatConversationsUpdated {
             conversation_id: Some(conversation_id),
             refresh_list: true,
             refresh_conversation: false,
+        }
+    }
+}
+
+impl AiSystemUpdated {
+    pub fn background_compile_ran() -> Self {
+        Self {
+            reason: AiSystemUpdatedReason::BackgroundCompileRan,
+            refresh_snapshot: true,
+        }
+    }
+
+    pub fn feedback_recorded() -> Self {
+        Self {
+            reason: AiSystemUpdatedReason::FeedbackRecorded,
+            refresh_snapshot: true,
+        }
+    }
+
+    pub fn legacy_review_persisted() -> Self {
+        Self {
+            reason: AiSystemUpdatedReason::LegacyReviewPersisted,
+            refresh_snapshot: true,
         }
     }
 }

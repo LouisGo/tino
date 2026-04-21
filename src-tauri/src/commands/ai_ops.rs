@@ -9,6 +9,7 @@ use crate::{
     },
     app_state::AppState,
     error::IpcResult,
+    ipc_events::AiSystemUpdated,
 };
 use tauri::State;
 
@@ -38,8 +39,15 @@ pub async fn record_ai_feedback_event(
     state: State<'_, AppState>,
     input: RecordFeedbackEventInput,
 ) -> Result<RecordFeedbackEventResult, String> {
-    let state = state.inner().clone();
-    run_blocking_command(move || ops::record_ai_feedback_event(&state, input)).await
+    let command_state = state.inner().clone();
+    let notify_state = state.inner().clone();
+    let result =
+        run_blocking_command(move || ops::record_ai_feedback_event(&command_state, input)).await;
+    if result.is_ok() {
+        notify_state.emit_ai_system_updated(AiSystemUpdated::feedback_recorded());
+    }
+
+    result
 }
 
 #[tauri::command]

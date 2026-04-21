@@ -15,6 +15,7 @@ import { DEFAULT_CLIPBOARD_HISTORY_DAYS } from "@/lib/app-defaults";
 import { appEnv, dataChannel, isProductionDataChannel } from "@/lib/runtime-profile";
 import { isTauriRuntime, unwrapTauriResult } from "@/lib/tauri-core";
 import type {
+  AiSystemUpdated as RustAiSystemUpdated,
   AppSettingsChanged as RustAppSettingsChanged,
   AppSettings as RustAppSettings,
   CapturePreview as RustCapturePreview,
@@ -34,6 +35,7 @@ import type {
 } from "@/bindings/tauri";
 import { minutesAgoIsoString, nowIsoString } from "@/lib/time";
 import type {
+  AiSystemUpdatedPayload,
   AiSystemSnapshot,
   AppSettingsChangedPayload,
   ClipboardBoardBootstrap,
@@ -751,6 +753,15 @@ function normalizeAppSettingsChangedPayload(
   };
 }
 
+function normalizeAiSystemUpdatedPayload(
+  payload: RustAiSystemUpdated,
+): AiSystemUpdatedPayload {
+  return {
+    reason: payload.reason,
+    refreshSnapshot: payload.refreshSnapshot ?? true,
+  };
+}
+
 function normalizeClipboardCapturesUpdatedPayload(
   payload: RustClipboardCapturesUpdated,
 ): ClipboardCapturesUpdatedPayload {
@@ -777,6 +788,19 @@ export const appSettingsChangedEvent = {
         ...event,
         payload: normalizeAppSettingsChangedPayload(event.payload),
       })),
+};
+
+export const aiSystemUpdatedEvent = {
+  listen: (
+    callback: (event: { payload: AiSystemUpdatedPayload }) => void | Promise<void>,
+  ) =>
+    tauriEvents.aiSystemUpdated.listen((event) =>
+      callback({
+        ...event,
+        payload: normalizeAiSystemUpdatedPayload(event.payload),
+      })),
+  emit: (payload: AiSystemUpdatedPayload) =>
+    tauriEvents.aiSystemUpdated.emit(payload),
 };
 
 export const clipboardCapturesUpdatedEvent = {

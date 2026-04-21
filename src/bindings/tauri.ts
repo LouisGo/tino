@@ -45,6 +45,7 @@ export const commands = {
 
 /** Events */
 export const events = {
+	aiSystemUpdated: makeEvent<AiSystemUpdated>("ai-system-updated"),
 	appSettingsChanged: makeEvent<AppSettingsChanged>("app-settings-changed"),
 	clipboardCapturesUpdated: makeEvent<ClipboardCapturesUpdated>("clipboard-captures-updated"),
 	homeChatConversationsUpdated: makeEvent<HomeChatConversationsUpdated>("home-chat-conversations-updated"),
@@ -108,6 +109,13 @@ export type AiSystemSnapshot = {
 	recentJobs: BatchCompileJob[],
 	recentWrites: PersistedKnowledgeWrite[],
 };
+
+export type AiSystemUpdated = {
+	reason: AiSystemUpdatedReason,
+	refreshSnapshot: boolean,
+};
+
+export type AiSystemUpdatedReason = "backgroundCompileRan" | "feedbackRecorded" | "legacyReviewPersisted";
 
 export type AppLocale = "en-US" | "zh-CN";
 

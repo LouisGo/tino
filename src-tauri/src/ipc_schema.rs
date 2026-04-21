@@ -5,7 +5,7 @@ use tauri_specta::{collect_commands, collect_events, Builder};
 
 use crate::commands::{ai, ai_ops, chat, shell};
 use crate::ipc_events::{
-    AppSettingsChanged, ClipboardCapturesUpdated, HomeChatConversationsUpdated,
+    AiSystemUpdated, AppSettingsChanged, ClipboardCapturesUpdated, HomeChatConversationsUpdated,
 };
 
 pub fn builder() -> Builder<tauri::Wry> {
@@ -49,6 +49,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             shell::reveal_in_file_manager,
         ])
         .events(collect_events![
+            AiSystemUpdated,
             AppSettingsChanged,
             ClipboardCapturesUpdated,
             HomeChatConversationsUpdated,

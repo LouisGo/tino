@@ -1,5 +1,7 @@
 import type {
   AiCapabilitySnapshot as RustAiCapabilitySnapshot,
+  AiSystemUpdated as RustAiSystemUpdated,
+  AiSystemUpdatedReason as RustAiSystemUpdatedReason,
   AiSystemPhase as RustAiSystemPhase,
   AiSystemSnapshot as RustAiSystemSnapshot,
   BackgroundCompileSourceKind as RustBackgroundCompileSourceKind,
@@ -175,6 +177,8 @@ export type HomeChatConversationsUpdatedReason = RustHomeChatConversationsUpdate
 export type HomeChatConversationsUpdatedPayload = RustHomeChatConversationsUpdated;
 
 export type AiSystemPhase = RustAiSystemPhase;
+export type AiSystemUpdatedReason = RustAiSystemUpdatedReason;
+export type AiSystemUpdatedPayload = RustAiSystemUpdated;
 export type BackgroundCompileSourceKind = RustBackgroundCompileSourceKind;
 export type BatchCompileTrigger = RustBatchCompileTrigger;
 export type BatchCompileRuntimeStatus = RustBatchCompileRuntimeStatus;

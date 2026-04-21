@@ -68,7 +68,7 @@
 状态：进行中
 
 - [x] 提供 Rust-owned snapshot 查询
-- [ ] 提供 typed event / subscription
+- [x] 提供 typed event / subscription
 - [~] 让 Renderer 可消费 runtime、job、write log、feedback、quality 信息
 
 ### Phase 5. 文档与验证收口
@@ -127,5 +127,8 @@
 - dashboard 首页现已新增次级 `AI Ops` 摘要卡：通过 `get_ai_system_snapshot` 直接消费 Rust-owned `runtime / recentJobs / recentWrites / latestQualitySnapshot / feedbackEventCount`，但不在 Renderer 建立新的权威 runtime 状态
 - `aiSystemSnapshot` 的 renderer query invalidation 已收敛到更窄边界：设置变更只在 `knowledgeRoot` 或当前激活 provider 变化时刷新；clipboard `refreshDashboard` 事件也会联动刷新该 snapshot
 - 已补 `src/lib/app-settings-sync.test.ts` 与 `src/features/clipboard/lib/clipboard-capture-sync.test.ts`，覆盖 AI Ops snapshot 的关键 invalidation 语义
-- 本轮验证已通过：`pnpm typecheck`、`pnpm test:run src/lib/app-settings-sync.test.ts src/features/clipboard/lib/clipboard-capture-sync.test.ts`、`cargo check --manifest-path src-tauri/Cargo.toml`
-- 当前下一步：继续补 AI Ops 的 typed event / subscription，并继续把剩余 `review-first` / `ai-quality replay` 资产压到 tooling / benchmark 语义
+- Rust 侧现已新增 `AiSystemUpdated` typed event：后台编译周期完成、`record_ai_feedback_event` 成功、legacy `apply_batch_decision` 成功后都会发射 `backgroundCompileRan / feedbackRecorded / legacyReviewPersisted`
+- Renderer 现已通过 `useAiSystemEvents` + `AppProviders` 统一消费该 subscription，并按 `refreshSnapshot` 权威刷新 `aiSystemSnapshot` query；事件只做热同步，冷启动仍以 snapshot query 为准
+- 已补 `src/features/ai/hooks/use-ai-system-events.test.tsx`，验证 typed event 的监听与卸载行为
+- 本轮验证已通过：`pnpm typecheck`、`pnpm test:run src/lib/app-settings-sync.test.ts src/features/clipboard/lib/clipboard-capture-sync.test.ts src/features/ai/hooks/use-ai-system-events.test.tsx`、`cargo check --manifest-path src-tauri/Cargo.toml`、`cargo test --manifest-path src-tauri/Cargo.toml`、`pnpm lint`
+- 当前下一步：继续把 `recentJobs / write log / feedback / quality` 从“可查询”推进到更完整的 AI Ops 次级信息面板，并继续把剩余 `review-first` / `ai-quality replay` 资产压到 tooling / benchmark 语义

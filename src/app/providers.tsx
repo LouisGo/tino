@@ -7,6 +7,7 @@ import { RouterProvider, type AnyRouter } from "@tanstack/react-router";
 import { I18nextProvider } from "react-i18next";
 
 import { appCommands } from "@/app/commands";
+import { queryKeys } from "@/app/query-keys";
 import { appShortcuts, filterConfigurableShortcutOverrides } from "@/app/shortcuts";
 import { AppCommandProvider } from "@/core/commands";
 import { ContextMenuProvider } from "@/core/context-menu";
@@ -21,6 +22,7 @@ import {
   syncLocalePreference,
 } from "@/i18n";
 import { queryClient } from "@/app/query-client";
+import { useAiSystemEvents } from "@/features/ai/hooks/use-ai-system-events";
 import {
   resetClipboardCapturePauseGuideDismissed,
   shouldResetClipboardCapturePauseGuideDismissed,
@@ -77,6 +79,14 @@ function AppShellRuntime({ router }: AppProvidersProps) {
   const hydratedLocaleRef = useRef(false);
   const { data: settings } = usePersistedAppSettings();
   const sanitizedShortcutOverrides = filterConfigurableShortcutOverrides(settings?.shortcutOverrides);
+
+  useAiSystemEvents((payload) => {
+    if (!payload.refreshSnapshot) {
+      return;
+    }
+
+    void queryClient.invalidateQueries({ queryKey: queryKeys.aiSystemSnapshot() });
+  });
 
   useEffect(() => {
     applyTheme({ mode, themeName });

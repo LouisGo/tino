@@ -5,6 +5,7 @@ use crate::{
     },
     app_state::AppState,
     error::IpcResult,
+    ipc_events::AiSystemUpdated,
 };
 use tauri::State;
 
@@ -33,6 +34,15 @@ pub async fn apply_batch_decision(
     state: State<'_, AppState>,
     request: ApplyBatchDecisionRequest,
 ) -> IpcResult<ApplyBatchDecisionResult> {
-    let state = state.inner().clone();
-    run_blocking_ipc_command(move || legacy_review::apply_batch_decision(state, request)).await
+    let command_state = state.inner().clone();
+    let notify_state = state.inner().clone();
+    let result = run_blocking_ipc_command(move || {
+        legacy_review::apply_batch_decision(command_state, request)
+    })
+    .await;
+    if result.is_ok() {
+        notify_state.emit_ai_system_updated(AiSystemUpdated::legacy_review_persisted());
+    }
+
+    result
 }
