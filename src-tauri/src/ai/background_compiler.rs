@@ -7,8 +7,9 @@ use crate::{
         batch_store::{load_stored_batches, save_stored_batch, StoredBatchFile},
         capability::{background_compile_enabled, compile_batch_with_capability},
         contracts::{
-            BatchCompileDecision, BatchCompileDisposition, BatchCompileInput, BatchCompileJob,
-            BatchCompileJobStatus, BatchCompileRuntimeStatus, BatchCompileTrigger,
+            BackgroundCompileWriteMode, BatchCompileDecision, BatchCompileDisposition,
+            BatchCompileInput, BatchCompileJob, BatchCompileJobStatus,
+            BatchCompileRuntimeStatus, BatchCompileTrigger,
             KnowledgeWriteDestination, PersistedKnowledgeWrite,
         },
         knowledge_writer::{
@@ -21,6 +22,7 @@ use crate::{
             append_audit_event, append_write_log_entry, load_job, load_or_bootstrap_runtime,
             persist_runtime, save_job, BatchCompilerAuditEvent, PersistedBatchCompilerRuntime,
         },
+        triage_store::{save_triage_artifact, PersistedTriageArtifact},
         topic_index::{load_topic_index_entries, refresh_topic_index_entry},
     },
     app_state::AppSettings,
@@ -189,6 +191,7 @@ fn process_batch_compile(
         )?,
     )?;
 
+    let write_mode = settings.background_compile_write_mode;
     let result = (|| -> AppResult<(String, Vec<BatchCompileDecision>, Vec<PersistedKnowledgeWrite>)> {
         let topics = load_topic_index_entries(knowledge_root)?;
         let compiled = compile_batch_with_capability(settings, &batch, &topics)?;
@@ -196,19 +199,38 @@ fn process_batch_compile(
         job.decisions = compiled.decisions.clone();
         save_job(knowledge_root, &job)?;
 
+        let compiled_at = now_rfc3339()?;
+        save_triage_artifact(
+            knowledge_root,
+            &PersistedTriageArtifact::from_batch_compile(
+                &batch,
+                &job.id,
+                &job.input,
+                job.attempt,
+                &compiled.source_label,
+                write_mode,
+                &compiled_at,
+                &compiled.decisions,
+            ),
+        )?;
+
         batch.status = BATCH_STATUS_PERSISTING.into();
         save_stored_batch(knowledge_root, &batch)?;
         job.status = BatchCompileJobStatus::WritePending;
         save_job(knowledge_root, &job)?;
 
         let persisted_at = now_rfc3339()?;
-        let writes = persist_compiled_decisions(
-            knowledge_root,
-            &batch,
-            &job.id,
-            &compiled.decisions,
-            &persisted_at,
-        )?;
+        let writes = if write_mode.persists_live_writes() {
+            persist_compiled_decisions(
+                knowledge_root,
+                &batch,
+                &job.id,
+                &compiled.decisions,
+                &persisted_at,
+            )?
+        } else {
+            Vec::new()
+        };
         for write in &writes {
             append_write_log_entry(knowledge_root, write)?;
         }
@@ -241,12 +263,7 @@ fn process_batch_compile(
                 &audit_event(
                     Some(batch.id.clone()),
                     BatchCompileRuntimeStatus::Idle,
-                    format!(
-                        "background compiler persisted batch {} with {} write(s) via {}",
-                        batch.id,
-                        writes.len(),
-                        source_label
-                    ),
+                    completion_message(&batch.id, writes.len(), &source_label, write_mode),
                 )?,
             )?;
         }
@@ -610,6 +627,25 @@ fn knowledge_destination_label(destination: KnowledgeWriteDestination) -> &'stat
     }
 }
 
+fn completion_message(
+    batch_id: &str,
+    write_count: usize,
+    source_label: &str,
+    write_mode: BackgroundCompileWriteMode,
+) -> String {
+    match write_mode {
+        BackgroundCompileWriteMode::LegacyLive => format!(
+            "background compiler persisted batch {batch_id} with {write_count} write(s) via {source_label}"
+        ),
+        BackgroundCompileWriteMode::SandboxOnly => format!(
+            "background compiler compiled batch {batch_id} via {source_label} in sandbox_only mode; live knowledge writes were skipped and decisions were retained in job artifacts"
+        ),
+        BackgroundCompileWriteMode::DigestGated => format!(
+            "background compiler compiled batch {batch_id} via {source_label} in digest_gated mode; live knowledge writes remain paused until digest gating is ready"
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use chrono::{DateTime, Duration, Local};
@@ -618,7 +654,9 @@ mod tests {
     use crate::{
         ai::{
             batch_store::{load_stored_batch, save_stored_batch, StoredBatchFile},
+            contracts::BackgroundCompileWriteMode,
             runtime_store::{load_job, load_or_bootstrap_runtime},
+            triage_store::list_recent_triage_artifacts,
         },
         app_state::AppSettings,
         clipboard::types::CaptureRecord,
@@ -643,6 +681,7 @@ mod tests {
             knowledge_root: root.display().to_string(),
             runtime_provider_profiles: Vec::new(),
             active_runtime_provider_id: String::new(),
+            background_compile_write_mode: BackgroundCompileWriteMode::SandboxOnly,
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: 7,
             clipboard_capture_enabled: true,
@@ -689,7 +728,8 @@ mod tests {
     #[test]
     fn run_background_compile_cycle_persists_topic_and_inbox_outputs() {
         let root = unique_root();
-        let settings = test_settings(&root);
+        let mut settings = test_settings(&root);
+        settings.background_compile_write_mode = BackgroundCompileWriteMode::LegacyLive;
         save_stored_batch(
             &root,
             &StoredBatchFile {
@@ -746,6 +786,70 @@ mod tests {
     }
 
     #[test]
+    fn run_background_compile_cycle_skips_live_writes_in_sandbox_only_mode() {
+        let root = unique_root();
+        let settings = test_settings(&root);
+        save_stored_batch(
+            &root,
+            &StoredBatchFile {
+                id: "batch_sandbox".into(),
+                status: BATCH_STATUS_PENDING_AI.into(),
+                created_at: "2026-04-13T12:00:00+08:00".into(),
+                trigger_reason: "capture_count".into(),
+                capture_count: 2,
+                first_captured_at: "2026-04-13T11:58:00+08:00".into(),
+                last_captured_at: "2026-04-13T12:00:00+08:00".into(),
+                source_ids: vec!["cap_text".into(), "cap_link".into()],
+                captures: vec![
+                    sample_capture(
+                        "cap_text",
+                        "plain_text",
+                        "Rust background compile should gate live knowledge writes.",
+                    ),
+                    sample_capture("cap_link", "link", "https://example.com/reference"),
+                ],
+            },
+        )
+        .expect("batch should save");
+
+        run_background_compile_cycle(&settings).expect("background compile should succeed");
+
+        let batch = load_stored_batch(&root, "batch_sandbox").expect("batch should load");
+        assert_eq!(batch.status, "persisted");
+        let topic_entries = fs::read_dir(root.join("topics"))
+            .expect("topics dir should exist")
+            .filter_map(Result::ok)
+            .collect::<Vec<_>>();
+        assert!(topic_entries.is_empty());
+        let inbox_entries = fs::read_dir(root.join("_inbox"))
+            .expect("inbox dir should exist")
+            .filter_map(Result::ok)
+            .collect::<Vec<_>>();
+        assert!(inbox_entries.is_empty());
+
+        let job = load_job(&root, "batch_sandbox")
+            .expect("job should load")
+            .expect("job should exist");
+        assert_eq!(
+            job.status,
+            crate::ai::contracts::BatchCompileJobStatus::Persisted
+        );
+        assert!(job.persisted_writes.is_empty());
+        assert!(!job.decisions.is_empty());
+        let triage_artifacts =
+            list_recent_triage_artifacts(&root, 10).expect("triage artifacts should load");
+        assert_eq!(triage_artifacts.len(), 1);
+        assert_eq!(triage_artifacts[0].batch_id, "batch_sandbox");
+        assert_eq!(
+            triage_artifacts[0].write_mode,
+            BackgroundCompileWriteMode::SandboxOnly
+        );
+        assert_eq!(triage_artifacts[0].decisions.len(), 2);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn run_background_compile_cycle_schedules_retry_backoff_for_failed_batch() {
         let root = unique_root();
         let settings = test_settings(&root);
@@ -795,7 +899,8 @@ mod tests {
     #[test]
     fn run_background_compile_cycle_skips_duplicate_writes_for_same_source_ids() {
         let root = unique_root();
-        let settings = test_settings(&root);
+        let mut settings = test_settings(&root);
+        settings.background_compile_write_mode = BackgroundCompileWriteMode::LegacyLive;
 
         let duplicate_captures = vec![
             sample_capture(

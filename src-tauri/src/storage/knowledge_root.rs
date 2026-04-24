@@ -13,6 +13,7 @@ const INBOX_DIR_NAME: &str = "_inbox";
 const AI_SYSTEM_DIR_NAME: &str = "ai";
 const AI_RUNTIME_FILE_NAME: &str = "runtime.json";
 const AI_JOBS_DIR_NAME: &str = "jobs";
+const AI_TRIAGE_DIR_NAME: &str = "triage";
 const AI_WRITE_LOG_FILE_NAME: &str = "writes.jsonl";
 const AI_JOB_AUDIT_LOG_FILE_NAME: &str = "job-audit.jsonl";
 const TOPIC_INDEX_FILE_NAME: &str = "topic-index.json";
@@ -69,6 +70,22 @@ pub(crate) fn ai_job_file_path(knowledge_root: &Path, job_id: &str) -> PathBuf {
     ai_jobs_dir_path(knowledge_root).join(format!("{job_id}.json"))
 }
 
+pub(crate) fn ai_triage_dir_path(knowledge_root: &Path) -> PathBuf {
+    ai_system_dir_path(knowledge_root).join(AI_TRIAGE_DIR_NAME)
+}
+
+pub(crate) fn ai_triage_day_dir_path(knowledge_root: &Path, partition_day: &str) -> PathBuf {
+    ai_triage_dir_path(knowledge_root).join(partition_day)
+}
+
+pub(crate) fn ai_triage_artifact_file_path(
+    knowledge_root: &Path,
+    partition_day: &str,
+    batch_id: &str,
+) -> PathBuf {
+    ai_triage_day_dir_path(knowledge_root, partition_day).join(format!("{batch_id}.json"))
+}
+
 pub(crate) fn ai_write_log_file_path(knowledge_root: &Path) -> PathBuf {
     ai_system_dir_path(knowledge_root).join(AI_WRITE_LOG_FILE_NAME)
 }
@@ -89,5 +106,6 @@ pub(crate) fn ensure_knowledge_root_layout(knowledge_root: &Path) -> Result<(), 
     fs::create_dir_all(assets_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
     fs::create_dir_all(batches_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
     fs::create_dir_all(ai_jobs_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
+    fs::create_dir_all(ai_triage_dir_path(knowledge_root)).map_err(|error| error.to_string())?;
     Ok(())
 }

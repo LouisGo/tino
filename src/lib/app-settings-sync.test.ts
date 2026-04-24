@@ -23,6 +23,7 @@ function createSettingsDraft(overrides: Partial<SettingsDraft> = {}): SettingsDr
     knowledgeRoot: "/tmp/tino-a",
     runtimeProviderProfiles: [],
     activeRuntimeProviderId: "",
+    backgroundCompileWriteMode: "sandbox_only",
     localePreference: defaultAppLocalePreference(),
     clipboardHistoryDays: 7,
     clipboardCaptureEnabled: true,
@@ -221,5 +222,35 @@ describe("applyIncomingAppSettingsChange", () => {
     });
 
     expect(invalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it("invalidates only the AI system snapshot when background compile write mode changes", () => {
+    const queryClient = createQueryClient();
+    const invalidateQueries = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockResolvedValue(undefined);
+    const previous = createSettingsDraft({
+      revision: 10,
+      backgroundCompileWriteMode: "sandbox_only",
+    });
+    const saved = createSettingsDraft({
+      revision: 11,
+      backgroundCompileWriteMode: "legacy_live",
+    });
+
+    applyIncomingAppSettingsChange(queryClient, {
+      previous,
+      saved,
+    });
+
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: queryKeys.aiSystemSnapshot(),
+    });
+    expect(invalidateQueries).not.toHaveBeenCalledWith({
+      queryKey: queryKeys.dashboardSnapshot(),
+    });
+    expect(invalidateQueries).not.toHaveBeenCalledWith({
+      queryKey: queryKeys.clipboardPageBase(),
+    });
   });
 });

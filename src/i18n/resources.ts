@@ -246,6 +246,12 @@ export const enUSResources = defineLocaleSchema({
         retryBackoff: "Retry backoff",
         blocked: "Blocked",
       },
+      writeMode: {
+        label: "Write mode",
+        legacyLive: "Legacy live",
+        sandboxOnly: "Sandbox only",
+        digestGated: "Digest gated",
+      },
       summary: {
         loading: "Loading Rust runtime snapshot.",
         unavailable:
@@ -255,6 +261,10 @@ export const enUSResources = defineLocaleSchema({
         unconfiguredSource: "No background source",
         secondary:
           "Secondary observer for the Rust background compiler, feedback, and writes.",
+        sandboxOnly:
+          "Background compile still runs, but live writes to topics and inbox are paused. Decisions stay in Rust job artifacts only.",
+        digestGated:
+          "Background compile still runs, but live writes stay behind the future digest gate until day-level contracts land.",
         lastError: "Last runtime error: {{message}}",
         lastWrite: "Latest persisted write {{time}}",
         lastFeedback: "Latest feedback {{time}}",
@@ -747,6 +757,30 @@ export const enUSResources = defineLocaleSchema({
       sectionsAriaLabel: "Settings sections",
     },
     provider: {
+      backgroundWriteMode: {
+        label: "Background write mode",
+        description:
+          "Controls whether Rust background compile can write directly into topics and inbox.",
+        note:
+          "Recommended while day digest and rolling topic contracts are still being introduced.",
+        options: {
+          sandbox_only: {
+            label: "Sandbox only",
+            hint:
+              "Compile and keep decisions in Rust job artifacts, but skip live knowledge writes.",
+          },
+          digest_gated: {
+            label: "Digest gated",
+            hint:
+              "Reserve live writes for the future day digest gate. Current builds still hold writes.",
+          },
+          legacy_live: {
+            label: "Legacy live",
+            hint:
+              "Keep the old small-batch behavior and write directly into topics or inbox now.",
+          },
+        },
+      },
       advanced: {
         label: "Advanced",
         summary: "Base URL, model, connectivity test",
@@ -1135,6 +1169,12 @@ export const zhCNResources = {
         retryBackoff: "退避重试",
         blocked: "阻塞中",
       },
+      writeMode: {
+        label: "落盘模式",
+        legacyLive: "旧链路直写",
+        sandboxOnly: "仅沙盒保留",
+        digestGated: "Digest 守门",
+      },
       summary: {
         loading: "正在加载 Rust runtime 快照。",
         unavailable:
@@ -1144,6 +1184,10 @@ export const zhCNResources = {
         unconfiguredSource: "未配置后台来源",
         secondary:
           "这里只做次级观察，展示 Rust 后台编译、反馈与落盘。",
+        sandboxOnly:
+          "后台编译仍会运行，但写入 `topics/` 和 `_inbox/` 的 live 落盘已暂停；当前只保留 Rust job artifact。",
+        digestGated:
+          "后台编译仍会运行，但 live 落盘会继续卡在后续的 digest gate 之前，直到日级 contract 落地。",
         lastError: "最近一次运行时错误：{{message}}",
         lastWrite: "最近一次落盘发生在 {{time}}",
         lastFeedback: "最近一次反馈发生在 {{time}}",
@@ -1635,6 +1679,25 @@ export const zhCNResources = {
       sectionsAriaLabel: "设置导航",
     },
     provider: {
+      backgroundWriteMode: {
+        label: "后台落盘模式",
+        description: "控制 Rust 后台编译是否允许直接写入 `topics/` 和 `_inbox/`。",
+        note: "在 `day digest / rolling topic` 契约尚未正式落地前，推荐先保持非 live write。",
+        options: {
+          sandbox_only: {
+            label: "仅保留沙盒结果",
+            hint: "继续编译并把结果保留在 Rust job artifact 中，但不做 live 知识落盘。",
+          },
+          digest_gated: {
+            label: "等待 Digest 守门",
+            hint: "为后续 day digest gate 预留模式；当前实现下同样不会做 live 落盘。",
+          },
+          legacy_live: {
+            label: "沿用旧链路直写",
+            hint: "继续保留小 batch 直接写入 `topics/` 或 `_inbox/` 的旧行为。",
+          },
+        },
+      },
       advanced: {
         label: "高级设置",
         summary: "接口地址、模型、连通性测试",

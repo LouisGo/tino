@@ -124,9 +124,11 @@ function resetAppStores() {
   });
   useSettingsDraftStore.setState({
     settingsDraft: {
+      revision: 0,
       knowledgeRoot: "",
       runtimeProviderProfiles: [],
       activeRuntimeProviderId: "",
+      backgroundCompileWriteMode: "sandbox_only",
       localePreference: defaultAppLocalePreference(),
       clipboardHistoryDays: DEFAULT_CLIPBOARD_HISTORY_DAYS,
       clipboardCaptureEnabled: true,

@@ -10,4 +10,5 @@ pub mod ops;
 pub mod provider_compile;
 pub mod runtime_store;
 pub mod system;
+pub mod triage_store;
 pub mod topic_index;

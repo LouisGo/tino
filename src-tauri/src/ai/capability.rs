@@ -312,7 +312,10 @@ mod tests {
     use crate::{
         ai::{
             batch_store::StoredBatchFile,
-            contracts::{BackgroundCompileSourceKind, BatchCompileDisposition},
+            contracts::{
+                BackgroundCompileSourceKind, BackgroundCompileWriteMode,
+                BatchCompileDisposition,
+            },
             topic_index::TopicIndexEntry,
         },
         app_state::AppSettings,
@@ -394,6 +397,7 @@ mod tests {
             knowledge_root: "/tmp/tino-tests".into(),
             runtime_provider_profiles: vec![profile.clone()],
             active_runtime_provider_id: profile.id,
+            background_compile_write_mode: BackgroundCompileWriteMode::SandboxOnly,
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: 7,
             clipboard_capture_enabled: true,
@@ -422,6 +426,7 @@ mod tests {
             knowledge_root: "/tmp/tino-tests".into(),
             runtime_provider_profiles: vec![profile.clone()],
             active_runtime_provider_id: profile.id,
+            background_compile_write_mode: BackgroundCompileWriteMode::SandboxOnly,
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: 7,
             clipboard_capture_enabled: true,
@@ -450,6 +455,7 @@ mod tests {
             knowledge_root: "/tmp/tino-tests".into(),
             runtime_provider_profiles: vec![profile.clone()],
             active_runtime_provider_id: profile.id,
+            background_compile_write_mode: BackgroundCompileWriteMode::SandboxOnly,
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: 7,
             clipboard_capture_enabled: true,
@@ -475,6 +481,7 @@ mod tests {
             knowledge_root: "/tmp/tino-tests".into(),
             runtime_provider_profiles: vec![profile.clone()],
             active_runtime_provider_id: profile.id,
+            background_compile_write_mode: BackgroundCompileWriteMode::SandboxOnly,
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: 7,
             clipboard_capture_enabled: true,

@@ -153,6 +153,7 @@ export function SettingsPage() {
             />
 
             <AiSettingsSection
+              patchSettingsDraft={patchSettingsDraft}
               runtimeProviderForm={runtimeProviderForm}
               settingsDraft={settingsDraft}
             />

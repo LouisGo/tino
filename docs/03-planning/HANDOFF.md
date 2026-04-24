@@ -1,7 +1,7 @@
 # Tino Handoff
 
-> 最后更新：2026-04-21
-> 当前基线提交：`d4e2c7e`
+> 最后更新：2026-04-22
+> 当前基线提交：`313306f`
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
 
@@ -18,6 +18,7 @@
 按任务再读：
 
 - 当前 AI 质量闭环与 replay 计划：`docs/03-planning/Tino AI 开发期质量管线计划 v0.1.md`
+- 当前静默编译从 batch runtime 迁到 `day digest / rolling topic` 的细化方案：`docs/03-planning/Tino AI 静默编译优化与迁移方案 v0.1.md`
 - 打包、环境、签名：`docs/03-planning/环境与打包流程.md`
 - 产品目标与 AI 能力边界：`docs/02-product/个人信息流软件需求原型文档.md`、`docs/02-product/Tino AI 能力地图 v0.2.md`
 - legacy `/ai` / review 资产说明只在排查历史实现时阅读，且统一去 `docs/03-planning/archive/`
@@ -48,12 +49,15 @@
 - 应用稳定持久化目录下的 `ai-memory.db` 已建立，用于 feedback event 与 quality snapshot 的本地 SQLite 骨架
 - `get_ai_system_snapshot` / `record_ai_feedback_event` 已存在，用于后续 AI Ops 与纠错回路接线
 - Phase B storage reset 已起步：`_system/ai/runtime.json`、`_system/ai/jobs/*.json`、`_system/ai/writes.jsonl`、`_system/ai/job-audit.jsonl` 路径已冻结
+- `_system/ai/triage/YYYY-MM-DD/*.json` 现已起步：后台编译在 `ModelComplete` 后会先把 batch decision、输入快照和 capture 证据沉成 triage artifact，再进入后续 live write gate
 - 正式 `topic-index.json` 资产已建立，当前读取会优先走该资产而不是长期依赖扫 `topics/`
 - legacy `applyBatchDecision` 持久化路径现在会顺手回填 `topic-index`、compile job snapshot、write log、job audit
 - Phase C capability boundary 已起步：background compile 的 batch 读取、topic index 读取、能力解析已从 legacy `/ai review` 语义中独立出来，当前支持 provider-backed compile source
 - `preview_ai_batch_compile` 已存在，并与 Rust background compile 共用同一条 provider-backed capability path
-- Phase D Rust background compiler 已接上：会在启动、batch promotion、周期维护后自动挑选 ready batch、通过 active provider profile 真实调用模型、落盘到 `topics/` / `_inbox/`
-- 上述 provider-backed background compile 证明了 Rust 主链路已跑通，但它当前仍带着“小 batch 直接落库”的过渡语义，不等于 `Day Digest / Rolling Topic` 已被证明正确
+- Phase D Rust background compiler 已接上：会在启动、batch promotion、周期维护后自动挑选 ready batch、通过 active provider profile 真实调用模型；但 live knowledge write 现在受 Rust-owned `backgroundCompileWriteMode` 守门
+- `AppSettings` 与 `AiSystemSnapshot` 现已新增 Rust-owned `backgroundCompileWriteMode`；设置页与 dashboard `AI Ops` 摘要卡都能看到当前模式
+- 当前默认 `backgroundCompileWriteMode = sandbox_only`：后台编译仍会继续跑 provider compile，并把 decision 保留在 `jobs/*.json` 与 `triage/*.json` 等 runtime artifact 中，但不会默认直写 `topics/` / `_inbox/`；只有显式切回 `legacy_live` 才会恢复旧的小 batch live write
+- 上述 provider-backed background compile 证明了 Rust 主链路已跑通；而新的 write gate 让“小 batch 直接落库”不再是默认主语义，但这仍不等于 `Day Digest / Rolling Topic` 已被证明正确
 - DeepSeek 背景编译当前采用 batch 复杂度选模：简单批次走 `deepseek-chat`，复杂批次走 `deepseek-reasoner`
 - AI 融合与边界收敛执行已启动：legacy `/ai review` Rust bridge 已从 `commands/ai.rs` 下沉到 `src-tauri/src/ai/legacy_review.rs`
 - Runtime Provider 配置现在由 Rust authoritative save path 做最终校验：保存设置时会拒绝 `非 HTTPS baseUrl`、`带 credentials 的 baseUrl`、`model 内空白`、`apiKey 内空白`、`过短 apiKey`
@@ -64,7 +68,7 @@
 - Renderer 侧 legacy `/ai review` 模块现已整体收敛到 `src/features/ai/legacy-review/`；`ai-review-page.tsx` 仍保留为 legacy tooling surface，但 review-first 逻辑不再占据 `features/ai` 的默认结构中心
 - `pnpm ai-quality:replay` 现已显式区分 `--pipeline legacy|background`：`legacy` 继续用于 benchmark / compatibility，`background` 会通过 headless Rust compile 入口直接评测当前 rethink 主链路，但 scorer / goldens / experiment reports 仍保持同一套
 - Dashboard 首页现已开始消费 Rust-owned `AiSystemSnapshot`，以次级 `AI Ops` 摘要卡展示后台 runtime 状态、近期写入、feedback 计数与 quality 快照；该面板只消费 snapshot query，不在 Renderer 建立新的权威 runtime 状态
-- `aiSystemSnapshot` 的 query invalidation 现已收窄：设置变更只在 `knowledgeRoot` 或当前激活 provider 实际变化时刷新；clipboard 侧 `refreshDashboard` 事件也会同步刷新该 snapshot
+- `aiSystemSnapshot` 的 query invalidation 现已收窄：设置变更只在 `knowledgeRoot`、`backgroundCompileWriteMode` 或当前激活 provider 实际变化时刷新；clipboard 侧 `refreshDashboard` 事件也会同步刷新该 snapshot
 - Rust 侧现已新增 `AiSystemUpdated` typed event；后台编译周期完成、feedback 落库成功、legacy review persist 成功后都会发射该事件，Renderer 通过 `AppProviders` 统一失效 `aiSystemSnapshot` query 做热同步
 - provider-bound background compile 现在会先做最小本地安全防护：明显 token / credential capture 先本地丢弃，不进入外部模型请求
 - provider-bound background compile 现在也会做最小落库质量守门：输出语言跟随当前 `localePreference`，topic 复用时允许保留原 slug 但按当前 locale 更新显示名；单条祝福/鸡汤不直接入 `topic`，明显 OCR 乱码片段直接丢弃
@@ -100,6 +104,7 @@
 - `attention hint` 第一版只允许显式关闭或被新的 hint 替换，不做自动衰减
 - 后续文件拖入不应做成另一个 AI 孤岛，而应作为统一 `input adapter` 接入同一条静默编译主链路
 - 上述口径的完整描述见：`Tino AI 静默编译与显式意图执行方案 v0.1`
+- 当前从现有 batch runtime 继续往前推进时，迁移抓手优先参考：`Tino AI 静默编译优化与迁移方案 v0.1`
 
 ## 4. 当前 AI 相关旧资产必须这样理解
 

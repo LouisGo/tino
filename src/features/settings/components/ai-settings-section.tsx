@@ -51,14 +51,25 @@ import { SettingsSection } from "@/features/settings/components/settings-section
 import { settingsSections } from "@/features/settings/settings-sections";
 import { useScopedT } from "@/i18n";
 import { cn } from "@/lib/utils";
-import type { RuntimeProviderProfile, SettingsDraft } from "@/types/shell";
+import type {
+  BackgroundCompileWriteMode,
+  RuntimeProviderProfile,
+  SettingsDraft,
+} from "@/types/shell";
 
 const defaultModelOverrideSelectValue = "__vendor_default__";
+const backgroundCompileWriteModes: BackgroundCompileWriteMode[] = [
+  "sandbox_only",
+  "digest_gated",
+  "legacy_live",
+];
 
 export function AiSettingsSection({
+  patchSettingsDraft,
   runtimeProviderForm,
   settingsDraft,
 }: {
+  patchSettingsDraft: (value: Partial<SettingsDraft>) => void;
   runtimeProviderForm: RuntimeProviderFormController;
   settingsDraft: SettingsDraft;
 }) {
@@ -123,6 +134,48 @@ export function AiSettingsSection({
     >
       <SettingsPanel>
         <SettingsPanelBody>
+          <SettingField
+            label={t("provider.backgroundWriteMode.label")}
+            info={t("provider.backgroundWriteMode.description")}
+          >
+            <div className="max-w-[420px] space-y-2">
+              <Select
+                value={settingsDraft.backgroundCompileWriteMode}
+                onValueChange={(value) => {
+                  patchSettingsDraft({
+                    backgroundCompileWriteMode: value as BackgroundCompileWriteMode,
+                  });
+                }}
+              >
+                <SelectTrigger
+                  id="background-compile-write-mode"
+                  aria-label={t("provider.backgroundWriteMode.label")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {backgroundCompileWriteModes.map((mode) => (
+                    <SelectItem
+                      key={mode}
+                      value={mode}
+                      textValue={formatBackgroundWriteModeLabel(t, mode)}
+                    >
+                      <div className="flex min-w-0 flex-col">
+                        <span>{formatBackgroundWriteModeLabel(t, mode)}</span>
+                        <span className="text-xs font-normal opacity-80">
+                          {formatBackgroundWriteModeHint(t, mode)}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {t("provider.backgroundWriteMode.note")}
+              </p>
+            </div>
+          </SettingField>
+
           <SettingField
             label={t("provider.list.label")}
             info={t("provider.list.description")}
@@ -630,6 +683,38 @@ export function AiSettingsSection({
       </AlertDialog>
     </SettingsSection>
   );
+}
+
+function formatBackgroundWriteModeLabel(
+  t: ReturnType<typeof useScopedT<"settings">>,
+  mode: BackgroundCompileWriteMode,
+) {
+  switch (mode) {
+    case "sandbox_only":
+      return t("provider.backgroundWriteMode.options.sandbox_only.label");
+    case "digest_gated":
+      return t("provider.backgroundWriteMode.options.digest_gated.label");
+    case "legacy_live":
+      return t("provider.backgroundWriteMode.options.legacy_live.label");
+    default:
+      return mode;
+  }
+}
+
+function formatBackgroundWriteModeHint(
+  t: ReturnType<typeof useScopedT<"settings">>,
+  mode: BackgroundCompileWriteMode,
+) {
+  switch (mode) {
+    case "sandbox_only":
+      return t("provider.backgroundWriteMode.options.sandbox_only.hint");
+    case "digest_gated":
+      return t("provider.backgroundWriteMode.options.digest_gated.hint");
+    case "legacy_live":
+      return t("provider.backgroundWriteMode.options.legacy_live.hint");
+    default:
+      return mode;
+  }
 }
 
 function getFieldMessage(

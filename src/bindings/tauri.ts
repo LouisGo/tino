@@ -103,6 +103,7 @@ export type AiSystemPhase = "contract_reset" | "storage_reset" | "capability_bou
 export type AiSystemSnapshot = {
 	phase: AiSystemPhase,
 	capability: AiCapabilitySnapshot,
+	backgroundCompileWriteMode: BackgroundCompileWriteMode,
 	runtime: BatchCompilerRuntimeSnapshot,
 	feedbackEventCount: number,
 	latestQualitySnapshot: QualitySnapshot | null,
@@ -131,6 +132,7 @@ export type AppSettings = {
 	knowledgeRoot: string,
 	runtimeProviderProfiles: RuntimeProviderProfile[],
 	activeRuntimeProviderId: string,
+	backgroundCompileWriteMode?: BackgroundCompileWriteMode,
 	localePreference?: AppLocalePreference,
 	clipboardHistoryDays?: number,
 	clipboardCaptureEnabled?: boolean,
@@ -170,6 +172,8 @@ export type ApplyBatchDecisionResult = {
 };
 
 export type BackgroundCompileSourceKind = "injected_mock" | "provider_profile" | "unavailable";
+
+export type BackgroundCompileWriteMode = "legacy_live" | "sandbox_only" | "digest_gated";
 
 export type BatchCompileDecision = {
 	decisionId: string,

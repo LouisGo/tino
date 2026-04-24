@@ -129,6 +129,7 @@ function shouldInvalidateAiSystemSnapshot(
 
   return (
     previousPersisted.knowledgeRoot !== savedSettings.knowledgeRoot
+    || previousPersisted.backgroundCompileWriteMode !== savedSettings.backgroundCompileWriteMode
     || previousPersisted.activeRuntimeProviderId !== savedSettings.activeRuntimeProviderId
     || stableSerialize(resolveActiveRuntimeProviderProfile(previousPersisted))
       !== stableSerialize(resolveActiveRuntimeProviderProfile(savedSettings))

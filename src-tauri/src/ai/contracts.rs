@@ -23,6 +23,20 @@ pub enum BackgroundCompileSourceKind {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+pub enum BackgroundCompileWriteMode {
+    LegacyLive,
+    SandboxOnly,
+    DigestGated,
+}
+
+impl BackgroundCompileWriteMode {
+    pub fn persists_live_writes(self) -> bool {
+        matches!(self, Self::LegacyLive)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum BatchCompileTrigger {
     CaptureCount,
     MaxWait,
@@ -255,6 +269,7 @@ pub struct BatchCompilerRuntimeSnapshot {
 pub struct AiSystemSnapshot {
     pub phase: AiSystemPhase,
     pub capability: AiCapabilitySnapshot,
+    pub background_compile_write_mode: BackgroundCompileWriteMode,
     pub runtime: BatchCompilerRuntimeSnapshot,
     pub feedback_event_count: usize,
     pub latest_quality_snapshot: Option<QualitySnapshot>,

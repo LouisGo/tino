@@ -1104,6 +1104,10 @@ mod tests {
         let settings = sample_settings();
 
         assert_eq!(settings.revision, 0);
+        assert_eq!(
+            settings.background_compile_write_mode,
+            crate::ai::contracts::BackgroundCompileWriteMode::SandboxOnly
+        );
     }
 
     fn sample_capture_record(raw_text: &str) -> CaptureRecord {

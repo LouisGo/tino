@@ -15,6 +15,7 @@ const initialSettingsDraft: SettingsDraft = {
   knowledgeRoot: "",
   runtimeProviderProfiles: [],
   activeRuntimeProviderId: "",
+  backgroundCompileWriteMode: "sandbox_only",
   localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: DEFAULT_CLIPBOARD_HISTORY_DAYS,
   clipboardCaptureEnabled: true,

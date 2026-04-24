@@ -6,6 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::ai::contracts::BackgroundCompileWriteMode;
 use crate::locale::AppLocalePreference;
 use crate::runtime_provider::{
     default_runtime_provider_profile, infer_runtime_provider_vendor,
@@ -18,6 +19,10 @@ const MIN_CLIPBOARD_HISTORY_DAYS: u16 = 1;
 pub(crate) const MAX_CLIPBOARD_HISTORY_DAYS: u16 = 90;
 const DEFAULT_CLIPBOARD_CAPTURE_ENABLED: bool = true;
 const DEFAULT_SETTINGS_REVISION: u64 = 0;
+
+fn default_background_compile_write_mode() -> BackgroundCompileWriteMode {
+    BackgroundCompileWriteMode::SandboxOnly
+}
 
 fn default_clipboard_history_days() -> u16 {
     DEFAULT_CLIPBOARD_HISTORY_DAYS
@@ -66,6 +71,8 @@ pub struct AppSettings {
     pub knowledge_root: String,
     pub runtime_provider_profiles: Vec<RuntimeProviderProfile>,
     pub active_runtime_provider_id: String,
+    #[serde(default = "default_background_compile_write_mode")]
+    pub background_compile_write_mode: BackgroundCompileWriteMode,
     #[serde(default)]
     pub locale_preference: AppLocalePreference,
     #[serde(default = "default_clipboard_history_days")]
@@ -90,6 +97,7 @@ impl AppSettings {
             knowledge_root: default_knowledge_root.display().to_string(),
             runtime_provider_profiles,
             active_runtime_provider_id,
+            background_compile_write_mode: default_background_compile_write_mode(),
             locale_preference: AppLocalePreference::default(),
             clipboard_history_days: DEFAULT_CLIPBOARD_HISTORY_DAYS,
             clipboard_capture_enabled: DEFAULT_CLIPBOARD_CAPTURE_ENABLED,
@@ -196,6 +204,7 @@ impl LegacyAppSettings {
         settings.revision = DEFAULT_SETTINGS_REVISION;
         settings.runtime_provider_profiles = vec![runtime_provider];
         settings.active_runtime_provider_id = settings.runtime_provider_profiles[0].id.clone();
+        settings.background_compile_write_mode = default_background_compile_write_mode();
         settings.locale_preference = self.locale_preference;
         settings.clipboard_history_days = self.clipboard_history_days;
         settings.clipboard_capture_enabled = self.clipboard_capture_enabled;
@@ -261,6 +270,7 @@ impl LegacyManagedAppSettings {
                 .map(LegacyManagedRuntimeProviderProfile::into_current)
                 .collect(),
             active_runtime_provider_id: self.active_runtime_provider_id,
+            background_compile_write_mode: default_background_compile_write_mode(),
             locale_preference: self.locale_preference,
             clipboard_history_days: self.clipboard_history_days,
             clipboard_capture_enabled: self.clipboard_capture_enabled,

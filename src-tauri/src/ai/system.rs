@@ -36,6 +36,7 @@ pub fn load_ai_system_snapshot(state: &AppState) -> Result<AiSystemSnapshot, Str
     Ok(AiSystemSnapshot {
         phase: AiSystemPhase::BackgroundCompiler,
         capability,
+        background_compile_write_mode: settings.background_compile_write_mode,
         runtime: BatchCompilerRuntimeSnapshot {
             status: if !background_compile_configured
                 && matches!(

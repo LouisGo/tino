@@ -12,6 +12,7 @@ function createSettingsDraft(overrides: Partial<SettingsDraft> = {}): SettingsDr
     knowledgeRoot: "/tmp/tino-a",
     runtimeProviderProfiles: [],
     activeRuntimeProviderId: "",
+    backgroundCompileWriteMode: "sandbox_only",
     localePreference: defaultAppLocalePreference(),
     clipboardHistoryDays: 7,
     clipboardCaptureEnabled: true,

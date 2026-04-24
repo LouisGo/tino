@@ -5,7 +5,12 @@ import { queryKeys } from "@/app/query-keys";
 import { Badge } from "@/components/ui/badge";
 import { formatAppNumber, formatAppRelativeTime, useScopedT } from "@/i18n";
 import { getAiSystemSnapshot } from "@/lib/tauri";
-import type { AiSystemPhase, AiSystemSnapshot, BatchCompileRuntimeStatus } from "@/types/shell";
+import type {
+  AiSystemPhase,
+  AiSystemSnapshot,
+  BackgroundCompileWriteMode,
+  BatchCompileRuntimeStatus,
+} from "@/types/shell";
 
 type DashboardT = ReturnType<typeof useScopedT<"dashboard">>;
 
@@ -31,6 +36,9 @@ export function AiOpsSummaryCard() {
   const sourceLabel = snapshot
     ? resolveSourceLabel(snapshot, tDashboard)
     : tDashboard("aiOps.summary.unconfiguredSource");
+  const writeModeLabel = snapshot
+    ? formatWriteModeLabel(tDashboard, snapshot.backgroundCompileWriteMode)
+    : null;
   const summary = resolveSummaryCopy(snapshot, aiSystemQuery.isError, tDashboard);
   const latestWrite = snapshot ? resolveLatestWrite(snapshot) : null;
   const activityCopy = snapshot ? resolveActivityCopy(snapshot, tDashboard) : null;
@@ -51,6 +59,11 @@ export function AiOpsSummaryCard() {
             {phaseLabel}
           </p>
           <p className="mt-1 truncate text-[0.75rem] text-foreground/52">{sourceLabel}</p>
+          {writeModeLabel ? (
+            <p className="mt-1 text-[0.72rem] text-foreground/44">
+              {tDashboard("aiOps.writeMode.label")}: {writeModeLabel}
+            </p>
+          ) : null}
         </div>
         <Badge variant={runtimeBadgeVariant} className="shrink-0">
           {runtimeLabel}
@@ -186,6 +199,14 @@ function resolveSummaryCopy(
     });
   }
 
+  if (snapshot.backgroundCompileWriteMode === "sandbox_only") {
+    return tDashboard("aiOps.summary.sandboxOnly");
+  }
+
+  if (snapshot.backgroundCompileWriteMode === "digest_gated") {
+    return tDashboard("aiOps.summary.digestGated");
+  }
+
   if (snapshot.capability.backgroundSourceReason) {
     return snapshot.capability.backgroundSourceReason;
   }
@@ -303,5 +324,21 @@ function formatRuntimeStatusLabel(
       return tDashboard("aiOps.status.blocked");
     default:
       return status;
+  }
+}
+
+function formatWriteModeLabel(
+  tDashboard: DashboardT,
+  mode: BackgroundCompileWriteMode,
+) {
+  switch (mode) {
+    case "legacy_live":
+      return tDashboard("aiOps.writeMode.legacyLive");
+    case "sandbox_only":
+      return tDashboard("aiOps.writeMode.sandboxOnly");
+    case "digest_gated":
+      return tDashboard("aiOps.writeMode.digestGated");
+    default:
+      return mode;
   }
 }

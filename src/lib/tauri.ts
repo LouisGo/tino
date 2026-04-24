@@ -96,6 +96,7 @@ const mockSettings: SettingsDraft = {
     },
   ],
   activeRuntimeProviderId: "provider_mock_primary",
+  backgroundCompileWriteMode: "sandbox_only",
   localePreference: defaultAppLocalePreference(),
   clipboardHistoryDays: DEFAULT_CLIPBOARD_HISTORY_DAYS,
   clipboardCaptureEnabled: true,
@@ -218,6 +219,7 @@ const mockAiSystemSnapshot: AiSystemSnapshot = {
     activeProviderName: "DeepSeek Preview",
     activeVendor: "deepseek",
   },
+  backgroundCompileWriteMode: "sandbox_only",
   runtime: {
     status: "idle",
     observedPendingCaptureCount: 12,
@@ -675,6 +677,7 @@ function normalizeSettingsDraft(settings: RustAppSettings): SettingsDraft {
     runtimeProviderProfiles:
       settings.runtimeProviderProfiles.map(normalizeRuntimeProviderProfile),
     activeRuntimeProviderId: settings.activeRuntimeProviderId,
+    backgroundCompileWriteMode: settings.backgroundCompileWriteMode ?? "sandbox_only",
     localePreference: normalizeAppLocalePreference(settings.localePreference),
     clipboardHistoryDays: settings.clipboardHistoryDays ?? DEFAULT_CLIPBOARD_HISTORY_DAYS,
     clipboardCaptureEnabled: settings.clipboardCaptureEnabled ?? true,

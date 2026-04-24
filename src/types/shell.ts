@@ -5,6 +5,7 @@ import type {
   AiSystemPhase as RustAiSystemPhase,
   AiSystemSnapshot as RustAiSystemSnapshot,
   BackgroundCompileSourceKind as RustBackgroundCompileSourceKind,
+  BackgroundCompileWriteMode as RustBackgroundCompileWriteMode,
   AiBatchCapture as RustAiBatchCapture,
   AiBatchPayload as RustAiBatchPayload,
   AiBatchRuntimeState as RustAiBatchRuntimeState,
@@ -180,6 +181,7 @@ export type AiSystemPhase = RustAiSystemPhase;
 export type AiSystemUpdatedReason = RustAiSystemUpdatedReason;
 export type AiSystemUpdatedPayload = RustAiSystemUpdated;
 export type BackgroundCompileSourceKind = RustBackgroundCompileSourceKind;
+export type BackgroundCompileWriteMode = RustBackgroundCompileWriteMode;
 export type BatchCompileTrigger = RustBatchCompileTrigger;
 export type BatchCompileRuntimeStatus = RustBatchCompileRuntimeStatus;
 export type BatchCompileJobStatus = RustBatchCompileJobStatus;
