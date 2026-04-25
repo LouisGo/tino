@@ -116,6 +116,8 @@ pub struct HomeChatConversationSummary {
     pub title: Option<String>,
     pub title_status: HomeChatConversationTitleStatus,
     pub title_source: Option<HomeChatConversationTitleSource>,
+    pub is_pinned: bool,
+    pub pinned_at: Option<String>,
     pub preview_text: Option<String>,
     pub message_count: usize,
     pub created_at: String,
@@ -181,11 +183,31 @@ pub struct RewriteLatestHomeChatUserMessageRequest {
 
 #[derive(Debug, Clone, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
+pub struct SetHomeChatConversationPinnedRequest {
+    pub conversation_id: String,
+    pub pinned: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateHomeChatConversationTitleRequest {
     pub conversation_id: String,
     pub title: String,
     pub title_status: HomeChatConversationTitleStatus,
     pub title_source: HomeChatConversationTitleSource,
+}
+
+#[derive(Debug, Clone, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteHomeChatConversationRequest {
+    pub conversation_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteHomeChatConversationResult {
+    pub conversation_id: String,
+    pub deleted: bool,
 }
 
 pub fn normalize_home_chat_content(input: &str) -> String {

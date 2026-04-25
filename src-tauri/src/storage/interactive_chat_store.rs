@@ -1,13 +1,16 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use uuid::Uuid;
 
 use crate::home_chat::{
     build_home_chat_preview, normalize_home_chat_content, normalize_home_chat_optional_content,
-    normalize_home_chat_title, HomeChatConversationDetail, HomeChatConversationSummary,
-    HomeChatConversationTitleSource, HomeChatConversationTitleStatus, HomeChatMessage,
-    HomeChatMessageRole, HomeChatMessageStatus,
+    normalize_home_chat_title, DeleteHomeChatConversationResult, HomeChatConversationDetail,
+    HomeChatConversationSummary, HomeChatConversationTitleSource,
+    HomeChatConversationTitleStatus, HomeChatMessage, HomeChatMessageRole, HomeChatMessageStatus,
 };
 
 const SQLITE_FILE_NAME: &str = "interactive-chat.db";
@@ -27,6 +30,7 @@ pub struct AssistantMessageUpdate<'a> {
 
 impl InteractiveChatStore {
     pub fn new(storage_root: &Path) -> Result<Self, String> {
+        fs::create_dir_all(storage_root).map_err(|error| error.to_string())?;
         let store = Self {
             db_path: storage_root.join(SQLITE_FILE_NAME),
         };
@@ -44,13 +48,20 @@ impl InteractiveChatStore {
                     title,
                     title_status,
                     title_source,
+                    is_pinned,
+                    pinned_at,
                     preview_text,
                     message_count,
                     created_at,
                     updated_at,
                     last_message_at
                 FROM chat_conversations
-                ORDER BY last_message_at DESC, updated_at DESC, created_at DESC
+                ORDER BY
+                    is_pinned DESC,
+                    pinned_at DESC,
+                    last_message_at DESC,
+                    updated_at DESC,
+                    created_at DESC
                 "#,
             )
             .map_err(|error| error.to_string())?;
@@ -91,12 +102,14 @@ impl InteractiveChatStore {
                 title,
                 title_status,
                 title_source,
+                is_pinned,
+                pinned_at,
                 preview_text,
                 message_count,
                 created_at,
                 updated_at,
                 last_message_at
-            ) VALUES (?1, NULL, ?2, NULL, ?3, 1, ?4, ?4, ?4)
+            ) VALUES (?1, NULL, ?2, NULL, 0, NULL, ?3, 1, ?4, ?4, ?4)
             "#,
             params![
                 &conversation_id,
@@ -369,6 +382,60 @@ impl InteractiveChatStore {
             .ok_or_else(|| "Conversation not found.".to_string())
     }
 
+    pub fn set_conversation_pinned(
+        &self,
+        conversation_id: &str,
+        pinned: bool,
+    ) -> Result<HomeChatConversationSummary, String> {
+        let now = now_rfc3339();
+        let connection = self.open_connection()?;
+
+        let updated = connection
+            .execute(
+                r#"
+                UPDATE chat_conversations
+                SET
+                    is_pinned = ?1,
+                    pinned_at = ?2,
+                    updated_at = ?3
+                WHERE id = ?4
+                "#,
+                params![
+                    pinned,
+                    if pinned { Some(now.as_str()) } else { None },
+                    &now,
+                    conversation_id,
+                ],
+            )
+            .map_err(|error| error.to_string())?;
+
+        if updated == 0 {
+            return Err("Conversation not found.".into());
+        }
+
+        self.get_conversation_summary_with_connection(&connection, conversation_id)?
+            .ok_or_else(|| "Conversation not found.".to_string())
+    }
+
+    pub fn delete_conversation(
+        &self,
+        conversation_id: &str,
+    ) -> Result<DeleteHomeChatConversationResult, String> {
+        let connection = self.open_connection()?;
+        let deleted = connection
+            .execute(
+                "DELETE FROM chat_conversations WHERE id = ?1",
+                params![conversation_id],
+            )
+            .map_err(|error| error.to_string())?
+            > 0;
+
+        Ok(DeleteHomeChatConversationResult {
+            conversation_id: conversation_id.to_string(),
+            deleted,
+        })
+    }
+
     fn ensure_schema(&self) -> Result<(), String> {
         let connection = self.open_connection()?;
         connection
@@ -381,6 +448,8 @@ impl InteractiveChatStore {
                     title TEXT,
                     title_status TEXT NOT NULL,
                     title_source TEXT,
+                    is_pinned INTEGER NOT NULL DEFAULT 0,
+                    pinned_at TEXT,
                     preview_text TEXT,
                     message_count INTEGER NOT NULL DEFAULT 0,
                     created_at TEXT NOT NULL,
@@ -412,7 +481,25 @@ impl InteractiveChatStore {
                 ON chat_messages(conversation_id, ordinal ASC);
                 "#,
             )
-            .map_err(|error| error.to_string())
+            .map_err(|error| error.to_string())?;
+
+        ensure_column(
+            &connection,
+            "chat_conversations",
+            "is_pinned",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        ensure_column(&connection, "chat_conversations", "pinned_at", "TEXT")?;
+        connection
+            .execute_batch(
+                r#"
+                CREATE INDEX IF NOT EXISTS idx_chat_conversations_pinned_order
+                ON chat_conversations(is_pinned DESC, pinned_at DESC, last_message_at DESC, updated_at DESC);
+                "#,
+            )
+            .map_err(|error| error.to_string())?;
+
+        Ok(())
     }
 
     fn open_connection(&self) -> Result<Connection, String> {
@@ -603,6 +690,8 @@ impl InteractiveChatStore {
                     title,
                     title_status,
                     title_source,
+                    is_pinned,
+                    pinned_at,
                     preview_text,
                     message_count,
                     created_at,
@@ -639,11 +728,13 @@ fn map_conversation_summary_row(
             .get::<_, Option<String>>(3)?
             .as_deref()
             .and_then(HomeChatConversationTitleSource::from_storage_label),
-        preview_text: row.get(4)?,
-        message_count: row.get(5)?,
-        created_at: row.get(6)?,
-        updated_at: row.get(7)?,
-        last_message_at: row.get(8)?,
+        is_pinned: row.get::<_, bool>(4)?,
+        pinned_at: row.get(5)?,
+        preview_text: row.get(6)?,
+        message_count: row.get(7)?,
+        created_at: row.get(8)?,
+        updated_at: row.get(9)?,
+        last_message_at: row.get(10)?,
     })
 }
 
@@ -666,4 +757,162 @@ fn map_message_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<HomeChatMessage>
 
 fn now_rfc3339() -> String {
     chrono::Local::now().to_rfc3339()
+}
+
+fn ensure_column(
+    connection: &Connection,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> Result<(), String> {
+    if table_has_column(connection, table, column)? {
+        return Ok(());
+    }
+
+    connection
+        .execute(
+            &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
+            [],
+        )
+        .map_err(|error| error.to_string())?;
+
+    Ok(())
+}
+
+fn table_has_column(connection: &Connection, table: &str, column: &str) -> Result<bool, String> {
+    let mut statement = connection
+        .prepare(&format!("PRAGMA table_info({table})"))
+        .map_err(|error| error.to_string())?;
+    let rows = statement
+        .query_map([], |row| row.get::<_, String>(1))
+        .map_err(|error| error.to_string())?;
+
+    for existing_column in rows {
+        if existing_column.map_err(|error| error.to_string())? == column {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, path::PathBuf};
+
+    use rusqlite::Connection;
+    use uuid::Uuid;
+
+    use super::{InteractiveChatStore, SQLITE_FILE_NAME};
+
+    fn unique_root() -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "tino-interactive-chat-store-tests-{}",
+            Uuid::now_v7().simple()
+        ))
+    }
+
+    #[test]
+    fn pinning_conversation_updates_summary_and_sort_order() {
+        let root = unique_root();
+        let store = InteractiveChatStore::new(&root).expect("store should initialize");
+        let older = store
+            .create_conversation("Older thread")
+            .expect("older conversation should be created");
+        let newer = store
+            .create_conversation("Newer thread")
+            .expect("newer conversation should be created");
+
+        let pinned = store
+            .set_conversation_pinned(&older.conversation.id, true)
+            .expect("pinning should succeed");
+        let conversations = store
+            .list_conversations()
+            .expect("conversations should load");
+
+        assert!(pinned.is_pinned);
+        assert!(pinned.pinned_at.is_some());
+        assert_eq!(conversations[0].id, older.conversation.id);
+        assert_eq!(conversations[1].id, newer.conversation.id);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn delete_conversation_removes_messages_via_cascade() {
+        let root = unique_root();
+        let store = InteractiveChatStore::new(&root).expect("store should initialize");
+        let conversation = store
+            .create_conversation("Delete me")
+            .expect("conversation should be created");
+
+        let result = store
+            .delete_conversation(&conversation.conversation.id)
+            .expect("delete should succeed");
+
+        assert!(result.deleted);
+        assert!(store.get_conversation(&conversation.conversation.id).is_err());
+        assert!(store
+            .list_conversations()
+            .expect("conversations should load")
+            .is_empty());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn ensure_schema_backfills_pin_columns_for_existing_databases() {
+        let root = unique_root();
+        fs::create_dir_all(&root).expect("test root should exist");
+        let db_path = root.join(SQLITE_FILE_NAME);
+        let connection = Connection::open(&db_path).expect("db should open");
+        connection
+            .execute_batch(
+                r#"
+                CREATE TABLE chat_conversations (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    title TEXT,
+                    title_status TEXT NOT NULL,
+                    title_source TEXT,
+                    preview_text TEXT,
+                    message_count INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    last_message_at TEXT NOT NULL
+                );
+
+                CREATE TABLE chat_messages (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    conversation_id TEXT NOT NULL,
+                    ordinal INTEGER NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    reasoning_text TEXT,
+                    status TEXT NOT NULL,
+                    error_message TEXT,
+                    provider_label TEXT,
+                    response_model TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE,
+                    UNIQUE(conversation_id, ordinal)
+                );
+                "#,
+            )
+            .expect("legacy schema should be created");
+        drop(connection);
+
+        let store = InteractiveChatStore::new(&root).expect("store should migrate schema");
+        let conversation = store
+            .create_conversation("Needs migration")
+            .expect("conversation should be created");
+        let pinned = store
+            .set_conversation_pinned(&conversation.conversation.id, true)
+            .expect("pinning should succeed after migration");
+
+        assert!(pinned.is_pinned);
+        assert!(pinned.pinned_at.is_some());
+
+        let _ = fs::remove_dir_all(root);
+    }
 }

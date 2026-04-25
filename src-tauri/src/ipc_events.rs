@@ -53,6 +53,8 @@ pub enum HomeChatConversationsUpdatedReason {
     ConversationCreated,
     MessagesChanged,
     TitleChanged,
+    PinnedChanged,
+    ConversationDeleted,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
@@ -86,6 +88,24 @@ impl HomeChatConversationsUpdated {
     pub fn title_changed(conversation_id: String) -> Self {
         Self {
             reason: HomeChatConversationsUpdatedReason::TitleChanged,
+            conversation_id: Some(conversation_id),
+            refresh_list: true,
+            refresh_conversation: false,
+        }
+    }
+
+    pub fn pinned_changed(conversation_id: String) -> Self {
+        Self {
+            reason: HomeChatConversationsUpdatedReason::PinnedChanged,
+            conversation_id: Some(conversation_id),
+            refresh_list: true,
+            refresh_conversation: true,
+        }
+    }
+
+    pub fn conversation_deleted(conversation_id: String) -> Self {
+        Self {
+            reason: HomeChatConversationsUpdatedReason::ConversationDeleted,
             conversation_id: Some(conversation_id),
             refresh_list: true,
             refresh_conversation: false,

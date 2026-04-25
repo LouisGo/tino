@@ -45,6 +45,7 @@ import type {
   ClipboardSourceAppIconResult,
   ClipboardSourceAppOption,
   ClipboardSourceAppRule,
+  DeleteHomeChatConversationResult,
   DeleteClipboardCaptureResult,
   ClipboardPageResult,
   DashboardSnapshot,
@@ -420,8 +421,19 @@ function upsertMockHomeChatConversation(detail: HomeChatConversationDetail) {
 }
 
 function sortMockHomeChatConversations() {
-  mockHomeChatConversations.sort((left, right) =>
-    right.conversation.lastMessageAt.localeCompare(left.conversation.lastMessageAt));
+  mockHomeChatConversations.sort((left, right) => {
+    if (left.conversation.isPinned !== right.conversation.isPinned) {
+      return left.conversation.isPinned ? -1 : 1;
+    }
+
+    const leftPinnedAt = left.conversation.pinnedAt ?? "";
+    const rightPinnedAt = right.conversation.pinnedAt ?? "";
+    if (leftPinnedAt !== rightPinnedAt) {
+      return rightPinnedAt.localeCompare(leftPinnedAt);
+    }
+
+    return right.conversation.lastMessageAt.localeCompare(left.conversation.lastMessageAt);
+  });
 }
 
 function createMockConversation(
@@ -449,6 +461,8 @@ function createMockConversation(
       title: null,
       titleStatus: "pending",
       titleSource: null,
+      isPinned: false,
+      pinnedAt: null,
       previewText: buildMockHomeChatPreview(message.content),
       messageCount: 1,
       createdAt: now,
@@ -591,6 +605,43 @@ function updateMockConversationTitle(options: {
   upsertMockHomeChatConversation(detail);
   sortMockHomeChatConversations();
   return structuredClone(detail.conversation);
+}
+
+function setMockConversationPinned(
+  conversationId: string,
+  pinned: boolean,
+): HomeChatConversationSummary {
+  const detail = getMockHomeChatConversationDetail(conversationId);
+  const now = nowIsoString();
+
+  detail.conversation.isPinned = pinned;
+  detail.conversation.pinnedAt = pinned ? now : null;
+  detail.conversation.updatedAt = now;
+  upsertMockHomeChatConversation(detail);
+  sortMockHomeChatConversations();
+
+  return structuredClone(detail.conversation);
+}
+
+function deleteMockConversation(
+  conversationId: string,
+): DeleteHomeChatConversationResult {
+  const existingIndex = mockHomeChatConversations.findIndex(
+    (item) => item.conversation.id === conversationId,
+  );
+  if (existingIndex < 0) {
+    return {
+      conversationId,
+      deleted: false,
+    };
+  }
+
+  mockHomeChatConversations.splice(existingIndex, 1);
+
+  return {
+    conversationId,
+    deleted: true,
+  };
 }
 
 function normalizeClipboardCapture(capture: RustCapturePreview): ClipboardCapture {
@@ -960,6 +1011,34 @@ export async function updateHomeChatConversationTitle(options: {
       titleSource: options.titleSource,
     })),
   );
+}
+
+export async function setHomeChatConversationPinned(options: {
+  conversationId: string;
+  pinned: boolean;
+}): Promise<HomeChatConversationSummary> {
+  if (!isTauriRuntime()) {
+    return setMockConversationPinned(options.conversationId, options.pinned);
+  }
+
+  return normalizeHomeChatConversationSummary(
+    await unwrapTauriResult(tauriCommands.setHomeChatConversationPinned({
+      conversationId: options.conversationId,
+      pinned: options.pinned,
+    })),
+  );
+}
+
+export async function deleteHomeChatConversation(
+  conversationId: string,
+): Promise<DeleteHomeChatConversationResult> {
+  if (!isTauriRuntime()) {
+    return deleteMockConversation(conversationId);
+  }
+
+  return await unwrapTauriResult(tauriCommands.deleteHomeChatConversation({
+    conversationId,
+  }));
 }
 
 export async function getClipboardPage(

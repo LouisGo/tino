@@ -25,6 +25,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             chat::replace_latest_home_chat_assistant_message,
             chat::rewrite_latest_home_chat_user_message,
             chat::update_home_chat_conversation_title,
+            chat::set_home_chat_conversation_pinned,
+            chat::delete_home_chat_conversation,
             shell::get_dashboard_snapshot,
             shell::get_clipboard_page,
             shell::get_clipboard_board_bootstrap,

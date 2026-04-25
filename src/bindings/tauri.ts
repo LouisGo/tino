@@ -19,6 +19,8 @@ export const commands = {
 	replaceLatestHomeChatAssistantMessage: (request: ReplaceLatestHomeChatAssistantMessageRequest) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("replace_latest_home_chat_assistant_message", { request })),
 	rewriteLatestHomeChatUserMessage: (request: RewriteLatestHomeChatUserMessageRequest) => typedError<HomeChatConversationDetail, string>(__TAURI_INVOKE("rewrite_latest_home_chat_user_message", { request })),
 	updateHomeChatConversationTitle: (request: UpdateHomeChatConversationTitleRequest) => typedError<HomeChatConversationSummary, string>(__TAURI_INVOKE("update_home_chat_conversation_title", { request })),
+	setHomeChatConversationPinned: (request: SetHomeChatConversationPinnedRequest) => typedError<HomeChatConversationSummary, string>(__TAURI_INVOKE("set_home_chat_conversation_pinned", { request })),
+	deleteHomeChatConversation: (request: DeleteHomeChatConversationRequest) => typedError<DeleteHomeChatConversationResult, string>(__TAURI_INVOKE("delete_home_chat_conversation", { request })),
 	getDashboardSnapshot: () => typedError<DashboardSnapshot, string>(__TAURI_INVOKE("get_dashboard_snapshot")),
 	getClipboardPage: (request: ClipboardPageRequest) => typedError<ClipboardPage, string>(__TAURI_INVOKE("get_clipboard_page", { request })),
 	getClipboardBoardBootstrap: () => typedError<ClipboardBoardBootstrap, string>(__TAURI_INVOKE("get_clipboard_board_bootstrap")),
@@ -387,6 +389,15 @@ export type DeleteClipboardCaptureResult = {
 	deleted: boolean,
 };
 
+export type DeleteHomeChatConversationRequest = {
+	conversationId: string,
+};
+
+export type DeleteHomeChatConversationResult = {
+	conversationId: string,
+	deleted: boolean,
+};
+
 export type FeedbackEvent = {
 	id: string,
 	kind: FeedbackEventKind,
@@ -414,6 +425,8 @@ export type HomeChatConversationSummary = {
 	title: string | null,
 	titleStatus: HomeChatConversationTitleStatus,
 	titleSource: HomeChatConversationTitleSource | null,
+	isPinned: boolean,
+	pinnedAt: string | null,
 	previewText: string | null,
 	messageCount: number,
 	createdAt: string,
@@ -432,7 +445,7 @@ export type HomeChatConversationsUpdated = {
 	refreshConversation: boolean,
 };
 
-export type HomeChatConversationsUpdatedReason = "conversationCreated" | "messagesChanged" | "titleChanged";
+export type HomeChatConversationsUpdatedReason = "conversationCreated" | "messagesChanged" | "titleChanged" | "pinnedChanged" | "conversationDeleted";
 
 export type HomeChatMessage = {
 	id: string,
@@ -582,6 +595,11 @@ export type SetClipboardCapturePinnedRequest = {
 	capture: CapturePreview,
 	pinned: boolean,
 	replaceOldest?: boolean,
+};
+
+export type SetHomeChatConversationPinnedRequest = {
+	conversationId: string,
+	pinned: boolean,
 };
 
 export type TopicIndexEntry = {

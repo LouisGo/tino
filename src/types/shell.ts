@@ -40,6 +40,7 @@ import type {
   ClipboardSourceAppOption as RustClipboardSourceAppOption,
   ClipboardSourceAppRule as RustClipboardSourceAppRule,
   DashboardSnapshot as RustDashboardSnapshot,
+  DeleteHomeChatConversationResult as RustDeleteHomeChatConversationResult,
   DeleteClipboardCaptureResult as RustDeleteClipboardCaptureResult,
   FeedbackEvent as RustFeedbackEvent,
   FeedbackEventKind as RustFeedbackEventKind,
@@ -96,6 +97,7 @@ export type ClipboardBoardBootstrap = Omit<
 };
 
 export type DeleteClipboardCaptureResult = RustDeleteClipboardCaptureResult;
+export type DeleteHomeChatConversationResult = RustDeleteHomeChatConversationResult;
 export type PinnedClipboardCapture = Omit<RustPinnedClipboardCapture, "capture"> & {
   capture: ClipboardCapture;
 };

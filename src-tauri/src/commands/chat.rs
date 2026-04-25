@@ -1,9 +1,10 @@
 use crate::app_state::AppState;
 use crate::home_chat::{
     AppendHomeChatUserMessageRequest, CreateHomeChatConversationRequest,
+    DeleteHomeChatConversationRequest, DeleteHomeChatConversationResult,
     HomeChatConversationDetail, HomeChatConversationSummary,
     ReplaceLatestHomeChatAssistantMessageRequest, RewriteLatestHomeChatUserMessageRequest,
-    UpdateHomeChatConversationTitleRequest,
+    SetHomeChatConversationPinnedRequest, UpdateHomeChatConversationTitleRequest,
 };
 use crate::storage::interactive_chat_store::AssistantMessageUpdate;
 use tauri::State;
@@ -147,4 +148,37 @@ pub async fn update_home_chat_conversation_title(
         )
     })
     .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_home_chat_conversation_pinned(
+    state: State<'_, AppState>,
+    request: SetHomeChatConversationPinnedRequest,
+) -> Result<HomeChatConversationSummary, String> {
+    let conversation_id = request.conversation_id.trim().to_string();
+    if conversation_id.is_empty() {
+        return Err("Conversation id is required.".into());
+    }
+
+    let state = state.inner().clone();
+    run_blocking_command(move || {
+        state.set_home_chat_conversation_pinned(&conversation_id, request.pinned)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_home_chat_conversation(
+    state: State<'_, AppState>,
+    request: DeleteHomeChatConversationRequest,
+) -> Result<DeleteHomeChatConversationResult, String> {
+    let conversation_id = request.conversation_id.trim().to_string();
+    if conversation_id.is_empty() {
+        return Err("Conversation id is required.".into());
+    }
+
+    let state = state.inner().clone();
+    run_blocking_command(move || state.delete_home_chat_conversation(&conversation_id)).await
 }

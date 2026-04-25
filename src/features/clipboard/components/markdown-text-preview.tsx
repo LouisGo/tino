@@ -61,7 +61,7 @@ export function MarkdownTextPreview({
     <div
       className={cn(
         "app-markdown-preview app-selectable app-kind-text-text max-w-[72ch] leading-[1.7]",
-        size === "chat" ? "text-[15px]" : "text-[13px]",
+        size === "chat" ? "text-[16px]" : "text-[13px]",
       )}
     >
       <ReactMarkdown

@@ -18,15 +18,17 @@ import {
 import {
   appendHomeChatUserMessage,
   createHomeChatConversation,
+  deleteHomeChatConversation,
   getHomeChatConversation,
   homeChatConversationsUpdatedEvent,
   isTauriRuntime,
   listHomeChatConversations,
+  setHomeChatConversationPinned,
   replaceLatestHomeChatAssistantMessage,
-  rewriteLatestHomeChatUserMessage,
   updateHomeChatConversationTitle,
 } from "@/lib/tauri";
 import type {
+  DeleteHomeChatConversationResult,
   HomeChatConversationDetail,
   HomeChatConversationSummary,
   HomeChatMessageStatus,
@@ -49,6 +51,8 @@ type ClearedComposerUndoState = {
   value: string;
 };
 
+type StreamLifecycleState = "idle" | "streaming" | "stopping";
+
 export function useHomeChatWorkspace({
   providerAccess,
   providerConfig,
@@ -63,6 +67,7 @@ export function useHomeChatWorkspace({
   const [isPersistingTurn, setIsPersistingTurn] = useState(false);
   const [isEditingLatestUserMessage, setIsEditingLatestUserMessage] = useState(false);
   const [liveAssistant, setLiveAssistant] = useState<LiveAssistantState | null>(null);
+  const [streamLifecycleState, setStreamLifecycleState] = useState<StreamLifecycleState>("idle");
   const didInitializeSelection = useRef(false);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
   const editComposerRestoreRef = useRef<string | null>(null);
@@ -99,6 +104,36 @@ export function useHomeChatWorkspace({
     setActiveConversationId(null);
     setIsDraftConversation(true);
   }, [conversationsQuery.data, conversationsQuery.isLoading]);
+
+  useEffect(() => {
+    if (
+      conversationsQuery.isLoading
+      || isDraftConversation
+      || !activeConversationId
+      || conversationsQuery.data?.some((conversation) => conversation.id === activeConversationId)
+    ) {
+      return;
+    }
+
+    const nextConversation = conversationsQuery.data?.[0] ?? null;
+    if (nextConversation) {
+      setActiveConversationId(nextConversation.id);
+      setIsDraftConversation(false);
+      return;
+    }
+
+    setActiveConversationId(null);
+    setIsDraftConversation(true);
+    setHistoryComposerValue("");
+    setWorkspaceError(null);
+    setIsEditingLatestUserMessage(false);
+    editComposerRestoreRef.current = null;
+  }, [
+    activeConversationId,
+    conversationsQuery.data,
+    conversationsQuery.isLoading,
+    isDraftConversation,
+  ]);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -142,8 +177,8 @@ export function useHomeChatWorkspace({
     ? newConversationDraft
     : historyComposerValue;
 
-  const isStreaming = liveAssistant !== null;
-  const isBusy = isPersistingTurn || isStreaming;
+  const isStreaming = streamLifecycleState === "streaming";
+  const isBusy = isPersistingTurn || streamLifecycleState !== "idle";
   const latestUserMessage = activeConversation
     ? getLatestHomeChatUserMessage(activeConversation.messages)
     : null;
@@ -175,6 +210,17 @@ export function useHomeChatWorkspace({
           : current
       ),
     );
+  }, [queryClient]);
+
+  const removeConversationFromCache = useCallback((conversationId: string) => {
+    queryClient.setQueryData<HomeChatConversationSummary[]>(
+      queryKeys.homeChatConversations(),
+      (current) => (current ?? []).filter((item) => item.id !== conversationId),
+    );
+    queryClient.removeQueries({
+      queryKey: queryKeys.homeChatConversation(conversationId),
+      exact: true,
+    });
   }, [queryClient]);
 
   const setComposerValue = useCallback((value: string) => {
@@ -219,6 +265,7 @@ export function useHomeChatWorkspace({
     let latestText = "";
     let latestReasoningText = "";
 
+    setStreamLifecycleState("streaming");
     setLiveAssistant({
       conversationId: options.conversation.conversation.id,
       text: "",
@@ -233,6 +280,13 @@ export function useHomeChatWorkspace({
         }),
         abortSignal: abortController.signal,
         onTextStream: (progress) => {
+          if (
+            abortController.signal.aborted
+            || activeAbortControllerRef.current !== abortController
+          ) {
+            return;
+          }
+
           latestText = progress.text;
           latestReasoningText = progress.reasoningText;
           setLiveAssistant({
@@ -272,6 +326,7 @@ export function useHomeChatWorkspace({
       if (activeAbortControllerRef.current === abortController) {
         activeAbortControllerRef.current = null;
       }
+      setStreamLifecycleState("idle");
       setLiveAssistant((current) => (
         current?.conversationId === options.conversation.conversation.id ? null : current
       ));
@@ -307,7 +362,7 @@ export function useHomeChatWorkspace({
       }
 
       if (isEditingLatestUserMessage) {
-        const detail = await rewriteLatestHomeChatUserMessage(activeConversationId, nextPrompt);
+        const detail = await appendHomeChatUserMessage(activeConversationId, nextPrompt);
         syncConversationDetailCache(detail);
         setHistoryComposerValue("");
         setIsEditingLatestUserMessage(false);
@@ -367,8 +422,77 @@ export function useHomeChatWorkspace({
   }, [setComposerValue]);
 
   const stopStreaming = useCallback(() => {
-    activeAbortControllerRef.current?.abort();
+    const abortController = activeAbortControllerRef.current;
+    if (!abortController) {
+      return;
+    }
+
+    abortController.abort();
+    setStreamLifecycleState("stopping");
+    setLiveAssistant(null);
+    setWorkspaceError(null);
   }, []);
+
+  const renameConversation = useCallback(async (
+    conversationId: string,
+    title: string,
+  ) => {
+    const summary = await updateHomeChatConversationTitle({
+      conversationId,
+      title,
+      titleStatus: "ready",
+      titleSource: "manual",
+    });
+    syncConversationSummaryCache(summary);
+    setWorkspaceError(null);
+    return summary;
+  }, [syncConversationSummaryCache]);
+
+  const updateConversationPinned = useCallback(async (
+    conversationId: string,
+    pinned: boolean,
+  ) => {
+    const summary = await setHomeChatConversationPinned({
+      conversationId,
+      pinned,
+    });
+    syncConversationSummaryCache(summary);
+    setWorkspaceError(null);
+    return summary;
+  }, [syncConversationSummaryCache]);
+
+  const removeConversation = useCallback(async (
+    conversationId: string,
+  ): Promise<DeleteHomeChatConversationResult> => {
+    const result = await deleteHomeChatConversation(conversationId);
+    if (!result.deleted) {
+      return result;
+    }
+
+    removeConversationFromCache(conversationId);
+    if (activeConversationId === conversationId) {
+      const remainingConversations = (
+        queryClient.getQueryData<HomeChatConversationSummary[]>(queryKeys.homeChatConversations())
+        ?? []
+      ).filter((conversation) => conversation.id !== conversationId);
+      const nextConversation = remainingConversations[0] ?? null;
+
+      if (nextConversation) {
+        setActiveConversationId(nextConversation.id);
+        setIsDraftConversation(false);
+      } else {
+        setActiveConversationId(null);
+        setIsDraftConversation(true);
+        setHistoryComposerValue("");
+      }
+
+      setIsEditingLatestUserMessage(false);
+      editComposerRestoreRef.current = null;
+      setWorkspaceError(null);
+    }
+
+    return result;
+  }, [activeConversationId, queryClient, removeConversationFromCache]);
 
   const selectConversation = useCallback((conversationId: string) => {
     if (isBusy) {
@@ -438,6 +562,9 @@ export function useHomeChatWorkspace({
     startEditingLatestUserMessage,
     cancelEditingLatestUserMessage,
     stopStreaming,
+    renameConversation,
+    updateConversationPinned,
+    removeConversation,
     undoClearedComposerValue,
     workspaceError,
   };
@@ -452,5 +579,17 @@ function upsertConversationSummary(
     ...current.filter((item) => item.id !== summary.id),
   ];
 
-  return next.sort((left, right) => right.lastMessageAt.localeCompare(left.lastMessageAt));
+  return next.sort((left, right) => {
+    if (left.isPinned !== right.isPinned) {
+      return left.isPinned ? -1 : 1;
+    }
+
+    const leftPinnedAt = left.pinnedAt ?? "";
+    const rightPinnedAt = right.pinnedAt ?? "";
+    if (leftPinnedAt !== rightPinnedAt) {
+      return rightPinnedAt.localeCompare(leftPinnedAt);
+    }
+
+    return right.lastMessageAt.localeCompare(left.lastMessageAt);
+  });
 }
