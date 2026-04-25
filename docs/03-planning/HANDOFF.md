@@ -43,6 +43,7 @@
 - Runtime Provider 多配置 CRUD、当前启用项切换、smoke test
 - Renderer 侧交互式 provider access layer 与首页即时 AI 调用入口
 - 首页 `HomeChatWorkspace` 已升级为可复用组件：支持多会话、SQLite 持久化、首问后建会话、首条消息异步生成标题
+- 首页 `HomeChatWorkspace` 的交互式流式对话现已按 conversation 隔离运行，并由 renderer app-scope runtime registry 持有 active run：切换会话或 workspace remount 不会中断旧会话流；手动停止会保留一条 `stopped` assistant 记录并允许在当前会话直接基于最后一条 user message 进入新增副本编辑；对 `stopped/failed` assistant 点重试时，live thinking 区域会原位覆盖最新 assistant，而不是额外 append 第二块 reasoning UI
 - 首页 chat 视觉与交互基线已调整为 Gemini-like 双态：空态沿用原首页 banner / background 语义，首问后 composer 沉底，消息流与 reasoning 展示在上方
 - 首页 `HomeChatWorkspace` 现在是当前默认的交互式 AI 入口，但它不是后台编译 runtime 或 AI Ops 状态的真相源
 - Phase A contract reset 已起步：Rust-owned `AiSystemSnapshot` / `BatchCompile*` / `FeedbackEvent` / `QualitySnapshot` IPC 类型

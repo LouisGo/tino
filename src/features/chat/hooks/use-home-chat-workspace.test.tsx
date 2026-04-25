@@ -5,6 +5,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useHomeChatWorkspace } from "@/features/chat/hooks/use-home-chat-workspace";
+import { resetHomeChatRuntimeStore } from "@/features/chat/store/home-chat-runtime-store";
 import type {
   HomeChatConversationDetail,
   HomeChatConversationSummary,
@@ -67,6 +68,21 @@ function createWrapper(queryClient: QueryClient) {
   };
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error?: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject,
+  };
+}
+
 function createMessage(overrides: Partial<HomeChatMessage>): HomeChatMessage {
   return {
     id: overrides.id ?? "msg_1",
@@ -84,7 +100,9 @@ function createMessage(overrides: Partial<HomeChatMessage>): HomeChatMessage {
   };
 }
 
-function createConversationSummary(overrides: Partial<HomeChatConversationSummary> = {}): HomeChatConversationSummary {
+function createConversationSummary(
+  overrides: Partial<HomeChatConversationSummary> = {},
+): HomeChatConversationSummary {
   return {
     id: overrides.id ?? "conv_1",
     title: overrides.title ?? "Test chat",
@@ -132,6 +150,162 @@ function createConversationDetail(options?: {
   };
 }
 
+function createStreamResult(options: {
+  text: string;
+  reasoningText?: string;
+  responseModel?: string | null;
+}) {
+  return {
+    apiMode: "responses" as const,
+    durationMs: 10,
+    eventCount: 2,
+    finishReason: "stop",
+    firstReasoningLatencyMs: 1,
+    firstTextLatencyMs: 1,
+    inputTokens: 10,
+    outputTokens: 10,
+    model: options.responseModel ?? "gpt-test",
+    providerLabel: "OpenAI · Test",
+    reasoningChars: (options.reasoningText ?? "").length,
+    reasoningText: options.reasoningText ?? "",
+    receivedChars: options.text.length,
+    responseModel: options.responseModel ?? "gpt-test",
+    text: options.text,
+  };
+}
+
+function createInMemoryConversationStore(initialDetails: HomeChatConversationDetail[]) {
+  const detailsById = new Map<string, HomeChatConversationDetail>(
+    initialDetails.map((detail) => [detail.conversation.id, structuredClone(detail)]),
+  );
+  let messageCounter = 100;
+  let timeCounter = 0;
+
+  const nextId = (prefix: string) => {
+    messageCounter += 1;
+    return `${prefix}_${messageCounter}`;
+  };
+
+  const nextTimestamp = () => {
+    timeCounter += 1;
+    return `2026-04-25T00:00:${String(timeCounter).padStart(2, "0")}.000Z`;
+  };
+
+  const buildPreview = (value: string | null | undefined) => {
+    const collapsed = (value ?? "").trim().replace(/\s+/g, " ");
+    if (!collapsed) {
+      return null;
+    }
+
+    return collapsed.length > 120 ? `${collapsed.slice(0, 119)}…` : collapsed;
+  };
+
+  const listConversations = () => [...detailsById.values()]
+    .map((detail) => structuredClone(detail.conversation))
+    .sort((left, right) => right.lastMessageAt.localeCompare(left.lastMessageAt));
+
+  const getConversation = (conversationId: string) => {
+    const detail = detailsById.get(conversationId);
+    if (!detail) {
+      throw new Error(`Conversation ${conversationId} not found.`);
+    }
+
+    return structuredClone(detail);
+  };
+
+  const appendUserMessage = (conversationId: string, userMessage: string) => {
+    const detail = detailsById.get(conversationId);
+    if (!detail) {
+      throw new Error(`Conversation ${conversationId} not found.`);
+    }
+
+    const now = nextTimestamp();
+    detail.messages.push({
+      id: nextId("msg_user"),
+      conversationId,
+      ordinal: detail.messages.length + 1,
+      role: "user",
+      content: userMessage.trim(),
+      reasoningText: null,
+      status: "completed",
+      errorMessage: null,
+      providerLabel: null,
+      responseModel: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    detail.conversation.previewText = buildPreview(userMessage);
+    detail.conversation.messageCount = detail.messages.length;
+    detail.conversation.updatedAt = now;
+    detail.conversation.lastMessageAt = now;
+
+    return structuredClone(detail);
+  };
+
+  const replaceLatestAssistantMessage = (options: {
+    conversationId: string;
+    content: string;
+    reasoningText?: string | null;
+    status: HomeChatMessage["status"];
+    errorMessage?: string | null;
+    providerLabel?: string | null;
+    responseModel?: string | null;
+  }) => {
+    const detail = detailsById.get(options.conversationId);
+    if (!detail) {
+      throw new Error(`Conversation ${options.conversationId} not found.`);
+    }
+
+    const now = nextTimestamp();
+    const latestMessage = detail.messages.at(-1);
+    const nextAssistantMessage: HomeChatMessage = {
+      id:
+        latestMessage?.role === "assistant"
+          ? latestMessage.id
+          : nextId("msg_assistant"),
+      conversationId: options.conversationId,
+      ordinal:
+        latestMessage?.role === "assistant"
+          ? latestMessage.ordinal
+          : detail.messages.length + 1,
+      role: "assistant",
+      content: options.content,
+      reasoningText: options.reasoningText ?? null,
+      status: options.status,
+      errorMessage: options.errorMessage ?? null,
+      providerLabel: options.providerLabel ?? null,
+      responseModel: options.responseModel ?? null,
+      createdAt:
+        latestMessage?.role === "assistant"
+          ? latestMessage.createdAt
+          : now,
+      updatedAt: now,
+    };
+
+    if (latestMessage?.role === "assistant") {
+      detail.messages[detail.messages.length - 1] = nextAssistantMessage;
+    } else {
+      detail.messages.push(nextAssistantMessage);
+    }
+
+    detail.conversation.previewText =
+      buildPreview(options.content)
+      ?? buildPreview(options.errorMessage ?? "");
+    detail.conversation.messageCount = detail.messages.length;
+    detail.conversation.updatedAt = now;
+    detail.conversation.lastMessageAt = now;
+
+    return structuredClone(detail);
+  };
+
+  return {
+    listConversations,
+    getConversation,
+    appendUserMessage,
+    replaceLatestAssistantMessage,
+  };
+}
+
 const configuredProviderAccess = {
   apiKey: "test-key",
   apiMode: "responses" as const,
@@ -153,6 +327,7 @@ const providerConfig = {
 
 describe("useHomeChatWorkspace", () => {
   beforeEach(() => {
+    resetHomeChatRuntimeStore();
     mockAppendHomeChatUserMessage.mockReset();
     mockCreateHomeChatConversation.mockReset();
     mockDeleteHomeChatConversation.mockReset();
@@ -165,151 +340,134 @@ describe("useHomeChatWorkspace", () => {
     mockStreamHomeChatConversation.mockReset();
   });
 
-  it("reuses the last user message as a new appended prompt instead of rewriting history", async () => {
+  it("reconnects to an in-flight conversation stream after the workspace hook remounts", async () => {
     const initialDetail = createConversationDetail();
-    const appendedDetail = createConversationDetail({
-      messages: [
-        ...initialDetail.messages,
-        createMessage({
-          id: "msg_user_2",
-          conversationId: initialDetail.conversation.id,
-          ordinal: 3,
-          role: "user",
-          content: "Reworked question",
-        }),
-      ],
-    });
-    const finalDetail = createConversationDetail({
-      conversation: {
-        messageCount: 4,
-        previewText: "Updated answer",
-        updatedAt: "2026-04-25T00:01:00.000Z",
-        lastMessageAt: "2026-04-25T00:01:00.000Z",
+    const store = createInMemoryConversationStore([initialDetail]);
+    const deferredStream = createDeferred<ReturnType<typeof createStreamResult>>();
+
+    mockListHomeChatConversations.mockImplementation(() => Promise.resolve(store.listConversations()));
+    mockGetHomeChatConversation.mockImplementation((conversationId: string) =>
+      Promise.resolve(store.getConversation(conversationId)));
+    mockAppendHomeChatUserMessage.mockImplementation((conversationId: string, userMessage: string) =>
+      Promise.resolve(store.appendUserMessage(conversationId, userMessage)));
+    mockReplaceLatestHomeChatAssistantMessage.mockImplementation((options: {
+      conversationId: string;
+      content: string;
+      reasoningText?: string | null;
+      status: HomeChatMessage["status"];
+      errorMessage?: string | null;
+      providerLabel?: string | null;
+      responseModel?: string | null;
+    }) => Promise.resolve(store.replaceLatestAssistantMessage(options)));
+    mockStreamHomeChatConversation.mockImplementation(
+      ({ abortSignal, onTextStream }: { abortSignal?: AbortSignal; onTextStream?: (progress: {
+        eventCount: number;
+        firstReasoningLatencyMs: number | null;
+        firstTextLatencyMs: number | null;
+        lastEventType: string | null;
+        reasoningChars: number;
+        reasoningText: string;
+        receivedChars: number;
+        text: string;
+      }) => void }) => {
+        onTextStream?.({
+          eventCount: 1,
+          firstReasoningLatencyMs: 1,
+          firstTextLatencyMs: 1,
+          lastEventType: "text-delta",
+          reasoningChars: 17,
+          reasoningText: "Streamed reasoning",
+          receivedChars: 14,
+          text: "Partial answer",
+        });
+
+        abortSignal?.addEventListener("abort", () => {
+          deferredStream.reject(new Error("Request aborted by user."));
+        }, { once: true });
+
+        return deferredStream.promise;
       },
-      messages: [
-        ...appendedDetail.messages,
-        createMessage({
-          id: "msg_assistant_2",
-          conversationId: initialDetail.conversation.id,
-          ordinal: 4,
-          role: "assistant",
-          content: "Updated answer",
-          reasoningText: "Reasoning trail",
-          providerLabel: "OpenAI · Test",
-          responseModel: "gpt-test",
-          createdAt: "2026-04-25T00:01:00.000Z",
-          updatedAt: "2026-04-25T00:01:00.000Z",
-        }),
-      ],
-    });
+    );
 
-    mockListHomeChatConversations.mockResolvedValue([initialDetail.conversation]);
-    mockGetHomeChatConversation.mockResolvedValue(initialDetail);
-    mockAppendHomeChatUserMessage.mockResolvedValue(appendedDetail);
-    mockStreamHomeChatConversation.mockResolvedValue({
-      apiMode: "responses",
-      durationMs: 10,
-      eventCount: 2,
-      finishReason: "stop",
-      firstReasoningLatencyMs: 1,
-      firstTextLatencyMs: 1,
-      inputTokens: 10,
-      outputTokens: 10,
-      model: "gpt-test",
-      providerLabel: "OpenAI · Test",
-      reasoningChars: 15,
-      reasoningText: "Reasoning trail",
-      receivedChars: 14,
-      responseModel: "gpt-test",
-      text: "Updated answer",
-    });
-    mockReplaceLatestHomeChatAssistantMessage.mockResolvedValue(finalDetail);
-
-    const { result } = renderHook(
+    const queryClient = createQueryClient();
+    const wrapper = createWrapper(queryClient);
+    const firstRender = renderHook(
       () =>
         useHomeChatWorkspace({
           providerAccess: configuredProviderAccess,
           providerConfig,
         }),
-      {
-        wrapper: createWrapper(createQueryClient()),
-      },
+      { wrapper },
     );
 
     await waitFor(() => {
-      expect(result.current.activeConversation?.messages.length).toBe(2);
+      expect(firstRender.result.current.activeConversationId).toBe("conv_1");
     });
 
     act(() => {
-      result.current.startEditingLatestUserMessage();
+      firstRender.result.current.setComposerValue("Follow-up question");
     });
-
-    expect(result.current.isEditingLatestUserMessage).toBe(true);
-    expect(result.current.composerValue).toBe("Original question");
 
     act(() => {
-      result.current.setComposerValue("Reworked question");
+      void firstRender.result.current.submitComposer();
     });
 
-    await act(async () => {
-      await result.current.submitComposer();
+    await waitFor(() => {
+      expect(firstRender.result.current.isStreaming).toBe(true);
+      expect(firstRender.result.current.liveAssistant?.text).toBe("Partial answer");
     });
 
-    expect(mockAppendHomeChatUserMessage).toHaveBeenCalledWith("conv_1", "Reworked question");
-    expect(result.current.isEditingLatestUserMessage).toBe(false);
+    firstRender.unmount();
+
+    const secondRender = renderHook(
+      () =>
+        useHomeChatWorkspace({
+          providerAccess: configuredProviderAccess,
+          providerConfig,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(secondRender.result.current.activeConversationId).toBe("conv_1");
+      expect(secondRender.result.current.isStreaming).toBe(true);
+      expect(secondRender.result.current.liveAssistant?.text).toBe("Partial answer");
+    });
+
+    act(() => {
+      secondRender.result.current.stopStreaming();
+    });
+
+    await waitFor(() => {
+      expect(secondRender.result.current.isStreaming).toBe(false);
+      expect(secondRender.result.current.isEditingLatestUserMessage).toBe(true);
+      expect(secondRender.result.current.composerValue).toBe("Follow-up question");
+      expect(secondRender.result.current.activeConversation?.messages.at(-1)).toMatchObject({
+        role: "assistant",
+        content: "Partial answer",
+        status: "stopped",
+      });
+    });
   });
 
-  it("clears streaming state immediately after stop and persists a stopped assistant message", async () => {
+  it("stops a stream without dropping the partial assistant message and re-enters edit mode", async () => {
     const initialDetail = createConversationDetail();
-    const appendedDetail = createConversationDetail({
-      conversation: {
-        messageCount: 3,
-        previewText: "Follow-up question",
-        updatedAt: "2026-04-25T00:01:00.000Z",
-        lastMessageAt: "2026-04-25T00:01:00.000Z",
-      },
-      messages: [
-        ...initialDetail.messages,
-        createMessage({
-          id: "msg_user_2",
-          conversationId: initialDetail.conversation.id,
-          ordinal: 3,
-          role: "user",
-          content: "Follow-up question",
-          createdAt: "2026-04-25T00:01:00.000Z",
-          updatedAt: "2026-04-25T00:01:00.000Z",
-        }),
-      ],
-    });
-    const stoppedDetail = createConversationDetail({
-      conversation: {
-        messageCount: 4,
-        previewText: "Partial answer",
-        updatedAt: "2026-04-25T00:02:00.000Z",
-        lastMessageAt: "2026-04-25T00:02:00.000Z",
-      },
-      messages: [
-        ...appendedDetail.messages,
-        createMessage({
-          id: "msg_assistant_2",
-          conversationId: initialDetail.conversation.id,
-          ordinal: 4,
-          role: "assistant",
-          content: "Partial answer",
-          reasoningText: "Streamed reasoning",
-          status: "stopped",
-          errorMessage: "Generation stopped.",
-          providerLabel: "OpenAI · Test",
-          responseModel: null,
-          createdAt: "2026-04-25T00:02:00.000Z",
-          updatedAt: "2026-04-25T00:02:00.000Z",
-        }),
-      ],
-    });
+    const store = createInMemoryConversationStore([initialDetail]);
 
-    mockListHomeChatConversations.mockResolvedValue([initialDetail.conversation]);
-    mockGetHomeChatConversation.mockResolvedValue(initialDetail);
-    mockAppendHomeChatUserMessage.mockResolvedValue(appendedDetail);
+    mockListHomeChatConversations.mockImplementation(() => Promise.resolve(store.listConversations()));
+    mockGetHomeChatConversation.mockImplementation((conversationId: string) =>
+      Promise.resolve(store.getConversation(conversationId)));
+    mockAppendHomeChatUserMessage.mockImplementation((conversationId: string, userMessage: string) =>
+      Promise.resolve(store.appendUserMessage(conversationId, userMessage)));
+    mockReplaceLatestHomeChatAssistantMessage.mockImplementation((options: {
+      conversationId: string;
+      content: string;
+      reasoningText?: string | null;
+      status: HomeChatMessage["status"];
+      errorMessage?: string | null;
+      providerLabel?: string | null;
+      responseModel?: string | null;
+    }) => Promise.resolve(store.replaceLatestAssistantMessage(options)));
     mockStreamHomeChatConversation.mockImplementation(
       ({ abortSignal, onTextStream }: { abortSignal?: AbortSignal; onTextStream?: (progress: {
         eventCount: number;
@@ -338,7 +496,6 @@ describe("useHomeChatWorkspace", () => {
           }, { once: true });
         }),
     );
-    mockReplaceLatestHomeChatAssistantMessage.mockResolvedValue(stoppedDetail);
 
     const { result } = renderHook(
       () =>
@@ -374,7 +531,17 @@ describe("useHomeChatWorkspace", () => {
 
     await waitFor(() => {
       expect(result.current.isStreaming).toBe(false);
+      expect(result.current.isBusy).toBe(false);
       expect(result.current.liveAssistant).toBeNull();
+      expect(result.current.isEditingLatestUserMessage).toBe(true);
+      expect(result.current.composerValue).toBe("Follow-up question");
+      expect(result.current.activeConversation?.messages.at(-1)).toMatchObject({
+        role: "assistant",
+        content: "Partial answer",
+        reasoningText: "Streamed reasoning",
+        status: "stopped",
+        errorMessage: "Generation stopped.",
+      });
     });
 
     await waitFor(() => {
@@ -387,9 +554,412 @@ describe("useHomeChatWorkspace", () => {
         }),
       );
     });
+  });
+
+  it("keeps a stopped message even if the provider resolves after abort", async () => {
+    const initialDetail = createConversationDetail();
+    const store = createInMemoryConversationStore([initialDetail]);
+    const deferredStream = createDeferred<ReturnType<typeof createStreamResult>>();
+
+    mockListHomeChatConversations.mockImplementation(() => Promise.resolve(store.listConversations()));
+    mockGetHomeChatConversation.mockImplementation((conversationId: string) =>
+      Promise.resolve(store.getConversation(conversationId)));
+    mockAppendHomeChatUserMessage.mockImplementation((conversationId: string, userMessage: string) =>
+      Promise.resolve(store.appendUserMessage(conversationId, userMessage)));
+    mockReplaceLatestHomeChatAssistantMessage.mockImplementation((options: {
+      conversationId: string;
+      content: string;
+      reasoningText?: string | null;
+      status: HomeChatMessage["status"];
+      errorMessage?: string | null;
+      providerLabel?: string | null;
+      responseModel?: string | null;
+    }) => Promise.resolve(store.replaceLatestAssistantMessage(options)));
+    mockStreamHomeChatConversation.mockImplementation(
+      ({ onTextStream }: { onTextStream?: (progress: {
+        eventCount: number;
+        firstReasoningLatencyMs: number | null;
+        firstTextLatencyMs: number | null;
+        lastEventType: string | null;
+        reasoningChars: number;
+        reasoningText: string;
+        receivedChars: number;
+        text: string;
+      }) => void }) => {
+        onTextStream?.({
+          eventCount: 1,
+          firstReasoningLatencyMs: 1,
+          firstTextLatencyMs: 1,
+          lastEventType: "text-delta",
+          reasoningChars: 17,
+          reasoningText: "Streamed reasoning",
+          receivedChars: 14,
+          text: "Partial answer",
+        });
+
+        return deferredStream.promise;
+      },
+    );
+
+    const { result } = renderHook(
+      () =>
+        useHomeChatWorkspace({
+          providerAccess: configuredProviderAccess,
+          providerConfig,
+        }),
+      {
+        wrapper: createWrapper(createQueryClient()),
+      },
+    );
 
     await waitFor(() => {
+      expect(result.current.activeConversation?.messages.length).toBe(2);
+    });
+
+    act(() => {
+      result.current.setComposerValue("Follow-up question");
+    });
+
+    act(() => {
+      void result.current.submitComposer();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(true);
+    });
+
+    act(() => {
+      result.current.stopStreaming();
+    });
+
+    deferredStream.resolve(createStreamResult({
+      text: "Late completed answer",
+      reasoningText: "Late reasoning",
+    }));
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.activeConversation?.messages.at(-1)).toMatchObject({
+        role: "assistant",
+        content: "Partial answer",
+        reasoningText: "Streamed reasoning",
+        status: "stopped",
+      });
+    });
+
+    expect(mockReplaceLatestHomeChatAssistantMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Late completed answer",
+        status: "completed",
+      }),
+    );
+  });
+
+  it("keeps streams running per conversation while switching between chats", async () => {
+    const conversationA = createConversationDetail({
+      conversation: {
+        id: "conv_1",
+        title: "Chat A",
+        lastMessageAt: "2026-04-25T00:00:00.000Z",
+      },
+      messages: [
+        createMessage({
+          id: "msg_a_user_1",
+          conversationId: "conv_1",
+          role: "user",
+          ordinal: 1,
+          content: "Question A1",
+        }),
+        createMessage({
+          id: "msg_a_assistant_1",
+          conversationId: "conv_1",
+          role: "assistant",
+          ordinal: 2,
+          content: "Answer A1",
+          providerLabel: "OpenAI · Test",
+          responseModel: "gpt-test",
+        }),
+      ],
+    });
+    const conversationB = createConversationDetail({
+      conversation: {
+        id: "conv_2",
+        title: "Chat B",
+        lastMessageAt: "2026-04-24T23:59:00.000Z",
+      },
+      messages: [
+        createMessage({
+          id: "msg_b_user_1",
+          conversationId: "conv_2",
+          role: "user",
+          ordinal: 1,
+          content: "Question B1",
+        }),
+        createMessage({
+          id: "msg_b_assistant_1",
+          conversationId: "conv_2",
+          role: "assistant",
+          ordinal: 2,
+          content: "Answer B1",
+          providerLabel: "OpenAI · Test",
+          responseModel: "gpt-test",
+        }),
+      ],
+    });
+    const store = createInMemoryConversationStore([conversationA, conversationB]);
+    const deferredA = createDeferred<ReturnType<typeof createStreamResult>>();
+    const deferredB = createDeferred<ReturnType<typeof createStreamResult>>();
+
+    mockListHomeChatConversations.mockImplementation(() => Promise.resolve(store.listConversations()));
+    mockGetHomeChatConversation.mockImplementation((conversationId: string) =>
+      Promise.resolve(store.getConversation(conversationId)));
+    mockAppendHomeChatUserMessage.mockImplementation((conversationId: string, userMessage: string) =>
+      Promise.resolve(store.appendUserMessage(conversationId, userMessage)));
+    mockReplaceLatestHomeChatAssistantMessage.mockImplementation((options: {
+      conversationId: string;
+      content: string;
+      reasoningText?: string | null;
+      status: HomeChatMessage["status"];
+      errorMessage?: string | null;
+      providerLabel?: string | null;
+      responseModel?: string | null;
+    }) => Promise.resolve(store.replaceLatestAssistantMessage(options)));
+    mockStreamHomeChatConversation.mockImplementation(({ messages, onTextStream }: {
+      messages: Array<{ content: string; role: string }>;
+      onTextStream?: (progress: {
+        eventCount: number;
+        firstReasoningLatencyMs: number | null;
+        firstTextLatencyMs: number | null;
+        lastEventType: string | null;
+        reasoningChars: number;
+        reasoningText: string;
+        receivedChars: number;
+        text: string;
+      }) => void;
+    }) => {
+      const latestPrompt = messages.at(-1)?.content;
+
+      if (latestPrompt === "Question A2") {
+        onTextStream?.({
+          eventCount: 1,
+          firstReasoningLatencyMs: 1,
+          firstTextLatencyMs: 1,
+          lastEventType: "text-delta",
+          reasoningChars: 9,
+          reasoningText: "Reason A2",
+          receivedChars: 9,
+          text: "Partial A",
+        });
+        return deferredA.promise;
+      }
+
+      if (latestPrompt === "Question B2") {
+        onTextStream?.({
+          eventCount: 1,
+          firstReasoningLatencyMs: 1,
+          firstTextLatencyMs: 1,
+          lastEventType: "text-delta",
+          reasoningChars: 9,
+          reasoningText: "Reason B2",
+          receivedChars: 9,
+          text: "Partial B",
+        });
+        return deferredB.promise;
+      }
+
+      throw new Error(`Unexpected stream prompt: ${latestPrompt}`);
+    });
+
+    const { result } = renderHook(
+      () =>
+        useHomeChatWorkspace({
+          providerAccess: configuredProviderAccess,
+          providerConfig,
+        }),
+      {
+        wrapper: createWrapper(createQueryClient()),
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.activeConversationId).toBe("conv_1");
+      expect(result.current.activeConversation?.messages.at(-1)?.content).toBe("Answer A1");
+    });
+
+    act(() => {
+      result.current.setComposerValue("Question A2");
+    });
+    act(() => {
+      void result.current.submitComposer();
+    });
+
+    await waitFor(() => {
+      expect(result.current.activeConversationId).toBe("conv_1");
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.liveAssistant?.text).toBe("Partial A");
+    });
+
+    act(() => {
+      result.current.selectConversation("conv_2");
+    });
+
+    await waitFor(() => {
+      expect(result.current.activeConversationId).toBe("conv_2");
       expect(result.current.isBusy).toBe(false);
+      expect(result.current.activeConversation?.messages.at(-1)?.content).toBe("Answer B1");
+    });
+
+    act(() => {
+      result.current.setComposerValue("Question B2");
+    });
+    act(() => {
+      void result.current.submitComposer();
+    });
+
+    await waitFor(() => {
+      expect(result.current.activeConversationId).toBe("conv_2");
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.liveAssistant?.text).toBe("Partial B");
+    });
+
+    act(() => {
+      result.current.selectConversation("conv_1");
+    });
+
+    await waitFor(() => {
+      expect(result.current.activeConversationId).toBe("conv_1");
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.liveAssistant?.text).toBe("Partial A");
+    });
+
+    deferredA.resolve(createStreamResult({
+      text: "Answer A2",
+      reasoningText: "Reason A2",
+    }));
+
+    await waitFor(() => {
+      expect(result.current.activeConversationId).toBe("conv_1");
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.activeConversation?.messages.at(-1)).toMatchObject({
+        role: "assistant",
+        content: "Answer A2",
+        status: "completed",
+      });
+    });
+
+    act(() => {
+      result.current.selectConversation("conv_2");
+    });
+
+    await waitFor(() => {
+      expect(result.current.activeConversationId).toBe("conv_2");
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.liveAssistant?.text).toBe("Partial B");
+    });
+
+    deferredB.resolve(createStreamResult({
+      text: "Answer B2",
+      reasoningText: "Reason B2",
+    }));
+
+    await waitFor(() => {
+      expect(result.current.activeConversationId).toBe("conv_2");
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.activeConversation?.messages.at(-1)).toMatchObject({
+        role: "assistant",
+        content: "Answer B2",
+        status: "completed",
+      });
+    });
+  });
+
+  it("retries a stopped assistant by overwriting the latest assistant message", async () => {
+    const stoppedDetail = createConversationDetail({
+      messages: [
+        createMessage({
+          id: "msg_user_1",
+          conversationId: "conv_1",
+          role: "user",
+          ordinal: 1,
+          content: "Retry question",
+        }),
+        createMessage({
+          id: "msg_assistant_1",
+          conversationId: "conv_1",
+          role: "assistant",
+          ordinal: 2,
+          content: "Stopped answer",
+          reasoningText: "Old reasoning",
+          status: "stopped",
+          errorMessage: "Generation stopped.",
+          providerLabel: "OpenAI · Test",
+          responseModel: null,
+        }),
+      ],
+    });
+    const store = createInMemoryConversationStore([stoppedDetail]);
+
+    mockListHomeChatConversations.mockImplementation(() => Promise.resolve(store.listConversations()));
+    mockGetHomeChatConversation.mockImplementation((conversationId: string) =>
+      Promise.resolve(store.getConversation(conversationId)));
+    mockAppendHomeChatUserMessage.mockImplementation((conversationId: string, userMessage: string) =>
+      Promise.resolve(store.appendUserMessage(conversationId, userMessage)));
+    mockReplaceLatestHomeChatAssistantMessage.mockImplementation((options: {
+      conversationId: string;
+      content: string;
+      reasoningText?: string | null;
+      status: HomeChatMessage["status"];
+      errorMessage?: string | null;
+      providerLabel?: string | null;
+      responseModel?: string | null;
+    }) => Promise.resolve(store.replaceLatestAssistantMessage(options)));
+    mockStreamHomeChatConversation.mockResolvedValue(createStreamResult({
+      text: "Retried answer",
+      reasoningText: "Fresh reasoning",
+    }));
+
+    const { result } = renderHook(
+      () =>
+        useHomeChatWorkspace({
+          providerAccess: configuredProviderAccess,
+          providerConfig,
+        }),
+      {
+        wrapper: createWrapper(createQueryClient()),
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.activeConversation?.messages.at(-1)).toMatchObject({
+        role: "assistant",
+        status: "stopped",
+      });
+    });
+
+    await act(async () => {
+      await result.current.retryLatestAssistant();
+    });
+
+    expect(mockAppendHomeChatUserMessage).not.toHaveBeenCalled();
+    expect(mockStreamHomeChatConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: [
+          expect.objectContaining({
+            role: "user",
+            content: "Retry question",
+          }),
+        ],
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.activeConversation?.messages).toHaveLength(2);
+      expect(result.current.activeConversation?.messages.at(-1)).toMatchObject({
+        role: "assistant",
+        content: "Retried answer",
+        reasoningText: "Fresh reasoning",
+        status: "completed",
+      });
     });
   });
 });
