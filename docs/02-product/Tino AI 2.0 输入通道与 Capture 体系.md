@@ -156,7 +156,23 @@
 
 > `clipboard history != corpus != artifact`
 
-## 7. 关于“万物都是 Markdown”的更准确说法
+## 7. `Inbox Project` 不是垃圾场
+
+`Inbox Project` 是输入路由的默认缓冲层，不是所有杂项的永久墓地。
+
+当前固定规则是：
+
+1. 没有显式 project 归属的输入，默认先进 `Inbox Project`
+2. 系统可以提出“建议归类到某个 project”，但不能静默搬运已命名 project 的材料
+3. 长期未被引用、未被确认、未被提升的 capture，不应持续高频 resurfacing
+4. `Inbox Project` 的 digest 和 resurfacing 应比活跃 project 更保守
+5. 低置信输入允许停留在 capture / inbox 候选层，不急于提升成正式 corpus
+
+结论：
+
+> `Inbox Project` 的价值是接住和整理，不是默认把噪音升级成知识。
+
+## 8. 关于“万物都是 Markdown”的更准确说法
 
 当前共识不应表述为：
 
@@ -168,9 +184,8 @@
 
 这对 PDF、PPT、Excel、图片、视频尤其重要。
 
-## 8. 一句结论
+## 9. 一句结论
 
 剪贴板在 `Tino AI 2.0` 里的正确位置是：
 
 > `Input Adapter + Capture Pipeline` 的核心通道，而不是知识真相层本身。
-

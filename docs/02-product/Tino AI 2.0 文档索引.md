@@ -10,12 +10,14 @@
 按顺序阅读：
 
 1. `docs/02-product/Tino AI 2.0 产品定义.md`
-2. `docs/02-product/Tino AI 2.0 主战场定义.md`
-3. `docs/02-product/Tino AI 2.0 核心对象与主循环.md`
-4. `docs/02-product/Tino AI 2.0 输入通道与 Capture 体系.md`
-5. `docs/02-product/Tino AI 2.0 能力分层.md`
-6. `docs/02-product/Tino AI 2.0 交互模式、上下文与写回协议.md`
-7. `docs/02-product/Tino AI 2.0 非目标与阶段边界.md`
+2. `docs/02-product/Tino AI 2.0 结构性差异化.md`
+3. `docs/02-product/Tino AI 2.0 主战场定义.md`
+4. `docs/02-product/Tino AI 2.0 核心对象与主循环.md`
+5. `docs/02-product/Tino AI 2.0 输入通道与 Capture 体系.md`
+6. `docs/02-product/Tino AI 2.0 能力分层.md`
+7. `docs/02-product/Tino AI 2.0 交互模式、上下文与写回协议.md`
+8. `docs/02-product/Tino AI 2.0 运行时护栏.md`
+9. `docs/02-product/Tino AI 2.0 非目标与阶段边界.md`
 
 ## 2. 这组文档解决什么问题
 
@@ -25,11 +27,13 @@
 
 - `Tino AI` 现在到底是什么产品母型
 - 为什么它更像 `NotebookLM` 内核而不是 `Notion AI` 本体
+- 为什么它真正的护城河不只是“功能现在还不一样”，而是结构性路线差异
 - 为什么它不做编辑器，却仍然是 `Markdown-first`
 - 当前阶段唯一主战场是什么
 - 剪贴板、导入、静默 digest、chat、Markdown artifact 在系统里分别属于哪一层
 - 同一个 chat 入口里，`查 / 研 / 产` 三种意图如何区分
 - corpus scope 与 artifact feedback 应该怎么定义
+- `local-first`、`Inbox Project`、静默系统、外部知识、artifact ownership 这些关键边界到底怎么约束
 
 ## 3. 文档职责划分
 
@@ -41,23 +45,31 @@
 
 冻结当前阶段单一主战场与单一主循环。
 
-### 3.3 `Tino AI 2.0 核心对象与主循环`
+### 3.3 `Tino AI 2.0 结构性差异化`
+
+冻结当前阶段真正可持续的差异化来源：本地优先、系统级接入、开放 artifact 闭环。
+
+### 3.4 `Tino AI 2.0 核心对象与主循环`
 
 冻结核心对象模型：`project / source / capture / corpus / thread / digest / artifact`。
 
-### 3.4 `Tino AI 2.0 输入通道与 Capture 体系`
+### 3.5 `Tino AI 2.0 输入通道与 Capture 体系`
 
 冻结剪贴板、文件导入、选中唤起等输入层的正确位置。
 
-### 3.5 `Tino AI 2.0 能力分层`
+### 3.6 `Tino AI 2.0 能力分层`
 
 冻结从外部工作环境到 artifact 输出的整体分层。
 
-### 3.6 `Tino AI 2.0 交互模式、上下文与写回协议`
+### 3.7 `Tino AI 2.0 交互模式、上下文与写回协议`
 
 冻结入口、意图合同、scope、上下文栈、写回协议与反馈回流。
 
-### 3.7 `Tino AI 2.0 非目标与阶段边界`
+### 3.8 `Tino AI 2.0 运行时护栏`
+
+冻结最容易把实现带歪的运行时判断：`local-first` 边界、`Inbox Project` 治理、静默系统不打扰、外部知识定义、artifact 托管权与版本冲突。
+
+### 3.9 `Tino AI 2.0 非目标与阶段边界`
 
 冻结当前阶段故意不做的东西，防止范围漂移。
 
@@ -83,4 +95,5 @@
 - `Tino AI 2.0 产品定义`
 - `Tino AI 2.0 主战场定义`
 - `Tino AI 2.0 核心对象与主循环`
+- `Tino AI 2.0 运行时护栏`
 - `docs/03-planning/HANDOFF.md`

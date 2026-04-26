@@ -20,7 +20,7 @@
 - 当前 AI 质量闭环与 replay 计划：`docs/03-planning/Tino AI 开发期质量管线计划 v0.1.md`
 - 当前静默编译从 batch runtime 迁到 `day digest / rolling topic` 的细化方案：`docs/03-planning/Tino AI 静默编译优化与迁移方案 v0.1.md`
 - 打包、环境、签名：`docs/03-planning/环境与打包流程.md`
-- 当前 AI 产品定义、主战场、核心对象与运行时契约：`docs/02-product/Tino AI 2.0 文档索引.md`
+- 当前 AI 产品定义、结构性差异、主战场、核心对象、运行时契约与护栏：`docs/02-product/Tino AI 2.0 文档索引.md`
 - 旧 `MVP` 产品原型与早期能力地图：`docs/02-product/个人信息流软件需求原型文档.md`、`docs/02-product/Tino AI 能力地图 v0.2.md`
 - legacy `/ai` / review 资产说明只在排查历史实现时阅读，且统一去 `docs/03-planning/archive/`
 
@@ -37,7 +37,7 @@
 
 当前已真实存在：
 
-- `docs/02-product/Tino AI 2.0 文档索引.md` 及其配套产品文档已建立，当前 `AI chat / Copilot` 产品真相源已从早期 `MVP` 文档切到这组 2.0 文档；当前产品母型已收口为 `NotebookLM` 式 `project / corpus` 内核加 `Notion AI` 式统一入口，且明确不做复杂编辑器
+- `docs/02-product/Tino AI 2.0 文档索引.md` 及其配套产品文档已建立，当前 `AI chat / Copilot` 产品真相源已从早期 `MVP` 文档切到这组 2.0 文档；当前产品母型已收口为 `NotebookLM` 式 `project / corpus` 内核加 `Notion AI` 式统一入口，且明确不做复杂编辑器；当前结构性差异化已收口为 `本地优先 + 系统级接入 + 开放 artifact 闭环`；补充护栏也已明确：`local-first` 当前首先指数据面与工作流面，`Inbox Project` 只是缓冲层，静默系统遵守不打扰原则，外部知识不静默混入 corpus 事实，artifact 不自动 merge
 - Rust 剪贴板轮询、`CaptureRecord`、`daily/*.md` 原始归档
 - clipboard history 稳定 app storage root、sqlite + JSONL fallback、90 天缓存保留上限
 - clipboard 搜索、过滤、暂停采集、link enrich、paste-back、窗口 bootstrap 等主体验已基本收口

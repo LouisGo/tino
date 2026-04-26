@@ -95,6 +95,16 @@
 
 > 不允许系统在用户以为自己在“查”的时候，偷偷用“研”的协议回答。
 
+### 2.7 用户感知规则
+
+`查 / 研 / 产` 是系统合同，不应该变成用户每一轮都手动切换的负担。
+
+当前阶段固定为：
+
+- 默认由系统隐式判定
+- 默认不把模式切换做成高频必选操作
+- 只有在歧义会显著改变证据、scope 或写权限时，才追问用户
+
 ## 3. 入口面
 
 ### 3.1 Global Quick Window
@@ -186,7 +196,21 @@
 - 不静默引入外部知识
 - 不把模型先验伪装成 corpus 事实
 
-### 4.5 UI 要求
+### 4.5 `External Knowledge` 的确切含义
+
+当前阶段的 `External Knowledge` 至少拆成两类：
+
+1. `Model Prior`
+2. `Network Retrieval`
+
+固定规则：
+
+- `查` 模式下，当前 scope 不足时先承认不足，不静默拿外部知识补齐
+- `Model Prior` 只有在用户明确要开放讨论，或系统显式标注“这是语料外推断”时才能进入回答
+- `Network Retrieval` 在当前阶段不能静默触发，必须由用户显式触发或明确同意
+- 外部知识不能伪装成 corpus citation
+
+### 4.6 UI 要求
 
 当前 scope 必须尽量可见，不能让用户猜系统到底在引用什么。
 
@@ -385,6 +409,27 @@
 关键边界：
 
 > 我们不接管外部编辑过程，但要接住外部编辑结果。
+
+### 10.7 Artifact Ownership
+
+当前阶段至少区分两类 artifact：
+
+1. `Tino-managed artifact`
+2. `User-managed artifact`
+
+前者可以记录路径、元数据和 revision 信号；后者只允许 `Tino` 提供导出、append proposal 或 patch proposal，不应静默覆盖原文件。
+
+### 10.8 Versioning 与冲突规则
+
+当前阶段固定两条保守规则：
+
+1. 不自动 merge
+2. 外部修改先作为 revision signal，而不是自动重写指令
+
+如果同一 artifact 在外部和 `Tino` 侧都发生变化，系统默认应：
+
+- 生成新的 revision 或 patch proposal
+- 让用户决定 append、replace 还是手动合并
 
 ## 11. 一句结论
 
