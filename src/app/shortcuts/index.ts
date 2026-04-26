@@ -2,11 +2,13 @@ import type { ShortcutBindingOverride, ShortcutDefinition } from "@/core/shortcu
 import { systemShortcuts } from "@/app/shortcuts/system-shortcuts";
 import { contextMenuShortcuts } from "@/core/context-menu";
 import { clipboardShortcuts } from "@/features/clipboard/clipboard-shortcuts";
+import { homeChatShortcuts } from "@/features/chat/home-chat-shortcuts";
 
 export const appShortcuts = [
   ...contextMenuShortcuts,
   ...systemShortcuts,
   ...clipboardShortcuts,
+  ...homeChatShortcuts,
 ] satisfies ShortcutDefinition<unknown, unknown>[];
 
 const configurableShortcutIds = new Set(

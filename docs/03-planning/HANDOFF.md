@@ -1,6 +1,6 @@
 # Tino Handoff
 
-> 最后更新：2026-04-22
+> 最后更新：2026-04-26
 > 当前基线提交：`313306f`
 > 角色：短版 current-state 控制文档
 > 原则：只写当前有效信息；旧 AI 过渡方案不再在这里保留双轨表述
@@ -20,13 +20,14 @@
 - 当前 AI 质量闭环与 replay 计划：`docs/03-planning/Tino AI 开发期质量管线计划 v0.1.md`
 - 当前静默编译从 batch runtime 迁到 `day digest / rolling topic` 的细化方案：`docs/03-planning/Tino AI 静默编译优化与迁移方案 v0.1.md`
 - 打包、环境、签名：`docs/03-planning/环境与打包流程.md`
-- 产品目标与 AI 能力边界：`docs/02-product/个人信息流软件需求原型文档.md`、`docs/02-product/Tino AI 能力地图 v0.2.md`
+- 当前 AI 产品定义、主战场、核心对象与运行时契约：`docs/02-product/Tino AI 2.0 文档索引.md`
+- 旧 `MVP` 产品原型与早期能力地图：`docs/02-product/个人信息流软件需求原型文档.md`、`docs/02-product/Tino AI 能力地图 v0.2.md`
 - legacy `/ai` / review 资产说明只在排查历史实现时阅读，且统一去 `docs/03-planning/archive/`
 
 ## 2. 项目一句话
 
-`Tino` 是一个运行在 `macOS` 上的个人信息流入口层工具：  
-低摩擦收集用户输入，先做原始归档，再由后台 AI 编译成 `topics/`、`_inbox/` 等知识结果，最终以 `Markdown` 落盘给 Obsidian / 思源等系统使用。
+`Tino` 当前应理解为一个运行在 `macOS` 上的个人项目语料 AI 工作台：  
+它不接管外部编辑器，而是低摩擦接住用户输入与导入材料，把它们归一成可追溯的 Markdown 语料，再围绕这些语料提供 grounded chat、research、silent digest 和 Markdown 产出。
 
 ## 3. 当前真实状态
 
@@ -36,6 +37,7 @@
 
 当前已真实存在：
 
+- `docs/02-product/Tino AI 2.0 文档索引.md` 及其配套产品文档已建立，当前 `AI chat / Copilot` 产品真相源已从早期 `MVP` 文档切到这组 2.0 文档；当前产品母型已收口为 `NotebookLM` 式 `project / corpus` 内核加 `Notion AI` 式统一入口，且明确不做复杂编辑器
 - Rust 剪贴板轮询、`CaptureRecord`、`daily/*.md` 原始归档
 - clipboard history 稳定 app storage root、sqlite + JSONL fallback、90 天缓存保留上限
 - clipboard 搜索、过滤、暂停采集、link enrich、paste-back、窗口 bootstrap 等主体验已基本收口
@@ -97,6 +99,7 @@
 
 本轮已形成、但尚未完成代码落地的 next-stage 共识：
 
+- 当前 AI 产品主战场先收口到 `project / corpus copilot`，而不是继续发散成完整编辑器、通用 agent 或重陪伴产品
 - 进入真实历史 replay 前，先手工标注 `2-3` 天真实剪贴板历史，定义理想的 `Day Digest / Rolling Topic`
 - 当前 `20 条 / 10 分钟` 只应继续作为 queue promotion / triage 的调度窗口，不应再被当成最终语义窗口
 - `daily/` 仍然只做原始归档；后续真正的语义层应上移到 `day digest / rolling topic` 一类的静默编译层

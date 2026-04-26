@@ -4,6 +4,7 @@
 > 适用阶段：剪贴板模块 + 应用底座已落地，AI 主链路启动前
 > 本版变化：从 `review-first` 修正为 `result-first`，明确 AI 是后台知识编译器，审阅是隐藏干预层
 > MVP 心智：`inbox-first`。用户不需要先创建 `topic`，系统会在后台从混杂输入中生成并收敛议题。
+> 当前状态：保留为历史 `MVP / AI rethink` 阶段产品文档；当前 AI 产品真相源请先读 `docs/02-product/Tino AI 2.0 文档索引.md`
 
 ---
 

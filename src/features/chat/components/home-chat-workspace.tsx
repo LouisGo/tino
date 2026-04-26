@@ -5,26 +5,21 @@ import {
   useMemo,
   useRef,
   useState,
-  type RefObject,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 
 import { Link } from "@tanstack/react-router";
 import {
   ArrowUp,
   Check,
   ChevronDown,
-  CornerDownLeft,
   Copy,
-  EllipsisVertical,
   LoaderCircle,
   Pencil,
   Plus,
   RotateCcw,
   Search,
   Square,
-  X,
 } from "lucide-react";
 
 import { useContextMenu } from "@/core/context-menu";
@@ -40,15 +35,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DISABLE_TEXT_INPUT_ASSIST_PROPS } from "@/components/ui/text-input-behavior";
 import { Tooltip } from "@/components/ui/tooltip";
+import { ShortcutKbd, useShortcutScope } from "@/core/shortcuts";
 import { resolveProviderAccessConfig, type ProviderAccessConfig } from "@/features/ai/lib/provider-access";
 import {
   homeChatConversationContextMenu,
-  type HomeChatConversationMenuContext,
 } from "@/features/chat/home-chat-conversation-context-menu";
+import {
+  HOME_CHAT_OPEN_SEARCH_EVENT,
+  HOME_CHAT_START_NEW_CONVERSATION_EVENT,
+} from "@/features/chat/home-chat-shortcut-events";
+import { HomeChatSearchDialog } from "@/features/chat/components/home-chat-search-dialog";
+import { HomeChatSidebarList } from "@/features/chat/components/home-chat-sidebar-list";
 import { useHomeChatWorkspace } from "@/features/chat/hooks/use-home-chat-workspace";
+import { resolveHomeChatConversationTitle } from "@/features/chat/lib/home-chat-conversation-list";
 import { MarkdownTextPreview } from "@/features/clipboard/components/markdown-text-preview";
 import { HomeComposerDropOverlay } from "@/features/dashboard/components/home-composer-drop-overlay";
 import { HomeAttachmentPicker } from "@/features/dashboard/components/home-attachment-picker";
@@ -56,7 +57,6 @@ import { HomeAttachmentStrip } from "@/features/dashboard/components/home-attach
 import { useHomeAttachmentTransfer } from "@/features/dashboard/hooks/use-home-attachment-transfer";
 import { useHomeAttachments } from "@/features/dashboard/hooks/use-home-attachments";
 import { formatAppRelativeTime, useScopedT } from "@/i18n";
-import { resolvePortalContainer } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 import type {
   HomeChatConversationSummary,
@@ -158,8 +158,6 @@ export function HomeChatWorkspace({
   const manualScrollOverrideUntilRef = useRef(0);
   const [renderedSuggestions, setRenderedSuggestions] = useState(suggestionPrompts);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
-  const [searchDialogInstanceKey, setSearchDialogInstanceKey] = useState(0);
-  const [searchDialogValue, setSearchDialogValue] = useState("");
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [renamingConversationId, setRenamingConversationId] = useState<string | null>(null);
   const [renameDraftValue, setRenameDraftValue] = useState("");
@@ -174,12 +172,12 @@ export function HomeChatWorkspace({
     () => activeConversation?.messages ?? [],
     [activeConversation?.messages],
   );
+  useShortcutScope("homeChat.workspace");
   const activeLiveReplacementMessageId = liveAssistant?.replaceMessageId ?? null;
   const isLiveAssistantReplacingInView = Boolean(
     activeLiveReplacementMessageId
     && currentMessages.some((message) => message.id === activeLiveReplacementMessageId),
   );
-  const normalizedSearchDialogValue = searchDialogValue.trim().toLowerCase();
   const syncScrollBottomAffordance = useCallback((viewport: HTMLDivElement) => {
     if (emptyStateVisible) {
       viewportModeRef.current = "follow";
@@ -335,47 +333,11 @@ export function HomeChatWorkspace({
     }
   }, [isEditingLatestUserMessage, workspaceError]);
 
-  useEffect(() => {
-    const handleGlobalSearchShortcut = (event: KeyboardEvent) => {
-      if (
-        event.defaultPrevented
-        || event.altKey
-        || event.shiftKey
-        || !(event.metaKey || event.ctrlKey)
-        || event.key.toLowerCase() !== "k"
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      handleOpenSearchDialog();
-    };
-
-    window.addEventListener("keydown", handleGlobalSearchShortcut);
-    return () => {
-      window.removeEventListener("keydown", handleGlobalSearchShortcut);
-    };
-  }, []);
-
-  const searchResults = useMemo(() => {
-    if (!normalizedSearchDialogValue) {
-      return conversations;
-    }
-
-    return conversations.filter((conversation) => {
-      const haystacks = [
-        resolveConversationTitle(conversation.title, tDashboard("chat.newConversation")),
-        conversation.previewText ?? "",
-      ];
-
-      return haystacks.some((value) => value.toLowerCase().includes(normalizedSearchDialogValue));
-    });
-  }, [conversations, normalizedSearchDialogValue, tDashboard]);
-
-  const pinnedConversations = conversations.filter((conversation) => conversation.isPinned);
-  const recentConversations = conversations.filter((conversation) => !conversation.isPinned);
   const activeConversationTitle = activeConversation
-    ? resolveConversationTitle(activeConversation.conversation.title, tDashboard("chat.newConversation"))
+    ? resolveHomeChatConversationTitle(
+        activeConversation.conversation.title,
+        tDashboard("chat.newConversation"),
+      )
     : tDashboard("chat.newConversation");
 
   function handleMessageViewportScroll() {
@@ -454,7 +416,7 @@ export function HomeChatWorkspace({
     void submitComposer();
   }
 
-  function focusComposer() {
+  const focusComposer = useCallback(() => {
     window.requestAnimationFrame(() => {
       const textarea = promptTextareaRef.current;
       if (!textarea) {
@@ -465,14 +427,14 @@ export function HomeChatWorkspace({
       const caretPosition = textarea.value.length;
       textarea.setSelectionRange(caretPosition, caretPosition);
     });
-  }
+  }, []);
 
-  function handleStartNewConversation() {
+  const handleStartNewConversation = useCallback(() => {
     setSidebarError(null);
     setRenamingConversationId(null);
     startNewConversation();
     focusComposer();
-  }
+  }, [focusComposer, startNewConversation]);
 
   function handleSelectConversation(conversationId: string) {
     setSidebarError(null);
@@ -481,15 +443,12 @@ export function HomeChatWorkspace({
     focusComposer();
   }
 
-  function handleOpenSearchDialog() {
-    setSearchDialogInstanceKey((current) => current + 1);
-    setSearchDialogValue("");
+  const handleOpenSearchDialog = useCallback(() => {
     setSearchDialogOpen(true);
-  }
+  }, []);
 
   function handleCloseSearchDialog() {
     setSearchDialogOpen(false);
-    setSearchDialogValue("");
   }
 
   function handleSearchSelectConversation(conversationId: string) {
@@ -500,7 +459,7 @@ export function HomeChatWorkspace({
   function handleStartRename(conversation: HomeChatConversationSummary) {
     setSidebarError(null);
     setRenamingConversationId(conversation.id);
-    setRenameDraftValue(resolveConversationTitle(
+    setRenameDraftValue(resolveHomeChatConversationTitle(
       conversation.title,
       tDashboard("chat.newConversation"),
     ));
@@ -564,6 +523,29 @@ export function HomeChatWorkspace({
     }
   }
 
+  useEffect(() => {
+    const handleStartNewConversationShortcut = () => {
+      handleStartNewConversation();
+    };
+    const handleOpenSearchShortcut = () => {
+      handleOpenSearchDialog();
+    };
+
+    window.addEventListener(
+      HOME_CHAT_START_NEW_CONVERSATION_EVENT,
+      handleStartNewConversationShortcut,
+    );
+    window.addEventListener(HOME_CHAT_OPEN_SEARCH_EVENT, handleOpenSearchShortcut);
+
+    return () => {
+      window.removeEventListener(
+        HOME_CHAT_START_NEW_CONVERSATION_EVENT,
+        handleStartNewConversationShortcut,
+      );
+      window.removeEventListener(HOME_CHAT_OPEN_SEARCH_EVENT, handleOpenSearchShortcut);
+    };
+  }, [handleOpenSearchDialog, handleStartNewConversation]);
+
   return (
     <div
       className={cn(
@@ -575,21 +557,42 @@ export function HomeChatWorkspace({
       <aside className="app-home-chat-sidebar app-board-surface">
         <div className="app-home-chat-sidebar-header">
           <div className="app-home-chat-sidebar-actions">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleStartNewConversation()}
-              disabled={isPersistingTurn}
-              className={cn(
-                "app-home-chat-new-button",
-                isDraftConversation && "app-animated-tabs-indicator",
+            <Tooltip
+              content={(
+                <span className="flex items-center gap-2">
+                  <span>{tDashboard("chat.newChat")}</span>
+                  <ShortcutKbd shortcutId="homeChat.startNewConversation" />
+                </span>
               )}
+              placement="bottom"
+              anchorClassName="flex w-full min-w-0"
             >
-              <Plus className="size-4" />
-              <span>{tDashboard("chat.newChat")}</span>
-            </Button>
+              <div className="min-w-0 w-full">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleStartNewConversation()}
+                  disabled={isPersistingTurn}
+                  className={cn(
+                    "app-home-chat-new-button",
+                    isDraftConversation && "app-animated-tabs-indicator",
+                  )}
+                >
+                  <Plus className="size-4" />
+                  <span>{tDashboard("chat.newChat")}</span>
+                </Button>
+              </div>
+            </Tooltip>
 
-            <Tooltip content={tDashboard("chat.openSearch")} placement="bottom">
+            <Tooltip
+              content={(
+                <span className="flex items-center gap-2">
+                  <span>{tDashboard("chat.openSearch")}</span>
+                  <ShortcutKbd shortcutId="homeChat.openSearch" />
+                </span>
+              )}
+              placement="bottom"
+            >
               <div className="shrink-0">
                 <button
                   type="button"
@@ -612,32 +615,9 @@ export function HomeChatWorkspace({
             </div>
           ) : (
             <>
-              {pinnedConversations.length ? (
-                <ConversationSection
-                  title={tDashboard("chat.pinnedConversations")}
-                  conversations={pinnedConversations}
-                  activeConversationId={activeConversationId}
-                  renamingConversationId={renamingConversationId}
-                  renameDraftValue={renameDraftValue}
-                  renameInputRef={renameInputRef}
-                  busyConversationId={conversationActionPendingId}
-                  isBusy={isPersistingTurn}
-                  onRenameDraftChange={setRenameDraftValue}
-                  onRenameCancel={() => setRenamingConversationId(null)}
-                  onRenameSubmit={() => void handleRenameSubmit()}
-                  onSelectConversation={handleSelectConversation}
-                  onOpenConversationMenu={openAtElement}
-                  onConversationContextMenu={onContextMenu}
-                  onTogglePinned={(conversation) => void handleTogglePinned(conversation)}
-                  onStartRename={handleStartRename}
-                  onDeleteConversation={setDeleteTarget}
-                />
-              ) : null}
-
-              {recentConversations.length ? (
-                <ConversationSection
-                  title={tDashboard("chat.recentConversations")}
-                  conversations={recentConversations}
+              {conversations.length ? (
+                <HomeChatSidebarList
+                  conversations={conversations}
                   activeConversationId={activeConversationId}
                   renamingConversationId={renamingConversationId}
                   renameDraftValue={renameDraftValue}
@@ -955,7 +935,10 @@ export function HomeChatWorkspace({
               {tDashboard("chat.deleteDescription", {
                 values: {
                   title: deleteTarget
-                    ? resolveConversationTitle(deleteTarget.title, tDashboard("chat.newConversation"))
+                    ? resolveHomeChatConversationTitle(
+                        deleteTarget.title,
+                        tDashboard("chat.newConversation"),
+                      )
                     : "",
                 },
               })}
@@ -976,470 +959,13 @@ export function HomeChatWorkspace({
       </AlertDialog>
 
       <HomeChatSearchDialog
-        key={searchDialogInstanceKey}
         open={searchDialogOpen}
-        searchValue={searchDialogValue}
-        results={searchResults}
+        conversations={conversations}
         activeConversationId={activeConversationId}
         onClose={handleCloseSearchDialog}
-        onSearchValueChange={setSearchDialogValue}
         onSelectConversation={handleSearchSelectConversation}
       />
     </div>
-  );
-}
-
-function HomeChatSearchDialog({
-  open,
-  searchValue,
-  results,
-  activeConversationId,
-  onClose,
-  onSearchValueChange,
-  onSelectConversation,
-}: {
-  open: boolean;
-  searchValue: string;
-  results: HomeChatConversationSummary[];
-  activeConversationId: string | null;
-  onClose: () => void;
-  onSearchValueChange: (value: string) => void;
-  onSelectConversation: (conversationId: string) => void;
-}) {
-  const tCommon = useScopedT("common");
-  const tDashboard = useScopedT("dashboard");
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const resultRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const portalContainer = resolvePortalContainer();
-  const highlightedIndex = results.length > 0
-    ? Math.min(selectedIndex, results.length - 1)
-    : 0;
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      if (!open) {
-        return;
-      }
-
-      searchInputRef.current?.focus();
-      searchInputRef.current?.select();
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || results.length === 0) {
-      return;
-    }
-
-    resultRefs.current[highlightedIndex]?.scrollIntoView({
-      block: "nearest",
-    });
-  }, [highlightedIndex, open, results]);
-
-  if (!open || !portalContainer) {
-    return null;
-  }
-
-  const normalizedSearchValue = searchValue.trim();
-  const hasResults = results.length > 0;
-
-  return createPortal(
-    <div className="app-overlay-backdrop fixed inset-0 z-[145] bg-black/16 backdrop-blur-[2px]">
-      <div
-        className="flex min-h-full items-start justify-center px-4 pb-6 pt-[max(1.5rem,4vh)]"
-        onClick={onClose}
-      >
-        <section
-          role="dialog"
-          aria-modal="true"
-          aria-label={tDashboard("chat.openSearch")}
-          data-window-drag-disabled="true"
-          className="app-home-chat-search-dialog"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="app-home-chat-search-dialog-header">
-            <div className="app-home-chat-search-dialog-input-shell">
-              <Search className="app-home-chat-search-dialog-input-icon size-5" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchValue}
-                onChange={(event) => {
-                  setSelectedIndex(0);
-                  onSearchValueChange(event.target.value);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    event.preventDefault();
-                    onClose();
-                    return;
-                  }
-
-                  if (!results.length) {
-                    return;
-                  }
-
-                  if (event.key === "ArrowDown") {
-                    event.preventDefault();
-                    setSelectedIndex((current) => {
-                      const baseIndex = Math.min(current, results.length - 1);
-                      return (baseIndex + 1) % results.length;
-                    });
-                    return;
-                  }
-
-                  if (event.key === "ArrowUp") {
-                    event.preventDefault();
-                    setSelectedIndex((current) => {
-                      const baseIndex = Math.min(current, results.length - 1);
-                      return (baseIndex - 1 + results.length) % results.length;
-                    });
-                    return;
-                  }
-
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    const selectedConversation = results[highlightedIndex];
-                    if (selectedConversation) {
-                      onSelectConversation(selectedConversation.id);
-                    }
-                  }
-                }}
-                placeholder={tDashboard("chat.searchConversations")}
-                className="app-home-chat-search-dialog-input"
-                {...DISABLE_TEXT_INPUT_ASSIST_PROPS}
-              />
-            </div>
-
-            <button
-              type="button"
-              className="app-home-chat-search-dialog-close"
-              aria-label={tCommon("actions.close")}
-              onClick={onClose}
-            >
-              <X className="size-5" />
-            </button>
-          </div>
-
-          <div className="app-home-chat-search-dialog-body">
-            <div className="app-home-chat-search-dialog-section">
-              <p className="app-home-chat-search-dialog-label">
-                {tDashboard("chat.searchResultsLabel")}
-              </p>
-
-              {hasResults ? (
-                <div className="app-home-chat-search-dialog-results">
-                  {results.map((conversation, index) => {
-                    const isSelected = index === highlightedIndex;
-                    const isActive = conversation.id === activeConversationId;
-
-                    return (
-                      <button
-                        key={conversation.id}
-                        ref={(element) => {
-                          resultRefs.current[index] = element;
-                        }}
-                        type="button"
-                        className={cn(
-                          "app-home-chat-search-dialog-result",
-                          isSelected && "is-selected",
-                          isActive && "is-active",
-                        )}
-                        onMouseEnter={() => setSelectedIndex(index)}
-                        onClick={() => onSelectConversation(conversation.id)}
-                      >
-                        <div className="app-home-chat-search-dialog-result-main">
-                          <span className="app-home-chat-search-dialog-result-title">
-                            {resolveConversationTitle(
-                              conversation.title,
-                              tDashboard("chat.newConversation"),
-                            )}
-                          </span>
-                        </div>
-
-                        <div className="app-home-chat-search-dialog-result-meta">
-                          {!normalizedSearchValue ? (
-                            <span className="app-home-chat-search-dialog-result-time">
-                              {formatAppRelativeTime(conversation.lastMessageAt)}
-                            </span>
-                          ) : null}
-                          {isSelected ? (
-                            <CornerDownLeft className="app-home-chat-search-dialog-result-enter size-4" />
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="app-home-chat-search-dialog-empty">
-                  <span>
-                    {normalizedSearchValue
-                      ? tDashboard("chat.searchEmpty")
-                      : tDashboard("chat.emptyConversationHint")}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>,
-    portalContainer,
-  );
-}
-
-function ConversationSection({
-  title,
-  conversations,
-  activeConversationId,
-  renamingConversationId,
-  renameDraftValue,
-  renameInputRef,
-  busyConversationId,
-  isBusy,
-  onRenameDraftChange,
-  onRenameCancel,
-  onRenameSubmit,
-  onSelectConversation,
-  onOpenConversationMenu,
-  onConversationContextMenu,
-  onTogglePinned,
-  onStartRename,
-  onDeleteConversation,
-}: {
-  title: string;
-  conversations: HomeChatConversationSummary[];
-  activeConversationId: string | null;
-  renamingConversationId: string | null;
-  renameDraftValue: string;
-  renameInputRef: RefObject<HTMLInputElement | null>;
-  busyConversationId: string | null;
-  isBusy: boolean;
-  onRenameDraftChange: (value: string) => void;
-  onRenameCancel: () => void;
-  onRenameSubmit: () => void;
-  onSelectConversation: (conversationId: string) => void;
-  onOpenConversationMenu: (
-    element: Element | null,
-    context: HomeChatConversationMenuContext,
-  ) => boolean;
-  onConversationContextMenu: (
-    event: React.MouseEvent,
-    context: HomeChatConversationMenuContext,
-  ) => void;
-  onTogglePinned: (conversation: HomeChatConversationSummary) => void;
-  onStartRename: (conversation: HomeChatConversationSummary) => void;
-  onDeleteConversation: (conversation: HomeChatConversationSummary) => void;
-}) {
-  return (
-    <section className="app-home-chat-sidebar-group">
-      <div className="app-home-chat-sidebar-group-header">
-        <p className="app-home-chat-sidebar-label">{title}</p>
-      </div>
-
-      <div className="app-home-chat-sidebar-group-list">
-        {conversations.map((conversation) => (
-          <ConversationSidebarItem
-            key={conversation.id}
-            conversation={conversation}
-            active={conversation.id === activeConversationId}
-            renaming={conversation.id === renamingConversationId}
-            renameDraftValue={renameDraftValue}
-            renameInputRef={renameInputRef}
-            busy={isBusy || busyConversationId === conversation.id}
-            onRenameDraftChange={onRenameDraftChange}
-            onRenameCancel={onRenameCancel}
-            onRenameSubmit={onRenameSubmit}
-            onSelect={() => onSelectConversation(conversation.id)}
-            onOpenMenu={onOpenConversationMenu}
-            onConversationContextMenu={onConversationContextMenu}
-            onTogglePinned={() => onTogglePinned(conversation)}
-            onStartRename={() => onStartRename(conversation)}
-            onDelete={() => onDeleteConversation(conversation)}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ConversationSidebarItem({
-  conversation,
-  active,
-  renaming,
-  renameDraftValue,
-  renameInputRef,
-  busy,
-  onRenameDraftChange,
-  onRenameCancel,
-  onRenameSubmit,
-  onSelect,
-  onOpenMenu,
-  onConversationContextMenu,
-  onTogglePinned,
-  onStartRename,
-  onDelete,
-}: {
-  conversation: HomeChatConversationSummary;
-  active: boolean;
-  renaming: boolean;
-  renameDraftValue: string;
-  renameInputRef: RefObject<HTMLInputElement | null>;
-  busy: boolean;
-  onRenameDraftChange: (value: string) => void;
-  onRenameCancel: () => void;
-  onRenameSubmit: () => void;
-  onSelect: () => void;
-  onOpenMenu: (
-    element: Element | null,
-    context: HomeChatConversationMenuContext,
-  ) => boolean;
-  onConversationContextMenu: (
-    event: React.MouseEvent,
-    context: HomeChatConversationMenuContext,
-  ) => void;
-  onTogglePinned: () => void;
-  onStartRename: () => void;
-  onDelete: () => void;
-}) {
-  const tDashboard = useScopedT("dashboard");
-  const title = resolveConversationTitle(conversation.title, tDashboard("chat.newConversation"));
-  const menuContext: HomeChatConversationMenuContext = {
-    conversation,
-    onTogglePinned,
-    onStartRename,
-    onDelete,
-  };
-
-  return (
-    <div
-      data-conversation-id={conversation.id}
-      onContextMenu={(event) => {
-        if (renaming) {
-          return;
-        }
-
-        onConversationContextMenu(event, menuContext);
-      }}
-      className={cn(
-        "app-home-chat-sidebar-item",
-        active && "is-active app-animated-tabs-indicator",
-      )}
-    >
-      {renaming ? (
-        <div className="app-home-chat-sidebar-item-main is-editing">
-          <Input
-            ref={renameInputRef}
-            value={renameDraftValue}
-            onChange={(event) => onRenameDraftChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                onRenameSubmit();
-              }
-
-              if (event.key === "Escape") {
-                event.preventDefault();
-                onRenameCancel();
-              }
-            }}
-            placeholder={tDashboard("chat.renamePlaceholder")}
-            className="app-home-chat-rename-input"
-          />
-          <div className="app-home-chat-sidebar-item-actions is-visible">
-            <SidebarIconButton
-              label={tDashboard("chat.renameSave")}
-              onClick={() => onRenameSubmit()}
-              disabled={busy || !renameDraftValue.trim()}
-            >
-              <Check className="size-3.5" />
-            </SidebarIconButton>
-            <SidebarIconButton
-              label={tDashboard("chat.renameCancel")}
-              onClick={() => onRenameCancel()}
-              disabled={busy}
-            >
-              <X className="size-3.5" />
-            </SidebarIconButton>
-          </div>
-        </div>
-      ) : (
-        <div className="app-home-chat-sidebar-item-main">
-          <button
-            type="button"
-            className="app-home-chat-sidebar-item-trigger"
-            onClick={onSelect}
-            disabled={busy}
-          >
-            <span className="app-home-chat-sidebar-item-title">{title}</span>
-            {conversation.titleStatus === "pending" ? (
-              <LoaderCircle className="app-home-chat-sidebar-item-status size-3 animate-spin" />
-            ) : null}
-          </button>
-
-          <div className={cn("app-home-chat-sidebar-item-actions", active && "is-visible")}>
-            <SidebarIconButton
-              label={tDashboard("chat.moreActions")}
-              ariaHasPopup="menu"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onOpenMenu(event.currentTarget, menuContext);
-              }}
-              disabled={busy}
-              className="app-home-chat-sidebar-item-more"
-            >
-              <EllipsisVertical className="size-3.5" />
-            </SidebarIconButton>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SidebarIconButton({
-  children,
-  label,
-  onClick,
-  disabled = false,
-  tone = "default",
-  className,
-  ariaHasPopup,
-}: {
-  children: ReactNode;
-  label: string;
-  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  disabled?: boolean;
-  tone?: "default" | "danger";
-  className?: string;
-  ariaHasPopup?: React.AriaAttributes["aria-haspopup"];
-}) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "app-home-chat-sidebar-icon-button",
-        tone === "danger" && "is-danger",
-        className,
-      )}
-      aria-label={label}
-      aria-haspopup={ariaHasPopup}
-      title={label}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick(event);
-      }}
-      disabled={disabled}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -1674,11 +1200,6 @@ function ThinkingPanel({
       ) : null}
     </div>
   );
-}
-
-function resolveConversationTitle(title: string | null | undefined, fallback: string) {
-  const normalizedTitle = title?.trim();
-  return normalizedTitle || fallback;
 }
 
 function isChatViewportNearBottom(viewport: HTMLDivElement, threshold = 96) {

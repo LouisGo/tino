@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { HomeChatWorkspace } from "@/features/chat/components/home-chat-workspace";
+import { HOME_CHAT_START_NEW_CONVERSATION_EVENT } from "@/features/chat/home-chat-shortcut-events";
 import { resetHomeChatRuntimeStore } from "@/features/chat/store/home-chat-runtime-store";
 import type {
   HomeChatConversationDetail,
@@ -14,6 +15,7 @@ const mockUseHomeChatWorkspace = vi.fn();
 const mockUseHomeAttachments = vi.fn();
 const mockUseHomeAttachmentTransfer = vi.fn();
 const mockUseContextMenu = vi.fn();
+const mockUseShortcutScope = vi.fn();
 
 vi.mock("@/features/chat/hooks/use-home-chat-workspace", () => ({
   useHomeChatWorkspace: (...args: unknown[]) => mockUseHomeChatWorkspace(...args),
@@ -32,6 +34,17 @@ vi.mock("@/core/context-menu", async (importOriginal) => {
   return {
     ...actual,
     useContextMenu: (...args: unknown[]) => mockUseContextMenu(...args),
+  };
+});
+
+vi.mock("@/core/shortcuts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/core/shortcuts")>();
+  return {
+    ...actual,
+    ShortcutKbd: ({ shortcutId }: { shortcutId: string }) => (
+      <span data-testid={`shortcut-${shortcutId}`}>{shortcutId}</span>
+    ),
+    useShortcutScope: (...args: unknown[]) => mockUseShortcutScope(...args),
   };
 });
 
@@ -283,5 +296,25 @@ describe("HomeChatWorkspace", () => {
     expect(screen.getByText("Retrying answer")).toBeInTheDocument();
     expect(screen.queryByText("Stopped answer")).not.toBeInTheDocument();
     expect(screen.queryByText("Generation stopped")).not.toBeInTheDocument();
+  });
+
+  it("starts a new conversation when the home chat new conversation event fires", () => {
+    const startNewConversation = vi.fn();
+    mockUseHomeChatWorkspace.mockReturnValue(buildWorkspaceState({
+      startNewConversation,
+    }));
+
+    render(
+      <HomeChatWorkspace
+        providerAccess={{ isConfigured: true } as never}
+        providerConfig={{} as never}
+        providerControls={null}
+        suggestionPrompts={[]}
+      />,
+    );
+
+    window.dispatchEvent(new CustomEvent(HOME_CHAT_START_NEW_CONVERSATION_EVENT));
+
+    expect(startNewConversation).toHaveBeenCalledTimes(1);
   });
 });

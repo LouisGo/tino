@@ -2659,7 +2659,7 @@
     flex: 1 1 auto;
     flex-direction: column;
     gap: 0.75rem;
-    overflow: auto;
+    overflow: hidden;
     padding-right: 0.18rem;
   }
 
@@ -2846,7 +2846,7 @@
   }
 
   .app-home-chat-new-button {
-    width: auto;
+    width: 100%;
     min-width: 0;
     justify-content: flex-start;
     gap: 0.45rem;

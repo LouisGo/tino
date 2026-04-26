@@ -16,12 +16,14 @@ export function Tooltip({
   placement = "bottom",
   children,
   className,
+  anchorClassName,
   multiline = false,
 }: {
   content: ReactNode;
   placement?: TooltipPlacement;
   children: ReactNode;
   className?: string;
+  anchorClassName?: string;
   multiline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -89,7 +91,7 @@ export function Tooltip({
   return (
     <span
       ref={anchorRef}
-      className="inline-flex"
+      className={cn("inline-flex", anchorClassName)}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
