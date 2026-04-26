@@ -1,6 +1,8 @@
 # Home Chat Gemini化与多会话 MVP 计划 v0.1
 
 > 日期：2026-04-20
+> 状态：historical
+> 当前说明：多会话 Home Chat 基础能力已大体落地；当前真实状态请读 `docs/03-planning/HANDOFF.md`
 > 适用范围：`/home` 交互式 AI Chat 重构
 > 目标：先形成可评审、可直接实施的专项方案；本文件不是当前真实状态声明
 

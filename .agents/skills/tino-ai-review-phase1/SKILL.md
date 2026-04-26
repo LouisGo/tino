@@ -10,7 +10,7 @@ description: "Legacy filename. Use this skill for current Tino AI rethink work: 
 1. Read `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`.
 2. Read `docs/03-planning/HANDOFF.md` only if you need current repo state or transition notes.
 3. Read `docs/03-planning/技术冻结记录.md` if the task may change ownership, runtime location, storage, or feedback boundaries.
-4. Read `docs/03-planning/AI Review 当前实现与 Mock 链路说明.md` only when debugging legacy `/ai` or `applyBatchDecision`.
+4. Read `docs/03-planning/archive/AI Review 当前实现与 Mock 链路说明.md` only when debugging legacy `/ai` or `applyBatchDecision`.
 
 ## Current Contract
 

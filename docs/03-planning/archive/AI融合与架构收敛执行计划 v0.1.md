@@ -1,7 +1,8 @@
 # AI 融合与架构收敛执行计划 v0.1
 
 > 日期：2026-04-21
-> 状态：执行中
+> 状态：historical
+> 当前说明：大部分收敛结果已吸收到 `HANDOFF`、`技术冻结记录` 与 `Tino AI Rethink 与模块开发基线 v1.md`
 > 主判断：以 `AI rethink` 作为唯一主架构，吸收远程 `HomeChat` / `provider access` / `ai-quality` 资产，但不回退到 `review-first`
 
 ## 1. 目标架构

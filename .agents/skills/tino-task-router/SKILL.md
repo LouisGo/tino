@@ -37,11 +37,12 @@ Choose the smallest valid context set. This skill is a router, not a second sour
 - Packaging, signing, preview/prod data channel, or build/install flow:
   Read `docs/03-planning/环境与打包流程.md`.
 - Product scope, MVP boundary, or user-facing AI capability boundary:
-  Read `docs/02-product/个人信息流软件需求原型文档.md`.
-  Read `docs/02-product/Tino AI 能力地图 v0.2.md` only if the task is specifically about AI capability scope.
+  Read `docs/02-product/Tino AI 2.0 文档索引.md`.
+  Read `docs/02-product/archive/个人信息流软件需求原型文档.md` or `docs/02-product/archive/Tino AI 能力地图 v0.2.md` only if the task is specifically about historical MVP scope.
 
 ## Update These Docs When Needed
 
 - If the task changes current behavior or stage claims, update `docs/03-planning/HANDOFF.md`.
+- If the task changes current task ordering or active priorities, update `docs/03-planning/Tino AI 2.0 开发总计划.md`.
 - If the task changes frozen architecture or responsibility boundaries, update `docs/03-planning/技术冻结记录.md`.
 - If the task changes AI phase sequencing, runtime layering, or storage ownership, update `docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`.

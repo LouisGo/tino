@@ -7,7 +7,19 @@
 
 ## 1. 先读什么
 
-按顺序阅读：
+默认不要一次读完全部 2.0 文档。
+
+### 1.1 最小必读路径
+
+如果只是想快速建立当前产品共识，先读这 3 份：
+
+1. `docs/02-product/Tino AI 2.0 产品定义.md`
+2. `docs/02-product/Tino AI 2.0 主战场定义.md`
+3. `docs/02-product/Tino AI 2.0 运行时护栏.md`
+
+### 1.2 按需深入
+
+只有在任务需要时，再继续读：
 
 1. `docs/02-product/Tino AI 2.0 产品定义.md`
 2. `docs/02-product/Tino AI 2.0 结构性差异化.md`
@@ -75,8 +87,8 @@
 
 ## 4. 旧文档如何理解
 
-- `Tino AI 能力地图 v0.2`：保留为早期 `AI rethink` 启动阶段说明，不再作为当前真相源
-- `个人信息流软件需求原型文档`：保留为早期 `MVP inbox-first` 总原型，不再单独指导当前 `AI chat / corpus copilot` 设计
+- `docs/02-product/archive/Tino AI 能力地图 v0.2.md`：保留为早期 `AI rethink` 启动阶段说明，不再作为当前真相源
+- `docs/02-product/archive/个人信息流软件需求原型文档.md`：保留为早期 `MVP inbox-first` 总原型，不再单独指导当前 `AI chat / corpus copilot` 设计
 
 ## 5. 与规划文档的关系
 

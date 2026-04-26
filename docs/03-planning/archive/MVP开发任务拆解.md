@@ -1,6 +1,7 @@
 # 个人信息流软件 MVP 开发任务拆解
 
-> 基线文档：`docs/02-product/个人信息流软件需求原型文档.md`
+> 状态：historical
+> 基线文档：`docs/02-product/archive/个人信息流软件需求原型文档.md`
 > MVP 心智：`inbox-first`。用户先丢内容，系统后台再长出议题。
 > 当前 AI 执行基线：`docs/03-planning/Tino AI Rethink 与模块开发基线 v1.md`
 

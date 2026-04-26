@@ -5,8 +5,8 @@
 > 状态：最新共识
 > 适用范围：AI 入口、project / corpus 工作台、grounded chat、research、silent digest、Markdown 产出
 > 取代：
-> - `docs/02-product/Tino AI 能力地图 v0.2.md`
-> - `docs/02-product/个人信息流软件需求原型文档.md` 中与 AI 入口、AI chat、AI 主产品心智相关的口径
+> - `docs/02-product/archive/Tino AI 能力地图 v0.2.md`
+> - `docs/02-product/archive/个人信息流软件需求原型文档.md` 中与 AI 入口、AI chat、AI 主产品心智相关的口径
 
 ## 1. 这份文档解决什么问题
 
